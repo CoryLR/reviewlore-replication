@@ -1,0 +1,212 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/preprocess.ts",
+      "line_number": 31,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This silently forces `tidy-tree` as the default layout for ALL mindmap diagrams, even when the `@mermaid-js/layout-tidy-tree` package has not been installed or registered via `mermaid.registerLayoutLoaders()`. Since `tidy-tree` is an optional external package, this will cause a runtime failure for any user who renders a mindmap without having registered the tidy-tree layout loader. Additionally, the PR description states cose-bilkent is the default, and the schema default (`layoutAlgorithm: 'cose-bilkent'`) contradicts this auto-injection. This is a silent breaking change for existing mindmap diagrams. Consider instead updating the mindmap renderer's `fallback` parameter, or only setting the layout override when the tidy-tree loader is actually registered.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layout.ts",
+      "line_number": 43,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`intersectionShift` is initialized to `50` here but is unconditionally overwritten to `30` a few lines later (line 48). The initial value of `50` is never used \u2014 this is dead code. Either remove the initial assignment and declare it as `const intersectionShift = 30`, or make it configurable if different values are actually needed.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layout.ts",
+      "line_number": 56,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "This mutates the caller's `data` object by assigning `data.edges = []`. Side effects on input parameters make functions harder to reason about and can cause subtle bugs if the same `data` object is used elsewhere after this call. Instead, use a local variable: `const edges = data.edges && Array.isArray(data.edges) ? data.edges : [];`.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layout.ts",
+      "line_number": 170,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `_leftBoundingBox`, `_rightBoundingBox`, and `_data` parameters are unused (underscore-prefixed). Critically, this means the function does NOT use the bounding boxes returned by the tidy-tree algorithm to position the two sub-trees relative to each other. Instead it uses a hardcoded `treeSpacing = rootNode.width / 2 + 30`. If the left or right tree is very wide, sub-trees can overlap. The bounding box should be used to calculate the proper spacing.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layout.ts",
+      "line_number": 202,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The root node is offset by a hardcoded `+ 20` on the y-axis: `y: rootY + 20`. `rootY` is always `0`, so this effectively hardcodes the root at y=20. This magic number is not documented, not configurable, and makes the test assertion `expect(rootNode!.y).toBe(20)` opaque. This should either be a named constant or zero (relying on the centering logic to position things correctly).",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layout.ts",
+      "line_number": 386,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "When `sourceNode.section === 'root'`, no intermediate waypoint is added on the source side of the edge. For an edge from root to a left-tree node, the path goes directly from `startPos` (at the root boundary) to a point outside the target, which may produce a straight horizontal line rather than the curved S-shape expected of a mind map edge. Consider always adding a horizontal exit waypoint from the root.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/render.ts",
+      "line_number": 93,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Group/cluster nodes are inserted into the DOM via `insertCluster`, but their positions are never updated after the layout algorithm runs. Unlike regular nodes (which get `node.domId.attr('transform', ...)` applied), clusters remain at their default position. If mindmaps ever contain group nodes, they will not be rendered at their correct positions.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid-layout-elk/src/render.ts",
+      "line_number": 4,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The old `cutPathAtIntersect` function has been removed and replaced by a `calcIntersect` callback pattern on nodes. However, `calcIntersect` is only defined in this PR for a small set of shapes: `drawRect`, `circle`, `question`, `bang`, `cloud`. All other shapes (hexagon, rhombus, cylinder, lean-right, lean-left, notch-rect, etc.) do NOT define `calcIntersect`. For those shapes, the new code in the ELK renderer skips all intersection trimming (`if (startNode.calcIntersect) { ... }`), causing edges to connect to the node's center rather than its boundary. This is a regression compared to the old behavior where `cutPathAtIntersect` handled all shapes.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/bang.ts",
+      "line_number": 63,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `calcIntersect` function uses `intersect.rect` for the bang shape, but bang is a spiky/starburst shape \u2014 not a rectangle. Using rectangular intersection means edges will connect to the bounding box of the shape rather than its visible boundary. For the tidy-tree layout which relies on `calcIntersect`, this will result in edges appearing to pierce through the shape's spikes. A polygon-based or circle-based intersection would be more accurate.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/cloud.ts",
+      "line_number": 65,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Same issue as the bang shape: `calcIntersect` uses `intersect.rect` for a cloud shape. Clouds have rounded, irregular boundaries, so rectangular intersection will produce edges that visually overlap the cloud's outline. `intersect.ellipse` or a custom approximation would be more appropriate.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.ts",
+      "line_number": 367,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`diagramId` is set to `'mindmap-' + Date.now()`. Using `Date.now()` produces a different ID on every call, making the diagram ID non-deterministic. This will break any SSR/hydration, caching, or snapshot-based testing that depends on stable output. The `id` parameter passed to the `draw` function in `mindmapRenderer.ts` should be used here instead.",
+      "index": 10
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/cose-bilkent/layout.ts",
+      "line_number": 57,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`validateLayoutData` throws if `data.rootNode` is not set. `rootNode` is a mindmap-specific property added to `LayoutData` in `mindmapDb.ts`, not a standard `LayoutData` field. This makes the cose-bilkent layout only work for mindmaps, not for flowcharts or other diagram types that might legitimately want to use it. The layout algorithm should be diagram-agnostic. Remove the `rootNode` check, or move mindmap-specific validation to the mindmap renderer.",
+      "index": 11
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/render.ts",
+      "line_number": 41,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The cose-bilkent layout loader is gated behind `includeLargeFeatures`. Since `mindmapRenderer.ts` uses `getRegisteredLayoutAlgorithm(layout, { fallback: 'cose-bilkent' })`, a user of the small/compact build who hasn't registered the tidy-tree layout will get an unregistered `cose-bilkent` fallback, potentially failing silently. Ensure there is always a guaranteed fallback layout available in any build.",
+      "index": 12
+    },
+    {
+      "file_path": "packages/mermaid-layout-elk/src/render.ts",
+      "line_number": 598,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Multiple debug `log.debug('APA01 ...')` statements remain in production code, added during development. These prefix tags (`APA01`) are clearly development artifacts and will clutter logs for users. Please remove them before merging.",
+      "index": 13
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layout.test.ts",
+      "line_number": 334,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The test assertions `expect(child1!.x).toBeLessThan(-100)` and `expect(child2!.x).toBeGreaterThan(100)` use magic numbers (-100, 100) that are derived from the mock's implementation, not the actual algorithm. These thresholds are brittle: they can pass even if the layout is subtly wrong, and they don't document the *intent* of the expected layout. Consider asserting structural properties instead (e.g., left children have negative x, right children have positive x, children are further from root than the root itself).",
+      "index": 14
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/package.json",
+      "line_number": 22,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `scripts` field is empty (`{}`). The package has source files and tests, but no `build`, `test`, or `lint` scripts are defined. This means the standard CI/CD pipeline (which likely runs `pnpm build` or `pnpm test` per package) will silently skip building and testing this package. At minimum, add a `build` script matching the pattern used by `mermaid-layout-elk`.",
+      "index": 15
+    },
+    {
+      "file_path": "cypress/platform/knsv2.html",
+      "line_number": 133,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "All newly added `<pre>` elements use `id=\"diagram4\"`, creating multiple elements with the same ID in a single HTML document. Duplicate IDs are invalid HTML and will cause issues for JavaScript querying elements by ID (only the first element will be returned). Please use unique IDs for each diagram element.",
+      "index": 16
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/types.ts",
+      "line_number": 27,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`PositionedEdge` has an index signature `[key: string]: unknown`. In TypeScript, when an interface has an index signature, all explicitly defined properties must be assignable to the index signature type. Since `unknown` is a supertype of everything, this compiles, but it effectively disables type-checking on property accesses through the index signature. More importantly, it forces consumers to use type assertions (`as`) when reading known properties. Consider removing the index signature and instead explicitly typing the properties needed.",
+      "index": 17
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layout.ts",
+      "line_number": 133,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The width/height transposition in `convertNodeToTidyTreeTransposed` (`width: node.height ?? 50, height: node.width ?? 100`) swaps the original defaults along with the dimensions. The original node might have `width=200, height=50`, yielding `width=50, height=200` in the tidy-tree format. But if either dimension is nullish, the defaults (`50` for width, `100` for height) are also swapped from the original node's perspective. This could produce incorrectly sized nodes for nodes missing one dimension. Consider using a single default value for both or using the actual node defaults.",
+      "index": 18
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.ts",
+      "line_number": 345,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `shapes` Map is populated and immediately converted to a plain object via `Object.fromEntries(shapes)`. The intermediate `Map` adds no value over directly building an object. Replace it with: `const shapes: Record<string, any> = {}; for (const node of processedNodes) { shapes[node.id] = { ... }; }`.",
+      "index": 19
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 14,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `_drawNodes` function and `_updateNodeDimensions` function are defined but neither is called in the new `draw` implementation. `_drawNodes` was the primary rendering path in the old implementation, and `_updateNodeDimensions` was written to update dimensions after drawing. Both appear to be dead code that was not cleaned up during the refactor. Remove them to reduce confusion.",
+      "index": 20
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "**`instructions.md` committed to repository root**: The file `instructions.md` added at the repo root is a development artifact \u2014 it contains instructions to an AI assistant for implementing the tidy-tree algorithm. This file has no value in a production repository and should be removed. It is also not included in `.gitignore` (the `.instructions/` directory was added to `.gitignore`, but this file is at the root, not in that directory).",
+      "index": 21
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**Inconsistent indentation in `mindmap-layouts.html` frontmatter**: The YAML frontmatter blocks in `cypress/platform/mindmap-layouts.html` have inconsistent leading whitespace. Some `<pre>` blocks start the `---` with a single leading space, others don't. While YAML is generally whitespace-tolerant at the document level, this inconsistency makes the file harder to maintain and may trip up strict parsers. Normalize the indentation across all blocks.",
+      "index": 22
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**Duplicate layout code between tidy-tree and cose-bilkent renderers**: `packages/mermaid-layout-tidy-tree/src/render.ts` and `packages/mermaid/src/rendering-util/layout-algorithms/cose-bilkent/render.ts` share significant structural duplication: both insert nodes into the DOM to get dimensions, run a layout algorithm, then position nodes and edges. The differences are small (which layout algorithm is called, and how edges are handled). Consider extracting a shared `renderWithLayout(layoutFn, ...)` helper to reduce duplication and ensure future fixes apply uniformly.",
+      "index": 23
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**`LayoutData` used as an informal extension point**: Several properties are added to `LayoutData` in `mindmapDb.getData()` that are not part of the `LayoutData` type definition (`rootNode`, `nodeSpacing`, `rankSpacing`, `shapes`). This informal extension makes it hard to understand the actual contract of `LayoutData` and will cause TypeScript to treat these properties as non-existent in typed contexts. These mindmap-specific properties should either be added to a `MindmapLayoutData` subtype or passed through a separate mechanism to avoid polluting the generic `LayoutData` interface.",
+      "index": 24
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**Missing vitest configuration for `mermaid-layout-tidy-tree` package**: The new package includes `layout.test.ts` but there is no `vitest.config.ts` in the package directory. Test discovery may depend entirely on the root-level vitest config, which may or may not include the new package path. Add a `vitest.config.ts` (or confirm the root config covers it) and add a `\"test\"` script to `package.json` so package-level test runs work consistently.",
+      "index": 25
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "**The `non-layered-tidy-tree-layout` type declaration file is hand-written and minimal**: `packages/mermaid-layout-tidy-tree/src/non-layered-tidy-tree-layout.d.ts` types the `layout()` return value as `{ result: any; boundingBox: ... }`. The `result` being typed as `any` means the entire return value of the layout algorithm is untyped, losing all benefits of TypeScript for a core part of the implementation. Since the `TidyTreeNode` type is already defined in `types.ts`, use it: `layout(data: TidyTreeNode): { result: TidyTreeNode; boundingBox: { left: number; right: number; top: number; bottom: number; }; }`.",
+      "index": 26
+    }
+  ],
+  "cost_usd": 2.2455900499999997,
+  "duration_seconds": 341.4361810684204
+}

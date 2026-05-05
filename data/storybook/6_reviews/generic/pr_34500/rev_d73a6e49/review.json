@@ -1,0 +1,60 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 150,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "This test case ('handles the case where @storybook/react-native is in dependencies (not devDependencies)') does not verify any unique behavior. `getAllDependencies()` already returns a flat object merging all dependency groups, and the mock setup is identical to the positive 'string addons' test \u2014 just with a single addon instead of multiple. The test description implies it covers a `deps` vs `devDeps` distinction, but neither the implementation nor the mock makes that distinction. Consider removing this test or replacing it with a case that actually adds coverage (e.g., verifying the fix does not apply when `@storybook/react-native` appears only as a transitive dependency, or testing behavior when `addons` contains a mix of string and object entries simultaneously).",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 55,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`storybookVersion: '8.0.0'` is used across every test case, but the migration being tested is described (in the MIGRATION.md and PR description) as targeting the 9.x \u2192 10.0.0 upgrade. Using version `'9.0.0'` or `'10.0.0'` would align the tests with the intended migration context and improve self-documentation. Since the `check()` implementation ignores `storybookVersion`, the current value is not incorrect, but it is misleading for future readers.",
+      "index": 1
+    },
+    {
+      "file_path": "MIGRATION.md",
+      "line_number": 1326,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "\"In Storybook 9, on-device addons\u2026 must be listed under the `deviceAddons` key\" is inconsistent with the stated chapter context (9.x \u2192 10.0.0). Readers upgrading from 9 to 10 would interpret this as a requirement that already existed in their current version. The sentence should read \"In Storybook 10\" (or \"Starting in Storybook 10\") to make clear this is a new requirement introduced by the upgrade they are performing.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 44,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "After the migration runs, if every entry in `addons` was an ondevice addon, the array is left as an empty `addons: []` in the config rather than being removed entirely. While `removeEntryFromArray` correctly splices each element out, no cleanup step drops the empty array node. Other non-RN addons in projects that only used ondevice addons will see a superfluous `addons: []` in their migrated config. Consider checking whether the `addons` array is empty after the loop and, if so, calling `main.removeField(['addons'])` (or equivalent) to keep the output clean.",
+      "index": 3
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 43,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The callback passed to `updateMainConfig` is synchronous, which is fine since the type accepts `Promise<void> | void`. However, `removeEntryFromArray` (in `ConfigFile.ts`) throws a `new Error(...)` when it cannot locate the target entry in the AST array \u2014 for instance, when addons are assembled via spread operators or runtime `require()` calls. That error is caught by `updateMainConfig`'s outer try/catch, which logs a manual-migration message and abandons the whole write. The resulting user-facing error message does not distinguish this case from a true parse failure. Adding a brief code comment here noting the dependency on the AST matching the evaluated config would help future maintainers understand the failure mode.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `check()` function operates on the evaluated `mainConfig.addons` (JavaScript runtime values), while `run()` operates on the raw AST via `removeEntryFromArray` / `appendValueToArray`. This is consistent with every other automigration fix in the codebase, but it means there is a latent class of failures: if a user's `addons` array is partially dynamic (e.g., `addons: [...require('./extra-addons'), '@storybook/addon-ondevice-controls']`), `check()` will find the ondevice addon in the evaluated config and return a non-null result, but `run()` will throw inside `updateMainConfig` because the AST element is not a plain string or object literal. The error is caught and surfaced as a generic parse-failure message. A comment in `run()` acknowledging this limitation (parallel to the JSDoc on `updateMainConfig` itself) would help set expectations.",
+      "index": 5
+    },
+    {
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Other automigration `prompt()` implementations in this directory (e.g., `rnstorybook-config.ts`) wrap their return value with `dedent` for consistent whitespace handling, even for single-sentence prompts. The new `prompt()` returns a bare string literal. While this works, adopting `dedent` here would be consistent with the established pattern in the file set.",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.48995089999999997,
+  "duration_seconds": 402.91174697875977
+}

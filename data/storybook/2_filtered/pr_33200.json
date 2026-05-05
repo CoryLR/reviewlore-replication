@@ -1,0 +1,96 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33200,
+  "title": "Controls: Fix displaying as object instead of select for optional union types",
+  "body": "## What\r\nPartially fixes #12641\r\n\r\n## Why\r\nWhen TypeScript properties are optional (`prop?: Type`), TypeScript adds `| undefined` to the union type. The enum detection logic in the TypeScript converter was failing because `undefined` is not a literal type, causing the union to not be recognized as an enum.\r\n\r\nThis resulted in controls displaying as \"object\" type instead of \"select\" dropdown for optional properties with union types, regardless of the number of items in the union.\r\n\r\n## How\r\nThe fix filters out `undefined` elements before checking if all remaining elements are literals. This allows optional unions to be correctly recognized as enums and display as select controls.\r\n\r\n### Changes\r\n- Modified `code/core/src/docs-tools/argTypes/convert/typescript/convert.ts`\r\n- Filter `undefined` from union elements when checking for enum type\r\n- Use only non-undefined elements for enum value array\r\n\r\n### Example\r\nBefore this fix:\r\n```tsx\r\ninterface Props {\r\n  myProperty?: 'k1' | 'k2' | ... | 'k29';  // Shows as \"object\" control\r\n}\r\n```\r\n\r\nAfter this fix:\r\n```tsx\r\ninterface Props {\r\n  myProperty?: 'k1' | 'k2' | ... | 'k29';  // Shows as \"select\" control\r\n}\r\n```\r\n## How to test manually\r\n\r\n  1. Create a sandbox: yarn task --task dev --template react-vite/default-ts\r\n  2. Create a component with optional union type props:\r\n  interface Props {\r\n    variant?: 'primary' | 'secondary' | 'tertiary';\r\n    size: 'small' | 'medium' | 'large';\r\n    manyOptions?: 'k1' | 'k2' | 'k3' | 'k4' | 'k5';\r\n  }\r\n  3. Create a story for the component and open it in Storybook\r\n  4. Verify the Controls panel shows:\r\n    - variant (optional) as radio buttons \u2014 not \"object\"\r\n    - size (required) as radio buttons\r\n    - manyOptions (optional) as a select dropdown \u2014 not \"object\"\r\n  5. Verify you can select options and the component updates\r\n  6. Verify the reset button (\u21ba) clears optional props back to undefined\r\n\r\n## Checklist\r\n  - Fix tested locally\r\n  - Minimal, focused change\r\n  - Backward compatible with required unions\r\n  - Type errors resolved\r\n  - Unit tests pass\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Bug Fixes**\n  * Better detection and generation of enums from TypeScript unions that mix literals and undefined.\n\n* **Changes**\n  * Union processing now ignores undefined values when deriving enums and treats literal members distinctly.\n  * Parser expects union elements to be explicit (stricter union shape) and recognizes literal values separately for more accurate output.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->\n\n\n<!-- Issuehunt content -->\n\n---\n\n<details>\n<summary>\n<b>IssueHunt Summary</b>\n</summary>\n\n### Referenced issues\n\nThis pull request has been submitted to:\n- [#12641: Problem with storybook-controls of type \"select\"](https://oss.issuehunt.io/repos/54173593/issues/12641)\n---\n</details>\n<!-- /Issuehunt content-->",
+  "author": "tanujbhaud",
+  "merged_at": "2025-12-10T20:17:58Z",
+  "base_ref": "next",
+  "merge_commit_sha": "8b278b06037e517fa59167dc86f43a08b6106f7b",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "7cd8fe8dc9bc1d0b35f411157769d2e167b0b1dc",
+    "17e33699e7eb51bad794a8ee042c399056aa3360"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6ag3Qm",
+          "author": "Sidnioulz",
+          "body": "The fact that this throws TS errors either means that `TSType` is wrong, or that the check isn't done correctly, or both.\n\nMy preference would go towards fixing `TSType` to actually match all the inputs that can be received at runtime (so we can discover other type bugs elsewhere).\n\nCan you also please check if `typeof element.raw` is consistently `undefined` when `element.name` is `'undefined'`? If so, then inspecting the type of `raw` (like done on line 29) could be safer.",
+          "file_path": "code/core/src/docs-tools/argTypes/convert/typescript/convert.ts",
+          "line_number": 47,
+          "start_line": null,
+          "commit_sha": "456b6cfb91b146baa49647a4f5c10ba08d2f9192",
+          "created_at": "2025-12-05T11:10:24Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests fixing TSType to match runtime inputs, and asks to check if typeof element.raw being undefined correlates with element.name being 'undefined' as a safer approach \u2014 both are concrete suggestions for code changes."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6ag3yt",
+          "author": "Sidnioulz",
+          "body": "Type errors here if `nonUndefinedElements` is undefined.",
+          "file_path": "code/core/src/docs-tools/argTypes/convert/typescript/convert.ts",
+          "line_number": 48,
+          "start_line": null,
+          "commit_sha": "456b6cfb91b146baa49647a4f5c10ba08d2f9192",
+          "created_at": "2025-12-05T11:11:17Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential type error when nonUndefinedElements is undefined, implying the code should handle that case."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6ag4TR",
+          "author": "Sidnioulz",
+          "body": "This might be fixable if the code above used type guard functions. The fact that you found a type bug in a code path with `@ts-expect-error` hints that we really want to remove `@ts-expect-error` and actually get types right this time (without any casting, just with type guards).",
+          "file_path": "code/core/src/docs-tools/argTypes/convert/typescript/convert.ts",
+          "line_number": 53,
+          "start_line": null,
+          "commit_sha": "456b6cfb91b146baa49647a4f5c10ba08d2f9192",
+          "created_at": "2025-12-05T11:12:05Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests refactoring to use type guard functions and removing @ts-expect-error to get types correct without casting \u2014 a concrete improvement request."
+    }
+  ],
+  "review_thread_count": 3,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 3,
+    "stage1_kept": 3,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

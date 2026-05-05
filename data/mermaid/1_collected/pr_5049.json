@@ -1,0 +1,124 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 5049,
+  "title": "Move ELK to standalone package",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nSplits Flowchart-ELK into a separate package, to make licensing simpler.\r\n\r\nResolves #5043 \r\n\r\nThis allows sites to fallback to dagre layout for `flowchart-elk` if the elk package is not installed, instead of completely breaking rendering.\r\nWe need to pick either #5050 or #5051 for the approach to override.\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nMoved files to a new package, removed elkjs dependency from the mermaid core.\r\nEdited tsconfig to allow import of files from mermaid, to avoid duplicating code. \r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n",
+  "author": "sidharthv96",
+  "merged_at": "2023-11-24T05:35:34Z",
+  "base_ref": "next",
+  "merge_commit_sha": "6d49cd68592681311b42be9a4757f169aac4427d",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "a2db4a464aa51a767ba61d77c1f01210fb97af22",
+    "5eb116059ba07a6e79336ff023940045b12642a0"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TYt4f",
+          "author": "aloisklink",
+          "body": "It doesn't have to be in this PR, but at some point, we really need to optimise this.",
+          "file_path": "package.json",
+          "line_number": 22,
+          "start_line": null,
+          "commit_sha": "5eb116059ba07a6e79336ff023940045b12642a0",
+          "created_at": "2023-11-20T10:33:35Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TqWFb",
+          "author": "sidharthv96",
+          "body": "Done https://github.com/mermaid-js/mermaid/pull/5049/commits/4ec57836d8cca4327f4d54955444f8c1ed01af89 :)",
+          "file_path": "package.json",
+          "line_number": 22,
+          "start_line": null,
+          "commit_sha": "5eb116059ba07a6e79336ff023940045b12642a0",
+          "created_at": "2023-11-23T17:01:45Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TYuKW",
+          "author": "aloisklink",
+          "body": "Since we're now using `prettier` instead of `standard`, I think we should be able to remove this.",
+          "file_path": "packages/mermaid-flowchart-elk/package.json",
+          "line_number": 40,
+          "start_line": null,
+          "commit_sha": "5eb116059ba07a6e79336ff023940045b12642a0",
+          "created_at": "2023-11-20T10:34:32Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TYuxf",
+          "author": "aloisklink",
+          "body": "I think we should make this a `peerDependency` and using [`pnpm`'s `workspace:^` protocol](https://pnpm.io/workspaces#workspace-protocol-workspace).\r\n\r\nThat way, whenever we do an `pnpm publish`, it should automatically use the latest version of Mermaid. And it also means that if we ever made a breaking change to Mermaid, we won't break any existing plugins.",
+          "file_path": "packages/mermaid-flowchart-elk/package.json",
+          "line_number": 50,
+          "start_line": null,
+          "commit_sha": "5eb116059ba07a6e79336ff023940045b12642a0",
+          "created_at": "2023-11-20T10:36:31Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TqkCE",
+          "author": "aloisklink",
+          "body": "What about:\r\n\r\n```suggestion\r\n    \"build:types\": \"pnpm --recursive exec tsc --emitDeclarationOnly\",\r\n```\r\n\r\nVery simple, and it runs in parallel (by default it's 4 jobs, see https://pnpm.io/cli/recursive#--workspace-concurrency).\r\n\r\nThe only potential issue is that 4 jobs might use up a lot of RAM (does tsc use up a lot of RAM?), but we could lower this with `--workspace-concurrency=2` or something.",
+          "file_path": "package.json",
+          "line_number": 22,
+          "start_line": null,
+          "commit_sha": "5eb116059ba07a6e79336ff023940045b12642a0",
+          "created_at": "2023-11-23T18:49:33Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Tqknm",
+          "author": "sidharthv96",
+          "body": "It should not run in parallel.\n\nParser first, mermaid second, then the other packages. \n\nOtherwise it won't compile. ",
+          "file_path": "package.json",
+          "line_number": 22,
+          "start_line": null,
+          "commit_sha": "5eb116059ba07a6e79336ff023940045b12642a0",
+          "created_at": "2023-11-23T18:51:55Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TqlF_",
+          "author": "aloisklink",
+          "body": "Oooh, that makes sense then!",
+          "file_path": "package.json",
+          "line_number": 22,
+          "start_line": null,
+          "commit_sha": "5eb116059ba07a6e79336ff023940045b12642a0",
+          "created_at": "2023-11-23T18:56:16Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 4
+}

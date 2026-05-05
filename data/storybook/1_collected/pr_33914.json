@@ -1,0 +1,950 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33914,
+  "title": "React: Add component metadata extraction via Volar-style LanguageService",
+  "body": "## What I did\n\nAdds a new prop extraction engine (`react-component-meta`) that uses TypeScript's own LanguageService \u2014 the same API behind IDE autocomplete \u2014 to detect components and extract props. Instead of AST heuristics (react-docgen) or throwaway `ts.Program` per file (react-docgen-typescript), it maintains a persistent LanguageService with incremental updates.\n\nThe architecture mirrors [Vue Component Meta](https://github.com/vuejs/language-tools/tree/master/packages/component-meta) \u2014 built on `@volar/typescript` and `@volar/language-core`.\n\n### Why\n\nNeither existing engine works reliably on real design systems:\n\n| # | Pattern | RD | RDT | RCM | Projects | Count |\n|---|---------|-----|------|------|----------|-------|\n| 1 | `polymorphicFactory()` | FAIL | OK | OK | Mantine | 133 |\n| 2 | `export * as X from` + HOC | FAIL | FAIL | OK | Park UI | 29 |\n| 3 | `styled(ark.div, recipe)` HOC | FAIL | OK | OK | Park UI | 17 |\n| 4 | `React.FC<T.Props>` (namespace type import) | FAIL | OK | OK | Reshaped | 63 |\n| 5 | `forwardRef() as PolymorphicForwardRefComponent` | Partial | FAIL | OK | Primer | 38 |\n| 6 | `Object.assign(Component, { subs })` compound | FAIL | FAIL | OK | Primer | ~15 |\n| 7 | `createComponent()` for Web Components | FAIL | OK | OK | Primer | ~5 |\n| 8 | Discriminated union props | FAIL | OK | OK | Flowbite | 1 |\n| 9 | Generic polymorphic forwardRef + cast | Partial | FAIL | OK | Flowbite | 1 |\n\n### How it works\n\n**Probe-free.** Instead of generating virtual files, the engine reads existing story files directly:\n\n**Path 1 \u2014 JSX extraction (~95%):** `resolvePropsFromStoryFile()` \u2014 finds JSX elements in the story file that match the target component (CSF1 or CSF3 with `render`), then calls `checker.getResolvedSignature()` to extract the full props type. TypeScript resolves props the same way as autocompletion \u2014 polymorphic components with generic call signatures get instantiated with their default type parameter, giving correct concrete props.\n\n**Path 2 \u2014 Component type fallback:** `resolvePropsFromComponentType()` \u2014 for args-only CSF3 stories with no JSX, inspects the component's type directly via `getCallSignatures()[0].parameters[0]`. Does NOT work for polymorphic/generic components (TS #61133).\n\nWe also tried **virtual probe files** with synthetic JSX to force `getResolvedSignature` on the fallback path \u2014 but injecting files into the TS program invalidates caches and hurts performance. Scanning real story files is much faster.\n\nBoth paths produce a `ts.Type` which is then serialized into `ComponentDoc` format by `serializeComponentDocs()`.\n\n### Why Volar-style LanguageService\n\nThe naive approach (`ts.createProgram()` per request) means full TypeScript program creation on every dev server cycle \u2014 expensive for large projects like Mantine (9 tsconfig projects). Instead, we use `@volar/typescript` directly:\n\n- **`ComponentMetaProject`** \u2014 one `LanguageService` per tsconfig (mirrors Volar's `TypeScriptProjectHost` + `createTypeScriptCheckerLanguageService`)\n- **`ComponentMetaManager`** \u2014 manages multiple projects, routes component requests to the right tsconfig (mirrors Volar LS's `typescriptProject.ts`)\n- **`projectVersion++` invalidation** \u2014 on file change events, bump the version counter. The LS compares file mtimes and only recompiles what changed\n- **File watching** \u2014 `fs.watch` with debounce. Watchers are created lazily when projects are discovered\n- **Shared mtime-based snapshots** \u2014 file reads are cached across projects via `@volar/language-core`'s `FileMap` (monorepo support \u2014 Mantine's 9 tsconfigs share one snapshot cache)\n- **Background warmup** \u2014 after file change, `scheduleWarmup()` replays the last extraction so the cache is hot before the next request\n\n### Architecture (Volar alignment)\n\n| Concept | Vue Component Meta / Volar | This PR |\n|---------|---------------------------|---------| \n| Per-tsconfig checker | `TypeScriptProjectHost` + `createLanguageServiceHost` | `ComponentMetaProject` |\n| Multi-project manager | `typescriptProject.ts` | `ComponentMetaManager` |\n| Language core | `@volar/language-core` `createLanguage()` | `@volar/language-core` `createLanguage()` |\n| LS host | `@volar/typescript` `createLanguageServiceHost()` | `@volar/typescript` `createLanguageServiceHost()` |\n| Component detection | Vue SFC parsing | JSX in story files + `isReactComponentType()` |\n| Prop extraction | Template type narrowing | `getResolvedSignature()` on JSX / `getCallSignatures()` fallback |\n| File snapshots | `FileMap` with mtime cache | `FileMap` with mtime cache |\n| Invalidation | `projectVersion++` | `projectVersion++` |\n\n### Other changes\n\n- **`getComponentImports.ts`** \u2014 tracks JSX nesting depth per component, adds `member` field for member expressions (`Accordion.Root` \u2192 `member: \"Root\"`). Both react-docgen and react-docgen-typescript always run.\n- **`generator.ts`** \u2014 prefers outermost JSX component (shallowest depth) instead of alphabetical order. `memberAccess` derived from `component.member` instead of regex scanning.\n- **Bulk source exclusions** \u2014 extended to `.d.ts` files (catches generated type systems like Panda CSS `styled-system/`).\n\n## Results\n\nTested on 5 design systems with published canary `0.0.0-pr-33914-sha-ba1d6f53`.\n\n### Component Detection\n\n| Project | Components | RD | RDT | **RCM** |\n|---------|-----------|-----|------|------|\n| Flowbite | 43 | 42 (98%) | 42 (98%) | **43 (100%)** |\n| Reshaped | 63 | 0 (0%) | 63 (100%) | **63 (100%)** |\n| Park UI | 54 | 8 (15%) | 25 (46%) | **54 (100%)** |\n| Primer | 212 | 188 (89%) | 161 (76%) | **212 (100%)** |\n| Mantine | 154 | 19 (12%) | 152 (99%) | **154 (100%)** |\n\n**RCM: 526/526 \u2014 100% detection across all 5 projects.**\n\n### Props Extracted\n\n| Project | RD | RDT | **RCM** |\n|---------|-----|------|------|\n| Flowbite | 282 | 308 | **321** |\n| Reshaped | 0 | 827 | **842** |\n| Park UI | 11 | 205 | **1,021** |\n| Primer | 1,010 | 1,030 | **1,865** |\n| Mantine | 535 | 12,382 | **10,292** |\n\nMantine RDT (12,382) > RCM (10,292) \u2014 RDT includes inherited HTML/DOM props (100+ `HTMLAttributes` per component). RCM's source filter (>30 props from a single `.d.ts`) keeps only meaningful props.\n\n### Prop Quality (RCM = ground truth)\n\n| Project | RD Recall | RD Precision | RDT Recall | RDT Precision |\n|---------|-----------|--------------|------------|---------------|\n| Flowbite | 94% | 98% | 97% | 98% |\n| Reshaped | 0% | 0% | 98% | 100% |\n| Park UI | 2% | 15% | 31% | 46% |\n| Primer | 63% | 86% | 57% | 76% |\n| Mantine | 11% | 12% | 98% | 84% |\n\nDeep per-component validation: **RCM is a strict superset of both RD and RDT** on 4 out of 5 projects. On Mantine, the only gap is `.d.ts` style props (by design \u2014 in a user's project, Mantine is in `node_modules` and style props are correctly excluded). No engine ever found a prop that RCM incorrectly missed.\n\n### Performance \u2014 Cold Start (build mode)\n\n| Project | RD | RDT | **RCM** |\n|---------|-----|------|------|\n| Flowbite | 1,708ms | 1,999ms | **1,481ms** |\n| Reshaped | 729ms | 1,859ms | **1,599ms** |\n| Park UI | 812ms | **32,890ms** | 4,350ms |\n| Primer | 2,394ms | 3,540ms | 3,397ms |\n| Mantine | 5,180ms | 6,858ms | 9,387ms |\n\nCold start happens once. RCM is in the same ballpark as RDT \u2014 except Park UI where RDT takes **33 seconds** (Panda CSS types are deep + throwaway Program per file).\n\n### Performance \u2014 Dev Mode (after file edit)\n\n| Project | RD | RDT | **RCM** | **speedup vs RDT** |\n|---------|-----|------|------|------|\n| Flowbite | 1,591ms | 1,783ms | **27ms** | 66x |\n| Reshaped | 694ms | 1,449ms | **18ms** | 81x |\n| Park UI | 697ms | 40,553ms | **46ms** | **882x** |\n| Primer | 2,190ms | 2,880ms | **41ms** | 70x |\n| Mantine | 5,851ms | 8,698ms | **200ms** | 43x |\n\nRD and RDT rebuild from scratch every time. RCM's LanguageService is persistent \u2014 **18\u2013200ms after every edit** across all projects.\n\n### File Invalidation (no story touch needed)\n\n| Project | Edited file | Before | After edit | After revert |\n|---------|--------|---:|---:|---:|\n| Flowbite | `ListGroup.tsx` | 321 props | 322 (+1) \u2705 | 321 \u2705 |\n| Reshaped | `Button.types.ts` | 842 props | 843 (+1) \u2705 | 842 \u2705 |\n| Park UI | `button.tsx` | 1,021 props | 1,022 (+1) \u2705 | 1,021 \u2705 |\n| Primer | `Button/types.ts` | 1,865 props | 1,875 (+10) \u2705 | 1,865 \u2705 |\n| Mantine | `Button.tsx` | 10,292 props | 10,293 (+1) \u2705 | 10,292 \u2705 |\n\nOnly the component source file was edited \u2014 no story file touch needed. File watcher detects changes \u2192 bumps `projectVersion++` \u2192 LanguageService incrementally recompiles only affected files.\n\n## Checklist for Contributors\n\n### Testing\n\n#### The changes in this PR are covered in the following automated tests:\n\n- [ ] stories\n- [x] unit tests\n- [ ] integration tests\n- [ ] end-to-end tests\n\n### Documentation\n\n- [ ] Add or update documentation reflecting your changes\n- [ ] If you are deprecating/removing a feature, make sure to update\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\n\n## Checklist for Maintainers\n\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\n- [ ] Make sure this PR contains **one** of the labels below:\n   <details>\n     <summary>Available labels</summary>\n\n  - `bug`: Internal changes that fixes incorrect behavior.\n  - `maintenance`: User-facing maintenance tasks.\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\n  - `feature request`: Introducing a new feature.\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\n  - `other`: Changes that don't fit in the above categories.\n\n   </details>\n\n#### Manual testing\n\nTested on 5 design systems (Flowbite, Reshaped, Park UI, Primer, Mantine) with published canary. See results tables in the PR description above.\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Added optional watch mode for manifest generation with background warmup capabilities\n  * Introduced granular timing metrics for manifest generation (docgen and component metadata extraction durations)\n  * Enhanced component metadata extraction system for more comprehensive prop documentation analysis\n\n* **Improvements**\n  * Added component JSX nesting depth tracking for improved component analysis\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "kasperpeulen",
+  "merged_at": "2026-03-23T15:03:59Z",
+  "base_ref": "next",
+  "merge_commit_sha": "ca11722436e5a90751f5cc2f58f43e06e1b8100c",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "f95a174ce0608486a81fe79d0eeacada29428912",
+    "3e60442310e2ba6ce232024614265ddc29f9159c"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6q5TtE",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**`ComponentsManifest.meta.timings` is missing emitted keys.**\n\n`generator.ts` now writes `timings.reactDocgen` and `timings.reactDocgenTypescript`, but this public type omits them. That leaves consumers with an inaccurate contract.\n\n\n<details>\n<summary>\ud83e\ude79 Suggested type update</summary>\n\n```diff\n     timings?: {\n       docgen: number;\n+      reactDocgen: number;\n+      reactDocgenTypescript: number;\n       reactComponentMeta: number;\n       reactComponentMetaComponents: number;\n     };\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/types/modules/core-common.ts` around lines 375 - 379, Update\nthe public type for ComponentsManifest.meta.timings to match what's emitted by\ngenerator.ts: add the missing properties reactDocgen and reactDocgenTypescript\n(same numeric type as the other timings) to the timings object so the shape used\nin ComponentsManifest.meta reflects generator.ts output; locate the timings\ndeclaration in core-common.ts and add reactDocgen: number;\nreactDocgenTypescript: number; to the timings interface/object.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits aabca7c to 982e5a3",
+          "file_path": "code/core/src/types/modules/core-common.ts",
+          "line_number": 379,
+          "start_line": null,
+          "commit_sha": "982e5a3a8a63c099b97d438c75f4bf0d4854740b",
+          "created_at": "2026-02-28T06:49:58Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6q5TtF",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Deleted config paths can stay stale in `rootTsConfigs`.**\n\nWhen a config is deleted but no project instance exists yet, the path is never removed from `rootTsConfigs`.\n\n\n<details>\n<summary>\ud83e\ude79 Suggested fix</summary>\n\n```diff\n   onConfigChanged(configPath: string, type: 'created' | 'changed' | 'deleted') {\n     configPath = configPath.replace(/\\\\/g, '/');\n     if (type === 'created') {\n       this.rootTsConfigs.add(configPath);\n-    } else if ((type === 'changed' || type === 'deleted') && this.configProjects.has(configPath)) {\n-      if (type === 'deleted') {\n-        this.rootTsConfigs.delete(configPath);\n-      }\n+    } else if (type === 'deleted') {\n+      this.rootTsConfigs.delete(configPath);\n+      if (!this.configProjects.has(configPath)) {\n+        this.searchedDirs.clear();\n+        return;\n+      }\n+      const project = this.configProjects.get(configPath);\n+      this.configProjects.delete(configPath);\n+      project?.dispose();\n+    } else if (type === 'changed' && this.configProjects.has(configPath)) {\n       const project = this.configProjects.get(configPath);\n       this.configProjects.delete(configPath);\n       project?.dispose();\n     }\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts`\naround lines 329 - 333, The deletion branch currently only removes configPath\nfrom rootTsConfigs when a project exists (code references rootTsConfigs,\nconfigProjects, configPath), leaving deleted configs stale if no project\ninstance was present; update the logic so that when type === 'deleted' you\nalways remove the configPath from this.rootTsConfigs (and optionally from\nthis.configProjects) before proceeding \u2014 ensure the check for\nthis.configProjects.has(configPath) only gates project-specific cleanup and not\nthe rootTsConfigs deletion.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+          "line_number": 376,
+          "start_line": 372,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-02-28T06:49:58Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6sRxnv",
+          "author": "kasperpeulen",
+          "body": "Not a bug \u2014 this matches the original Volar LS pattern exactly ([source](https://github.com/volarjs/volar.js/blob/master/packages/language-server/lib/project/typescriptProject.ts)). Volar intentionally only cleans `rootTsConfigs` when a project was created for that config. If no project exists, the stale path is harmless: `searchedDirs.clear()` fires on every config change, forcing a re-scan that uses `sys.fileExists()` before adding configs.",
+          "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+          "line_number": 376,
+          "start_line": 372,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-03-05T14:29:06Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6q5TtG",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, let's examine the actual code file\ncat -n code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts | head -470 | tail -40\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1545\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's error handling around the watch call\ncat -n code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts | sed -n '320,340p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1068\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check Storybook's Node.js version requirements\ncat package.json | grep -A 5 '\"engines\"'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udf10 Web query:\n\n`Node.js fs.watch recursive option platform support and compatibility`\n\n\ud83d\udca1 Result:\n\n## `fs.watch(..., { recursive: true })` platform support\n\n- **Supported:** **macOS** and **Windows** only. ([nodejs.org](https://nodejs.org/download/release/v9.9.0/docs/api/fs.html?utm_source=openai))  \n- **Not supported:** **Linux** (and other Unix-like platforms such as BSD/SunOS/AIX). On these platforms, Node\u2019s docs explicitly call out that recursive watching is not available. ([nodejs.org](https://nodejs.org/download/release/v9.9.0/docs/api/fs.html?utm_source=openai))  \n- **What happens if you try it on an unsupported platform:** Node throws **`ERR_FEATURE_UNAVAILABLE_ON_PLATFORM`**. ([nodejs.cn](https://nodejs.cn/api/v18/fs/7.html?utm_source=openai))  \n\n## Compatibility notes (important caveats)\n\n- `fs.watch` behavior is **not fully consistent across OSes** because it depends on OS-specific backends (e.g., **inotify** on Linux, **ReadDirectoryChangesW** on Windows, **FSEvents** for directories on macOS). ([nodejs.org](https://nodejs.org/download/release/v9.9.0/docs/api/fs.html?utm_source=openai))  \n- Watching can be **unreliable or not work** on some environments like **network filesystems** or certain virtualization/shared-folder setups. ([nodejs.org](https://nodejs.org/download/release/v9.11.0/docs/api/fs.html?utm_source=openai))  \n\n## If you need recursive watching on Linux\n\n- Common approach: use a library such as **chokidar**, which implements recursive directory watching in a cross-platform way (including by creating watchers per subdirectory where needed). ([npmjs.com](https://www.npmjs.com/package/chokidar/v/3.0.0?utm_source=openai))\n\nCitations:\n\n- 1: https://nodejs.org/download/release/v9.9.0/docs/api/fs.html?utm_source=openai\n- 2: https://nodejs.org/download/release/v9.9.0/docs/api/fs.html?utm_source=openai\n- 3: https://nodejs.cn/api/v18/fs/7.html?utm_source=openai\n- 4: https://nodejs.org/download/release/v9.9.0/docs/api/fs.html?utm_source=openai\n- 5: https://nodejs.org/download/release/v9.11.0/docs/api/fs.html?utm_source=openai\n- 6: https://www.npmjs.com/package/chokidar/v/3.0.0?utm_source=openai\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the catch block to see error handling\ncat -n code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts | sed -n '454,500p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1779\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find package.json to check Node.js version requirements\nfind . -maxdepth 3 -name \"package.json\" -type f | head -5 | xargs grep -l '\"engines\"' 2>/dev/null | head -1 | xargs cat | grep -A 3 '\"engines\"'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's any error handling or logging for watch failures\nrg -A 10 'catch.*error|catch.*err' code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts | head -30\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 797\n\n---\n\n\n\n</details>\n\n**`fs.watch({ recursive: true })` silently fails on Linux; implement platform-aware fallback or explicit error handling.**\n\nThe `recursive` option is only supported on macOS and Windows. On Linux, the call throws `ERR_FEATURE_UNAVAILABLE_ON_PLATFORM`, but the catch block at line 489\u2013491 logs at DEBUG level only and returns silently. This means users on Linux will silently lose file change detection for the component manifest with no clear indication of failure. Either switch to a cross-platform library like chokidar, implement a recursive watcher fallback for unsupported platforms, or log a clear warning at INFO level when recursive watching is unavailable.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts`\naround lines 455 - 456, The code calls watch(dir, { recursive: true }, ...)\ninside ComponentMetaManager and silently returns on platforms where recursive is\nunsupported; update the watcher creation to detect\nERR_FEATURE_UNAVAILABLE_ON_PLATFORM (or platform !== 'win32' && platform !==\n'darwin'), and implement a fallback: either instantiate a cross-platform watcher\n(e.g., use chokidar) or walk the directory tree and create per-directory\nfs.watch watchers, and ensure the catch path for the watch(dir, { recursive:\ntrue }) failure logs an INFO/WARN-level message (including the error) so users\nknow recursive watching is unavailable; keep the original watcher variable name\n(watcher) and ensure cleanup logic still closes the fallback watcher(s).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+          "line_number": 495,
+          "start_line": 494,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-02-28T06:49:58Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6sR23w",
+          "author": "kasperpeulen",
+          "body": "Not an issue \u2014 `fs.watch({ recursive: true })` has been supported on Linux since Node.js v19.1.0 (backported to v18.x, see [nodejs/node#45098](https://github.com/nodejs/node/pull/45098)). Storybook requires Node 22+ (`.nvmrc`: 22.21.1), so this works on all platforms.",
+          "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+          "line_number": 495,
+          "start_line": 494,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-03-05T14:32:42Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6q5TtI",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Missing fallback to `entry.componentPath` on package-resolution miss.**\n\nWhen `resolveModuleName()` fails, extraction currently bails out even though `entry.componentPath` is already available.\n\n\n<details>\n<summary>\ud83e\ude79 Suggested fallback</summary>\n\n```diff\n         if (isPackageImport) {\n           const resolved = this.typescript.resolveModuleName(\n             entry.importId!,\n             entry.storyFilePath,\n             this.commandLine.options,\n             this.typescript.sys\n           );\n-          if (resolved.resolvedModule) {\n-            componentSourceFile = program.getSourceFile(resolved.resolvedModule.resolvedFileName);\n-          }\n+          componentSourceFile = resolved.resolvedModule\n+            ? program.getSourceFile(resolved.resolvedModule.resolvedFileName)\n+            : program.getSourceFile(entry.componentPath);\n         } else {\n           componentSourceFile = program.getSourceFile(entry.componentPath);\n         }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n        if (isPackageImport) {\n          const resolved = this.typescript.resolveModuleName(\n            entry.importId!,\n            entry.storyFilePath,\n            this.commandLine.options,\n            this.typescript.sys\n          );\n          componentSourceFile = resolved.resolvedModule\n            ? program.getSourceFile(resolved.resolvedModule.resolvedFileName)\n            : program.getSourceFile(entry.componentPath);\n        } else {\n          componentSourceFile = program.getSourceFile(entry.componentPath);\n        }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts`\naround lines 298 - 310, When isPackageImport is true and\nthis.typescript.resolveModuleName(...) returns no resolved.resolvedModule, fall\nback to loading the file by entry.componentPath instead of aborting; update the\nlogic inside the block handling isPackageImport (around resolveModuleName,\nresolved.resolvedModule, and program.getSourceFile) so that if\nresolved.resolvedModule is falsy you set componentSourceFile =\nprogram.getSourceFile(entry.componentPath) (same behavior as the else branch),\nensuring entry.importId, entry.storyFilePath, this.commandLine.options and\nthis.typescript.sys are still used for the preferred resolution but\nentry.componentPath is used as a fallback.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+          "line_number": 299,
+          "start_line": 287,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-02-28T06:49:58Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6sSGpt",
+          "author": "kasperpeulen",
+          "body": "Fixed \u2014 falls back to `entry.componentPath` when `resolveModuleName` returns nothing. The file is already ensured in the program via `ensureFiles()`, so this is safe.",
+          "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+          "line_number": 299,
+          "start_line": 287,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-03-05T14:44:02Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6q5TtM",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udf10 Web query:\n\n`TypeScript isTypeAssertionExpression API ts.isTypeAssertionExpression when added`\n\n\ud83d\udca1 Result:\n\n`ts.isTypeAssertionExpression` (Compiler API type guard) was added in **TypeScript 4.0** as part of the move away from the older `ts.isTypeAssertion` helper (which was **deprecated starting in TS 4.0** in favor of `isTypeAssertionExpression`). [1]\n\nYou can see it **does not exist yet** in the **TypeScript 3.9.0-dev** `typescript.d.ts` (no `isTypeAssertionExpression` symbol present there). [2]\n\n**Sources**  \n[1] TypeScript Wiki \u2013 API Breaking Changes (notes that `isTypeAssertion` was deprecated since TS 4.0; use `isTypeAssertionExpression`) https://github.com/microsoft/TypeScript/wiki/API-Breaking-Changes  \n[2] TypeScript 3.9.0-dev.20200404 `lib/typescript.d.ts` on UNPKG (no `isTypeAssertionExpression` found) https://app.unpkg.com/typescript@3.9.0-dev.20200404/files/lib/typescript.d.ts\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if the file exists and examine the context around lines 1409-1412\nwc -l code/renderers/react/src/componentManifest/componentMetaExtractor.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 138\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Examine the specific lines and surrounding context\nsed -n '1400,1420p' code/renderers/react/src/componentManifest/componentMetaExtractor.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 877\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check TypeScript version in package.json or tsconfig\nfind . -name \"package.json\" -o -name \"tsconfig.json\" | head -5 | xargs grep -l \"typescript\" 2>/dev/null | head -3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 161\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check TypeScript version requirement in the root package.json\ncat package.json | grep -A 2 -B 2 \"typescript\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 183\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for other usages of isTypeAssertionExpression in the codebase\nrg \"isTypeAssertionExpression\" --type ts --type tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check tsconfig to see if strict mode is enabled (mentioned in coding guidelines)\nfind . -name \"tsconfig.json\" | head -1 | xargs cat\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 155\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for other usages of isTypeAssertionExpression in the codebase\nrg \"isTypeAssertionExpression\" --type ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 187\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check for other type guard calls in the same file to compare patterns\nrg \"typescript\\.is[A-Z]\" code/renderers/react/src/componentManifest/componentMetaExtractor.ts | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1286\n\n---\n\n\n\n</details>\n\n**Remove optional chaining and fix type safety violation.**\n\nThe optional chaining on `typescript.isTypeAssertionExpression?.(node)` is unnecessary\u2014the API exists in TypeScript 4.0+ and the project requires TypeScript 5.9.3. All other type guard calls in this file (e.g., `isCallExpression`, `isAsExpression`, `isParenthesizedExpression`) use direct calls without optional chaining. Additionally, the `(node as any).expression` cast violates TypeScript strict mode, which is enabled per coding guidelines. Use proper typing: `(node as ts.TypeAssertion).expression`.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/renderers/react/src/componentManifest/componentMetaExtractor.ts` around\nlines 1409 - 1412, Remove the unnecessary optional chaining on\ntypescript.isTypeAssertionExpression and replace the unsafe cast: call\ntypescript.isTypeAssertionExpression(node) directly and pass a properly typed\nexpression to unwrapToFunctionAST by replacing (node as any).expression with\n(node as typescript.TypeAssertion).expression (or ts.TypeAssertion if the local\nalias is ts), ensuring the TypeAssertion type is imported/used consistently in\ncomponentMetaExtractor.ts.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits aabca7c to 5269c1d",
+          "file_path": "code/renderers/react/src/componentManifest/componentMetaExtractor.ts",
+          "line_number": 1673,
+          "start_line": 1670,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-02-28T06:49:58Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6q6Y-R",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Handle CSF read/parse failures per entry to avoid aborting the full manifest run.**\n\nA single `cachedReadFileSync` or `loadCsf(...).parse()` failure here currently rejects the whole `manifests()` call instead of isolating the failure to one component.\n\n\n\n<details>\n<summary>Suggested hardening</summary>\n\n```diff\n-        const storyFile = cachedReadFileSync(absoluteImportPath, 'utf-8') as string;\n-        const csf = loadCsf(storyFile, { makeTitle: () => entry.title }).parse();\n+        let storyFile: string;\n+        let csf: ReturnType<ReturnType<typeof loadCsf>['parse']>;\n+        try {\n+          storyFile = cachedReadFileSync(absoluteImportPath, 'utf-8') as string;\n+          csf = loadCsf(storyFile, { makeTitle: () => entry.title }).parse();\n+        } catch (e) {\n+          invariant(e instanceof Error);\n+          return {\n+            manifest: {\n+              id: entry.id.split('--')[0],\n+              name: entry.title.split('/').at(-1)!.replace(/\\s+/g, ''),\n+              path: storyFilePath,\n+              stories: [],\n+              import: '',\n+              jsDocTags: {},\n+              error: { name: e.name, message: `${e.message}\\n\\n${entry.importPath}` },\n+            } satisfies ReactComponentManifest,\n+          };\n+        }\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/renderers/react/src/componentManifest/generator.ts` around lines 229 -\n237, Wrap the per-entry file read and CSF parse (the logic that computes\nstoryFilePath, absoluteImportPath, storyFile = cachedReadFileSync(...), and csf\n= loadCsf(...).parse()) in a try/catch so a single failure doesn't reject the\nwhole manifests() run; on error log the entry identifier (e.g., entry.title or\nentry.importPath) and the error, skip processing that entry (do not add its data\nto the manifest output), and continue the loop. Ensure you catch both IO and\nparse errors and keep the rest of the manifest generation unchanged.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+          "line_number": 237,
+          "start_line": null,
+          "commit_sha": "982e5a3a8a63c099b97d438c75f4bf0d4854740b",
+          "created_at": "2026-02-28T12:32:50Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6sSPIM",
+          "author": "kasperpeulen",
+          "body": "Pre-existing pattern \u2014 `next` has the same unguarded `cachedReadFileSync` / `loadCsf().parse()` inside the `.map()`. This PR restructured it into a 3-step flow but didn't change the error handling behavior. Out of scope for this PR.",
+          "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+          "line_number": 237,
+          "start_line": null,
+          "commit_sha": "982e5a3a8a63c099b97d438c75f4bf0d4854740b",
+          "created_at": "2026-03-05T14:50:01Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6q6Y-W",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**`reactComponentMeta` extraction is unintentionally skipped when docgen is missing.**\n\nThe early `!hasDocgen` return does not include `componentMetaCtx`, so those entries never reach the manager extraction path, even when `component.path` is available.\n\n\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n-        const hasDocgen = component?.reactDocgen || component?.reactDocgenTypescript;\n+        const componentMetaCtx: ComponentMetaContext | undefined = component?.path\n+          ? {\n+              componentPath: component.path,\n+              importName: component.importName,\n+              importId: component.importId,\n+              storyFilePath: absoluteImportPath,\n+              memberAccess: component.member,\n+            }\n+          : undefined;\n+\n+        const hasDocgen = component?.reactDocgen || component?.reactDocgenTypescript;\n\n         if (!hasDocgen) {\n           const error = !csf._meta?.component\n             ? {\n                 name: 'No component found',\n                 message:\n                   'We could not detect the component from your story file. Specify meta.component.',\n               }\n             : {\n                 name: 'No component import found',\n                 message: `No component file found for the \"${csf.meta.component}\" component.`,\n               };\n\n           return {\n             manifest: {\n               ...base,\n               error: {\n                 name: error.name,\n                 message:\n                   (csf._metaStatementPath?.buildCodeFrameError(error.message).message ??\n                     error.message) + `\\n\\n${entry.importPath}:\\n${storyFile}`,\n               },\n             },\n+            componentMetaCtx,\n           };\n         }\n@@\n-          componentMetaCtx: component.path\n-            ? {\n-                componentPath: component.path,\n-                importName: component.importName,\n-                importId: component.importId,\n-                storyFilePath: absoluteImportPath,\n-                memberAccess: component.member,\n-              }\n-            : undefined,\n+          componentMetaCtx,\n```\n</details>\n\n\nAlso applies to: 325-333\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/renderers/react/src/componentManifest/generator.ts` around lines 271 -\n296, The early return when !hasDocgen in generator.ts is skipping extraction of\nreactComponentMeta/componentMetaCtx so entries with component.path never reach\nthe manager path; modify the block around hasDocgen (the conditional that builds\nthe error and returns a manifest) to still attach\ncomponentMetaCtx/reactComponentMeta (from component?.path or csf.meta.component)\nto the returned object when available, or avoid returning early and instead set\nan error field but continue to populate and return base.manifest with\ncomponentMetaCtx so the manager extraction (reactComponentMeta/componentMetaCtx\nlogic used elsewhere) can run; reference symbols: hasDocgen,\ncomponent?.reactDocgen, component?.reactDocgenTypescript, componentMetaCtx,\nreactComponentMeta, csf, base, entry.importPath, storyFile.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits aabca7c to 3d840a0",
+          "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+          "line_number": 296,
+          "start_line": null,
+          "commit_sha": "982e5a3a8a63c099b97d438c75f4bf0d4854740b",
+          "created_at": "2026-02-28T12:32:50Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rL14H",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check file exists and get basic info\nwc -l code/renderers/react/src/componentManifest/generator.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 129\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look at the specific lines mentioned in the review (20-21, 291-292, 532-533, 644-645)\nsed -n '15,25p' code/renderers/react/src/componentManifest/generator.test.ts\necho \"---\"\nsed -n '286,296p' code/renderers/react/src/componentManifest/generator.test.ts\necho \"---\"\nsed -n '527,537p' code/renderers/react/src/componentManifest/generator.test.ts\necho \"---\"\nsed -n '639,649p' code/renderers/react/src/componentManifest/generator.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1819\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find the manifests function signature\nrg -n \"export.*manifests\" code/renderers/react/src/componentManifest/ -A 5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 695\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check for tsconfig.json to verify strict mode\nfind code/renderers/react -name \"tsconfig*.json\" -exec cat {} \\; | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 252\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check parent tsconfig.json for strict mode setting\ncat code/renderers/react/../../tsconfig.json | grep -A 20 \"strict\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 235\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check what's imported in the test file to understand type availability\nhead -30 code/renderers/react/src/componentManifest/generator.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1122\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look at the manifests function full signature and return type\nsed -n '188,210p' code/renderers/react/src/componentManifest/generator.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 987\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Verify the test can import IndexEntry type if needed\nrg -n \"IndexEntry\" code/renderers/react/src/componentManifest/generator.test.ts | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Double-check all 4 line numbers are correct\nrg -n \"as any\" code/renderers/react/src/componentManifest/generator.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 371\n\n---\n\n\n\n</details>\n\n**Replace `as any` casts with a typed test helper to enforce strict-mode compliance.**\n\nLines 21, 292, 533, and 645 use `as any` to cast options to the `manifests` function. This violates TypeScript strict mode (enabled in the project's tsconfig.json) and can hide API drift. Consolidate these four identical calls into a single typed helper.\n\n<details>\n<summary>\ud83d\udca1 Suggested refactor</summary>\n\n```diff\n+type ManifestsOptions = NonNullable<Parameters<typeof manifests>[1]>;\n+\n+const runManifests = (manifestEntries: ManifestsOptions['manifestEntries']) =>\n+  manifests(undefined, { manifestEntries } as ManifestsOptions);\n+\n test('manifests generates correct id, name, description and examples ', async () => {\n   const manifestEntries = Object.values(indexJson.entries).filter(\n     (entry) => entry.tags?.includes(Tag.MANIFEST) ?? false\n   );\n-  // eslint-disable-next-line `@typescript-eslint/no-explicit-any`\n-  const result = await manifests(undefined, { manifestEntries } as any);\n+  const result = await runManifests(manifestEntries);\n```\n\nApply the same replacement at lines 292, 533, and 645.\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/renderers/react/src/componentManifest/generator.test.ts` around lines 20\n- 21, The tests call manifests(..., { manifestEntries } as any) which bypasses\nTypeScript strictness; add a typed test helper in generator.test.ts (e.g., a\nfunction like typedManifestOptions<T extends ManifestOptions>(opts: Partial<T>):\nT) that narrows the options shape, then replace the four instances of casting to\nany (the calls to manifests with { manifestEntries } as any) to use this helper\n(pass the same object through typedManifestOptions) so the calls remain strongly\ntyped against the manifests function signature.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits aabca7c to 5269c1d",
+          "file_path": "code/renderers/react/src/componentManifest/generator.test.ts",
+          "line_number": 21,
+          "start_line": null,
+          "commit_sha": "30aec66abcf13bceb843ee47eb59145e722acda1",
+          "created_at": "2026-03-02T11:50:52Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rL8oa",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Default extraction is over-broad for body destructuring.**\n\nBoth paths collect defaults from any object destructuring in the function body, even when unrelated to `props`. This can leak unrelated defaults into prop docs.\n\n\n\n<details>\n<summary>\ud83d\udca1 Narrow collection to props-derived destructuring</summary>\n\n```diff\n-        for (const varDecl of stmt.declarationList.declarations) {\n-          if (typescript.isObjectBindingPattern(varDecl.name) && varDecl.initializer) {\n-            collectBindingDefaults(typescript, varDecl.name, defaults, checker);\n-          }\n-        }\n+        for (const varDecl of stmt.declarationList.declarations) {\n+          if (!typescript.isObjectBindingPattern(varDecl.name) || !varDecl.initializer) {\n+            continue;\n+          }\n+          const init = varDecl.initializer;\n+          const firstParamName =\n+            typescript.isIdentifier(firstParam.name) ? firstParam.name.text : undefined;\n+          const fromProps =\n+            firstParamName &&\n+            ((typescript.isIdentifier(init) && init.text === firstParamName) ||\n+              (typescript.isCallExpression(init) &&\n+                init.arguments.some(\n+                  (a) => typescript.isIdentifier(a) && a.text === firstParamName\n+                )));\n+          if (fromProps) {\n+            collectBindingDefaults(typescript, varDecl.name, defaults, checker);\n+          }\n+        }\n```\n</details>\n\n\nAlso applies to: 1281-1291\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/renderers/react/src/componentManifest/componentMetaExtractor.ts` around\nlines 755 - 767, The body-level destructuring currently collects defaults from\nany object binding pattern; restrict this so collectBindingDefaults is only\ninvoked for destructuring tied to props: check varDecl.initializer and only\nproceed if it's an Identifier named \"props\" or a CallExpression that either\ncalls \"resolveProps\" (initializer.expression is Identifier \"resolveProps\") or\nwhose first argument is the Identifier \"props\"; otherwise skip calling\ncollectBindingDefaults. This change affects the loop that examines\nstmt.declarationList.declarations in componentMetaExtractor.ts and ensures\ncollectBindingDefaults is only run for props-derived initializers.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/componentMetaExtractor.ts",
+          "line_number": 950,
+          "start_line": 934,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-03-02T11:56:58Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6sSVAI",
+          "author": "kasperpeulen",
+          "body": "Not a real issue \u2014 `serializePropItem` only looks up defaults by prop name from the resolved type's properties (`defaultsMap?.get(propName)` at line 857). Unrelated destructuring defaults (e.g. `const { timeout = 1000 } = config`) get collected into the map but are never looked up because `timeout` isn't in the component's Props type. Verified with a test: the unrelated defaults don't leak into the output.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMetaExtractor.ts",
+          "line_number": 950,
+          "start_line": 934,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-03-05T14:53:55Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rL8og",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**`computeDisplayName` is not Windows-safe.**\n\nUsing `fileName.split('/')` fails for `\\` paths, so default-export display names can be wrong on Windows.\n\n\n\n<details>\n<summary>\ud83d\udca1 Proposed fix</summary>\n\n```diff\n-    const fileName = sourceFile.fileName;\n-    const parts = fileName.split('/');\n+    const fileName = sourceFile.fileName.replace(/\\\\/g, '/');\n+    const parts = fileName.split('/');\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/renderers/react/src/componentManifest/componentMetaExtractor.ts` around\nlines 1037 - 1042, computeDisplayName (in componentMetaExtractor.ts) breaks on\nWindows because it uses fileName.split('/') to parse paths; replace that logic\nwith Node's path utilities: import path from 'path' (or require) and use\npath.basename(fileName) to get the file base (strip extension with the existing\nregex), and when base === 'index' use path.basename(path.dirname(fileName)) to\nget the parent directory name; update the code that sets base (and remove the\nmanual split/pop logic) so it works on both POSIX and Windows; ensure the import\nis added if not present.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/componentMetaExtractor.ts",
+          "line_number": 1042,
+          "start_line": null,
+          "commit_sha": "9d27a0fe115895b1a154a736a3ced1f8c9434037",
+          "created_at": "2026-03-02T11:56:58Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6sSVvB",
+          "author": "kasperpeulen",
+          "body": "Not an issue \u2014 `ts.SourceFile.fileName` always uses forward slashes, even on Windows. TypeScript normalizes all paths internally. `fileName.split(/\\)`  is safe.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMetaExtractor.ts",
+          "line_number": 1042,
+          "start_line": null,
+          "commit_sha": "9d27a0fe115895b1a154a736a3ced1f8c9434037",
+          "created_at": "2026-03-05T14:54:25Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rL8oh",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Use only the terminal member segment for `member`.**\n\n`mem = c.slice(dot + 1)` turns `<Accordion.Item.Root />` into `member: \"Item.Root\"`, but downstream expects a single member token and import emission may attempt invalid identifiers from dotted strings.\n\n\n\n<details>\n<summary>\ud83d\udca1 Proposed fix</summary>\n\n```diff\n-      const dot = c.indexOf('.');\n-      if (dot !== -1) {\n-        const ns = c.slice(0, dot);\n-        const mem = c.slice(dot + 1);\n+      const dot = c.indexOf('.');\n+      if (dot !== -1) {\n+        const ns = c.slice(0, dot);\n+        const mem = c.split('.').pop()!;\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n      if (dot !== -1) {\n        const ns = c.slice(0, dot);\n        const mem = c.split('.').pop()!;\n        const direct = localToImport.get(ns);\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/renderers/react/src/componentManifest/getComponentImports.ts` around\nlines 211 - 214, The code currently computes member as mem = c.slice(dot + 1)\nusing the first dot position, producing dotted member strings like \"Item.Root\";\nupdate the logic in getComponentImports so the member token is only the terminal\nsegment (e.g., \"Root\") by using the last dot position or splitting on '.' and\ntaking the last element before using localToImport and import emission (refer to\nvariables c, dot, ns, mem and the localToImport lookup).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/getComponentImports.ts",
+          "line_number": 214,
+          "start_line": null,
+          "commit_sha": "566935e2494e590d9b4251f664cc98ed181a5e21",
+          "created_at": "2026-03-02T11:56:58Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6sSaDB",
+          "author": "kasperpeulen",
+          "body": "Only a real issue for 3+ level compound components (`<Accordion.Item.Root />`), which basically never occur in practice. The common 2-level pattern (`<Accordion.Root />`) works correctly since `c.slice(dot + 1)` gives `\"Root\"` \u2014 exactly the terminal segment.\n\nFor the Path 2 fallback (`resolveFromMetaComponent`), `componentType.getProperty(memberAccess)` would also need chaining for 3+ levels. Not worth the complexity for a pattern that doesn't exist in real design systems.\n\nAlso, the same `c.slice(dot + 1)` pattern exists on `next` \u2014 this PR just added `memberAccess` consumption but didn't change how `member` is computed.",
+          "file_path": "code/renderers/react/src/componentManifest/getComponentImports.ts",
+          "line_number": 214,
+          "start_line": null,
+          "commit_sha": "566935e2494e590d9b4251f664cc98ed181a5e21",
+          "created_at": "2026-03-05T14:57:07Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rL8ot",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Keep executable assertions for unsupported RDT patterns instead of comment-only coverage.**\n\nReplacing these cases with comments removes regression protection in this suite. Please keep a compact assertion (e.g., table-driven) that these fixtures currently return `[]`.\n\n\n\n<details>\n<summary>\ud83e\uddea Suggested test replacement</summary>\n\n```diff\n-  // DtsComponent, ForwardRef, RenamedExport, DisplayNameOverride, Barrel \u2014\n-  // RDT returns [] for all of these. These patterns are covered by RPT tests instead.\n+  test.each([\n+    'DtsComponent.ts',\n+    'ForwardRef.ts',\n+    'RenamedExport.ts',\n+    'DisplayNameOverride.ts',\n+    'Barrel.ts',\n+  ])('%s returns empty result in RDT', (file) => {\n+    expect(normalize(parseWithReactDocgenTypescript(fixture(file)))).toMatchInlineSnapshot(`[]`);\n+  });\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  test.each([\n    'DtsComponent.ts',\n    'ForwardRef.ts',\n    'RenamedExport.ts',\n    'DisplayNameOverride.ts',\n    'Barrel.ts',\n  ])('%s returns empty result in RDT', (file) => {\n    expect(normalize(parseWithReactDocgenTypescript(fixture(file)))).toMatchInlineSnapshot(`[]`);\n  });\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/renderers/react/src/componentManifest/reactDocgenTypescript.test.ts`\naround lines 1211 - 1212, Replace the comment-only coverage for the RDT edge\ncases with a compact, executable table-driven assertion in\nreactDocgenTypescript.test.ts that iterates the fixtures named DtsComponent,\nForwardRef, RenamedExport, DisplayNameOverride, and Barrel and asserts the\nparser/RDT call returns [] for each; locate the test block currently containing\nthat comment, create an array of those fixture names and loop (or use a\nparameterized/test.each) to call the same function used elsewhere in this file\nto parse each fixture and expect the result toEqual([]), keeping the assertion\nminimal and consistent with surrounding test helpers.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits aabca7c to 2d691cd",
+          "file_path": "code/renderers/react/src/componentManifest/reactDocgenTypescript.test.ts",
+          "line_number": 1212,
+          "start_line": null,
+          "commit_sha": "6ee61a9b212aa3fb1432824047365b37d62e1d9e",
+          "created_at": "2026-03-02T11:56:59Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rm7Ev",
+          "author": "kasperpeulen",
+          "body": "This should only warmup the language service, not the complete call.... and only when rcm is enabled",
+          "file_path": "code/core/src/core-server/utils/manifests/manifests.ts",
+          "line_number": 62,
+          "start_line": null,
+          "commit_sha": "a352cee90aacf7a07f7a61eb52e93a0fd7657d83",
+          "created_at": "2026-03-03T15:57:38Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rm87S",
+          "author": "kasperpeulen",
+          "body": "This is horrible",
+          "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.test.ts",
+          "line_number": 16,
+          "start_line": null,
+          "commit_sha": "d036b8cc219b6caaf9947ef645a34b919314a400",
+          "created_at": "2026-03-03T15:59:00Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6sSef5",
+          "author": "kasperpeulen",
+          "body": "Can't use memfs here \u2014 `ComponentMetaProject` passes `typescript.sys` directly into Volar's `createLanguageServiceHost`, and the TS LanguageService needs to resolve real `@types/react`, `lib.d.ts` etc. from `node_modules`. That's why fixtures live under the monorepo root (so module resolution walks up and finds them).\n\nThe `../../../../..` is fragile though. Alternatives:\n- Use `os.tmpdir()` + explicit `typeRoots` pointing at monorepo's `node_modules/@types` in the test tsconfig\n- Use a `findUp` to locate the monorepo root instead of counting `..`\n- Inject a custom `sys` that overlays memfs on real fs (memfs for test files, real fs fallback for node_modules) \u2014 bigger refactor",
+          "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.test.ts",
+          "line_number": 16,
+          "start_line": null,
+          "commit_sha": "d036b8cc219b6caaf9947ef645a34b919314a400",
+          "created_at": "2026-03-05T14:59:54Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rm9ni",
+          "author": "kasperpeulen",
+          "body": "what's up with all the sys",
+          "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.test.ts",
+          "line_number": 21,
+          "start_line": null,
+          "commit_sha": "d036b8cc219b6caaf9947ef645a34b919314a400",
+          "created_at": "2026-03-03T15:59:35Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6sSiXi",
+          "author": "kasperpeulen",
+          "body": "The react renderer's vitest setup mocks `node:fs` with memfs. Using `fs.mkdirSync` etc. here would write to the in-memory filesystem, which TypeScript's LanguageService can't see \u2014 `ts.sys` captured the real `fs` at import time before mocks were applied. So all test file I/O goes through `ts.sys` to stay on the real filesystem.\n\n(Same explanation as in `ComponentMetaProject.test.ts` line 16-18, but the comment is missing here \u2014 should add it.)",
+          "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.test.ts",
+          "line_number": 21,
+          "start_line": null,
+          "commit_sha": "d036b8cc219b6caaf9947ef645a34b919314a400",
+          "created_at": "2026-03-05T15:02:34Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rm-PV",
+          "author": "kasperpeulen",
+          "body": "story files are needed for path 2",
+          "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.test.ts",
+          "line_number": 61,
+          "start_line": null,
+          "commit_sha": "6da19a1f4f7675c52eebe830b016fff4ab1400b5",
+          "created_at": "2026-03-03T16:00:02Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6sSkse",
+          "author": "kasperpeulen",
+          "body": "You're right \u2014 `storyFilePath` is actively used by `extractPropsFromStories`: it's added to the TS program via `ensureFiles`, parsed with `getSourceFile`, and used as module resolution context for package imports. The docstring \"no story file needed\" is wrong.\n\nIn this test helper it works because `storyFilePath: componentPath` \u2014 the component file doubles as the story file. But the comment should say that, not claim story files aren't needed.",
+          "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.test.ts",
+          "line_number": 61,
+          "start_line": null,
+          "commit_sha": "6da19a1f4f7675c52eebe830b016fff4ab1400b5",
+          "created_at": "2026-03-05T15:04:16Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6vLsW7",
+          "author": "JReinhold",
+          "body": "can these be devDependencies?",
+          "file_path": "code/renderers/react/package.json",
+          "line_number": 58,
+          "start_line": null,
+          "commit_sha": "168e04db03897f61fa9301bf9ca4708f8fb8edcb",
+          "created_at": "2026-03-16T09:18:17Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6vv05l",
+          "author": "kasperpeulen",
+          "body": "Already done in aac5d2b \u2014 moved @volar/language-core and @volar/typescript to devDependencies so they get bundled by esbuild.",
+          "file_path": "code/renderers/react/package.json",
+          "line_number": 58,
+          "start_line": null,
+          "commit_sha": "168e04db03897f61fa9301bf9ca4708f8fb8edcb",
+          "created_at": "2026-03-17T17:52:08Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6vMF1T",
+          "author": "JReinhold",
+          "body": "there is probably an optimisation shortcut here, where if `cur.jsxDepth` is 0 (or 1?), then just select that and don't continue searching any further. but that would also require to use for-of instead of reduce.",
+          "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+          "line_number": 132,
+          "start_line": null,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-03-16T09:37:23Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6vv1Sm",
+          "author": "kasperpeulen",
+          "body": "Good call \u2014 already implemented this. The current code uses `for...of` and short-circuits on `jsxDepth === 0`:\n\n```ts\nlet best = matches[0];\nfor (const cur of matches) {\n  if (cur.jsxDepth === 0) {\n    return cur; // can't get shallower, pick immediately\n  }\n  if ((cur.jsxDepth ?? Infinity) < (best.jsxDepth ?? Infinity)) {\n    best = cur;\n  }\n}\n```",
+          "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+          "line_number": 132,
+          "start_line": null,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-03-17T17:52:24Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6vMbQF",
+          "author": "JReinhold",
+          "body": "now that we require Node 20, we can use import attributes to import JSON files instead of readFile+parse. It also has the added benefit that it's cached internally by Node.\n\nhttps://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import/with\n\n\n```suggestion\n    const { default: parsed } = await import(nearestPkg, { with: { type: 'json' } });\n```",
+          "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+          "line_number": 154,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-16T09:52:25Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6vv1iP",
+          "author": "kasperpeulen",
+          "body": "Good idea in principle, but I'll keep `cachedReadTextFileSync` here for now \u2014 it's part of the per-generation cache that gets invalidated via `invalidateCache()` at the start of each manifest run. Node's `import()` module cache persists across calls and doesn't get invalidated, which could serve stale data in watch mode when a user changes their package.json.\n\nCould revisit this as a follow-up if we add explicit cache-busting (e.g. query string trick), but for now the sync read + JSON.parse is simpler and correct.",
+          "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+          "line_number": 154,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-17T17:52:34Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6vMoYR",
+          "author": "JReinhold",
+          "body": "this dot-thing deserves a comment, I don't really understand it.",
+          "file_path": "code/renderers/react/src/componentManifest/getComponentImports.ts",
+          "line_number": 209,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-16T10:02:04Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6vv1-q",
+          "author": "kasperpeulen",
+          "body": "Added a more detailed comment in ce712ba explaining the three cases:\n\n```ts\n// Split compound component names (e.g. \"Accordion.Root\") on the first dot to separate\n// the namespace/import binding (\"Accordion\") from the accessed member (\"Root\").\n//\n// Three cases for compound names (dot !== -1):\n//   1. No import found for the namespace  \u2192 keep componentName + member, no import metadata\n//   2. Namespace import (`import * as Ns`) \u2192 importName = member (the actual export name)\n//   3. Named import (`import { Accordion }`) \u2192 importName = original export, member carried separately\n//\n// Simple names (dot === -1) just look up the import binding directly.\n```",
+          "file_path": "code/renderers/react/src/componentManifest/getComponentImports.ts",
+          "line_number": 209,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-17T17:52:55Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6vMzso",
+          "author": "JReinhold",
+          "body": "\"prevent walking to filesystem root\" doesn't really happen here. If that is a real problem, then we should have an explicit check for fs root. a max depth of 10 could still easily get to the fs root in many environments.",
+          "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+          "line_number": 435,
+          "start_line": null,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-03-16T10:10:04Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6vv7OX",
+          "author": "kasperpeulen",
+          "body": "Removed \u2014 the depth guard was replaced with proper boundary detection (stops at package.json/tsconfig.json).",
+          "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+          "line_number": 435,
+          "start_line": null,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-03-17T17:56:55Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6vNH32",
+          "author": "JReinhold",
+          "body": "nit: `memberAccess` is unused\n```suggestion\n```",
+          "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+          "line_number": 285,
+          "start_line": null,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-03-16T10:25:42Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6vv7gl",
+          "author": "kasperpeulen",
+          "body": "`memberAccess` is used on line 429-430 \u2014 it accesses the sub-component property from compound components like `Accordion.Root`:\n```ts\nif (memberAccess) {\n  const prop = componentType.getProperty(memberAccess);\n```",
+          "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+          "line_number": 285,
+          "start_line": null,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-03-17T17:57:05Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6vQsxs",
+          "author": "JReinhold",
+          "body": "The readability of this file is not amazing, because the input is separated from the assertions. The tests references the long list of files, and so to actually verify if the test is doing the right thing, you have to search for the file name and then scroll back and forth to get a sense of the test being right or not.\n\nIf possible, I'd perfer if the file-input could be seen directly in each test. Maybe some files are used multiple times, and that makes it hard?\n\nAn alternative could be that the `TEST_FILES` record becomes a record of file-name -> file-content + expected output? and then use `it.each` to go through all of them? but maybe that's super cumbersome to maintain too?\n\nMy main concern here, is that the implementation in `componentMetaExtractor.ts` is _massive_, and impossible for me or anyone to get an actual understanding of (could also be me that's stupid). And so my thinking was _\"well at least I can look at the tests, and see if the input-output is good\"_, but I can't even do _that_ in its current structure, which turns all of this into a black box.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMetaExtractor.checker.test.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-03-16T13:29:07Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6vv78n",
+          "author": "kasperpeulen",
+          "body": "Addressed \u2014 the tests have been completely restructured across the last few commits. The old monolithic test file is now split into focused files by concern (props, detection, defaults, displayName, parentTracking, QA), each with describe blocks and consistent naming. The `extract()` and `extractFromStory()` helpers keep input and assertion together in each test.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMetaExtractor.checker.test.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-03-17T17:57:21Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6vQvEI",
+          "author": "JReinhold",
+          "body": "nit: remove `.checker.` from the file name",
+          "file_path": "code/renderers/react/src/componentManifest/componentMetaExtractor.checker.test.ts",
+          "line_number": 2,
+          "start_line": null,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-03-16T13:30:47Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6vv8Kk",
+          "author": "kasperpeulen",
+          "body": "Done \u2014 the `.checker.` was removed from the file name and the tests are now in `componentMeta/componentMetaExtractor.*.test.ts`.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMetaExtractor.checker.test.ts",
+          "line_number": 2,
+          "start_line": null,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-03-17T17:57:28Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6vQv8W",
+          "author": "JReinhold",
+          "body": "nits:\n\n1. why is this directory called `checker`? Isn't this the actual `react-component-meta`?\n2. I feel like this `index` file is very unnecessary.",
+          "file_path": "code/renderers/react/src/componentManifest/checker/index.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-03-16T13:31:25Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6vv8kB",
+          "author": "kasperpeulen",
+          "body": "Both addressed:\n\n1. Directory renamed from `checker/` to `componentMeta/` \u2014 it now lives at `componentManifest/componentMeta/`.\n2. The `index.ts` barrel file has been removed.",
+          "file_path": "code/renderers/react/src/componentManifest/checker/index.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "99252dfdc887f945bed67acf0d55081df760fb57",
+          "created_at": "2026-03-17T17:57:41Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6wA9r4",
+          "author": "JReinhold",
+          "body": "why is this cjs? \ud83e\udd2e",
+          "file_path": "code/renderers/react/__mocks__/fs/promises.cjs",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-18T12:15:45Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6wZ9r7",
+          "author": "kasperpeulen",
+          "body": "This is basically straight from the Vitest `memfs` docs. They explicitly show `__mocks__/fs.cjs` and `__mocks__/fs/promises.cjs`, and mention that ESM works too, but then you have to explicitly re-export everything you need.\n\nSo instead of this:\n\n```js\nconst { fs } = require(\"memfs\");\nmodule.exports = fs.promises;\n```\n\nyou end up with something more like:\n\n```js\nimport { fs } from \"memfs\";\n\nexport const readFile = fs.promises.readFile.bind(fs.promises);\nexport const writeFile = fs.promises.writeFile.bind(fs.promises);\nexport const mkdir = fs.promises.mkdir.bind(fs.promises);\nexport const readdir = fs.promises.readdir.bind(fs.promises);\nexport default fs.promises;\n```\n\nThat's doable, just more annoying and easier to miss exports as tests evolve. So I kept the CJS version here mostly because it's the simplest way to mirror the full `memfs` API shape.\n\nVitest docs: https://vitest.dev/guide/mocking/file-system",
+          "file_path": "code/renderers/react/__mocks__/fs/promises.cjs",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-19T12:02:46Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6wBA-d",
+          "author": "JReinhold",
+          "body": "Are we sure we want this? It's just surprising to me that a component's API docs are defined by logic it does internally, but I also can't pinpoint exactly why it's bad. Maybe I'm just worried that it's brittle.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.defaultValue.test.ts",
+          "line_number": 87,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-18T12:18:19Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6waHML",
+          "author": "kasperpeulen",
+          "body": "This is mainly meant to handle common \"props-derived destructuring\" cases, for example:\n\n```ts\nconst { color = 'info' } = props;\nconst { color = 'info' } = props ?? {};\nconst { color = 'info' } = props ?? fallback;\nconst { color = 'info' } = resolveProps(props);\n```\n\nThe goal here isn\u2019t to make arbitrary helper logic define the docs. The default still comes from the destructuring pattern written in the component itself, not from inspecting the helper implementation.\n\nI intentionally made the check a bit broader around \"expression depends on props\" rather than trying to hardcode a few specific syntactic patterns. In practice that\u2019s simpler and more robust than maintaining a narrow allowlist of forms we think are valid.\n\nI also think it\u2019s relatively unlikely to break in a harmful way, because the initializer still has to be props-derived for us to consider it at all. So this is meant as a pragmatic heuristic for common real-world component code, not as a perfect semantic proof.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.defaultValue.test.ts",
+          "line_number": 87,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-19T12:11:14Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6wBCLp",
+          "author": "JReinhold",
+          "body": "why is this a specific case?",
+          "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.defaultValue.test.ts",
+          "line_number": 210,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-18T12:19:12Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6wagB8",
+          "author": "kasperpeulen",
+          "body": "Good point. It doesn\u2019t really need to be a special implementation case.\n\nI just changed the extractor so `-100` / `-1` now work through the generic fallback (`node.getText()`) instead of a dedicated `PrefixUnaryExpression` branch.\n\nI kept the test because negative numbers are still a different AST shape than plain numeric literals, so they\u2019re easy to accidentally regress even if the implementation stays generic. So the test is specific, but the code no longer is.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.defaultValue.test.ts",
+          "line_number": 210,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-19T12:31:32Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6wBFf0",
+          "author": "JReinhold",
+          "body": "Wouldn't it make more sense and be more correct for unset default values just to be either `label: { defaultValue: undefined }` or `label: {}`? Then the `null` default value would just be `label: { defaultValue: null }`.\n\n(I'm not sure why `defaultValue` is an object with `value` vs just being the value directly, is it do allow for comments/descriptions too?)",
+          "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.defaultValue.test.ts",
+          "line_number": 227,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-18T12:21:47Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6wap61",
+          "author": "kasperpeulen",
+          "body": "Yeah, I agree this API shape is a bit awkward.\n\nThe main reason it looks like this is that Claude kept it aligned with the existing RDT API, which I think is fine for now for compatibility.\n\nIn practice that means `defaultValue` is treated as \u201cserialized source text if present, otherwise null\u201d, so:\n\n- no default found -> `defaultValue: null`\n- `= 'hello'` -> `defaultValue: { value: \"'hello'\" }`\n- `= null` -> `defaultValue: { value: 'null' }`\n- `= { a: 1 }` -> `defaultValue: { value: '{ a: 1 }' }`\n\nI don\u2019t think this is the ideal long-term shape if we were designing it fresh. At some point it would probably make sense to unify this with some more standard/default-value schema instead of inheriting the RDT compatibility shape. But for this PR, keeping the same API felt like the safer tradeoff.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.defaultValue.test.ts",
+          "line_number": 227,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-19T12:39:37Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6wBHQq",
+          "author": "JReinhold",
+          "body": "(maybe this is already there in the implementation but) I think there should be a comment somewhere outlining the priority of default value extraction.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.defaultValue.test.ts",
+          "line_number": 343,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-18T12:23:13Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6wasas",
+          "author": "kasperpeulen",
+          "body": "Good point. I added a short comment in the test file to make that precedence explicit:\n\n```ts\n// Default precedence is intentional: destructuring > defaultProps > JSDoc.\n```\n\nSo the intended order here is:\n\n- destructuring defaults\n- `defaultProps`\n- JSDoc fallback tags (`@default` / `@defaultValue`)\n\nand the tests below are meant to pin that behavior.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.defaultValue.test.ts",
+          "line_number": 343,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-19T12:41:41Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6wBRWH",
+          "author": "JReinhold",
+          "body": "I would think we wanted it to be the other way around?\n\nImagine this case:\n\n```\n// my.stories.js\n\nimport PureButton from './Button.jsx';\n```\n\nWouldn't we want that to be called `Button` and not `PureButton`? Not sure.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.displayName.test.ts",
+          "line_number": 65,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-18T12:30:23Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6wBTup",
+          "author": "JReinhold",
+          "body": "But I also realize that if we base the component name on the file name we run into issues with file name casing like `my-button.tsx`.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.displayName.test.ts",
+          "line_number": 65,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-18T12:32:17Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6wcoIG",
+          "author": "kasperpeulen",
+          "body": "I think the current behavior is safer, but only for truly anonymous default exports.\r\n\r\nFor named exports / named default variables we already use the real source symbol name. This only applies when the component is actually anonymous, so there isn\u2019t really a canonical source name to preserve.\r\n\r\nIn that case, using the story import alias felt safer than inventing a name from the file path. But open to changing it in the future.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.displayName.test.ts",
+          "line_number": 65,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-19T14:04:05Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6wBYtf",
+          "author": "JReinhold",
+          "body": "Don't we want this to be the actual low-level types (colors and spacing) instead of just `Theme`? The `Theme` string isn't that valuable to human or agents as docs, unless it is also defined somewhere else.\n\nOr maybe there is a `raw` property too that is just not asserted on here.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.props.test.ts",
+          "line_number": 94,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-18T12:36:22Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6wdWjw",
+          "author": "kasperpeulen",
+          "body": "You\u2019re right to call this out.\n\nFor top-level component props we already do the \u201csmart\u201d part: intersections get flattened into individual props, we track `parent` / `declarations`, and that\u2019s what powers the bulk `.d.ts` / `node_modules` filtering.\n\nBut for a nested prop type like:\n\n```ts\ntheme: Theme\n```\n\nwe currently keep the alias name instead of recursively expanding it into `{ colors: ..., spacing: ... }`. I also checked RDT, and it does the same thing here, so there isn\u2019t a hidden richer shape we\u2019re failing to expose in this case.\n\nSo I think this is okay for now, but expanding nested object-ish prop types would be a good follow-up improvement later.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.props.test.ts",
+          "line_number": 94,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-19T14:32:21Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6wBhNO",
+          "author": "JReinhold",
+          "body": "Don't you think as a follow up to this, that we want to have some form of \"extends\" pattern here? right now we're saying _\"Button doesn't take in any other props\"_, but maybe in the near future we can expand that with something like `extends: 'React.ButtonHTMLAttributes<HTMLButtonElement>` in the output. I understand that isn't self-contained so it doesn't work in all use cases of people consuming this information, but at least agents would understand it perfectly fine.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.props.test.ts",
+          "line_number": 552,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-18T12:42:43Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6weKx_",
+          "author": "kasperpeulen",
+          "body": "I think this is a good direction, but it\u2019s not as straightforward as it first looks.\n\nProps can come in through `extends`, intersections, unions, utility types, and those chains can be several levels deep. The filtered props also often point at lower-level internal React types (`HTMLAttributes`, `DOMAttributes`, etc.), not necessarily the exact top-level type reference the user wrote.\n\nSo there\u2019s definitely room to improve this later, but I don\u2019t think there\u2019s a trivial \u201cif props were filtered, just use that name for `extends`\u201d rule that will be reliably correct across real-world cases.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.props.test.ts",
+          "line_number": 552,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-19T15:06:22Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6wBl08",
+          "author": "JReinhold",
+          "body": "what about JSDoc tags?",
+          "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.props.test.ts",
+          "line_number": 715,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-18T12:46:20Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6weZB0",
+          "author": "kasperpeulen",
+          "body": "Not yet implemented, I would say for another revision.",
+          "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.props.test.ts",
+          "line_number": 715,
+          "start_line": null,
+          "commit_sha": "3e60442310e2ba6ce232024614265ddc29f9159c",
+          "created_at": "2026-03-19T15:15:27Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 34
+}

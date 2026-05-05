@@ -1,0 +1,98 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 3,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Uses `node:path` instead of `pathe`. The rest of this module\u2014and every other file in the change-detection directory\u2014imports `join`/`relative`/`dirname` from `pathe` (the project's cross-platform path utility that always produces forward-slash separators). `node:path` on Windows returns backslash-separated strings; since git always outputs forward-slash paths, comparisons such as `join(repoRoot, '.git')` would produce a path that mismatches git output. Replace with `import { dirname, join, resolve as resolvePath } from 'pathe'`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 135,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`void this.configureBranchWatcher(gitDir, generation)` silently discards any rejection. `configureBranchWatcher` can throw when `readHeadRef` surfaces a non-ENOENT error (e.g., `EACCES` or `EISDIR`) or when `watchFile` receives a non-ENOENT filesystem error\u2014both rethrow rather than returning `undefined`. Using `void` here means those errors become unhandled Promise rejections in Node.js. The same pattern recurs at the two `void this.configureBranchWatcher` sites inside `configureBranchWatcher` itself (the branch-watcher callbacks). The prior implementation handled this explicitly with a `.catch()` that logged a warning and called `stopWatching()`. Add a `.catch()` that at minimum logs via `logger.warn` and tears down watchers, mirroring the safety net the old `reconfigureBranchWatcher` helper provided.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 142,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `catch` block in `setupWatchers` is completely empty\u2014it swallows all errors silently. Per the project's coding guidelines, `catch` blocks must not silently swallow errors; at minimum, log at debug level using `logger.debug` from `storybook/internal/node-logger`. The comment explains *why* errors are tolerated here, but it provides zero diagnostic signal when something unexpected goes wrong during setup (e.g., a permissions error on the git repo root). Consider: `catch (error) { logger.debug('Change detection git watcher setup failed:', error); }`.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 177,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The watcher `'error'` handler calls `scheduleWatcherRebuild()` but never logs anything. The previous `attachWatcher` implementation emitted `logger.warn(\\`Change detection git watcher failed for ${filePath}. Git state updates may stop until restart.\\`)`. Silently scheduling a rebuild with no diagnostic output makes it impossible for users or operators to know that watcher errors occurred or that the feature may be running in a degraded state. Add a `logger.warn` or `logger.debug` call before `scheduleWatcherRebuild()`.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.test.ts",
+      "line_number": 3,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`FSWatcher` (line 1) and `watch` (line 3) are both imported from `'node:fs'` in separate `import type` statements. These should be merged into a single declaration: `import type { FSWatcher, watch } from 'node:fs';`.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.test.ts",
+      "line_number": 110,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`mockReadFile` is exposed in the `GitDiffProviderTestContext` return value but is never accessed by any of the test cases added in this PR. Dead API surface on the context object adds noise and can mislead readers into thinking it should be used. Either remove it from the returned object (and the `GitDiffProviderTestContext` type) or actually use it in a test that verifies `readFile` interactions.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.test.ts",
+      "line_number": 244,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Several tests use numeric indices to access specific watchers (e.g., `watchRecords[2].emitChange()`, `watchRecords[1].emitChange()`). The correctness of these assertions depends on the internal order in which `setupWatchers` registers watchers (`head`, then `packedRefs`, then `branch`). If that order changes, tests fail with confusing index-out-of-bounds or wrong-watcher errors rather than a meaningful message. Consider using a helper like `watchRecords.find(({ path }) => path === '/repo/.git/refs/heads')` (or the `getLatestWatcherByPath` pattern) for clarity and resilience.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.test.ts",
+      "line_number": 285,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`watchRecords.at(-1)?.emitChange()` uses `Array.prototype.at()` (ES2022). Per the project's rules, `.at(-1)` should be avoided unless the build pipeline explicitly targets ES2022+ environments; use `watchRecords[watchRecords.length - 1]?.emitChange()` instead.",
+      "index": 7
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.test.ts",
+      "line_number": 102,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`void callback;` is used to suppress an \"unused variable\" lint warning. This is a non-idiomatic pattern\u2014`void expr` as a statement is an unusual operator usage that will puzzle readers unfamiliar with this workaround. Prefix the parameter with `_` instead: `(_callback) => { return vi.fn(); }` (or `(_callback) => vi.fn()`). This is the standard TypeScript/ESLint convention for intentionally-unused parameters and is used consistently elsewhere in the codebase.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `onGitStateChange` method is the new public API surface of `GitDiffProvider`, but it has no JSDoc comment. Per the project's convention for exported utilities in framework/shared packages, every exported function should have a `/** */` JSDoc block describing its purpose, parameters, return value (including that the returned function is an unsubscribe handle), and any important behavioral notes (e.g., that setup is opportunistic and watching may silently fail when git is unavailable, that a watcher rebuild is scheduled on error, and that watchers are shared across multiple subscribers and torn down only when the last subscriber unsubscribes).",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The private `watchFile` method is named and typed as if it watches a file path (`filePath: string`), but it is called with directory paths in every case (`gitDir`, `dirname(branchRefPath)`, `join(gitDir, 'refs', 'heads')`). In Node.js `fs.watch` can watch both files and directories, so this works correctly at runtime, but the name creates a false expectation for readers. Renaming to `watchPath` (or adding a clarifying JSDoc/inline comment) would remove the confusion.",
+      "index": 10
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `MockGitDiffProvider` in `ChangeDetectionService.test.ts` extends the concrete `GitDiffProvider` class (and calls `super('/repo')`) solely to satisfy TypeScript's nominal type check on the `gitDiffProvider` option, since the option's type was widened from `Pick<GitDiffProvider, ...>` to the full `GitDiffProvider` class. All three methods are overridden, so no real GitDiffProvider behavior is exercised. Consider whether the option type should be an interface (`IGitDiffProvider`) instead of the concrete class; this would allow tests to pass plain objects and remove the coupling between the mock and the class constructor.",
+      "index": 11
+    }
+  ],
+  "cost_usd": 1.1388140499999997,
+  "duration_seconds": 753.2353181838989
+}

@@ -1,0 +1,76 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/common/js-package-manager/JsPackageManagerFactory.test.ts",
+      "line_number": 23,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`readFileSyncMock` is not reset in `beforeEach`, unlike `findMock` and `executeCommandSyncMock` which are explicitly reset there. Two new tests (lines 373 and 408) call `readFileSyncMock.mockImplementation(...)` with a default branch that throws `new Error('File not found')`. That stale implementation persists into the subsequent BERRY v3, v4, and BERRY WHEN YARN FAILS tests. Those tests currently happen to be safe because their `findMock.up` returns `undefined` for `package.json`, so `readFileSync` is never reached \u2014 but this is fragile: any test ordering change or new test that triggers the `package.json` read path would hit the stale throwing mock and produce a confusing failure. Add `readFileSyncMock.mockReset()` (or `readFileSyncMock.mockRestore()`) to `beforeEach` to be consistent with how the other mocks are handled.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/common/js-package-manager/JsPackageManagerFactory.test.ts",
+      "line_number": 129,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "With `getYarnVersionFromPackageJson` now in the production call path, this test's `realFind.up` catch-all will also resolve real `package.json` files from the fixture directory tree. Currently the fixture at `fixtures/pnpm-workspace/package/` has no `packageManager` field, so the test still passes, but it now has an implicit dependency on the fixture's file contents. If someone later adds `packageManager` to that fixture (or any ancestor up to the project root), `getYarnVersionFromPackageJson` would return early with a version before `yarn --version` is consulted, silently changing what the test exercises. For the same reason `.yarnrc.yml` is now explicitly mocked to `undefined`, `package.json` should be too \u2014 e.g. by adding `if (filename === 'package.json') return undefined;` inside the mock implementation.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/common/js-package-manager/JsPackageManagerFactory.test.ts",
+      "line_number": 231,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Same issue as the 'PNPM LOCK IF CLOSER' test: `realFind.up` now resolves real `package.json` files, creating an implicit dependency on the `fixtures/multiple-lockfiles/` fixture not having a `packageManager` field. The test expects `Yarn1Proxy` based on a `yarn --version` returning 1.22.4, but if the fixture's `package.json` ever gets a `packageManager: 'yarn@4.x'` field, `getYarnVersionFromPackageJson` would short-circuit and return 2 before `yarn --version` is checked, flipping the result to `Yarn2Proxy` without any obvious test change. Add an explicit `package.json \u2192 undefined` case to the mock to make the test self-contained.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/common/js-package-manager/JsPackageManagerFactory.ts",
+      "line_number": 258,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`getYarnVersionFromPackageJson` calls `getProjectRoot()` independently, as does `hasYarnBerryConfig` on line 285. The PR description explicitly states the intent: \"Compute `getProjectRoot()` once in `getYarnVersion()` and pass result to helper functions to avoid repeated filesystem traversals.\" In practice `getProjectRoot()` is cached at module level so repeat calls are cheap, but the stated design goal was not carried through. Consider accepting `root` as an optional parameter (`root = getProjectRoot()`) in both helpers, and computing it once in `getYarnVersion()` to align with the documented intent and make the coupling explicit.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/common/js-package-manager/JsPackageManagerFactory.ts",
+      "line_number": 297,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`hasYarnBerryConfig(cwd)` is called unconditionally before `yarn --version` is executed. For the common Berry case where `yarn --version` already reports `3.x` or `4.x`, `hasBerryConfig` is computed (a filesystem `find.up` traversal) but the value is never used \u2014 the `return 2` on line 315 doesn't reference it. Moving `hasYarnBerryConfig(cwd)` inside the `if (/^1\\./.test(yarnVersion.trim()))` branch (and keeping it available in the `catch` block via a late declaration) would avoid the unnecessary traversal for the straightforward Berry case.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/common/js-package-manager/JsPackageManagerFactory.test.ts",
+      "line_number": 331,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The explicit npm guard (`if (options.command === 'npm' ...) { throw new Error(...) }`) is dead code: it throws the exact same error as the default `throw new Error('Command not found')` that follows it. The `// NPM is ko` comment adds no information beyond what the fallthrough already conveys. This pattern appears in several of the new tests (lines 357, 392, 430, 451). Either remove the redundant branch, or if the intent is documentation, a comment on the default throw (`// all other commands (npm, pnpm, ...) are ko`) would be cleaner.",
+      "index": 5
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/commands/PreflightCheckCommand.ts",
+      "line_number": 76,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`PACKAGE_MANAGER_LABEL` is typed as `Record<PackageManagerName, string>`, an exhaustive record that TypeScript enforces at compile time. Any `PackageManagerName` value not present in the object literal produces a type error, so `PACKAGE_MANAGER_LABEL[packageManager.type]` can never be `undefined` at runtime. The `?? packageManager.type` fallback is therefore dead code. It's harmless as a defensive safety net, but it can confuse readers who wonder what runtime scenario it covers. If you want to guard against future enum additions that miss the label map, a comment explaining this intent would clarify it; otherwise the fallback can be removed.",
+      "index": 6
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "There is no test covering the `packageManager: 'yarn@1.22.0'` case in `getYarnVersionFromPackageJson`. The function handles this path (the `match[1] === '1'` branch on line 270 returns `1`), but no test exercises it \u2014 every new `packageManager`-field test uses `yarn@4.x`. A test asserting that `packageManager: 'yarn@1.22.0'` in `package.json` results in `Yarn1Proxy` would complete the coverage of both branches in that function.",
+      "index": 7
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description says \"Compute `getProjectRoot()` once in `getYarnVersion()` and pass result to helper functions to avoid repeated filesystem traversals\", but neither `getYarnVersionFromPackageJson` nor `hasYarnBerryConfig` receives `projectRoot` as a parameter \u2014 each calls `getProjectRoot()` internally. Because `getProjectRoot()` is cached at module level the production performance impact is negligible, but the mismatch between stated intent and implementation could mislead future contributors about the design rationale.",
+      "index": 8
+    }
+  ],
+  "cost_usd": 0.81396765,
+  "duration_seconds": 558.5978059768677
+}

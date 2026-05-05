@@ -1,0 +1,122 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "scripts/eval/eval.ts",
+      "line_number": 74,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`inferAgent(values.model)` is invoked at module top-level before Zod validation runs (line 76). If `values.model` is an unrecognised string, `inferAgent` throws a raw `Error` that bypasses the user-friendly `parsed.error.issues` reporting block entirely and crashes with an unhelpful stack trace. Wrap the inference in a try/catch and surface it through the same error path, or move the agent resolution inside the `safeParse` call so Zod handles the unknown-model case.",
+      "index": 0
+    },
+    {
+      "file_path": "scripts/eval/eval.ts",
+      "line_number": 116,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`PROJECTS.find((p) => p.name === args.project)!` uses a non-null assertion to silence the `undefined` case. Although Zod validates `args.project` against `PROJECT_NAMES`, the assertion still suppresses TypeScript's safety net. Per project rules, test-infrastructure scripts must not use `!` to paper over absence \u2014 add an explicit guard: `if (!project) { logger.log(...); process.exit(1); }`. This also avoids a potential runtime error if `PROJECTS` and `PROJECT_NAMES` ever fall out of sync.",
+      "index": 1
+    },
+    {
+      "file_path": "scripts/eval/lib/grade.ts",
+      "line_number": 4,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "Both `getComponentCandidates` and `runGhostStories` are imported via deep relative paths (`../../../code/core/src/core-server/utils/ghost-stories/...`). The same PR exports these symbols from `storybook/internal/core-server` (see `code/core/src/core-server/index.ts`), and `grading-helpers.test.ts` correctly uses that public export. Per project rules, cross-package imports must go through the public package export \u2014 change to `import { getComponentCandidates, runGhostStories } from 'storybook/internal/core-server'`. Deep paths are fragile under restructuring and bypass the intended API surface.",
+      "index": 2
+    },
+    {
+      "file_path": "scripts/eval/lib/run-trial.test.ts",
+      "line_number": 14,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "All five `vi.mock(...)` calls use the factory-replacement form (`() => ({ fn: vi.fn() })`). Project rules require `vi.mock('module', { spy: true })` at the top level, with mock behaviour configured via `.mockImplementation(...)` / `.mockResolvedValue(...)` exclusively inside `beforeEach` \u2014 never inside individual test bodies. In particular, the 'does not call grade before agent finishes' test (around line 147) sets up `mockImplementation` inline, which bleeds between tests. Refactor to the spy pattern with a top-level `vi.clearAllMocks()` in `beforeEach`.",
+      "index": 3
+    },
+    {
+      "file_path": "scripts/eval/lib/agents/claude-code.ts",
+      "line_number": 20,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`const effort = variant.effort as 'low' | 'medium' | 'high' | 'max';` is a redundant type assertion \u2014 `variant.effort` is already narrowed to `ClaudeEffort` (which is exactly that union) by the `if (variant.agent !== 'claude')` guard above. Remove the cast; if the SDK's `effort` parameter has a different type, prefer `@ts-expect-error` with a comment explaining the upstream gap over a silent `as`.",
+      "index": 4
+    },
+    {
+      "file_path": "scripts/eval/lib/agents/config.ts",
+      "line_number": 118,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`debug: true` is hardcoded in the Claude execution config. This forces verbose SDK output for every benchmark run, regardless of whether the user passed `--verbose`. The `ClaudeExecutionConfig` interface defines `debug: boolean`, so it is already designed to be configurable. Either drive this from the `TrialConfig.verbose` flag or default it to `false` and only set it to `true` when `verbose` is enabled.",
+      "index": 5
+    },
+    {
+      "file_path": "scripts/eval/lib/run-trial.ts",
+      "line_number": 48,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`promptName || 'setup'` (also at line 80) uses logical-OR instead of nullish coalescing. `promptName` is typed as `string`, so an explicitly passed empty string `''` would fall back to `'setup'` silently. Use `promptName ?? 'setup'` (or simply `promptName` if the type guarantees it is non-empty after CLI validation). The project rule is to prefer `??` over `||` for default fallbacks.",
+      "index": 6
+    },
+    {
+      "file_path": "scripts/eval/lib/utils.ts",
+      "line_number": 14,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`EVAL_ROOT` is hardcoded to `../storybook-eval` relative to the monorepo root. There is no environment-variable override, so anyone with a different directory layout (CI, different clone location, Windows path) must edit source to change it. Add `process.env.STORYBOOK_EVAL_ROOT ?? resolve(REPO_ROOT, '..', 'storybook-eval')` so the path is configurable without code changes.",
+      "index": 7
+    },
+    {
+      "file_path": "scripts/eval/lib/prepare-trial.ts",
+      "line_number": 107,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`getRemoteBranchHead` performs a `git ls-remote` network call on **every** run that could reuse the cache (i.e., whenever `.git` and the cache metadata exist). This adds latency even when nothing has changed. Consider making the freshness check opt-in via a `--check-updates` flag, or caching the remote HEAD locally with a short TTL (e.g., a timestamp in the cache metadata), so back-to-back runs are not blocked on a network round-trip.",
+      "index": 8
+    },
+    {
+      "file_path": "scripts/eval/lib/grade.ts",
+      "line_number": 282,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`parseGitDiffStatus` silently falls back to `'M'` for any unrecognised git status code. If git emits an unexpected line format (e.g., merge conflicts, submodule markers), the entry is silently classified as 'modified' with no warning. Consider logging a diagnostic or returning a distinct sentinel so callers can decide how to handle unknown statuses rather than silently continuing with incorrect data.",
+      "index": 9
+    },
+    {
+      "file_path": "scripts/eval/lib/projects.ts",
+      "line_number": 9,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "All six benchmark repos point to personal forks under `kasperpeulen/` rather than an official `storybookjs/` organisation. If these forks diverge, are deleted, or become private, the eval harness silently breaks for all contributors. The PR description says these are 'forked repos' \u2014 they should be transferred to a canonical org (e.g., `storybookjs-eval/`) or at minimum documented as the authoritative eval source with an explicit maintenance plan.",
+      "index": 10
+    },
+    {
+      "file_path": ".circleci/config.yml",
+      "line_number": 35,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Changing `resource_class` from `small` to `large` significantly increases CI compute cost (and queue time). This change is unrelated to the eval harness and there is no explanation in the PR description or a comment here. Add an inline comment explaining why `large` is now required, or move this to a separate PR with justification.",
+      "index": 11
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`citty` is added to `scripts/package.json` (and locked in `yarn.lock`) but is never imported anywhere in the eval harness code. The CLI argument parsing uses `node:util`'s `parseArgs` instead. Remove the unused dependency to avoid confusion and unnecessary install weight.",
+      "index": 12
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The PR description prominently describes `eval-parallel.ts` ('all 8 combos: node scripts/eval/eval-parallel.ts -p mealdrop') and the live-prefixed log output it produces, but the file is absent from the diff. Similarly, the Google Sheets upload feature (`EVAL_GOOGLE_SHEETS_URL`) is described but has no implementation in the diff. The `scripts/tsconfig.json` excludes `eval/google-apps-script.js`, hinting at further planned code. If these are deferred to follow-up PRs, the PR description should say so explicitly; if they were accidentally omitted, they should be included before merge so the harness is actually runnable end-to-end as described.",
+      "index": 13
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `grade.test.ts` file declares `vi.mock(...)` for `getComponentCandidates` and `runGhostStories` at the top, but none of the test cases in that file configure, call, or assert on those mocks \u2014 the file only tests pure utility functions (`filterStorybookFiles`, `computeQualityScore`, `countTypeCheckErrors`, `parseChangedFiles`). The mocks exist solely to prevent transitive import failures when `grade.ts` is loaded. Per project rules, verify that the real implementations cannot simply be allowed to load (they are function definitions with no module-level side effects). If the mocks are still needed, add a comment explaining why, so future readers do not mistake them for tested behaviour.",
+      "index": 14
+    }
+  ],
+  "cost_usd": 0.7581855000000001,
+  "duration_seconds": 503.0748932361603
+}

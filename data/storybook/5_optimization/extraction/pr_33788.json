@@ -1,0 +1,13 @@
+{
+  "pr_number": 33788,
+  "source_mr_date": "2026-03-10T08:05:08Z",
+  "candidates": [
+    "When calling a helper function that internally handles multiple categories of inputs (e.g., `addWorkaroundResolutions` in `scripts/utils/yarn.ts`, which applies Vite, React 19, and testing-library resolutions based on the sandbox key), do not gate the call site with a predicate that covers only one category (e.g., `isViteSandbox`). Call the function unconditionally and let its internal branching own the full routing logic; otherwise sandboxes in uncovered categories silently miss their resolutions.",
+    "When mutating nested optional properties on a Vite `UserConfig` object, guard every intermediate level with nullish coalescing assignment (`??=`) before accessing deeper properties. For example, `config.build` is typed as optional (`build?: BuildOptions`), so always write `config.build ??= {}` before touching `config.build.rolldownOptions` or other nested fields, to avoid a runtime throw when the parent is unset.",
+    "When accumulating package resolutions (or any similar key-value overrides) across multiple sequential conditional branches in `scripts/utils/yarn.ts`, use object spread to merge into the existing accumulator rather than replacing it with a plain assignment (e.g., `additionalResolutions = { ...additionalResolutions, vite: '...' }`). A plain assignment silently discards entries set by earlier branches, which breaks sandboxes that legitimately match more than one condition (e.g., a Vite sandbox that also needs React 19 pins).",
+    "Keep inline comments describing yarn `logFilters` entries in `scripts/utils/yarn.ts` in sync with the actual `level` values in the JSON config. If a filter's level changes (e.g., from `\"error\"` to `\"discard\"`), update the corresponding comment from 'Error on YN\u2026' to 'Discard all YN\u2026' so that the comment accurately describes the enforced behavior."
+  ],
+  "analysis": [],
+  "cost_usd": 0.12957100000000002,
+  "duration_seconds": 71.6942241191864
+}

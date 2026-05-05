@@ -1,0 +1,178 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3385,
+  "title": "add `pseudo_path` to OnetepProfile",
+  "body": "This allows to use the config file for pseudo when doing ONETEP calculations.\n\n# Checklist\n\n- [ ] I am familiar with [ASE's contribution guidelines](https://wiki.fysik.dtu.dk/ase/development/contribute.html).\n- [ ] [**Doc strings**](https://wiki.fysik.dtu.dk/ase/development/python_codingstandard.html#writing-documentation-in-the-code) in code changed in this MR are up to date.\n- [ ] [**Unit tests** have been added for new or changed code.](https://wiki.fysik.dtu.dk/ase/development/tests.html)\n- [ ] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "tomdemeyere",
+  "merged_at": "2024-06-07T11:13:50.891Z",
+  "base_ref": "master",
+  "merge_commit_sha": "d021f3de1488cb9a89516467bcdc27018dad7180",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "1937578360",
+          "author": "askhl",
+          "body": "we should do `parameters = deepcopy(parameters)` (from the `copy` module) before so the change does not creep into the caller's original dictionary.\n\n(Or we can avoid the deepcopy by carefully doing shallow copy of both keywords and parameters)",
+          "file_path": "ase/calculators/onetep.py",
+          "line_number": 78,
+          "commit_sha": "5a6959281266995a526d1f98d7ee299931b8e166",
+          "base_sha": "ebe82cfbb206f6b2f84dfb050c6c3b076e740737",
+          "created_at": "2024-06-05T17:02:18.921Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "Mutating the caller's original dictionary without a deep copy causes unintended side effects, meaning the code behavior does not match the expected/intended behavior of the caller."
+        },
+        {
+          "id": "1939794587",
+          "author": "tomdemeyere",
+          "body": "Given that it might happen for other calculators would it not be worth it to make it deepcopy in the `BaseCalculator` directly? at:\n\n```python\nself.parameters = dict(parameters)\n```\n\nI have no idea about possible apocalyptic consequences, just wondering.",
+          "file_path": "ase/calculators/onetep.py",
+          "line_number": 78,
+          "commit_sha": "5a6959281266995a526d1f98d7ee299931b8e166",
+          "base_sha": "ebe82cfbb206f6b2f84dfb050c6c3b076e740737",
+          "created_at": "2024-06-06T20:52:17.741Z",
+          "is_outdated": false
+        },
+        {
+          "id": "1940613078",
+          "author": "askhl",
+          "body": "Excellent question!\n\nNormally, when many implementations must follow a rule, it would indeed be best for a common layer to implement the rules so each implementation needs not.  However modifying inputs as a side effect is usually unexpected.  So I generally live by the rule of not doing so.  In this case, doing it would also imply a *requirement* that the caller must take a copy, and this requirement must be remembered by everyone reads the code, otherwise they'll suspect it to be a bug.  I think ensuring that kind of awareness is a larger burden than requiring the code to not change the inputs, which is a locally verifiable condition.  (By \"locally\" I mean something that can be seen *only* by reading the code here, not by consulting/knowing about other modules)\n\nThis is more about how I would always try to write code, and not so specifically about calculators.\n\nOf course sometimes there can be good reasons for inputs to be modified, e.g. for efficient in-place computations.",
+          "file_path": "ase/calculators/onetep.py",
+          "line_number": 78,
+          "commit_sha": "5a6959281266995a526d1f98d7ee299931b8e166",
+          "base_sha": "ebe82cfbb206f6b2f84dfb050c6c3b076e740737",
+          "created_at": "2024-06-07T11:13:09.131Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly requests a code change: adding `deepcopy` before modifying the parameters dictionary to prevent mutation of the caller's original dictionary."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2018607634",
+          "author": "AndrewRosen",
+          "body": "The new `pseudo_path` parameter is missing in the docstring.",
+          "file_path": "ase/calculators/onetep.py",
+          "line_number": 22,
+          "commit_sha": "5a6959281266995a526d1f98d7ee299931b8e166",
+          "base_sha": "ebe82cfbb206f6b2f84dfb050c6c3b076e740737",
+          "created_at": "2024-07-27T20:42:58.616Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "The new `pseudo_path` parameter is not documented in the docstring, which is a missing documentation issue."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a missing docstring entry for the new `pseudo_path` parameter, implying it should be added."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2018607635",
+          "author": "AndrewRosen",
+          "body": "@tomdemeyere: Are these parameters still relevant (sorry, please scroll up a bit)? For instance, there is a `pseudo_path` in the docstring that is part of the `Onetep` class, but it looks like it should instead be part of `OnetepProfile`? The docstrings look like they need a bit of cleanup.",
+          "file_path": "ase/calculators/onetep.py",
+          "line_number": 144,
+          "commit_sha": "5a6959281266995a526d1f98d7ee299931b8e166",
+          "base_sha": "ebe82cfbb206f6b2f84dfb050c6c3b076e740737",
+          "created_at": "2024-07-27T20:42:59.656Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "high",
+          "label_reasoning": "The docstrings are outdated or misplaced (e.g., `pseudo_path` described under the wrong class), indicating misleading or inaccurate documentation that needs cleanup."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that the docstrings need cleanup and that `pseudo_path` may be in the wrong class's docstring, implying a refactoring or correction of documentation is needed."
+    }
+  ],
+  "review_thread_count": 5,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "1940613458",
+            "author": "askhl",
+            "body": "Thanks a lot @tomdemeyere!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2024-06-07T11:13:28.224Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure social acknowledgment/thanks with no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2018607636",
+            "author": "AndrewRosen",
+            "body": "A bit delayed, but I just wanted to point out a few things here.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2024-07-27T20:43:00.300Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Meta/preamble comment with no specific code change suggested; just a note that feedback is coming."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 5,
+    "stage1_kept": 5,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 2,
+    "stage3_cost_usd": 0.01600325
+  }
+}

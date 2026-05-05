@@ -1,0 +1,408 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 1548,
+  "title": "ENH: allow setting parameters for BFGS optimizer",
+  "body": "This MR adds the parameter `alpha = 1 / H0` known from `LBFGS` to `BFGS` and adds the attribute `BFGS.H0`. This enables to deviate from the initial value of `alpha = 1/70 eV/AA`,\n\n```python\nopt = BFGS(..., alpha=25)\n```\n\nand further enables to inject custom hessians via\n\n```python\nopt.H0 = custom_H0\n```\n\nafter initialization.",
+  "author": "flokno",
+  "merged_at": "2020-07-17T14:57:30.037Z",
+  "base_ref": "master",
+  "merge_commit_sha": "aeea7cf1f491c708f77c465ee7e13744b70d104b",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "257655032",
+          "author": "askhl",
+          "body": "Scaling down the steps and getting negative eigenvalues is quite common, so IMHO not something to *warn* about (although a detailed log should definitely include that information).  In a large system with long-range changes -- imagine a long carbon chain which rotates -- we would consistently get large displacements.\n\nThe current maxstep=0.04 is a very bad choice.  A much more reasonable default is 0.2 like the other optimizers.  But changing things is hell, because people's simulations will then run differently.\n\nI think we should write an entirely new optimizer *wrapper* which does all the common stuff: It has reasonable defaults, a single implementation of standard stuff like `replay_trajectory()`, and takes care of things like whether we are writing to a trajectory.  It also does all of the logging which doesn't apply to a particular algorithm.  Those things that *do* apply to a particular algorithm, well, hmm, it could ask the algorithm to print that stuff into a particular file object maybe.\n\nOf course we couldn't do all that by tomorrow...",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2019-12-09T15:59:03.952Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests changing the default maxstep value and proposes writing a new optimizer wrapper with better architecture \u2014 concrete improvement suggestions."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "376535815",
+          "author": "askhl",
+          "body": "Hmm what's the big picture here?  Do we want to move more defaults out into the defaults module?\n\nAs for coverage, we may still have uncontrolled pseudorandomness in a few tests.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-07-09T12:32:29.150Z",
+          "is_outdated": false
+        },
+        {
+          "id": "376541816",
+          "author": "flokno",
+          "body": "The bigger picture is to enable setting the initial hessian. Before, the default was hard coded deep in the code. As we introduced the `defaults` module in https://gitlab.com/ase/ase/-/merge_requests/1725 I'm just using it here.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-07-09T12:40:10.915Z",
+          "is_outdated": false
+        },
+        {
+          "id": "376555898",
+          "author": "askhl",
+          "body": "Hmm.  Do we see this as a BFGS feature or a BFGS-and-friends feature?\n\nOverall I think having defaults as classvars (or otherwise close to the implementation) is more logical than statically declared defaults far away from the classes, unless there are specific reasons for doing it differently.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-07-09T12:57:16.059Z",
+          "is_outdated": false
+        },
+        {
+          "id": "376566267",
+          "author": "flokno",
+          "body": "The initial idea was to store default values that are shared by all optimizers, in particular `maxstep`. The second idea was to make it possible to look up and share the default values of the parameters without using `inspect`.\n\nI'm absolutely fine with making them class-variables. I'll suggest something.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-07-09T13:10:57.488Z",
+          "is_outdated": false
+        },
+        {
+          "id": "376572254",
+          "author": "flokno",
+          "body": "@askhl see https://gitlab.com/flokno/ase/-/merge_requests/3",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-07-09T13:18:41.460Z",
+          "is_outdated": false
+        },
+        {
+          "id": "377088378",
+          "author": "flokno",
+          "body": "is that better?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-07-10T08:13:04.138Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Raises a question about design direction (moving defaults to a defaults module) and flags uncontrolled pseudorandomness in tests \u2014 both imply potential code changes."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "376535863",
+          "author": "askhl",
+          "body": "Belongs under another section (e.g. 'Algorithms')",
+          "file_path": "doc/releasenotes.rst",
+          "line_number": 162,
+          "commit_sha": "7450dd105d37ea00dac104a1d8c096bb90e68356",
+          "base_sha": "ecd865fa5760c1b38630a7fd662f4f2e3d265612",
+          "created_at": "2020-07-09T12:32:34.397Z",
+          "is_outdated": false
+        },
+        {
+          "id": "376544906",
+          "author": "flokno",
+          "body": "Right, I missed that there are different headlines. Fixed.",
+          "file_path": "doc/releasenotes.rst",
+          "line_number": 162,
+          "commit_sha": "7450dd105d37ea00dac104a1d8c096bb90e68356",
+          "base_sha": "ecd865fa5760c1b38630a7fd662f4f2e3d265612",
+          "created_at": "2020-07-09T12:43:39.398Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests moving release note content to a different section \u2014 a concrete change to the documentation file."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "381333847",
+          "author": "askhl",
+          "body": "As a software library, it's bad style to print to stdout because that stream belongs to the caller.  We can only print to it if the caller explicitly tells us to.\n\nTo a lesser extent the same applies to stderr.\n\nSince this can happen for valid geometries, and since the algorithm should recover, it's not truly a job for warnings.warn() either.\n\nWe should perhaps start using the `logging` module, but I propose discussing centralized logging in a separate issue.",
+          "file_path": "ase/optimize/bfgs.py",
+          "line_number": 123,
+          "commit_sha": "6bbb847b3f12d2759492296d2e44d19496e2d292",
+          "base_sha": "ecd865fa5760c1b38630a7fd662f4f2e3d265612",
+          "created_at": "2020-07-17T12:25:56.329Z",
+          "is_outdated": false
+        },
+        {
+          "id": "381413754",
+          "author": "flokno",
+          "body": "Du you suggest to sth about this immediately? Just log to the file?",
+          "file_path": "ase/optimize/bfgs.py",
+          "line_number": 123,
+          "commit_sha": "6bbb847b3f12d2759492296d2e44d19496e2d292",
+          "base_sha": "ecd865fa5760c1b38630a7fd662f4f2e3d265612",
+          "created_at": "2020-07-17T14:23:48.979Z",
+          "is_outdated": false
+        },
+        {
+          "id": "381417788",
+          "author": "askhl",
+          "body": "I suggest not changing behaviour in this MR.",
+          "file_path": "ase/optimize/bfgs.py",
+          "line_number": 123,
+          "commit_sha": "6bbb847b3f12d2759492296d2e44d19496e2d292",
+          "base_sha": "ecd865fa5760c1b38630a7fd662f4f2e3d265612",
+          "created_at": "2020-07-17T14:30:02.457Z",
+          "is_outdated": false
+        },
+        {
+          "id": "381423023",
+          "author": "flokno",
+          "body": "I commented out and left grepable `FUTURE` note to our future selves. Ok?\n\nWe can resolve this thread in a new issue demanding better `logging`.",
+          "file_path": "ase/optimize/bfgs.py",
+          "line_number": 123,
+          "commit_sha": "6bbb847b3f12d2759492296d2e44d19496e2d292",
+          "base_sha": "ecd865fa5760c1b38630a7fd662f4f2e3d265612",
+          "created_at": "2020-07-17T14:37:55.383Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags use of stdout printing as bad style and suggests using the `logging` module instead \u2014 implies a concrete code change."
+    }
+  ],
+  "review_thread_count": 13,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "254465521",
+            "author": "flokno",
+            "body": "@askhl I added some verbositiy to the optimizer via `warnings` in c3ced2a9 and d99d3cb6.\nThis crashes the pipeline: https://gitlab.com/flokno/ase/-/jobs/368428005\n\nI could just print the information to screen and hope for the best instead. Or make this optional with a log level (is there a log level in ASE?).\n\nAny ideas?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2019-12-04T10:37:26.582Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "257666828",
+            "author": "flokno",
+            "body": "> Scaling down the steps and getting negative eigenvalues is quite common, so IMHO not something to warn about (although a detailed log should definitely include that information).\n\nYes I'm worried more about the logging which is very far from complete currently.\n\n> The current maxstep=0.04 is a very bad choice. A much more reasonable default is 0.2 like the other optimizers. But changing things is hell, because people's simulations will then run differently.\n\nTrue I actually forgot about that. Anyway this is not about changing any defaults.\n\nI will come back to this hopefully soon and do sth. like this: https://gitlab.com/ase/ase-workshop-discussion/issues/6#note_254541171 in order to progress here.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2019-12-09T16:17:43.166Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "290759426",
+            "author": "flokno",
+            "body": "Note to myself: pick this up again after https://gitlab.com/ase/ase/-/merge_requests/1725 is settled.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-02-19T08:37:14.647Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "373666361",
+            "author": "flokno",
+            "body": "@askhl this is good to go from my side. I decided against singling out the BFGS step since I currently don't need it and don't have the time to do it properly regardless.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-07-04T12:56:41.906Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "373668961",
+            "author": "flokno",
+            "body": "it seems I decrease coverage by 0.01%",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-07-04T13:19:52.036Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "375600719",
+            "author": "flokno",
+            "body": "ping @askhl",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-07-08T08:58:13.265Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "378923775",
+            "author": "flokno",
+            "body": "@askhl some final remarks?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-07-14T08:44:47.873Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "381127812",
+            "author": "flokno",
+            "body": "ping",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-07-17T08:05:07.557Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "381435410",
+            "author": "askhl",
+            "body": "Thanks a lot @flokno",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-07-17T14:57:37.561Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment/thank-you with no code feedback."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 13,
+    "stage1_kept": 5,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 8,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1,
+    "stage3_cost_usd": 0.0169085
+  }
+}

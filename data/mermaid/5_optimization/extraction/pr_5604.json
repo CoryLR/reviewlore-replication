@@ -1,0 +1,21 @@
+{
+  "pr_number": 5604,
+  "source_mr_date": "2024-08-12T12:38:05Z",
+  "candidates": [
+    "In `rendering-util/rendering-elements/edges.js`, all user-supplied string values embedded into SVG/HTML output must be fully escaped; backslash characters in particular must be escaped to prevent incomplete string encoding (flagged repeatedly by static analysis scanning).",
+    "In `rendering-util/rendering-elements/createLabel.js`, never construct HTML by directly concatenating library input; all user-supplied label content must be sanitized or properly escaped before insertion into HTML markup to prevent XSS vulnerabilities.",
+    "In `rendering-util/rendering-elements/shapes/util.js`, avoid regular expressions that can exhibit catastrophic (polynomial) backtracking on user-controlled data; review any regex applied to node label strings \u2014 especially patterns matching HTML tags like `<img>` \u2014 for ReDoS risk before merging.",
+    "Remove all dead code before merging: delete unused imports, dead variable assignments, and TODO-flagged comments within files; when a renderer or module is fully superseded by a new implementation, delete the old file entirely (e.g., `flowRenderer-v2.js`) rather than leaving it unreferenced in the repository.",
+    "Ensure JSDoc `@returns` type annotations accurately reflect the function's actual return type; if a utility is documented as returning `string`, the implementation must always return a `string` and never silently return an array or `undefined`.",
+    "Use `Map` instead of plain objects (`{}`) for all dictionary/lookup data structures in rendering utilities (e.g., `mermaid-graphlib.js`, `clusters.js`); this is an established project-wide convention.",
+    "All new configuration properties \u2014 including diagram rendering hints (such as `look`) and layout-engine options (such as ELK settings) \u2014 must be added to the MermaidConfig type as properly nested objects (e.g., `elk: { mergeEdges: true, nodePlacement: { strategy: 'SIMPLE' } }`) rather than as flat string-valued options or ad-hoc top-level properties on diagram DB objects; this maintains consistency with the existing nested MermaidConfig structure.",
+    "Never place a file-level `@ts-ignore` directive to suppress all TypeScript errors across an entire module; add `@ts-ignore` only to the specific lines that require suppression, and include an inline comment explaining the reason for each suppression.",
+    "Mermaid-defined config option string literals should use camelCase (e.g., `'handDrawn'`, `'classic'`); UPPER_SNAKE_CASE is reserved for string values that directly map to external library constants (e.g., ELK strategy names such as `'NETWORK_SIMPLEX'`, `'BRANDES_KOEPF'`).",
+    "Configuration properties with a fixed set of valid values (such as `look` or edge pattern types) must be typed with explicit, exhaustive union types (e.g., `'classic' | 'handDrawn'`) rather than a generic `string`; audit all variants to ensure none are omitted \u2014 for example, `'dotted'` must be included alongside `'solid'` in edge pattern union types.",
+    "In the markdown-to-rendered-text processing pipeline (`handle-markdown-text.ts`), each token handler should emit only the content semantically required by that token type; do not silently inject extra whitespace characters (`' '` or `&nbsp;`) for tokens that do not produce whitespace, as this corrupts node label text.",
+    "Do not hardcode layout geometry values (e.g., `padding = 0`) in rendering utilities when a configurable value is available from the diagram config or node properties; always read from the relevant config property (e.g., `node.padding`, `config.nodePadding`) to ensure user-defined settings take effect."
+  ],
+  "analysis": [],
+  "cost_usd": 0.28400975,
+  "duration_seconds": 133.91640424728394
+}

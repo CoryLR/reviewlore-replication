@@ -1,0 +1,52 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3881,
+  "title": "Fix a failure on a NWChem test reported in #1806",
+  "body": "Related to #1806\n\n# Short summary\n\nThis MR fixes the failure on a NWChem test reported in #1806.\n\nShortly, this failure may be triggered by the bug fix between NWChem 7.0.0 and NWChem 7.2.3 when setting a periodic system together with a Gaussian basis set. This MR fixes this by changing `theory` in the `NWChem` calculator to `pspw` (pseudo-potential plane-wave) as well as the reference force-constant value.\n\nAs found in the [pipeline](https://gitlab.com/ase/ase/-/jobs/11957844818), the NWChem failure has been solved in this MR. There is still a remaining octopus failure, which may be addressed in a separate MR.\n\n@askhl: Maybe this MR can be merged rather quickly. Could you have a look when you have a short time?\n\n# A bit detailed survey\n\nAs stated in #1806, the failure happened between the following two pipelines.\n- https://gitlab.com/ase/ase/-/pipelines/2048489285 (passed: nwchem 7.0.0, python 3.12.11)\n- https://gitlab.com/ase/ase/-/pipelines/2050944500 (failed: nwchem 7.2.3, python 3.13.7)\n\nBy running the test code for H2 (consistent with the failed test), I obtained the following NWChem output:\n```\n                                 NWChem DFT Module\n                                 -----------------\n\n\n                                      nwchem\n\n\n ------------------------------------------------------------------------\n dft_rdinput: detected periodicity =                    3\n ------------------------------------------------------------------------\n ------------------------------------------------------------------------\n  current input line :\n    30: task dft energy\n ------------------------------------------------------------------------\n ------------------------------------------------------------------------\n There is an error in the input file\n ------------------------------------------------------------------------\n For more information see the NWChem manual at https://nwchemgit.github.io\n\n\n For further details see manual section:\n0:dft_rdinput: detected periodicity =:Received an Error in Communication\n--------------------------------------------------------------------------\nMPI_ABORT was invoked on rank 0 in communicator MPI COMM 3 DUP FROM 0\n  Proc: [[26570,0],0]\n  Errorcode: 3\n\nNOTE: invoking MPI_ABORT causes Open MPI to kill all MPI processes.\nYou may or may not see output from other processes, depending on\nexactly when Open MPI kills them.\n--------------------------------------------------------------------------\n```\nAs found, the failure is related to the periodicity of the system.\nIndeed, there is [a bug report in NWChem GitHub repo](\nhttps://github.com/nwchemgit/nwchem/issues/322) (2021-02-12); NWChem cannot compute a periodic system with a Gaussian basis set, but before there was no error raised. This was fixed at that time.\nThis fix has been introduced between [NWChem 7.0.0 released on 2020-02-26](https://github.com/nwchemgit/nwchem/releases/tag/v7.0.0-release) and [NWChem 7.2.3 released on 2024-08-28](https://github.com/nwchemgit/nwchem/releases/tag/v7.2.3-release).\n\nRegarding ASE `NWChem` calculator, [it sets a Gaussian basis set by default](https://gitlab.com/ase/ase/-/blob/3.26.0/ase/io/nwchem/nwwriter.py?ref_type=tags#L111), while [the failed test considers H2 in a periodic cell](https://gitlab.com/ase/ase/-/blob/3.26.0/ase/test/calculator/test_h2_bond_force.py?ref_type=tags#L13-14).\nBefore (NWChem 7.0.0), I guess the periodicity may be simply ignored in NWChem, while later (NWChem 7.2.3), this gets detected as an error in NWChem, which probably caused the failure of the test.\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [x] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [x] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [~] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [~] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "yuzie007",
+  "merged_at": "2025-11-13T15:08:23.313Z",
+  "base_ref": "master",
+  "merge_commit_sha": "0bbb338587661f681025f1269e97ba04db3fcfc8",
+  "merge_commit_parent_count": 2,
+  "review_threads": [],
+  "review_thread_count": 1,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2887091415",
+            "author": "askhl",
+            "body": "Thanks a lot @yuzie007!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-11-13T15:08:17.920Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "This is a pure acknowledgment/social comment with no suggestion, request, or implied code change."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1,
+    "stage3_cost_usd": 0.01089175
+  }
+}

@@ -1,0 +1,294 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34283,
+  "title": "Manager: URL-based tag filter state + filter-aware initial story selection",
+  "body": "Closes #34252\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\nReplaces localStorage persistence for tag filters with URL-based state. All filter state is now encoded in a single `tags` URL parameter (e.g. `?tags=a11y;$changed;!experimental`). Also fixes the bug where initial story selection ignored active tag filters when navigating to Storybook without a story path.\r\n\r\n\r\nhttps://github.com/user-attachments/assets/e39e00d2-39c7-4147-9e95-b278de17f6c1\r\n\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n> [!CAUTION]\r\n> This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!\r\n\r\n1. Run a sandbox: `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Add a tag filter via the sidebar filter UI (e.g. include `play`)\r\n3. Verify the URL updates to `?tags=$play` (or the appropriate tag encoding)\r\n4. Refresh the page \u2014 verify the same filter is restored from the URL\r\n5. Navigate to `http://localhost:6006/?tags=play` directly \u2014 verify only stories tagged `play` are shown and the first story/docs is auto-selected\r\n6. Clear all filters \u2014 verify the `tags` param is removed from the URL\r\n7. Click between sidebar entries repeatedly \u2014 verify `tags` param is preserved in the URL throughout\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Tag filters now persist in the URL (bookmarkable/shareable) and are initialized from the URL on load\n  * Query parameters are preserved during story navigation so filters/selections remain intact\n  * Story selection respects active tag filters and will navigate to the first matching story/docs entry when needed\n  * URL-backed persistence supports explicit adding/removing of query params (null clears a param)\n  * Safer URL/query handling on load and navigation (handles missing location/search)\n\n* **Tests**\n  * Added tests for tag filter parsing/serialization and URL query-parameter behavior, including navigation expectations\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "valentinpalkovic",
+  "merged_at": "2026-03-26T10:49:10Z",
+  "base_ref": "next",
+  "merge_commit_sha": "f4e4a5351d055f6b90986ad88e5f92135cb7022f",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "febea6302bcba4bc548f149a53a71769956c028d",
+    "17b4191002628383b3159923d2c3bae4f660dfe4"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6xYqZf",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Use the matched entry type for the filtered fallback.**\n\n`firstFiltered` can be a docs entry, but this redirect always reuses the preview-emitted `viewMode`. With docs-only results such as `?tags=$docs`, that can produce `/story/<docsId>` instead of `/docs/<docsId>`. Either restrict the fallback to stories or derive the route from the matched entry itself.\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n-              const firstFiltered = filteredIndex\n-                ? Object.keys(filteredIndex).find((id) => {\n-                    const entry = filteredIndex[id];\n-                    return entry.type === 'story' || entry.type === 'docs';\n-                  })\n-                : undefined;\n+              const firstFiltered = filteredIndex\n+                ? Object.values(filteredIndex).find(\n+                    (entry) => entry.type === 'story' || entry.type === 'docs'\n+                  )\n+                : undefined;\n \n               if (firstFiltered) {\n-                navigateWithQueryParams(`/${viewMode}/${firstFiltered}`);\n+                navigateWithQueryParams(`/${firstFiltered.type}/${firstFiltered.id}`);\n               }\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager-api/modules/stories.ts` around lines 967 - 975, The\nfallback redirect uses viewMode blindly which can misroute a docs entry; change\nthe fallback to derive the route from filteredIndex[firstFiltered]. Retrieve\nconst entry = filteredIndex[firstFiltered]; determine routeMode = entry &&\nentry.type === 'docs' ? 'docs' : 'story' (or only allow 'story' if you prefer\nrestricting), then call\nnavigateWithQueryParams(`/${routeMode}/${firstFiltered}`) instead of using\nviewMode; ensure you guard for entry existence before navigating.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager-api/modules/stories.ts",
+          "line_number": 972,
+          "start_line": 964,
+          "commit_sha": "17b4191002628383b3159923d2c3bae4f660dfe4",
+          "created_at": "2026-03-23T16:07:54Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where docs entries can be misrouted and provides a specific code fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6xYqZm",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Legacy localStorage can still override these URL-derived filters.**\n\nThese values are only correct if nothing later overwrites them. `Store.getInitialState()` in `code/core/src/manager-api/store.ts` still merges `store.local` and `store.session` over the module state on startup, so previously persisted `includedTagFilters` / `excludedTagFilters` will win over `initialIncluded` / `initialExcluded` for existing users. That leaves the active filters out of sync with the `tags` URL until the user changes them again. This migration needs a one-time scrub or an explicit ignore for the legacy persisted keys.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager-api/modules/stories.ts` around lines 1179 - 1183, The\nURL-parsed tag filters (computed via queryFromLocation and parseTagsParam into\ninitialIncluded/initialExcluded when hasTagsParam is true) are being overridden\nby legacy persisted keys merged by Store.getInitialState (store.local /\nstore.session) so the active filters stay out-of-sync; modify startup behavior\nso when hasTagsParam is true you ignore or scrub legacy persisted\nincludedTagFilters/excludedTagFilters instead of letting Store.getInitialState\nmerge them: either (A) update Store.getInitialState to skip merging those two\nkeys from store.local/session when a tags param is present, or (B) add a\none-time migration in the stories module startup to delete/clear\nstore.local.storeKeys for includedTagFilters/excludedTagFilters before state\nmerge, or (C) ensure the module\u2019s initial state explicitly sets\nincludedTagFilters/excludedTagFilters to parsedTags.included/parsedTags.excluded\nafter Store.getInitialState runs when hasTagsParam is true so URL-derived values\nwin.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit c9da280",
+          "file_path": "code/core/src/manager-api/modules/stories.ts",
+          "line_number": 1180,
+          "start_line": 1176,
+          "commit_sha": "17b4191002628383b3159923d2c3bae4f660dfe4",
+          "created_at": "2026-03-23T16:07:54Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where legacy localStorage values override URL-derived filters, with specific remediation options. Marked as addressed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6xYqZt",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Preserve an explicit empty tag selection.**\n\n`parseTagsParam('')` already means \u201cno filters\u201d, but returning `undefined` here turns that into \u201cno `tags` param\u201d. `code/core/src/manager-api/modules/stories.ts` treats an absent `tags` param as \u201cuse preset defaults\u201d, so clearing the last active filter cannot round-trip when any preset has `defaultFilterSelection`. Please keep a distinct empty serialization and make sure the URL-writing path preserves empty strings instead of dropping them.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager-api/modules/tags.ts` around lines 39 - 42, The\nserialization currently returns undefined when both included and excluded are\nempty which collapses an explicit \u201cno tags\u201d selection into an absent tags param;\nchange serializeTagsParam (in code/core/src/manager-api/modules/tags.ts) to\nreturn an explicit empty string ('') when included.length===0 &&\nexcluded.length===0 so the URL-writing path can preserve the empty value instead\nof dropping the param, and ensure this aligns with parseTagsParam so\nparseTagsParam('') continues to mean \u201cno filters\u201d while undefined remains \u201cno\ntags param / use presets\u201d (verify any callers in stories.ts that write the tags\nparam do not treat '' as missing).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit c9da280",
+          "file_path": "code/core/src/manager-api/modules/tags.ts",
+          "line_number": 42,
+          "start_line": null,
+          "commit_sha": "e73920dd2f3f5f8535bb410858284fe20669b721",
+          "created_at": "2026-03-23T16:07:54Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a round-trip bug with empty tag serialization and requests a specific code change. Marked as addressed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6xYqZx",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Initialize the store with the module state before calling `applyQueryParams()`.**\n\n`applyQueryParams()` reads `path` and `location.hash` from `store.getState()`. This test only seeds `customQueryParams`, and Line 137 nests `path` under `location`, so the call can throw on `location.hash` and build a URL from an undefined path.\n\n[suggested fix]\n<details>\n<summary>Proposed test setup</summary>\n\n```diff\n-    let state = { customQueryParams: { tags: 'a11y', args: 'foo:bar' } };\n+    let state = {};\n     const store = {\n       setState: (change) => {\n         state = { ...state, ...change };\n       },\n       getState: () => state,\n     };\n     const channel = new EventEmitter();\n     const navigate = vi.fn();\n-    const { api } = initURL({\n-      state: { location: { search: '?tags=a11y&args=foo:bar', path: '/', hash: '' } },\n+    const { api, state: initialState } = initURL({\n+      state: { path: '/', location: { search: '?tags=a11y&args=foo:bar', hash: '' } },\n       navigate,\n       store,\n       provider: { channel },\n     });\n+    state = initialState;\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager-api/tests/url.test.js` around lines 126 - 143, The test\nseeds store.state with only customQueryParams causing applyQueryParams\n(api.applyQueryParams) to call store.getState() and access location.path and\nlocation.hash on an undefined location; fix by initializing the store with the\nfull module state shape (including location: { path, search, hash }) before\ncalling initURL/api.applyQueryParams so getState() returns a location\nobject\u2014update the test's store or initial state passed to initURL to include\nlocation.path and location.hash alongside customQueryParams.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 2f80eb0",
+          "file_path": "code/core/src/manager-api/tests/url.test.js",
+          "line_number": 143,
+          "start_line": 126,
+          "commit_sha": "17b4191002628383b3159923d2c3bae4f660dfe4",
+          "created_at": "2026-03-23T16:07:54Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a test setup bug that can cause throws, with a specific proposed fix. Marked as addressed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6x0N19",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Migration reads storage before cleanup, so tag filter keys may still appear in initial state.**\n\nThe `local` and `session` variables are captured at lines 81-82 before the migration loop removes `includedTagFilters`/`excludedTagFilters` from storage. Since the returned state merges the original snapshots, any old tag filter keys will still be present in the initial state on first load after upgrade.\n\nIf the intent is to prevent localStorage tag filters from influencing initial state (per PR objectives), consider re-reading after migration or filtering the keys from the returned state.\n\n<details>\n<summary>\ud83d\udd27 Proposed fix to exclude tag filters from returned state</summary>\n\n```diff\n   getInitialState(base: State) {\n-    const local = get(store.local);\n-    const session = get(store.session);\n-\n     // One-time migration: tag filter state moved from localStorage to URL persistence.\n     // Remove the old keys so they no longer interfere with URL-derived initial state.\n     for (const storage of [store.local, store.session] as const) {\n       const persisted = get(storage);\n       if ('includedTagFilters' in persisted || 'excludedTagFilters' in persisted) {\n         const { includedTagFilters: _i, excludedTagFilters: _e, ...rest } = persisted;\n         set(storage, rest);\n       }\n     }\n \n+    const local = get(store.local);\n+    const session = get(store.session);\n+\n     return { ...base, ...local, ...session };\n   }\n```\n\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    // One-time migration: tag filter state moved from localStorage to URL persistence.\n    // Remove the old keys so they no longer interfere with URL-derived initial state.\n    for (const storage of [store.local, store.session] as const) {\n      const persisted = get(storage);\n      if ('includedTagFilters' in persisted || 'excludedTagFilters' in persisted) {\n        const { includedTagFilters: _i, excludedTagFilters: _e, ...rest } = persisted;\n        set(storage, rest);\n      }\n    }\n\n    const local = get(store.local);\n    const session = get(store.session);\n\n    return { ...base, ...local, ...session };\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager-api/store.ts` around lines 81 - 94, The migration\nremoves tag-filter keys after taking snapshots (local and session), so the\nreturned initial state still includes the old\nincludedTagFilters/excludedTagFilters; update the logic in the store\ninitialization to either (A) re-read storage after the cleanup loop (call\nget(store.local) and get(store.session) again and use those for the returned\nmerge) or (B) explicitly strip includedTagFilters/excludedTagFilters from the\npreviously-captured local and session objects before returning; reference the\nexisting symbols local, session, store.local, store.session, get, set, and the\nfinal return that merges base, local, session to locate where to apply the fix.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 2f80eb0",
+          "file_path": "code/core/src/manager-api/store.ts",
+          "line_number": 94,
+          "start_line": null,
+          "commit_sha": "0d52e76e4c4f88f79cc54c913d99bbe8d63c4915",
+          "created_at": "2026-03-24T17:39:30Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where migration reads storage before cleanup, with a specific proposed fix. Marked as addressed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6yDm5r",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Verify direct mock mutation and beforeEach presence in this test file\nrg -n \"store2\\\\.(session|local)\\\\.get\\\\s*\\\\.?\\\\s*mockReturnValueOnce|store2\\\\.(session|local)\\\\.get\\\\.mockReturnValueOnce\" code/core/src/manager-api/tests/store.test.js\nrg -n \"\\\\bbeforeEach\\\\s*\\\\(\" code/core/src/manager-api/tests/store.test.js\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 114\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/manager-api/tests/store.test.js | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4219\n\n---\n\n\n\n</details>\n\n**Move mock setup to use `vi.mock(..., { spy: true })` at top level and configure mock behaviors in `beforeEach` using `vi.mocked()` accessors.**\n\nLines 24-30 configure mock behaviors inline within the test body and use direct function access instead of `vi.mocked()` handles. Additionally, the `vi.mock('store2', ...)` call at line 8 is missing the required `spy: true` option. Please refactor:\n\n1. Add `spy: true` to the `vi.mock()` call on line 8\n2. Introduce a `beforeEach` block to reset mocks\n3. Use `vi.mocked()` to wrap `store2.session.get` and `store2.local.get` references\n\n<details>\n<summary>Suggested refactor</summary>\n\n```diff\n-vi.mock('store2', () => ({\n+vi.mock('store2', { spy: true }, () => ({\n   default: {\n     local: {\n       set: vi.fn(),\n       get: vi.fn(),\n     },\n     session: {\n       set: vi.fn(),\n       get: vi.fn(),\n     },\n     _: { fn: () => {} },\n   },\n }));\n\n describe('store', () => {\n+  beforeEach(() => {\n+    vi.mocked(store2.session.get).mockReset();\n+    vi.mocked(store2.local.get).mockReset();\n+  });\n+\n   it('sensibly combines local+session storage for initial state', () => {\n     // Each storage is read twice: once for the migration check, once for the actual merge.\n-    store2.session.get\n+    vi.mocked(store2.session.get)\n       .mockReturnValueOnce({ foo: 'bar', combined: { a: 'b' } })\n       .mockReturnValueOnce({ foo: 'bar', combined: { a: 'b' } });\n-    store2.local.get\n+    vi.mocked(store2.local.get)\n       .mockReturnValueOnce({ foo: 'baz', another: 'value', combined: { c: 'd' } })\n       .mockReturnValueOnce({ foo: 'baz', another: 'value', combined: { c: 'd' } });\n```\n</details>\n\nThis aligns with the coding guidelines: use `vi.mock()` with `spy: true`, implement mock behaviors in `beforeEach` blocks, and use `vi.mocked()` to type-safely access mocked functions.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager-api/tests/store.test.js` around lines 24 - 30, Update\nthe test to use vi.mock(..., { spy: true }) for the store2 mock, and move the\ninline mockReturnValueOnce setup into a beforeEach where you reset mocks (e.g.,\nvi.resetAllMocks or vi.clearAllMocks) and then configure behaviors via\nvi.mocked(...) wrappers; specifically replace direct calls to\nstore2.session.get.mockReturnValueOnce and store2.local.get.mockReturnValueOnce\nwith vi.mocked(store2.session.get).mockReturnValueOnce(...) and\nvi.mocked(store2.local.get).mockReturnValueOnce(...), doing both the\nmigration-check and merge returns inside beforeEach so tests use the typed\nvi.mocked accessors and mocks are reset between tests.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager-api/tests/store.test.js",
+          "line_number": 30,
+          "start_line": 24,
+          "commit_sha": "17b4191002628383b3159923d2c3bae4f660dfe4",
+          "created_at": "2026-03-25T10:35:58Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests a specific refactor of test mock setup to use vi.mock with spy:true, beforeEach, and vi.mocked()."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6yJQ_D",
+          "author": "ghengeveld",
+          "body": "We have `navigateTo` in url.ts which is very similar. Should we reuse/share that?",
+          "file_path": "code/core/src/manager-api/modules/stories.ts",
+          "line_number": 441,
+          "start_line": 438,
+          "commit_sha": "17b4191002628383b3159923d2c3bae4f660dfe4",
+          "created_at": "2026-03-25T14:50:05Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests reusing/sharing an existing navigateTo function, implying a refactor."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6yJdoe",
+          "author": "ghengeveld",
+          "body": "Didn't we drop this approach for changed items?",
+          "file_path": "code/core/src/manager-api/modules/tags.ts",
+          "line_number": 7,
+          "start_line": 3,
+          "commit_sha": "17b4191002628383b3159923d2c3bae4f660dfe4",
+          "created_at": "2026-03-25T14:57:37Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions whether the current approach was already dropped, implying the code may need to be changed or removed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6yJpT4",
+          "author": "ghengeveld",
+          "body": "Why aren't we reusing this in navigateWithQueryParams?",
+          "file_path": "code/core/src/manager-api/modules/url.ts",
+          "line_number": 230,
+          "start_line": null,
+          "commit_sha": "f1256e98deeb842f6be7520b330562f4516bc509",
+          "created_at": "2026-03-25T15:04:00Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests reusing an existing function in navigateWithQueryParams, implying a refactor."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6yJ0qQ",
+          "author": "ghengeveld",
+          "body": "I think _changed doesn't belong here.",
+          "file_path": "code/core/src/manager-api/tests/tags.test.js",
+          "line_number": 18,
+          "start_line": null,
+          "commit_sha": "f1256e98deeb842f6be7520b330562f4516bc509",
+          "created_at": "2026-03-25T15:10:41Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "States that _changed doesn't belong in the test file, implying it should be removed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6yJ3kR",
+          "author": "ghengeveld",
+          "body": "Should these be sorted maybe?",
+          "file_path": "code/core/src/manager-api/tests/tags.test.js",
+          "line_number": 42,
+          "start_line": null,
+          "commit_sha": "f1256e98deeb842f6be7520b330562f4516bc509",
+          "created_at": "2026-03-25T15:12:16Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests sorting items, implying a code change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6yJ-DL",
+          "author": "ghengeveld",
+          "body": "Should we have a TODO to eventually remove this migration logic?",
+          "file_path": "code/core/src/manager-api/store.ts",
+          "line_number": 80,
+          "start_line": 79,
+          "commit_sha": "17b4191002628383b3159923d2c3bae4f660dfe4",
+          "created_at": "2026-03-25T15:16:11Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding a TODO comment for eventual removal of migration logic."
+    }
+  ],
+  "review_thread_count": 12,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 12,
+    "stage1_kept": 12,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

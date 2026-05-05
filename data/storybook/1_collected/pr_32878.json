@@ -1,0 +1,48 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 32878,
+  "title": "Core: Support defineConfig when setting up ESLint plugin",
+  "body": "Storybook init adds the `eslint-plugin-storybook` import but fails to register it in Next.js projects using `defineConfig([...])` from `eslint/config`.\n\n## Changes\n\n**`code/core/src/cli/eslintPlugin.ts`**\n- Added Case 2b to handle direct `export default defineConfig([...])` pattern\n- Extended Case 3 to handle CallExpressions wrapping array arguments (variable assignment pattern)\n- Added tracking for `defineConfig` imports specifically from `\"eslint/config\"`\n- Validates the callee matches the imported `defineConfig` identifier before modifying\n- Added type guards (`t.isExpression`) and null checks before unwrapping and modifying arrays\n\n**`code/core/src/cli/eslintPlugin.test.ts`**\n- Added test case validating direct `export default defineConfig([...])` pattern from `\"eslint/config\"`\n- Added test case validating variable assignment pattern `const config = defineConfig([...]); export default config;`\n- Added test case ensuring `defineConfig` from other packages is not modified\n\n## Behavior\n\n**Before:**\n```typescript\nimport storybook from \"eslint-plugin-storybook\";\n\n// Pattern 1: Variable assignment\nconst eslintConfig = defineConfig([\n  ...nextVitals,\n  ...nextTs,\n]); // Plugin import added but not registered\nexport default eslintConfig;\n\n// Pattern 2: Direct export\nexport default defineConfig([\n  ...nextVitals,\n  ...nextTs,\n]); // Plugin import added but not registered\n```\n\n**After:**\n```typescript\n// Only modifies defineConfig from \"eslint/config\"\nimport { defineConfig } from \"eslint/config\";\nimport storybook from \"eslint-plugin-storybook\";\n\n// Pattern 1: Variable assignment - now works\nconst eslintConfig = defineConfig([\n  ...nextVitals,\n  ...nextTs,\n  ...storybook.configs[\"flat/recommended\"]\n]);\nexport default eslintConfig;\n\n// Pattern 2: Direct export - now works\nexport default defineConfig([\n  ...nextVitals,\n  ...nextTs,\n  ...storybook.configs[\"flat/recommended\"]\n]);\n\n// defineConfig from other packages is left unchanged (import only added)\nimport { defineConfig } from \"some-other-lib\";\nconst config = defineConfig([...]); // Not modified\n```\n\nAll existing ESLint config formats (direct arrays, `tseslint.config()`, legacy `.eslintrc`) remain unaffected.\n\n<!-- START COPILOT CODING AGENT SUFFIX -->\n\n\n\n<details>\n\n<summary>Original prompt</summary>\n\n> \n> ----\n> \n> *This section details on the original issue you should resolve*\n> \n> <issue_title>[Bug]: Storybook plugin not added to eslint.config during init in Next.js projects</issue_title>\n> <issue_description>### Describe the bug\n> \n> When initializing Storybook in a Next.js project, the setup modifies the eslint.config file to include an import for the Storybook ESLint plugin, but does not actually register the plugin in the ESLint configuration array.\n> \n> Current generated eslint.config:\n> \n> ```ts\n> // \ud83d\udc47 only the import is added, but the plugin isn't added to the config\n> import storybook from \"eslint-plugin-storybook\";\n> \n> import { defineConfig, globalIgnores } from \"eslint/config\";\n> import nextVitals from \"eslint-config-next/core-web-vitals\";\n> import nextTs from \"eslint-config-next/typescript\";\n> \n> const eslintConfig = defineConfig([\n>   ...nextVitals,\n>   ...nextTs,\n>   // Override default ignores of eslint-config-next.\n>   globalIgnores([\n>     \".next/**\",\n>     \"out/**\",\n>     \"build/**\",\n>     \"next-env.d.ts\",\n>   ]),\n> ]);\n> \n> export default eslintConfig;\n> ```\n> \n> **Expected behaviour**\n> Storybook\u2019s init process should both:\n> - Add the eslint-plugin-storybook import and\n> - Extend the ESLint configuration with the Storybook plugin, e.g.:\n> \n> ### Reproduction steps\n> \n> 1. Create a new Next.js project (`npx gitpick storybookjs/sandboxes/tree/next/nextjs-vite/default-ts/before-storybook`)\n> 2. Run `npx storybook@latest init`\n> 3. Inspect the generated eslint.config.mjs (or eslint.config.mjs)\n> \n> ### System\n> \n> ```bash\n> -\n> ```\n> \n> ### Additional context\n> \n> _No response_</issue_description>\n> \n> ## Comments on the Issue (you are @copilot in this section)\n> \n> <comments>\n> </comments>\n> \n\n\n</details>\n\n- Fixes storybookjs/storybook#32858\n\n<!-- START COPILOT CODING AGENT TIPS -->\n---\n\n\ud83d\udca1 You can make Copilot smarter by setting up custom instructions, customizing its development environment and configuring Model Context Protocol (MCP) servers. Learn more [Copilot coding agent tips](https://gh.io/copilot-coding-agent-tips) in the docs.\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Improved handling of various ESLint flat-config styles (including import aliases and import-only sources) so Storybook lint rules and Next.js presets are merged correctly across different export patterns.\n\n* **Tests**\n  * Added tests validating merging behavior and import-preservation across defineConfig-style, direct-array, and non-standard export scenarios.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "copilot-swe-agent",
+  "merged_at": "2026-01-19T11:44:05Z",
+  "base_ref": "next",
+  "merge_commit_sha": "a1c13a8626f9c1c4e97b77607fc7d3dfd34d8713",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "c053d38ce6af13f1c16fc8c124f8102549d05eef",
+    "372dbc836000522751fa3c9051519abf605cbc7b"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6TbP2s",
+          "author": "yannbf",
+          "body": "@copilot only if it's defineConfig from `import { defineConfig } from \"eslint/config\"`",
+          "file_path": "code/core/src/cli/eslintPlugin.ts",
+          "line_number": 116,
+          "start_line": null,
+          "commit_sha": "55554fcb522395cd5012fe4caefb1b883a213f44",
+          "created_at": "2025-10-29T14:19:29Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6TbgT8",
+          "author": "copilot-swe-agent",
+          "body": "Fixed in 72ec435. Now specifically checks that `defineConfig` is imported from \"eslint/config\" before modifying the array. Added test to verify we don't modify `defineConfig` from other sources.",
+          "file_path": "code/core/src/cli/eslintPlugin.ts",
+          "line_number": 116,
+          "start_line": null,
+          "commit_sha": "55554fcb522395cd5012fe4caefb1b883a213f44",
+          "created_at": "2025-10-29T14:29:30Z",
+          "is_outdated": true
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 1
+}

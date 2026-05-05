@@ -1,0 +1,38 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/Color.tsx",
+      "line_number": 335,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `!maxPresetColors` condition has two silent failure modes:\n\n1. **Negative numbers are not caught.** In JavaScript, negative numbers are truthy, so `!(-5) === false`. A value like `-5` falls through to `combined.slice(-(-5))` which equals `combined.slice(5)`, silently dropping elements from the *front* of the array rather than applying the default cap or returning all presets.\n\n2. **`NaN` is unintentionally treated as \"no limit\".** `!NaN === true`, so passing `NaN` bypasses the limit entirely, which is unlikely to be the intended behavior.\n\nConsider using explicit checks and a fallback guard:\n```ts\nif (maxPresetColors === 0 || maxPresetColors === Infinity) {\n  return combined;\n}\nconst limit = Number.isInteger(maxPresetColors) && maxPresetColors > 0 ? maxPresetColors : 27;\nreturn combined.slice(-limit);\n```\nThis makes the \"invalid input \u2192 fall back to 27\" contract explicit and avoids the negative-number footgun.",
+      "index": 0
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/Color.stories.tsx",
+      "line_number": 73,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Neither `WithMaxPresetColors` nor `WithUnlimitedPresetColors` includes `startOpen: true`. The primary purpose of these stories is to visually demonstrate the preset-count behavior, but the color picker is closed by default \u2014 users must manually click the swatch to see the swatches. Adding `startOpen: true` to each story's `args` block would make the feature immediately visible without interaction, which is especially valuable for the limit-to-5 story where the capping effect is the whole point.",
+      "index": 1
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/types.ts",
+      "line_number": 23,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "\"The oldest presets are removed first (most-recently-used order)\" is potentially misleading. The mechanism is `combined.slice(-maxPresetColors)`, which keeps the *last* N elements of the concatenated array. When `presetColors` alone exceeds `maxPresetColors` and no user selections have been made, the **first entries of the user's `presetColors` array** are dropped \u2014 i.e., the ones at the beginning of the defined list, not the least-recently-used ones in any temporal sense. The MRU framing only holds once the user picks colors (which are appended at the end and push initial presets off the front). A more precise description might be: \"When the combined list exceeds this value, entries are removed from the beginning of the list first.\"",
+      "index": 2
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "There are no unit tests covering the new `maxPresetColors` parameter. The logic in `usePresets` now branches on several distinct cases \u2014 `0`, `Infinity`, a valid positive integer, a negative number, and `NaN` \u2014 each with different intended behavior. Without tests, the negative-number and NaN edge cases described in the inline comment above are easy to miss. A dedicated test file for `usePresets` (or integration tests for `ColorControl`) that covers these branches would prevent regressions and document the expected behavior per case.",
+      "index": 3
+    }
+  ],
+  "cost_usd": 0.32586880000000007,
+  "duration_seconds": 279.7569031715393
+}

@@ -1,0 +1,92 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/create-storybook/src/generators/configure.ts",
+      "line_number": 113,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`SupportedRenderer.QWIK` is missing from the `isJsx` list. Qwik uses JSX syntax (`.jsx`/`.tsx` files) for component definitions, the same as React, Preact, React Native, and Solid. Omitting it means Qwik projects will receive `preview.ts`/`preview.js` instead of `preview.tsx`/`preview.jsx`, which defeats the stated goal of this PR for that renderer. Add `SupportedRenderer.QWIK` to the array.",
+      "index": 0
+    },
+    {
+      "file_path": "docs/_snippets/automock-register-mock-file.md",
+      "line_number": 63,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The Vue renderer TypeScript snippet filename was changed from `preview.ts` to `preview.tsx`, but Vue is not a JSX renderer \u2014 it uses `.vue` SFCs and template syntax. The `isJsx` logic in `configure.ts` correctly excludes Vue (VUE3), so this documentation change contradicts the implementation. The filename should remain `preview.ts` for Vue. The same incorrect change affects the Vue JS snippet (`preview.js` \u2192 `preview.jsx`), the Angular TS snippet (`preview.ts` \u2192 `preview.tsx`), the web-components TS snippet (`preview.ts` \u2192 `preview.tsx`), and the web-components JS snippet (`preview.js` \u2192 `preview.jsx`) in this same file.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/generators/configure.test.ts",
+      "line_number": 151,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test fixture for \"should generate preview.jsx for react-like renderers\" pairs `renderer: SupportedRenderer.REACT_NATIVE` with `frameworkPackage: '@storybook/react-vite'`. These are inconsistent \u2014 React Native projects would never use `@storybook/react-vite`. Since the two fields are independent in the logic under test, this doesn't break correctness, but it makes the fixture misleading. Consider using `SupportedRenderer.REACT` with `@storybook/react-vite`, or `SupportedRenderer.REACT_NATIVE` with a React Native framework package.",
+      "index": 2
+    },
+    {
+      "file_path": "docs/_snippets/mock-provider-in-preview.md",
+      "line_number": 1,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The React renderer (`renderer=\"react\"`) CSF 3 snippets were changed from precise `.jsx` / `.tsx` back to the ambiguous `js|jsx` / `ts|tsx` notation. Every other `renderer=\"react\"` snippet in this PR uses the exact extension (`.jsx` / `.tsx`). This inconsistency will confuse React users reading these docs: half of the snippets say `preview.jsx` and this one says `preview.js|jsx`.",
+      "index": 3
+    },
+    {
+      "file_path": "docs/configure/story-rendering.mdx",
+      "line_number": 12,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The change from `preview.js|ts` to `preview.ts|tsx` silently drops JavaScript users. The new text implies that only TypeScript projects have a preview file. For a framework-agnostic overview page, this should use `preview.*` (or `preview.js|ts|jsx|tsx`) to cover all project configurations. The old wording was also incomplete, but the new wording is more restrictive, not less.",
+      "index": 4
+    },
+    {
+      "file_path": "docs/writing-docs/autodocs.mdx",
+      "line_number": 18,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Three consecutive references in this file were changed to `preview.jsx|tsx`, which implies all Storybook frameworks use JSX/TSX. This page is rendered for all renderers including Vue, Angular, and Svelte. Use `preview.*` (or `preview.js|ts`) for framework-agnostic references. The `.jsx|tsx` suffix is only correct for React-based renderers.",
+      "index": 5
+    },
+    {
+      "file_path": "docs/get-started/frameworks/nextjs.mdx",
+      "line_number": 453,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The inline description was changed to say `.storybook/preview.tsx`, but the code block immediately below it (titled `.storybook/preview.tsx`) contains plain JavaScript. A `.tsx` file extension implies TypeScript JSX; a JavaScript snippet should use `.storybook/preview.jsx`. Similarly, the two `index.tsx` block titles on lines 435 and 458 previously said `index.jsx|tsx` to indicate either language, but were narrowed to a TypeScript-only title even though the snippet contains JSX JavaScript.",
+      "index": 6
+    },
+    {
+      "file_path": "docs/api/csf/csf-next.mdx",
+      "line_number": 356,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `diff` block title for the preview config upgrade was changed to `preview.jsx|tsx`. The surrounding prose (and `@storybook/your-framework` placeholder) make clear this section applies to all renderers, not just React. A Vue or Angular developer following this migration guide would incorrectly rename their file to `.tsx`. Use `.storybook/preview.*` in the prose and keep the diff title renderer-neutral (e.g., `preview.ts` for the generic TS case) or qualify the section with a renderer guard.",
+      "index": 7
+    },
+    {
+      "file_path": "AGENTS.md",
+      "line_number": 79,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The updated bullet still names `preview.ts` as the primary filename and only adds a parenthetical `(TSX for React-based frameworks)`. This is incomplete: it omits JavaScript variants (`preview.jsx` / `preview.js`) and is ambiguous for agents that generate JS projects. A clearer phrasing would be: \"`.storybook/preview.ts` (or `.tsx` for React-based frameworks, `.js`/`.jsx` for JavaScript projects) is bundled into preview\".",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The documentation update strategy is inconsistent across snippet files. Some framework-agnostic snippets (`renderer=\"common\"`) correctly use the `ts|tsx` and `js|jsx` dual-notation to cover both React and non-React users, while other framework-agnostic prose passages (e.g., in `autodocs.mdx`, `decorators.mdx`, `parameters.mdx`) were updated to `jsx|tsx` or `ts|tsx`, silently excluding one language tier. Agreeing on a single canonical notation for framework-agnostic references \u2014 either `preview.*` or the full four-variant `js|ts|jsx|tsx` \u2014 and applying it consistently would eliminate this class of documentation bug.",
+      "index": 9
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `renderer` parameter added to `ConfigurePreviewOptions` is now required (non-optional). If any callers of `configurePreview` outside the files shown in this diff (e.g., framework-specific generators, third-party integrations) do not pass `renderer`, they will fail to compile. The diff updates `baseGenerator.ts` and the test file, but it's worth auditing all call sites \u2014 including any exported-API consumers \u2014 to confirm none are silently broken.",
+      "index": 10
+    }
+  ],
+  "cost_usd": 0.63568465,
+  "duration_seconds": 227.28994488716125
+}

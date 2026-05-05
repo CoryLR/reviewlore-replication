@@ -1,0 +1,116 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/styles.ts",
+      "line_number": 80,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `.section-${i - 1} line { stroke-width: 0; }` rule inside `genGradient` is NOT scoped to `[data-look=\"neo\"]`. This means any mindmap diagram rendered with a theme that sets `useGradient: true` \u2014 regardless of its `look` setting \u2014 will have its lines hidden. The rule should be `[data-look=\"neo\"].section-${i - 1} line { stroke-width: 0; }` to restrict the effect to neo look only.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.ts",
+      "line_number": 239,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`theme` and `isReduxTheme` are recomputed on every invocation of the `getShapeFromType` closure, even though they only depend on `conf` which is already computed once in the outer scope of `flattenNodes`. These two derivations should be hoisted to the outer scope (next to `const conf = getConfig()`) so they are evaluated once per node, not once per `getShapeFromType` call.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.ts",
+      "line_number": 303,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`generateEdges` is recursive \u2014 it calls `this.generateEdges(child, edges)` for each child. The `const conf = getConfig()` added here is therefore called once per node that has children, not just once for the whole tree. Since config does not change during rendering, this is wasteful. Consider passing `look` (the only value used from `conf`) as a parameter to `generateEdges`, or hoisting the `getConfig()` call to the public entry point.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/styles.ts",
+      "line_number": 56,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Inconsistency in neutral theme handling: the `fill` rule uses `options.mainBkg` for `neutral` theme (`theme === 'neutral'`), but the `stroke` rule immediately below falls through to `options['cScale' + i]` for neutral (only redux/redux-dark use `nodeBorder`). If this is intentional it should be documented; otherwise the stroke should also branch on `theme === 'neutral'`.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/styles.ts",
+      "line_number": 29,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The new `.section-${i - 1} span` selector block has a leading space before it (` .section-${i - 1} span {`), inconsistent with the preceding `.section-${i - 1} text` block which has no leading space. The `color:` value also has inconsistent indentation (single space vs the four spaces used elsewhere in the template). Aligning these would keep the generated CSS readable.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/styles.ts",
+      "line_number": 119,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Double space before `{` in the selector: `[data-look=\"neo\"].mindmap-node  {`. Should be a single space.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/styles.ts",
+      "line_number": 127,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Double space after `fill:` in `fill:  ${theme?.includes('redux') ...}`. Should be a single space.",
+      "index": 6
+    },
+    {
+      "file_path": "cypress/integration/rendering/mindmap-neo-look.spec.ts",
+      "line_number": 28,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `describe` label says \"connect all shapes with each other\" but the test builds a tree (root \u2192 children \u2192 grandchildren), not a fully connected graph. The description should say something like \"render all mindmap shapes in a tree hierarchy\" to accurately reflect what is being tested.",
+      "index": 7
+    },
+    {
+      "file_path": "cypress/integration/rendering/mindmap-neo-look.spec.ts",
+      "line_number": 2,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `looks` array contains only one element (`'neo'`), making the outer `looks.forEach` loop purely ceremonial \u2014 it adds a level of nesting with no benefit. If other looks are not intended to be tested here, removing the outer loop and using `'neo'` directly would be simpler and clearer.",
+      "index": 8
+    },
+    {
+      "file_path": "cypress/integration/rendering/mindmap-neo-look.spec.ts",
+      "line_number": 3,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `neutral` theme is absent from the test matrix even though the styles code has explicit branching on `theme === 'neutral'` for both `fill` and `cScaleLabel` selection. Adding `'neutral'` to the themes array would give snapshot coverage of the path that receives the most bespoke logic.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/roundedRect.ts",
+      "line_number": 5,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The third parameter `{ config: { themeVariables } }: ShapeRenderOptions` is now required (no default, no `?`). The shape dispatch system always passes three arguments, so registered callers are safe. However, any direct call site that passes only `parent` and `node` (e.g. the local `roundedRect` wrapper in `labelRect.ts`) would break at runtime with a destructuring error on `undefined`. Verify every direct call site passes `ShapeRenderOptions`, or make the parameter optional with a sensible default (`= { config: {} } as ShapeRenderOptions`).",
+      "index": 10
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/edges.js",
+      "line_number": 783,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The comment \"Add data attributes for neo look support\" is accurate but narrow \u2014 this change adds `data-look` to ALL diagram edges (not only mindmap), making it part of the general edge rendering contract. A broader comment like \"Propagate look to edge element so CSS selectors such as [data-look=\\\"neo\\\"] can style edges\" would better reflect the scope of the change.",
+      "index": 11
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The long inline ternary chains that check `theme === 'redux' || theme === 'redux-dark' || theme === 'neutral'` appear three or four times across `genSections` and `getStyles`. If any new theme requires special treatment, each of these sites must be updated independently. Extracting helper predicates (e.g. `const isReduxFamily = ...`) at the top of the function and reusing them would reduce the risk of the conditions diverging.",
+      "index": 12
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The neo CSS selectors in `genSections` and `genGradient` enumerate all four element types on every rule (`rect, path, circle, polygon`), producing extremely long lines that are hard to scan and diff. Other diagram style files solve this by creating a shared CSS class (e.g. `.neo-shape`) applied to the SVG element in the renderer, then targeting that single class. If the element types need to stay as-is, extracting the repeated selector prefix into a template variable within the loop would at least reduce repetition.",
+      "index": 13
+    }
+  ],
+  "cost_usd": 0.6821647000000001,
+  "duration_seconds": 535.8994710445404
+}

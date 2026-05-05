@@ -1,0 +1,295 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4514,
+  "title": "resolve info `HTML` and `Document` assignment",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nBrief description about the content of your PR.\r\n\r\nResolves #<your issue id here>\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nDescribe the way your implementation works or what design decisions you made if applicable.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [ ] :computer: have added unit/e2e tests (if appropriate)\r\n- [ ] :notebook: have added documentation (if appropriate)\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "Yokozuna59",
+  "merged_at": "2023-08-06T15:21:32Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "7da38b9afe4c44c54e4eb215cc9b1d6cd3a4eda1",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "e1379ee0483a15b82a38385b0c8db0f7e86ea79a",
+    "1802f5d0c05be6725ba2a4fecba34581cee38298"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85MmMq-",
+          "author": "nirname",
+          "body": "Seems, that we refer to `doc` variable only with 'sandbox' security level, so:\r\n```ts\r\nconst root: HML = select('body');\r\nif (securityLevel === 'sandbox') {\r\n    const sandboxElement: HTML = select(`#i${id}`);\r\n    const doc: Document = sandboxElement.node()?.contentDocument ?? document;\r\n    root = select(doc.body as HTMLIFrameElement);\r\n}\r\n```\r\nUnless we need to return `doc` along with `svg` as a function result",
+          "file_path": "packages/mermaid/src/rendering-util/selectSvgElement.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "1802f5d0c05be6725ba2a4fecba34581cee38298",
+          "created_at": "2023-08-05T16:13:52Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85MmM1n",
+          "author": "nirname",
+          "body": "And a separate comment for this. Is there need to return `root`, `doc` along with `svg` for other diagrams? Info diagram is our lab animal in many cases, but not fully representative.",
+          "file_path": "packages/mermaid/src/rendering-util/selectSvgElement.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "1802f5d0c05be6725ba2a4fecba34581cee38298",
+          "created_at": "2023-08-05T16:18:44Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85MmPW0",
+          "author": "Yokozuna59",
+          "body": "> Seems, that we refer to `doc` variable only with 'sandbox' security level, so:\r\n> \r\n> ```ts\r\n> const root: HML = select('body');\r\n> if (securityLevel === 'sandbox') {\r\n>     const sandboxElement: HTML = select(`#i${id}`);\r\n>     const doc: Document = sandboxElement.node()?.contentDocument ?? document;\r\n>     root = select(doc.body as HTMLIFrameElement);\r\n> }\r\n> ```\r\n> \r\n> Unless we need to return `doc` along with `svg` as a function result\r\n\r\nMake sense, thanks! I was using this block of code in pieRenderer and it currently uses the `doc` variable, that why I assigned it outside.\r\n\r\n> And a separate comment for this. Is there need to return `root`, `doc` along with `svg` for other diagrams? Info diagram is our lab animal in many cases, but not fully representative.\r\n\r\nAnd don't think we need to do that. While I was working on converting pie files, I saw it [uses the `doc`](https://github.com/mermaid-js/mermaid/blob/23b6d53f80fb803562f13f86039da31a1cf632dd/packages/mermaid/src/diagrams/pie/pieRenderer.ts#L36) and [change some attributes](https://github.com/mermaid-js/mermaid/blob/23b6d53f80fb803562f13f86039da31a1cf632dd/packages/mermaid/src/diagrams/pie/pieRenderer.ts#L44) on it, which it should do that on the `svg` instead.\r\nSome diagrams do that and I'll fix them when standardizing their files.\r\n",
+          "file_path": "packages/mermaid/src/rendering-util/selectSvgElement.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "1802f5d0c05be6725ba2a4fecba34581cee38298",
+          "created_at": "2023-08-05T17:31:35Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment suggests a concrete refactoring \u2014 restructuring the code to scope the `doc` variable only within the sandbox security level block, and provides a specific code snippet illustrating the change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85MmM0K",
+          "author": "nirname",
+          "body": "Do we need this line?",
+          "file_path": "packages/mermaid/src/diagrams/info/infoRenderer.ts",
+          "line_number": 14,
+          "start_line": null,
+          "commit_sha": "1802f5d0c05be6725ba2a4fecba34581cee38298",
+          "created_at": "2023-08-05T16:17:29Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85MmPD5",
+          "author": "Yokozuna59",
+          "body": "Not really sure, my thought of leaving this line it's would give us the ability to track where the error might occur, i.e., if the diagram didn't get rendered and this line didn't get logged then it should somewhere before that.\r\n",
+          "file_path": "packages/mermaid/src/diagrams/info/infoRenderer.ts",
+          "line_number": 14,
+          "start_line": null,
+          "commit_sha": "1802f5d0c05be6725ba2a4fecba34581cee38298",
+          "created_at": "2023-08-05T17:23:06Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Mml52",
+          "author": "nirname",
+          "body": "Totally fine, lets leave it there and deal with it later. No harm, it is already working anyway.",
+          "file_path": "packages/mermaid/src/diagrams/info/infoRenderer.ts",
+          "line_number": 14,
+          "start_line": null,
+          "commit_sha": "1802f5d0c05be6725ba2a4fecba34581cee38298",
+          "created_at": "2023-08-06T09:42:39Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment questions whether a specific line is needed, implying it should potentially be removed \u2014 a concrete code change."
+    }
+  ],
+  "review_thread_count": 6,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85Joz_O",
+            "author": "Yokozuna59",
+            "body": "I've changed [`/demos/info.html`](https://github.com/mermaid-js/mermaid/blob/3d117815425cbd05105ec0f0192adc0be91931f2/demos/index.html) config to this:\r\n\r\n```diff\r\n<script type=\"module\">\r\n  import mermaid from './mermaid.esm.mjs';\r\n  mermaid.initialize({\r\n    theme: 'forest',\r\n    logLevel: 3,\r\n-   securityLevel: 'loose',\r\n+   securityLevel: 'sandbox',\r\n  });\r\n</script>\r\n```\r\n\r\nThe first would fail, but others would work fine:\r\n\r\n![image](https://github.com/mermaid-js/mermaid/assets/87622592/b2b003ad-72f7-4dbf-ba58-bf6b85cc9d1c)\r\n\r\nNot sure why yet, maybe a variable has been defined after first one, that's why `e2e` testing is failing.\r\n\r\n\r\nWhat is being logged:\r\n\r\n![image](https://github.com/mermaid-js/mermaid/assets/87622592/d30860aa-6f61-483d-8f4a-54723f6d6eb0)\r\n\r\n",
+            "file_path": "packages/mermaid/src/mermaidAPI.ts",
+            "line_number": 290,
+            "start_line": 288,
+            "commit_sha": "1802f5d0c05be6725ba2a4fecba34581cee38298",
+            "created_at": "2023-06-20T15:23:00Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85JpSk_",
+            "author": "Yokozuna59",
+            "body": "The above screenshot is in firefox, but it works fine in chrome:\r\n\r\n![image](https://github.com/mermaid-js/mermaid/assets/87622592/fb4c58ea-714e-491b-8eb0-96ad4726ebf0)\r\n",
+            "file_path": "packages/mermaid/src/mermaidAPI.ts",
+            "line_number": 290,
+            "start_line": 288,
+            "commit_sha": "1802f5d0c05be6725ba2a4fecba34581cee38298",
+            "created_at": "2023-06-20T17:07:17Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85Jpp4l",
+            "author": "Yokozuna59",
+            "body": "After more debugging, when I added the following line of code in [`/packages/diagrams/info/infoRenderer.ts`](https://github.com/mermaid-js/mermaid/blob/3d117815425cbd05105ec0f0192adc0be91931f2/packages/mermaid/src/diagrams/info/infoRenderer.ts#L21-L24):\r\n\r\n```diff\r\nif (securityLevel === 'sandbox') {\r\n  const sandboxElement: HTML = select('#i' + id);\r\n  document = sandboxElement.node()?.contentDocument;\r\n+ log.info(document?.body)\r\n}\r\n```\r\n\r\nIt shows that the body is being use in the first time is the parent one, not sub body of `iframe` element:\r\n\r\n![image](https://github.com/mermaid-js/mermaid/assets/87622592/c2d95cad-74a0-444e-8c99-c14c12e51b1e)\r\n",
+            "file_path": "packages/mermaid/src/mermaidAPI.ts",
+            "line_number": 290,
+            "start_line": 288,
+            "commit_sha": "1802f5d0c05be6725ba2a4fecba34581cee38298",
+            "created_at": "2023-06-20T18:26:58Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85KCTzc",
+            "author": "sidharthv96",
+            "body": "What do you think the cause is?",
+            "file_path": "packages/mermaid/src/mermaidAPI.ts",
+            "line_number": 290,
+            "start_line": 288,
+            "commit_sha": "1802f5d0c05be6725ba2a4fecba34581cee38298",
+            "created_at": "2023-06-26T12:30:35Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85KDKsX",
+            "author": "Yokozuna59",
+            "body": "I don't know. The weird part that it works fine in chrome.",
+            "file_path": "packages/mermaid/src/mermaidAPI.ts",
+            "line_number": 290,
+            "start_line": 288,
+            "commit_sha": "1802f5d0c05be6725ba2a4fecba34581cee38298",
+            "created_at": "2023-06-26T15:03:26Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85KoiMT",
+            "author": "Yokozuna59",
+            "body": "@sidharthv96 Let's leave the `sandbox` part for later and create an issue with the above details, then figure out why it happened and how to resolve it so we can merge this PR.",
+            "file_path": "packages/mermaid/src/mermaidAPI.ts",
+            "line_number": 290,
+            "start_line": 288,
+            "commit_sha": "1802f5d0c05be6725ba2a4fecba34581cee38298",
+            "created_at": "2023-07-04T14:58:49Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85KFQmW",
+            "author": "Yokozuna59",
+            "body": "These changes are essential, and I need to use them in #4501. I don't think we want to have two commits doing the same thing in different branches.",
+            "file_path": "packages/mermaid/src/diagram-api/types.ts",
+            "line_number": 84,
+            "start_line": 82,
+            "commit_sha": "1802f5d0c05be6725ba2a4fecba34581cee38298",
+            "created_at": "2023-06-26T22:51:46Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85MgdsI",
+            "author": "Yokozuna59",
+            "body": "@sidharthv96 It would be better use this function instead of repeating it in each diagram renderer.",
+            "file_path": "packages/mermaid/src/rendering-util/selectSvgElement.ts",
+            "line_number": null,
+            "start_line": 12,
+            "commit_sha": "1802f5d0c05be6725ba2a4fecba34581cee38298",
+            "created_at": "2023-08-03T18:36:29Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85MmMfe",
+            "author": "nirname",
+            "body": "Far better",
+            "file_path": "packages/mermaid/src/rendering-util/selectSvgElement.ts",
+            "line_number": null,
+            "start_line": 12,
+            "commit_sha": "1802f5d0c05be6725ba2a4fecba34581cee38298",
+            "created_at": "2023-08-05T16:08:33Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85MmMYD",
+            "author": "nirname",
+            "body": "It may be insignificant, but I would rename it Group, because Group is ubiquitous and too abstract. If it is an html element that contains that SVG, it could be SVGParent, if it is <g> inside svg it could be SVGGroup, or even G (yep, one-letter type name). I am afraid Group is too broad\r\n\r\nNot necessary to change this, simply asking",
+            "file_path": "packages/mermaid/src/diagram-api/types.ts",
+            "line_number": 86,
+            "start_line": null,
+            "commit_sha": "1802f5d0c05be6725ba2a4fecba34581cee38298",
+            "created_at": "2023-08-05T16:04:17Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85MmPA_",
+            "author": "Yokozuna59",
+            "body": "It's should be assignable to return type of `svg.append('g')`, which is the `g` tag inside an `svg`.\r\n\r\nI wasn't really sure what to call it. Originally, it was `G`, but I wasn't really sure does that `G` represents until I [searched](https://developer.mozilla.org/en-US/docs/Web/SVG/Element/g) and found it's suppose to be `group`.",
+            "file_path": "packages/mermaid/src/diagram-api/types.ts",
+            "line_number": 86,
+            "start_line": null,
+            "commit_sha": "1802f5d0c05be6725ba2a4fecba34581cee38298",
+            "created_at": "2023-08-05T17:20:38Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85Mml7C",
+            "author": "nirname",
+            "body": "Ok, lets try this",
+            "file_path": "packages/mermaid/src/diagram-api/types.ts",
+            "line_number": 86,
+            "start_line": null,
+            "commit_sha": "1802f5d0c05be6725ba2a4fecba34581cee38298",
+            "created_at": "2023-08-06T09:43:38Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "The author explicitly states 'Not necessary to change this, simply asking' \u2014 this is a pure question/discussion with no implied requirement to change the code."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 6,
+    "stage1_kept": 3,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 3,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1
+  }
+}

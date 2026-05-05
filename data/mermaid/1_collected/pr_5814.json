@@ -1,0 +1,99 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 5814,
+  "title": "feat: allow to put notes in namespaces on classDiagram",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nIt improve its support for notes inside namespaces.\r\n\r\nResolves #4706\r\n\r\n![image](https://github.com/user-attachments/assets/00e9bc5c-8935-42a0-804e-92dd3aea0df5)\r\n\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nIt allows NoteNode to be added in the namespace.\r\n\r\n- `classStatements` parses not only `classStatement` but also `noteStatement` and returns an array of their IDs.\r\n- `addClassesToNamespace()` takes a new param `noteNames` and associates the namespace with the note.\r\n- In `classRender-v2.ts` `addNotes()` implements the process of adding to namespace like `addClasses()`.\r\n- Changed `notes` from `Array` to `ClassNoteMap`.\r\n- Add fields to `ClassNote`.\r\n  - parent: keeps the ID of the namespace.\r\n  - index: holds the number of the note. index: holds the number of the note (used as a reference when generating the edge ID)\r\n\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://mermaid.js.org/community/contributing.html)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n- [x] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://mermaid.js.org/community/contributing.html#update-documentation) is used for all new features.\r\n- [x] :butterfly: If your PR makes a change that should be noted in one or more packages' changelogs, generate a changeset by running `pnpm changeset` and following the prompts. Changesets that add features should be `minor` and those that fix bugs should be `patch`. Please prefix changeset messages with `feat:`, `fix:`, or `chore:`.\r\n",
+  "author": "kairi003",
+  "merged_at": "2025-10-27T19:32:35Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "9af985ba9be9b76bb8fd4ea24167915618556d5f",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "fed8a523a432e06e923bb0ee03a67eb0ff768b54",
+    "700aa100f226519e7fae0b671e49c80a104084ab"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85taBUi",
+          "author": "jgreywolf",
+          "body": "!! Nice",
+          "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+          "line_number": 606,
+          "start_line": null,
+          "commit_sha": "d60b09cafcbb887419dfd67d87ac6cefc93fa0ed",
+          "created_at": "2024-11-09T22:26:21Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85taEa-",
+          "author": "jgreywolf",
+          "body": "Can you help me understand this change? What do the extra array definitions do?",
+          "file_path": "packages/mermaid/src/diagrams/class/parser/classDiagram.jison",
+          "line_number": 287,
+          "start_line": null,
+          "commit_sha": "700aa100f226519e7fae0b671e49c80a104084ab",
+          "created_at": "2024-11-10T00:09:28Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85taSsj",
+          "author": "kairi003",
+          "body": "Thank you for the review!\r\n\r\nIn short, this is to pass not only class node identifiers but also note node identifiers to `yy.addClassesToNamespace()`.\r\n\r\n`classStatements` is an array of identifiers for class nodes within the namespace.\r\n\r\nOriginally, only regular class nodes were stored in this array. These were passed to `yy.addClassesToNamespace()` within `namespaceStatement`, linking them to the namespace.\r\n\r\nMy change extends the format of `classStatements` from `[classIdentifiers]` to `[[classIdentifiers], [noteIdentifiers]]`. This allows note node identifiers to be passed to `yy.addClassesToNamespace()` and linked to the namespace.",
+          "file_path": "packages/mermaid/src/diagrams/class/parser/classDiagram.jison",
+          "line_number": 287,
+          "start_line": null,
+          "commit_sha": "700aa100f226519e7fae0b671e49c80a104084ab",
+          "created_at": "2024-11-10T07:22:51Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85taTUc",
+          "author": "kairi003",
+          "body": "Of course, for better extensibility and readability, we could use an object (associative array) instead of an array, like this:\r\n```\r\nclassStatement NEWLINE                   {$$={classNames: [$1], noteNames: []}\r\n...\r\n```\r\nHowever, I thought it might be overkill to do so just for the two types: class nodes and note nodes.",
+          "file_path": "packages/mermaid/src/diagrams/class/parser/classDiagram.jison",
+          "line_number": 287,
+          "start_line": null,
+          "commit_sha": "700aa100f226519e7fae0b671e49c80a104084ab",
+          "created_at": "2024-11-10T07:36:14Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85tahJx",
+          "author": "kairi003",
+          "body": "Which do you think is better? I don\u2019t have strong feelings about it, so I can rewrite it quickly.",
+          "file_path": "packages/mermaid/src/diagrams/class/parser/classDiagram.jison",
+          "line_number": 287,
+          "start_line": null,
+          "commit_sha": "700aa100f226519e7fae0b671e49c80a104084ab",
+          "created_at": "2024-11-10T11:30:48Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85tbJ3R",
+          "author": "jgreywolf",
+          "body": "The way you have done it is fine, it just took your explanation to help me see it :)",
+          "file_path": "packages/mermaid/src/diagrams/class/parser/classDiagram.jison",
+          "line_number": 287,
+          "start_line": null,
+          "commit_sha": "700aa100f226519e7fae0b671e49c80a104084ab",
+          "created_at": "2024-11-11T00:39:08Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 2
+}

@@ -1,0 +1,711 @@
+# Categorized rules: ase / tuned_100
+
+Each rule is annotated with its BitsAI-CR sub-category (within its existing dimension), generalizability (project_specific / generalizable), and lintability (lintable / partially_lintable / requires_llm). Generated via one Sonnet pass per project.
+
+## Summary
+
+- Total rules: 224
+- Generalizability:
+    - `project_specific`: 120
+    - `generalizable`: 104
+- Lintability:
+    - `lintable`: 6
+    - `partially_lintable`: 40
+    - `requires_llm`: 178
+- Top categories:
+    - Structural Issues: 42
+    - Logic Error: 39
+    - Language-Specific Standards: 28
+    - Unclear Code Descriptions: 23
+    - API Misuse: 12
+    - Naming Standards: 11
+    - Documentation: 9
+    - Code Duplication: 8
+    - Class Design Guidelines: 7
+    - Semantic Deviation: 6
+
+## Rules by dimension
+
+### Code Defect
+
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When modifying bond display code in `ase/gui/view.py`, verify that bonds are computed independently for each image frame rather than cached from a previous frame. Navigating a trajectory with 'show bonds' active must display bonds derived from the current frame's actual atomic positions.
+    - _reasoning:_ Project-specific file and feature; requires understanding frame-caching semantics across trajectory navigation.
+- **[Semantic Deviation]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When implementing destructive per-atom operations (e.g., delete, element change) in ase-gui's multi-frame trajectory context, explicitly decide and document whether the operation applies to the current frame only, to all frames, or collapses the sequence to a single frame.
+    - _reasoning:_ Requires understanding multi-frame trajectory semantics specific to ase-gui's design.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When reviewing a hand-written character-by-character parser (e.g., in `ase/io/extxyz.py`) that replaces a regex-based one, verify that Unicode handling is not regressed: Python's `re` module natively handles Unicode character properties, while hand-written classifiers must explicitly replicate that behavior.
+    - _reasoning:_ Project-specific file path; requires semantic understanding of Unicode handling in hand-written parsers.
+- **[Semantic Deviation]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - The low-level properties-string parser (`key_val_str_to_dict` in `ase/io/extxyz.py`) should not implicitly reshape flat numeric arrays based on element count (e.g., silently converting a 9-element array into a 3×3 matrix). Shape transformations belong in the caller, not inside the parser.
+    - _reasoning:_ Project-specific function and file; requires understanding parser responsibility boundaries.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding or modifying CLI commands, keep the completion option lists in `ase/cli/complete.py` synchronized with the options actually defined in the command module; consider adding an automated test that detects drift.
+    - _reasoning:_ Requires cross-file comparison of CLI option lists in project-specific modules.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When registering a program in `ase/io/formats.py` that has both input and output format variants, ensure each uses a distinct `magic` bytes value so ASE can reliably autodetect file type.
+    - _reasoning:_ Project-specific file; requires understanding magic bytes uniqueness semantics across format variants.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding a new calculator, register its snake_case name in the `names` list in `ase/calculators/calculator.py` and add its executable(s) to `default_executables` in `ase/calculators/autodetect.py`.
+    - _reasoning:_ Requires cross-file registration checks in project-specific ASE calculator registry files.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Use `round()` rather than `int()` when converting a floating-point value to an integer (e.g., summing initial magnetic moments). `int()` truncates toward zero and produces wrong results due to floating-point rounding.
+    - _reasoning:_ General float-to-int conversion pitfall; requires semantic understanding of intent to flag.
+- **[API Misuse]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Library code must not call `print()` to stdout or stderr — those streams belong to the caller. Route diagnostic output through the instance's logfile attribute or the standard `logging` module. Remove all debug `print()` statements before submitting code for review.
+    - _reasoning:_ Banned print() in library code; partially enforceable via custom lint rule but misses indirect stdout writes.
+- **[Semantic Deviation]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When changing existing default parameter values in public classes (e.g., optimizer `maxstep`), flag the change explicitly in review — users' simulations depend silently on these defaults, and any modification alters behavior without a visible API change.
+    - _reasoning:_ Requires understanding behavioral impact of default value changes, not detectable statically.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When overriding `todict()`, ensure every dictionary key matches the exact corresponding `__init__` parameter name (e.g., `'fixcm'` not `'fix-cm'`, `'temperature_K'` not `'temperature_eV'`). Don't override `todict()` unless there is a clear serialization purpose.
+    - _reasoning:_ Project-specific todict/init key matching; requires cross-method semantic analysis.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When implementing Box-Muller or other log-based transforms on uniform random samples, use `log(1 - y)` rather than `log(y)` to avoid a domain error when the sampled value is exactly 0.
+    - _reasoning:_ Requires understanding Box-Muller math to identify the domain-error edge case.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - New MD thermostat implementations must include a test (or a linked open issue) that verifies RATTLE constraints are preserved during and after thermalization — e.g., check that constrained DOFs remain constrained and average kinetic energy reflects the reduced DOF count.
+    - _reasoning:_ Project-specific MD thermostat testing requirement; requires semantic understanding of RATTLE constraints.
+- **[Concurrency Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In MD classes that generate per-atom random data, store those arrays as instance attributes and broadcast them via `self.communicator` before use, so parallel runs under gpaw or asap3 keep all MPI tasks synchronized.
+    - _reasoning:_ Requires understanding MPI broadcast semantics in context of project's parallel execution model.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When reading a CASTEP SPECIES_MASS block, raise a `ValueError` for any unrecognised unit specifier rather than emitting a warning and continuing; proceeding with an unknown unit silently produces physically incorrect masses. Validate against the supported CASTEP .cell file units and apply conversion from `ase.units` as needed.
+    - _reasoning:_ Project-specific CASTEP file format; requires understanding unit validation and conversion semantics.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a `warnings.warn()` call sits inside a loop, verify that the warning condition is checked per-item and only fires for items that genuinely satisfy the condition — not spuriously for every loop iteration regardless of whether that item requires the warned action.
+    - _reasoning:_ Requires semantic understanding of loop conditions to detect spurious per-iteration warnings.
+- **[API Misuse]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Use `np.testing.assert_allclose()` for comparing floating-point arrays in tests, and `pytest.approx` for scalar float comparisons; bare `==` on floats or NumPy arrays is fragile across platforms and produces unclear failure messages. When choosing `atol`/`rtol`, prefer tolerances generous enough for cross-platform portability (e.g., `atol=1e-5` rather than `1e-6` for MD round-trip tests); verify empirically across platforms before committing to stricter values.
+    - _reasoning:_ Bare == on floats can be partially flagged by linters; tolerance guidance requires semantic judgment.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a method receives a mutable argument (e.g., a dict passed as `parameters`) and needs to modify it locally, make a defensive copy (`copy.deepcopy` or a careful shallow copy) before modifying it so the caller's original object is not mutated as a side effect. This is especially important in serialization/deserialization code paths (e.g., `dict2constraint` and similar encode/decode helpers) where the same object may be referenced elsewhere. Do not rely on a shared base class to perform this copy — the non-mutation of inputs should be locally verifiable within the implementing method.
+    - _reasoning:_ Requires understanding whether a mutable argument is defensively copied before modification.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When wrapping floating-point coordinates into [0, 1) using `% 1.0`, apply the modulo twice — `(x % 1.0) % 1.0` — to correctly handle near-zero negative values: in Python/NumPy, `(-1e-20) % 1.0` evaluates to `1.0` rather than `0.0`, so a single application is insufficient for robust boundary handling.
+    - _reasoning:_ Pattern-matchable via AST for single % 1.0 on coordinates, but intent requires semantic context.
+- **[Concurrency Issues]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Flag any bare global `barrier()` call: it will deadlock if the code is executed on a sub-communicator smaller than MPI world. MPI-aware classes should store their communicator as an instance attribute (e.g., `self.comm`) and perform synchronization via that scoped communicator rather than calling a global barrier.
+    - _reasoning:_ Global barrier() calls can be flagged by banned-function lint; scoped communicator check needs semantic analysis.
+- **[API Misuse]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - When the intent is simply to count the number of atoms, use `len(atoms)` rather than `atoms.get_number_of_degrees_of_freedom()`. The latter returns 3× the atom count in the simple case but diverges under MPI decomposition or when constraints are present, making it wrong for atom-count arithmetic.
+    - _reasoning:_ Project-specific API misuse; could be flagged with banned-call rule for get_number_of_degrees_of_freedom.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In MD integrators, use `self._num_atoms_global` (set via `self.atoms.get_global_number_of_atoms()`) everywhere an atom count is needed — including integration formulas (e.g., `_integrate_p`, kinetic-energy correction terms) — rather than `len(self.atoms)`. Using the local atom count breaks correctness when the integrator runs with domain-decomposition calculators such as Asap.
+    - _reasoning:_ Requires understanding where atom count is used in integration formulas across project-specific MD code.
+- **[API Misuse]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - When testing whether an ASE `Atoms` object has velocities set, use `atoms.has('momenta')` rather than comparing `atoms.get_velocities()` to `None`. `get_velocities()` never returns `None`; it returns a zero array when no momenta array has been attached, so the `None` check is always truthy.
+    - _reasoning:_ Project-specific API; could partially lint by flagging get_velocities() == None comparisons.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When reading or writing VASP POSCAR velocity data, apply explicit unit conversion using `ase.units.Ang` and `ase.units.fs` (e.g., multiply by `Ang / fs` on read, divide on write). VASP stores velocities in Å/fs while ASE uses a different internal time unit, and omitting the conversion produces silently wrong results.
+    - _reasoning:_ Project-specific VASP unit conversion; requires understanding read/write code semantics.
+- **[API Misuse]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Avoid `tell()` and `seek()` on file handles inside I/O reader functions. Not all streams are seekable (e.g., pipes, compressed-file wrappers, memory streams). If an optional trailing section must be probed, restructure the calling code so the file pointer never needs to be rewound.
+    - _reasoning:_ tell()/seek() calls in I/O functions could be flagged by custom lint; context about stream seekability needs LLM.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When implementing stress calculation in an ASE calculator, guard against non-3D systems (e.g., 2D slabs, molecules) — do not unconditionally divide by volume. Check cell rank or otherwise mirror the pattern used in the canonical calculators `ase/calculators/emt.py` and `ase/calculators/morse.py`.
+    - _reasoning:_ Requires semantic understanding of when volume division is valid for non-3D systems in ASE calculators.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `ase/io/extxyz.py`, do not unconditionally prepend a column name to the default `fr_cols` list in `write_xyz`. Guard each new default column with a check that the key is present in `atoms.arrays` (e.g., `if 'move_mask' in atoms.arrays`), so that constraint types or configurations that do not populate that array key do not cause a write failure.
+    - _reasoning:_ Project-specific function and file; requires semantic understanding of conditional array key checks.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In MD integration methods that call `get_forces()` or `get_stress()`, place that call at the very top of the method, before computing any derived quantities (eigenvectors, projected momenta, etc.) that depend on atom-array shapes. In parallel calculators like Asap, force/stress evaluation may trigger atom migration between MPI tasks, invalidating arrays computed before the call.
+    - _reasoning:_ Requires cross-file understanding of Asap's atom migration behavior and ordering constraints.
+- **[API Misuse]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - In `get_conserved_energy()` (and any analogous conserved-quantity method), compute the energy as `atoms.get_potential_energy(force_consistent=True)` plus kinetic energy calculated from momenta, rather than `atoms.get_total_energy()`. Using `get_total_energy()` can produce inconsistent energies for certain calculators, breaking apparent conservation.
+    - _reasoning:_ Project-specific API; get_total_energy() in conserved-energy context could be flagged with banned-call rule.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `ase/io/utils.py`, the coordinate array (`self.positions` used in `PlottingVariables` and `make_patch_list`) is a single concatenated array of *all* transformable coordinates — atomic positions, cell segment endpoints, bond coordinates, and possibly more — not one entry per atom. When reviewing code that indexes into, slices, or checks the length of this array, verify that the author accounts for the extra non-atom entries and does not silently assume `len(positions) == len(atoms)`.
+    - _reasoning:_ Project-specific coordinate array structure; requires cross-file semantic understanding of array composition.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When modifying the `license` or `license-files` fields in `pyproject.toml`, verify that the chosen value is accepted by the full build and PyPI upload pipeline (e.g., twine) before merging. Python packaging guidance on license metadata has evolved multiple times; when uncertain, test the combination on a less critical release or package first.
+    - _reasoning:_ Requires understanding packaging pipeline compatibility; not statically enforceable.
+- **[Null Pointer]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When reading a line from a file and accessing it by character index (e.g., `line[0]`), always guard with a non-empty check first (e.g., `if line.strip() and line[0].lower() == 'x'`) to avoid `IndexError` on blank lines.
+    - _reasoning:_ Index access without empty-check is a common pattern that some linters can approximate.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In any ASE I/O writer that iterates over a collection of images, flag every use of `images[0]` or other positional subscripting. These patterns raise `TypeError` when `images` is a generator or non-subscriptable iterable, and using the first image's attributes (e.g., constraints) for all iterations is almost always a logic bug — use the loop variable (`atoms`) instead. If first-image data truly must be reused (e.g., for file-header metadata), capture it before the loop with `image_0 = next(iter(images))` and document why. Known affected files include: `ase/io/dmol.py`, `ase/io/findsym.py`, `ase/io/proteindatabank.py`, `ase/io/xsd.py`, `ase/io/xsf.py`, `ase/io/xtd.py`.
+    - _reasoning:_ Requires semantic understanding of generator vs subscriptable inputs; project-specific file list provided.
+- **[Logic Error]** _(gen: `generalizable`, lint: `lintable`)_
+    - When adding keyword parameters to ASE calculators (e.g., `LAMMPSlib`), use immutable types as default values: `()` for empty sequences and `None` for optional objects. Never use mutable containers such as `[]` or `{}` as defaults, since Python shares a single mutable object across all calls that use the default.
+    - _reasoning:_ Mutable default argument is a well-known lintable issue (Pylint W0102, ruff B006).
+- **[API Misuse]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When reviewing code that uses the `FIRE` optimizer, check two API points that changed together: (1) the step-size parameter must be `maxstep`, not the deprecated `maxmove`; and (2) convergence should be determined from the boolean return value of `dyn.run()` rather than a separate `dyn.converged()` call, whose signature changed in the same release.
+    - _reasoning:_ Project-specific FIRE optimizer API change; requires cross-file semantic analysis of usage patterns.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Every sphinx-gallery example script must contain a valid reStructuredText title in its module-level docstring (e.g., `""".. _my-label:\n\nMy Title\n========\n\nDescription...\n"""`); sphinx-gallery requires this title to process the file. Each gallery section directory under `examples/` must also include a `README.rst` with at minimum a valid RST section title — a missing or title-less `README.rst` causes `<no title>` labels in navigation and blank section entries on the gallery index.
+    - _reasoning:_ Project-specific sphinx-gallery setup; requires understanding RST title requirements.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Tutorial scripts that conditionally use an optional external package (e.g., toggled by a `use_asap = True/False` flag) must have a working default path that does not require the external package. Verify that setting the flag to `False` (or equivalent) allows the script to run cleanly; flag any MR that leaves the optional-package path as the only exercised one.
+    - _reasoning:_ Requires semantic understanding of optional-dependency paths and whether fallback is exercised.
+- **[Semantic Deviation]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a deprecated argument is still forwarded and used (not silently discarded), the deprecation warning text must accurately describe that behavior. Writing 'is ignored' when the argument is actually consumed and affects output is misleading and causes reviewers and users to misunderstand the behavior change.
+    - _reasoning:_ Requires reading deprecation message text and comparing it to actual behavior, needing semantic reasoning.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Avoid using special floating-point sentinel values (e.g., storing `0.0` to mean 'disabled') to enable or disable features; use `None` or explicit boolean flags so the intent is unambiguous and fragile float-equality comparisons are avoided. When sentinel values are unavoidable, add an inline comment at every check site (e.g., `if self.gamma == 0:  # i.e. disable_langevin=True`) so the control flow is traceable without reading `__init__`.
+    - _reasoning:_ Requires semantic understanding of sentinel value usage patterns and intent across codebase.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When a dynamics class has not been tested with ASE `Atoms` constraints, emit a `warnings.warn` at the earliest point where non-empty `atoms.constraints` is detected, making it explicit to users that this combination is untested.
+    - _reasoning:_ Project-specific dynamics class pattern; requires understanding constraint-handling contract.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Do not manually override the `pbc` returned by ASE surface builders (e.g., `fcc110`, `fcc111`, `bcc110`); the builders already configure the physically correct boundary conditions for slabs. Adding z-periodicity to a slab model is a physical error.
+    - _reasoning:_ Project-specific ASE surface builder semantics; requires physical domain knowledge.
+- **[Dead Code]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Before adding an `if result is not None:` guard, inspect the relevant source module to confirm the function can actually return `None`. If the `None` path is unreachable, remove the guard to avoid misleading readers about the function's contract.
+    - _reasoning:_ Requires cross-file analysis to determine if None return path is reachable.
+- **[API Misuse]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When computing inter-atomic distances from `NeighborList` output, never call `atoms.get_distances()` on the returned neighbor indices — it ignores periodic-image offsets and yields incorrect distances for atoms near cell boundaries. Instead, capture both return values with `j_indices, offsets = nl.get_neighbors(i)` and compute distances explicitly: `d = atoms.positions[j_indices] + offsets @ atoms.cell - atoms.positions[i]; distances = np.linalg.norm(d, axis=1)`. See `ase/calculators/emt.py` for the canonical usage pattern.
+    - _reasoning:_ Project-specific NeighborList API misuse; requires understanding periodic-image offset semantics.
+- **[API Misuse]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When constructing a `NeighborList` for pair-counting analysis (e.g., RDF or coordination statistics), pass `bothways=True` so every pair is enumerated in both directions, and adjust the normalization formula to account for double-counting rather than manually halving raw counts.
+    - _reasoning:_ Project-specific NeighborList usage; requires semantic understanding of bothways parameter impact.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When filtering neighbor indices returned by `nl.get_neighbors()` by atomic species, apply the same boolean mask to both the index array and the offsets array to keep them in sync: `mask = atoms.numbers[j_indices] == target; j_indices, offsets = j_indices[mask], offsets[mask]`.
+    - _reasoning:_ Project-specific NeighborList array synchronization; requires semantic understanding of index/offset pairing.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When using `np.bincount` to accumulate histogram counts into a fixed-size array, always pass `minlength=nbins + 1` and slice the result to `[:nbins + 1]`, e.g., `np.bincount(indices, minlength=nbins + 1)[:nbins + 1]`. This guarantees the output has exactly the expected length even when the largest index falls short of `nbins`.
+    - _reasoning:_ Requires semantic understanding of np.bincount output length guarantees and intended usage.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When coercing a nullable field to `str` for inclusion in a serialized dict (e.g., in a `todict` method), guard against `str(None)` silently producing the string `"None"`. Use `str(val) if val is not None else None` so that a `None` value is preserved as JSON null rather than introducing a silent schema change.
+    - _reasoning:_ Requires semantic understanding of str(None) producing 'None' vs intended null preservation.
+- **[Semantic Deviation]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When reviewing additions to serialization methods such as `todict`, flag any code that stores raw filesystem paths verbatim in the output dictionary: persisting paths can leak host-machine directory structure (security concern) and is fragile when files are moved. Prefer omitting the path field or raise whether storing it is necessary.
+    - _reasoning:_ Requires semantic understanding of what constitutes a sensitive filesystem path in serialized output.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When reviewing a helper that implements 'first-write wins' semantics on a dictionary (e.g., skipping assignment if a key is already set), verify that the test `d.get(key) is None` is intentional: it treats both absent keys and keys explicitly pre-initialized to `None` as 'not yet set'. Confirm that all callers are consistent — in particular, check whether any caller may pass keys that were never pre-initialized (e.g., non-registered INCAR keys whose parameter dicts do not seed every valid key to `None`). If pre-initialization is not guaranteed, add an assertion or docstring, or switch to `dict.setdefault()` which only guards against absent keys.
+    - _reasoning:_ Requires cross-file reasoning about caller contracts and pre-initialization assumptions.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When calling `_()` for gettext i18n, pass a bare string literal (or adjacent implicit-concatenation literals for multiline strings) as the sole argument — do not wrap the string in an extra layer of parentheses. Extra parentheses prevent gettext from statically extracting the translatable string.
+    - _reasoning:_ Could be caught by AST-based custom rule detecting extra parens around _() string literals.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When specifying special-key names for keyboard shortcuts in `ase/gui` — in `gui.py`'s dispatch dict and `M()` menu calls — use human-readable display names that render correctly in menus across all platforms (e.g., 'PageUp', 'PageDown'), not hyphenated variants ('Page-Up'/'Page-Down') nor raw Tk canonical names ('Prior'/'Next'). The `MenuItem` class in `ui.py` owns the mapping from these human-readable names to Tk key identifiers, so any new special key must have a corresponding entry added to that mapping table.
+    - _reasoning:_ Project-specific ase-gui key naming conventions requiring cross-file mapping table awareness.
+- **[API Misuse]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When applying the `@reader` or `@writer` decorators to a function in `ase/io/`, verify that the function's first parameter is named `file`, which is the name the decorator machinery in `ase/utils/__init__.py` expects. If the existing function uses a different name (e.g., `fd`, `fileobj`), rename that parameter before adding the decorator; otherwise the decorator silently rewrites the callable's signature and breaks callers that pass the argument by keyword.
+    - _reasoning:_ Project-specific decorator parameter name requirement; requires understanding decorator machinery.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When modifying global or process-level state (such as `os.environ`) or temporarily mutating an object (e.g., attaching/removing constraints on an `Atoms` instance during an MD step), perform the cleanup inside a `try/finally` block to guarantee restoration even if an exception is raised during the intervening code. For temporary constraint mutations, also validate the constraint list before and after the operation to catch silent corruption.
+    - _reasoning:_ Requires semantic understanding of which mutations need try/finally cleanup.
+- **[API Misuse]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - When evaluating user-supplied mathematical expressions in ASE code, use the existing `ase.utils.parsemath.eval_expression` utility rather than Python's built-in `eval` or a custom parser. Bare `eval` is a security risk; `eval_expression` is a safe, project-standard alternative that also supports math functions such as `sqrt(2.0)`.
+    - _reasoning:_ Bare eval() can be flagged by linters (ruff S307); project-specific replacement utility is additional context.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `ase.gui.ui.SpinBox`, always guard callback invocations with a null check (e.g., `if self.callback: self.callback()`) because spinboxes are frequently instantiated without a callback; calling `None` directly raises `TypeError`.
+    - _reasoning:_ Project-specific SpinBox class; requires understanding callback nullability contract.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When a tutorial or example introduces a new Sphinx extension dependency (e.g., `sphinxcontrib-video`), ensure it is added to the `[docs]` optional-dependencies section in `pyproject.toml` in addition to any explicit `pip install` lines in `.gitlab-ci.yml`.
+    - _reasoning:_ Requires cross-file awareness of pyproject.toml and CI configuration synchronization.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When a tutorial uses sphinx-gallery's `matplotlib_animations` feature to render mp4 animations, verify that `ffmpeg` is available in the CI doc-build environment (e.g., installed in the `ase-full-monty` Docker image or the `doc:` job's `before_script`); without it the build will fail with 'unknown file extension: .mp4'.
+    - _reasoning:_ Project-specific CI/Docker environment dependency; not statically detectable.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When modifying parameter handling in I/O writers or calculators, preserve backward compatibility by accepting `list`, `tuple`, and `numpy.ndarray` interchangeably for array-like parameters. Do not narrow a previously working input type without explicit justification. In docstrings for such functions, note which container types are accepted as equivalent.
+    - _reasoning:_ Requires semantic understanding of which input types were previously accepted vs newly restricted.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `write_elk_in` (`ase/io/elk.py`), when translating ASE-standard keyword parameters to Elk-native parameters, explicitly perform all required unit conversions: ASE standard units are eV/Å, while Elk-native parameters use Hartree/Bohr. For example, the `smearing` width from `parameters['smearing'][1]` must be divided by `Hartree` before being written as `swidth`. Verify each ASE-to-Elk keyword translation has the correct conversion factor.
+    - _reasoning:_ Project-specific Elk unit conversion; requires domain knowledge and cross-file unit lookup.
+- **[Semantic Deviation]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When modifying the `Langevin` driver, its constructor signature, or the public attributes it exposes (`temp`, `fr`, `c1`–`c5`, `v`, `rnd_pos`, `rnd_vel`), verify compatibility with Asap before merging. Asap is an external MD calculator that directly reads these attributes from `Langevin` instances, so changes that rename, remove, or alter their semantics will silently break Asap simulations.
+    - _reasoning:_ Project-specific external compatibility contract with Asap; requires cross-project semantic awareness.
+
+### Maintainability and Readability
+
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When an MR adds a new implementation or significantly rewrites an existing algorithm (e.g., an MD integrator or dynamics method), require that at least one short test exercising the new code path is included before merging.
+    - _reasoning:_ Requires semantic understanding of whether new code paths have test coverage.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When introducing a new I/O backend for trajectories or adding features to `BundleTrajectory`, evaluate whether it can be implemented as a pluggable backend in the common `Trajectory` class. The project aims for a single trajectory class with multiple backends; avoid siloing useful trajectory functionality in only one trajectory class.
+    - _reasoning:_ Project-specific architecture goal for trajectory backends; requires design-level reasoning.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Any change to ase-gui behaviour must be accompanied by a test in `ase/test/gui/`. Non-trivial GUI utility methods with conditional logic or UI side effects need dedicated unit tests exercising their core behavior. When adding features or fixing bugs, expand the relevant test file rather than relying solely on manual testing.
+    - _reasoning:_ Project-specific test directory convention for ase-gui changes.
+- **[Redundancy Handling]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Extract non-trivial computed expressions that represent a meaningful concept into a named variable rather than inlining the expression (e.g., `nebsteps = len(self.images) // nimages`).
+    - _reasoning:_ Requires semantic judgment about which expressions are meaningful enough to extract.
+- **[Code Duplication]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - NEB force-curve fitting logic (fitting images to an energy-vs-path band, producing `ForceFit` objects) belongs in `ase.utils.forcecurve` via `fit_raw`, `fit_images`, and `ForceFit`; do not duplicate this logic in `ase.neb` or other modules.
+    - _reasoning:_ Project-specific module ownership rule for NEB fitting logic.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When data has inherent structure not captured by the file format (e.g., multiple NEB bands in a single trajectory), prefer an explicit data structure or stored metadata over runtime heuristics that infer structure from patterns.
+    - _reasoning:_ Requires semantic understanding of data structure design vs runtime inference trade-offs.
+- **[Class Design Guidelines]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Utility classes representing a collection of data should accept a single canonical input type in their constructor; support for multiple input types (strings, trajectories, lists, GUI objects) should be provided through separate factory functions or IO modules, not by special-casing each type inside `__init__`.
+    - _reasoning:_ Requires semantic understanding of constructor complexity and factory pattern applicability.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - ASE CLI plotting commands should display an interactive plot by default and require an explicit `--output`/`-o` flag to write to a file; when file output is supported, accept at least the common formats (pdf, svg, png).
+    - _reasoning:_ Project-specific CLI convention; requires understanding of ASE CLI design patterns.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Any user-visible change (new feature, bug fix, renamed or deprecated class, new public API, behavior change) must include a `changelog.d` fragment created via `scriv create`. The fragment must use the correct section heading (e.g., a functional fix under `Bugfixes`, not `Other changes`), Sphinx cross-references for changed functions/classes (`:func:`, `:class:`), an MR reference (`:mr:`NNNN``), and accurately and briefly describe what problem was fixed or what the new feature solves. Flag breaking changes (e.g., removing or deprecating a public argument on a widely-used method) explicitly as breaking. When a change modifies behavior of a public method on a concrete, non-experimental class, flag it as a breaking change even if the MR primarily targets an experimental interface — an experimental-API designation on an abstract interface does not automatically extend to long-lived concrete classes. Do not mention private/internal implementation classes (underscore-prefixed) in changelog entries; changelogs document only user-facing changes — do not include internal implementation details, refactoring steps, or consistency cleanups that have no direct effect on users.
+    - _reasoning:_ Project-specific changelog process requirements; requires semantic understanding of change classification.
+- **[Code Duplication]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `FileIOCalculator` subclasses, set the class attribute `discard_results_on_any_change = True` directly on the class rather than overriding the `set()` method; the superclass handles this attribute automatically.
+    - _reasoning:_ Project-specific FileIOCalculator pattern; requires understanding of class attribute vs method override.
+- **[Code Smelling]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Keep new `FileIOCalculator` subclass constructors minimal. Avoid forwarding parameters like `restart`, `ignore_bad_restart_file`, and `atoms` unless they are explicitly exercised by tests.
+    - _reasoning:_ Project-specific FileIOCalculator subclass conventions; requires understanding of inheritance pattern.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - New calculators should include an entry in `ase/test/standardization/test_ch4_energy.py` so they participate in the project-wide standardised multi-calculator energy benchmark.
+    - _reasoning:_ Project-specific test registration requirement for new calculators.
+- **[Class Design Guidelines]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Logic inside a calculator that depends only on external data (e.g., the command string, job prefix, file path) should be extracted into standalone module-level functions rather than instance methods, keeping the calculator class lean and independently testable.
+    - _reasoning:_ Requires semantic judgment about which logic is instance-independent vs instance-dependent.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When using `subprocess.call` in a context where the subprocess is intentionally expected to fail (e.g., probing a launcher script), add a comment explaining that failure is expected and what happens on unexpected failure.
+    - _reasoning:_ Requires semantic understanding of intentional failure vs unintended failure in subprocess calls.
+- **[Code Duplication]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Do not manually create or enter a temporary directory inside individual tests. The project's global `autouse=True` fixture in `conftest.py` already runs every test inside a fresh temporary directory.
+    - _reasoning:_ Project-specific conftest.py fixture convention; requires awareness of test infrastructure.
+- **[Naming Convention]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When introducing or reviewing new public-facing API in ASE, prefer fully descriptive names over abbreviations (e.g., `atoms.calculator` rather than `atoms.calc`). Flag abbreviated names as candidates for renaming in the next major version.
+    - _reasoning:_ Project-specific API naming philosophy; requires semantic judgment about abbreviations.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When deprecating a public API, follow a phased rollout: introduce a `DeprecationWarning` paired with a release-notes entry in one release, then escalate to `FutureWarning` in the subsequent release. Verify that the pytest configuration surfaces `DeprecationWarning`s so CI catches deprecated call sites. When removing or deprecating a feature, update all documentation pages that reference it in the same MR. Do not mark an API as deprecated merely because a better alternative exists — deprecation signals a concrete plan for future removal; if no removal is planned, use a `.. note::` or `.. warning::` directive instead. When reviewing a PR that removes deprecated symbols, verify that the deprecation was introduced in an already-shipped release, not the current or upcoming one. When a class or method is retained as a transitional shim, use an explicit `.. deprecated::` RST directive or emit a `DeprecationWarning` rather than vague hedges like 'may change or be removed'. Methods that have completed the full deprecation cycle (`DeprecationWarning` → `FutureWarning` across multiple releases) are candidates for removal; include a prominent release-notes announcement when removing them. When removing a widely-used public argument would produce silently incorrect results if the argument is ignored, raise an `Error` rather than a `Warning` so affected workflows fail loudly.
+    - _reasoning:_ Project-specific deprecation lifecycle process; requires multi-release cross-file semantic understanding.
+- **[Class Design Guidelines]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Optimizer default parameter values should be stored as a class-level `defaults` dict that extends the parent class's defaults (e.g., `defaults = {**Optimizer.defaults, 'alpha': 70.0}`), keeping them close to the class implementation.
+    - _reasoning:_ Project-specific Optimizer defaults dict pattern; requires understanding of class hierarchy.
+- **[Function Consistency]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Use `warnings.warn` (not the `logging` module) for user-facing messages in ASE dynamics and optimizer classes; `warnings.warn` is the project-wide convention and is easier to capture, filter, and assert on from tests and downstream packages. However, do not use `warnings.warn()` for common, recoverable algorithm events (e.g., step-size scaling, negative Hessian eigenvalues); those normal occurrences should be written to the optimizer's logfile instead.
+    - _reasoning:_ Project-specific convention for warnings vs logging; requires semantic distinction between use cases.
+- **[Code Duplication]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Related MD tests should share setup code via common helper functions, pytest fixtures, or `@pytest.mark.parametrize`; never copy-paste test setup or assertion logic across test files.
+    - _reasoning:_ Requires semantic understanding of shared setup logic across test files.
+- **[Code Smelling]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When `communicator=None` is passed to an MD class constructor, replace it immediately with `DummyMPI()` in `__init__` rather than sprinkling `if self.communicator is not None:` guards throughout `step()`.
+    - _reasoning:_ Project-specific MPI communicator initialization pattern; requires understanding of null-guard placement.
+- **[Code Duplication]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Common logic shared across MD subclasses (e.g., center-of-mass velocity, momentum adjustment, RNG seed generation) must live in `Dynamics` or `MolecularDynamics` in `ase/md/md.py` rather than being duplicated in individual subclasses. Introduce new cross-cutting functionality as a separate, focused MR rather than bundled into a feature MR.
+    - _reasoning:_ Project-specific MD class hierarchy; requires cross-file analysis of duplicated logic.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Temperature assertions in MD tests must use tight quantitative bounds justified by a controlled RNG seed. Loose sanity-check ranges (e.g., `T > 50 and T < 1000`) are not meaningful.
+    - _reasoning:_ Project-specific MD test quality requirement; requires semantic judgment about assertion tightness.
+- **[Class Design Guidelines]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - New functionality for `ase/atoms.py` that extends existing behavior should be expressed as a new keyword argument on an existing method (e.g., `atoms.center()`) rather than an entirely new standalone method, keeping the `Atoms` API coherent.
+    - _reasoning:_ Project-specific Atoms API design philosophy; requires semantic understanding of API coherence.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Test functions verifying a specific physical or behavioral property should include a docstring naming that property explicitly (e.g., 'center of mass does not drift during dynamics'). Non-obvious assertions should have inline comments explaining why they belong in that test (e.g., referencing the bug they guard against).
+    - _reasoning:_ Requires semantic judgment about whether test docstrings adequately name the tested property.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When a variable must be stored as an instance attribute rather than a local variable because an external system (e.g., Asap's atom-migration mechanism) accesses it by name between two points in a method, add an inline comment at the declaration site explaining this constraint — otherwise the variable looks like a refactoring target and the requirement will be silently broken.
+    - _reasoning:_ Project-specific Asap attribute requirement; requires cross-system knowledge to identify missing comments.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When code has an implicit interface contract with an external library (e.g., Asap requires specific instance attributes after each MD step for its migration mechanism), add a dedicated unit test that explicitly enumerates and asserts each required attribute, so violations produce clear failures rather than surfacing only in hard-to-reproduce integration runs.
+    - _reasoning:_ Project-specific Asap interface contract; requires understanding of external library requirements.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Use `pytest.warns(WarningType, match=r'...')` to assert expected warnings rather than suppressing all warnings; always supply a `match=` regex argument to verify the specific expected message was emitted, not merely that some warning of the correct type was raised. When `pytest.warns` is used to absorb unrelated infrastructure noise rather than to assert new functionality, add an inline comment explaining the source of those warnings (e.g., `# CASTEP IO is noisy while handling keywords JSON`).
+    - _reasoning:_ pytest.warns without match= could be partially flagged; suppression comment guidance requires LLM.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - New CASTEP file-I/O tests belong in `ase/test/fio/test_castep.py`, not in `ase/test/io/` or `ase/test/calculator/castep/`; the `fio` directory is for file-format read/write tests that do not require a running external calculator.
+    - _reasoning:_ Project-specific test directory convention for CASTEP file I/O tests.
+- **[Code Smelling]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When adding a substantial new code block to an already-long function, extract the new logic into a named helper function to keep the parent function readable and to make the new functionality independently testable.
+    - _reasoning:_ Requires semantic judgment about function length and whether extraction is warranted.
+- **[Code Duplication]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When the same warning or error message string is used in more than one code path, extract it into a single named variable or constant (module-level or class attribute) rather than duplicating the literal string.
+    - _reasoning:_ Requires semantic understanding of whether the same message is duplicated across code paths.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Calculator configuration documentation should be structured with clear subsections ('Configuration file', 'Environment variable' with a concrete export example, 'Profile instantiation') and include complete, minimal, runnable code blocks for profile instantiation. Reference `BaseProfile` (with a hyperlink) so users understand which constructor arguments are shared across all calculator profiles.
+    - _reasoning:_ Project-specific documentation structure requirements for calculator configuration docs.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In developer and contributing documentation describing how to implement a calculator, reference `GenericFileIOCalculator` as the currently recommended base class for IO-based calculators, not the older `FileIOCalculator`.
+    - _reasoning:_ Project-specific recommendation of GenericFileIOCalculator over FileIOCalculator in docs.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When adding, removing, or moving parameters between classes or functions, update all affected docstrings accordingly: add entries for newly introduced parameters, remove or relocate entries for parameters that have moved, and eliminate stale cross-references so every docstring accurately reflects its actual signature. Keep class-level and parameter docstrings accurate as the implementation evolves; whenever a class's capabilities or parameter semantics change, update the docstring immediately.
+    - _reasoning:_ Requires semantic comparison of docstring parameter lists against actual function signatures.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - New tests that verify a bug fix must be shown to fail without the fix and pass with it. The test should run the computation end-to-end (not merely construct the object) to actually exercise the buggy code path. Use `pytest.warns` to assert any expected warnings are raised. If the test passes regardless of whether the buggy code path is active, tighten the simulation parameters and assertion tolerances until the test reliably detects the target error before merging.
+    - _reasoning:_ Requires semantic understanding of whether tests exercise the actual buggy code path.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When initializing a physics parameter array (e.g., chain masses in Nosé-Hoover-like integrators) where element 0 has a different numeric coefficient from the remaining elements, add an inline comment explaining the mathematical basis for each value and citing the relevant equation or section from the reference paper.
+    - _reasoning:_ Requires semantic judgment about which numeric initializations need mathematical explanation.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In round-trip numeric tests, use varied, non-zero test data (e.g., `np.linspace(-1, 1, ...)`) rather than all-zero arrays. All-zero data can mask encoding/decoding bugs because the default value and a correctly round-tripped value are indistinguishable.
+    - _reasoning:_ Requires semantic understanding of whether test data is non-trivially varied.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Every new function in ASE I/O modules (e.g., `ase/io/vasp.py`, `ase/io/castep.py`) must include a docstring describing its purpose, the file formats it handles (e.g., POSCAR/CONTCAR/CHGCAR), and any unit conversions it performs (e.g., Å/fs to ASE internal units).
+    - _reasoning:_ Project-specific I/O module docstring requirements including unit conversion documentation.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Do not add per-atom `stresses` to an ASE calculator without first surveying how existing calculators implement the property, since the definition is not yet unified across ASE. If `stresses` support is desired, do it in a dedicated MR that reviews and reconciles the existing implementations rather than bundling it into an unrelated feature addition.
+    - _reasoning:_ Project-specific design philosophy about per-atom stresses across ASE calculators.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding tests for a new property on a calculator that supports multiple potential forms or variants, ensure coverage across all supported forms rather than just one. Prefer extending an existing parameterized test that already iterates all variants (e.g., `test_eam_run.py::test_read_potential`) over adding the test inside a function that targets only a single variant.
+    - _reasoning:_ Project-specific test coverage requirement across calculator potential variants.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When modifying an ASE I/O writer to include a new column in the default output, add parametrised tests (using `@pytest.mark.parametrize`) that cover both the implicit path (e.g., `columns=None`) and the explicit path (column name spelled out in `columns`), to verify that both routes produce correct round-trip behaviour.
+    - _reasoning:_ Project-specific test parametrization requirement for I/O writer column tests.
+- **[Dead-Code Related Issues]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Verify that every parameter accepted in a class's `__init__` is actually used within the class body. Parameters that are stored as instance attributes but never read anywhere in the class should be removed from both the constructor signature and the call sites.
+    - _reasoning:_ Unused instance attributes can be partially detected by some analyzers but cross-class usage needs LLM.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When writing integration tests (e.g., MD reversibility, conserved-quantity checks), include an explicit assertion that state variables actually *changed* during forward propagation (e.g., `assert not np.allclose(state_after, state_before)`) to prevent the test from passing trivially if the propagation step is a no-op.
+    - _reasoning:_ Requires semantic understanding of whether integration tests verify actual state changes.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When migrating a calculator from `FileIOCalculator` to `GenericFileIOCalculator`, include explicit backward-compatibility hooks: (1) accept the old `command` keyword and raise a `RuntimeError` (or `FutureWarning`) with precise migration instructions (e.g., 'use `CalcProfile(command=...)` and pass it as `profile=`'), and (2) detect any legacy `ASE_<CALC>_COMMAND` environment variable and emit a `FutureWarning` directing users to the new `profile=` API. Reference the `Espresso` calculator as the canonical implementation of this pattern.
+    - _reasoning:_ Project-specific calculator migration pattern with specific backward-compatibility hooks.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When porting a widely-used calculator (e.g., Siesta, GPAW) from `FileIOCalculator` to `GenericFileIOCalculator`, prefer a conservative migration strategy — introduce the new implementation under a new class name or in a separate module — rather than replacing the existing class in-place. In-place replacement is acceptable only when the user base is known to be small (e.g., ELK).
+    - _reasoning:_ Project-specific migration strategy decision based on project-specific user base knowledge.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In doctest examples, ensure output is deterministic and portable: (a) wrap floating-point expressions in explicit formatted print statements (e.g., `print(f'{value:f}')`) rather than relying on bare repr, which varies across platforms; (b) guard output from unordered collections (e.g., `set` repr) with `# doctest: +SKIP` or restructure the example to avoid ordering sensitivity.
+    - _reasoning:_ Requires semantic understanding of doctest output determinism and platform portability.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding or modifying `.. versionadded::`, `.. deprecated::`, or `.. versionchanged::` Sphinx directives, verify that the cited version number refers to the *next unreleased* ASE version; if the version listed has already been published, increment it to the correct upcoming release.
+    - _reasoning:_ Project-specific release versioning; requires knowing the upcoming ASE version number.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When reviewing changes to the coordinate-management code in `ase/io/utils.py` (particularly `PlottingVariables` and `make_patch_list`), flag opportunities to replace the single flat combined-coordinate array with a more structured form such as a dictionary or dataclass keyed by coordinate type (atoms, cell segments, bonds, etc.). Suggest this refactor when the scope of the change is large enough to absorb it, as the current flat-array design is a known source of indexing bugs.
+    - _reasoning:_ Project-specific coordinate-array refactoring suggestion for ase/io/utils.py.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When an `Atoms` property (or similar rich-object property) returns an object with its own documented API, include illustrative examples directly in that property's docstring — even if the returned object's class has its own docs — because users encounter the API through the property first and will not discover the full interface otherwise.
+    - _reasoning:_ Requires semantic judgment about whether property docstrings include sufficient usage examples.
+- **[Naming Convention]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Old-style getter methods in ASE (e.g., `get_chemical_symbols()`) that duplicate functionality already available through a cleaner Pythonic property or sequence interface (e.g., `list(atoms.symbols)`) should be flagged as deprecation candidates. When reviewing code that calls such legacy getters, check whether a deprecation warning and recommended migration path should be added, allowing a suitable warning period before removal given their widespread use.
+    - _reasoning:_ Project-specific deprecation candidates for legacy getter methods; requires cross-file API analysis.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When writing tests for MD integrators (thermostat or barostat classes), prefer convergence/truncation-error tests over pure reversibility (forward-then-backward) tests. Specifically, verify that n full steps of δ and 2n half-steps of δ/2 produce results whose difference shrinks as O(δ³) as δ decreases; this directly checks a physical promise of the integrator and is far more likely to catch subtle implementation bugs than a round-trip test alone.
+    - _reasoning:_ Requires semantic understanding of MD integrator test design and convergence-order verification.
+- **[Function Consistency]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When an ASE I/O writer or similar function is updated to accept `Iterable[Atoms]` inputs (beyond the previously documented `Sequence[Atoms]`), update the type annotation in the corresponding registration point (e.g., `write()` in `ase/io/formats.py`) accordingly, so the public API contract remains accurate.
+    - _reasoning:_ Project-specific type annotation update in formats.py registration when writers accept iterables.
+- **[Class Design Guidelines]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When extending an ASE calculator with an initialization extension point that depends on an external library object (e.g., a `lammps` instance created at first use), accept a user-supplied callback (e.g., `initializer(lmp)`) rather than hard-coding calls to specific named library functions. This keeps ASE agnostic to the external library's Python API and avoids requiring ASE changes whenever the library adds new initialization functions.
+    - _reasoning:_ Requires semantic understanding of extension point design and callback vs hard-coded API trade-offs.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Tests for generic extension mechanisms (such as `initializer` callbacks or `extra_cmd_args`) must use simple, self-contained dummy implementations that work with whatever build of the external library exists in CI. Do not call optional library-specific routines (e.g., mliap or kokkos initialization functions) in these tests, as doing so requires updating CI Docker images and creates ongoing infrastructure maintenance burden.
+    - _reasoning:_ Project-specific CI/Docker infrastructure constraint for extension mechanism tests.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When hardcoded default values originate from an upstream specification (e.g., LAMMPS-documented defaults), add an inline comment citing that source (e.g., a URL to the relevant docs page) so future readers do not have to guess whether the value is meaningful or arbitrary.
+    - _reasoning:_ Requires semantic judgment about which hardcoded values need upstream source citations.
+- **[Redundancy Handling]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Do not call `.reshape()` immediately before `.flatten()`; the reshape is a no-op in that position and should be removed to avoid misleading readers.
+    - _reasoning:_ reshape() before flatten() pattern could be detected with AST-based custom lint rule.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - When reviewing code that uses cell or atomic-force filter classes (e.g., `ExpCellFilter`), verify imports come from `ase.filters` — the canonical location — rather than from `ase.constraints`, which only re-exports them for backward compatibility.
+    - _reasoning:_ Could be partially caught by import source linting for specific project-internal module paths.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Tutorial scripts under `doc/tutorials/` and sphinx-gallery examples under `examples/` are not automatically executed in CI. When reviewing changes to these files, manually run the affected scripts end-to-end to catch runtime errors (import failures, renamed parameters, API mismatches). For sphinx-gallery examples, also preview the rendered gallery page to confirm correct section ordering and titles.
+    - _reasoning:_ Project-specific CI gap for tutorial scripts; requires understanding of test execution coverage.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When configuring sphinx-gallery: (1) place the examples directory outside `doc/` (conventionally at project root `examples/`), since placing it inside `doc/` causes Sphinx to complain about stub `.rst` files not listed in any toctree; (2) pin `sphinx-gallery>=0.17.0` in docs dependencies, as the default gallery-header filename changed from `README.rst` to `GALLERY_HEADER.rst` in that release; (3) when adding a tutorial that consists of a single `.py` file, place it directly in the appropriate `examples/` subdirectory rather than creating a dedicated sub-subdirectory with an empty `README.rst` — only create a subdirectory when a meaningful `README.rst` describing a sub-gallery can be written.
+    - _reasoning:_ Project-specific sphinx-gallery configuration requirements and directory structure conventions.
+- **[Class Design Guidelines]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When refactoring a public class to use a private internal base class, keep the comprehensive user-facing docstring on the public subclass rather than moving it to the private base. The private base class's docstring should only describe its internal or transitional role.
+    - _reasoning:_ Requires semantic judgment about docstring placement during public/private class refactoring.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When transitional or comparison code is deliberately kept alongside new code (e.g., an `old_*` helper retained for assertion-checking), the adjacent comment must include a concrete removal deadline — an ASE version number or calendar date — so the code is not accidentally retained indefinitely.
+    - _reasoning:_ Requires semantic understanding of whether transitional code comments include removal deadlines.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When inverting the sign convention of a broadly-used interface method (e.g., `Optimizable.get_gradient()`), use a multi-phase deprecation: introduce an explicit parameter that preserves the old sign by default, emit a deprecation warning on each call with the old default, flip the default in a later release, and only remove the parameter after that — do not invert behavior in a single MR.
+    - _reasoning:_ Requires semantic understanding of deprecation phase design for sign-convention changes.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When removing or deprecating a customization hook (e.g., passing pre-computed forces directly to `step()`), provide or link to documentation and concrete examples showing how users can achieve the same effect through the supported replacement abstraction (e.g., a custom `Optimizable` subclass), so users are not left without a migration path.
+    - _reasoning:_ Requires semantic understanding of whether migration documentation is provided alongside deprecation.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Class docstrings must be placed immediately after the `class` line (or on `__init__`), not at the top of the module file; a module-level string is not treated as the class docstring by Sphinx `autoclass` and will be silently ignored in the generated docs.
+    - _reasoning:_ Module-level docstrings before class definitions could be detected with AST-based pattern matching.
+- **[Function Consistency]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - ASE classes that perform random number generation should expose an `rng` keyword argument accepting either a `np.random.Generator` instance or any seed understood by `np.random.default_rng`. The project convention is to use `rng=np.random` as the default value (not `rng=None`), keeping the RNG API consistent across stochastic routines. Follow `ase.md.velocitydistribution` as the canonical project example. In tutorial and example code, always create a local seeded generator with `np.random.default_rng(seed)` and pass it explicitly; never seed the global numpy RNG (`np.random.seed`).
+    - _reasoning:_ Project-specific RNG convention using np.random as default; requires cross-file consistency checking.
+- **[Class Design Guidelines]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Factor multi-phase initialization logic in `__init__` into focused private helper methods (e.g., `_set_externalstress(...)`, `_set_barostat_mass(...)`) so that each helper has no side-effects beyond what its name implies and `__init__` remains a concise orchestrator.
+    - _reasoning:_ Requires semantic judgment about whether __init__ logic is properly factored into helper methods.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - New MD integrator classes must be registered in `doc/ase/md.rst`: add an `.. autoclass::` directive in the primary ensemble section (NVT, NPT, etc.) and include brief `:class:`/`:ref:` cross-reference notes in the summary or recommendation text of any other ensemble section the class can operate in.
+    - _reasoning:_ Project-specific documentation registration requirement for new MD integrators.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Docstring parameter descriptions for arguments that only take effect conditionally (e.g., a scaling factor that is applied only when the primary value is `None`) must state that condition explicitly rather than implying unconditional behaviour.
+    - _reasoning:_ Requires semantic comparison of docstring descriptions against actual conditional parameter behavior.
+- **[Redundancy Handling]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Where a numeric value can be computed programmatically from existing objects and ASE's unit system (e.g., deriving molecular mass via `atoms.get_masses().sum() / units.mol` instead of a hardcoded literal), prefer the programmatic form to keep the code transparent and generalisable; reserve hardcoded constants only for quantities that cannot be reasonably derived.
+    - _reasoning:_ Requires semantic understanding of when values can be programmatically derived vs hardcoded.
+- **[Code Duplication]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Once a variable is defined for a value such as a file path or configuration constant, use that variable consistently throughout the file rather than repeating the string literal in subsequent calls.
+    - _reasoning:_ Requires semantic understanding of whether string literals represent the same logical constant.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In sphinx-gallery tutorial files, convert inline Python code snippets (shown as hints or asides) into actual executable `# %%` cells wherever possible, so they are verified by the gallery build. Shell/command-line snippets that cannot be trivially converted may remain as comments, but Python-only snippets should run.
+    - _reasoning:_ Project-specific sphinx-gallery cell execution conventions.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Sphinx-gallery examples in `examples/tutorials` should be written in tutorial style — demonstrating each step with working code — rather than exercise style that prompts the reader to write the code themselves. Avoid imperative instructions like 'print the formula for each row in your database' that leave the code absent or inert.
+    - _reasoning:_ Project-specific sphinx-gallery tutorial style requirements.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When a sphinx-gallery example generates output files (e.g., CSV, JSON, PNG) at build time under `examples/`, verify that those artifacts are removed by the project's `make clean` target (or an equivalent tutorial-specific clean target), rather than only being silenced via `.gitignore`.
+    - _reasoning:_ Project-specific build artifact cleanup requirements for sphinx-gallery.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When migrating a tutorial to sphinx-gallery format, review all narrative prose in the new file to ensure it accurately describes the updated code rather than carrying over stale or inaccurate descriptions from the old version.
+    - _reasoning:_ Requires semantic comparison of prose descriptions against actual code behavior.
+- **[Variable Handling]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When optimizer or dynamics classes store open file handles or trajectory objects as persistent instance attributes, flag this as a resource-management smell. The preferred pattern is to store only the file path or configuration on the object, open the file within the narrowest applicable scope (e.g., inside `irun` via a context manager), and pass the open stream explicitly to logging/writing helpers rather than stashing it on `self`.
+    - _reasoning:_ Requires semantic understanding of resource lifetime management in optimizer/dynamics classes.
+- **[Code Duplication]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When an MR is explicitly stacked on or built on top of another pending MR, check whether the two MRs introduce overlapping or duplicated logic; if so, flag the duplication and ask whether the shared code should be consolidated into a common helper before either MR is merged.
+    - _reasoning:_ Requires cross-MR awareness to detect duplicated logic between stacked merge requests.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Tests for functions that accept element-type arguments or implement partial/element-filtered analysis (e.g., partial RDFs, coordination counts) must include at least one test case covering a multi-element system, not only homogeneous single-element cases.
+    - _reasoning:_ Requires semantic understanding of whether multi-element test coverage exists.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Non-obvious helper methods — especially those that work around OS- or platform-specific bugs — should have a docstring or inline comment explaining the motivation (i.e., the specific bug or misbehavior being addressed), not just the mechanism. A one-liner describing the root cause (e.g., 'Num Lock registers as a modifier key on Linux/Windows, causing Ctrl-key bitmasks to fire spuriously') is sufficient.
+    - _reasoning:_ Requires semantic judgment about whether helper method comments explain root cause motivation.
+- **[API Misuse]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Before applying `@reader` or `@writer` to a function in `ase/io/`, confirm it is a standard ASE IO entry point — typically a top-level reader/writer registered with the ASE IO format dispatch and operating on `Atoms` objects. Auxiliary or domain-specific helper functions (e.g., functions that handle a particular QM code's ancillary input/output and are not part of the generic `ase.io.read`/`ase.io.write` pipeline) are generally not appropriate targets; adding these decorators changes the public API signature and can silently break existing callers.
+    - _reasoning:_ Project-specific @reader/@writer decorator appropriateness; requires semantic understanding of IO pipeline.
+- **[Variable Handling]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Use `@functools.cached_property` for attributes that require lazy or expensive initialization rather than manual `if-not-exists` guard patterns. Declare all instance attributes in `__init__` (even as `None` placeholders) so that an object's namespace is stable and inspectable immediately after construction.
+    - _reasoning:_ Requires semantic judgment about lazy initialization patterns vs cached_property usage.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Before approving or requesting further work on a bug-fix MR that references a specific issue, verify that no other open or recently merged MR is already addressing the same problem (search the linked issue's MR references and the project's open MR list); flag duplicate or conflicting fixes explicitly so the efforts can be reconciled.
+    - _reasoning:_ Requires cross-MR awareness and issue tracking search; not statically detectable.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a condition matches against specific runtime string values using substring or pattern checks (e.g., `'inline' in backend`), include an inline comment listing the concrete example values the condition is designed to catch. This is especially important for environment-specific defensive checks that are difficult to reproduce locally, so future readers understand the rationale and do not accidentally revert the code.
+    - _reasoning:_ Requires semantic judgment about whether string-pattern conditions have explanatory comments.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding or modifying behavior of `ase.gui.ui.SpinBox` (e.g., value parsing, formatting, validation), implement the logic inside the `value` property getter of the `SpinBox` class itself rather than wiring it up only at specific downstream call sites (such as individual dialog buttons or subclasses). This ensures the feature applies uniformly to every spinbox in the GUI without requiring per-callsite changes.
+    - _reasoning:_ Project-specific SpinBox class design; requires understanding of where logic should centralize.
+- **[Variable Handling]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Inside a loop over dictionary items, do not rebind the loop variable to a transformed value within the loop body. Instead, assign the transformation result to a new, descriptively named variable (e.g., `atomic_number = key if isinstance(key, int) else atomic_numbers[key]`) and use that new variable for all subsequent operations in the loop.
+    - _reasoning:_ Requires semantic understanding of loop variable rebinding vs new variable assignment.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a function accepts multiple supported input formats (e.g., both a plain `dict` and a list-of-tuples), cover each format as its own separate case under `@pytest.mark.parametrize` rather than testing formats sequentially within a single test body or writing separate test functions for each format.
+    - _reasoning:_ Requires semantic judgment about whether multiple input formats have separate parametrize cases.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When a `~/.ase/gui.py` configuration option is added, restored, or extended to support new input formats, update the Defaults section of `doc/ase/gui/basics.rst` to document every supported syntax variant with a concrete inline code example.
+    - _reasoning:_ Project-specific documentation requirement for ase-gui configuration options.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When porting a tutorial from the legacy `doc/tutorials/` format (RST + standalone Python scripts) to the Sphinx-gallery `examples/tutorials/` format, delete the old `.rst` file, all associated Python scripts, and any image-generation scripts from `doc/tutorials/`, and remove the corresponding toctree entry from `doc/tutorials/tutorials.rst`. Verify that all structural visualizations and figures present in the original are reproduced or replaced with equivalent `plot_atoms()` figures in the new tutorial.
+    - _reasoning:_ Project-specific tutorial migration process requiring old file deletion and toctree updates.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Comments preceding `plot_atoms` or other visualization calls in sphinx-gallery tutorial files should explicitly state the viewing orientation or perspective (e.g., 'side view in the yz plane', 'top-down view along the z-axis') so that readers can interpret the rendered images without having to infer the rotation from the code.
+    - _reasoning:_ Project-specific visualization comment requirements for sphinx-gallery tutorials.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Tutorial examples added to the sphinx gallery should produce at least one piece of visual output (a static plot or an animation) so that the gallery page has a meaningful thumbnail.
+    - _reasoning:_ Project-specific sphinx-gallery thumbnail requirement for tutorial examples.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When reviewing additions or expansions to format-specific I/O modules under `ase/io/`, consider whether the feature exceeds ASE's minimal-scope philosophy for I/O. Physics-specific data extraction beyond basic atomic-structure reading (e.g., phonon modes, vibrational spectra, band structures) may belong in specialized external packages or dedicated format plugins rather than ASE core; flag such additions for an explicit scope discussion rather than quietly accepting them.
+    - _reasoning:_ Project-specific philosophy about I/O module scope; requires design-level judgment.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Before approving any MR that touches shared documentation index or toctree files (e.g., `doc/tutorials/tutorials.rst`), verify there are no unresolved merge conflicts — these files are a chronic conflict hotspot because tutorial additions, removals, and migrations happen concurrently across multiple contributors.
+    - _reasoning:_ Project-specific merge conflict detection in known hotspot files.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Do not add unenforced annotation or comment fields to parameter-syntax designs. If named annotations (e.g., labelling sub-fields of a multi-value input block) cannot be validated by the code for correctness and ordering, omit them entirely — silently incorrect annotations are more harmful than no annotations at all.
+    - _reasoning:_ Requires semantic judgment about whether annotation fields are validated by the implementation.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When deprecating a parameter whose *default* value has been producing incorrect results, do not silently change the default. Instead, raise a `FutureWarning` (or error) that fires whenever the parameter takes its current default, forcing every caller to explicitly pass a value and acknowledge the change. The message must state both what is wrong and the exact replacement pattern the user should adopt.
+    - _reasoning:_ Requires semantic understanding of whether a default parameter produces incorrect results.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When writing deprecation warnings or docstring notices about a numerical inaccuracy, describe the *magnitude* qualitatively (e.g., 'deviations are typically small for large systems but can be more pronounced for small systems') rather than language that implies all results are wrong regardless of system size. Overstating the severity may cause unnecessary alarm and undermine trust in correct usage.
+    - _reasoning:_ Requires semantic judgment about whether warning language accurately characterizes error magnitude.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Visualization and rendering utilities such as `ase.visualize.plot.animate` and `ase.visualize.plot.plot_atoms` should be showcased in their own dedicated standalone examples rather than embedded as incidental secondary content inside domain-specific tutorials. When reviewing a tutorial that happens to exercise a visualization feature, flag whether a separate, focused example for that feature is warranted.
+    - _reasoning:_ Project-specific sphinx-gallery example organization philosophy for visualization utilities.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In format-specific I/O tests under `ase/test/fio/`, do not write to files in the current working directory. When testing format-specific reader/writer functions directly, pass an `io.StringIO` object; when exercising the higher-level `ase.io.read`/`ase.io.write` interface, use pytest's `tmp_path` fixture for any file paths (see `ase/test/fio/test_extxyz.py` for reference patterns).
+    - _reasoning:_ Project-specific test I/O pattern convention using StringIO vs tmp_path.
+
+### Performance Issue
+
+- **[Computation Efficiency]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Bond calculation in ase-gui must be gated behind the 'show bonds' toggle (`self.showing_bonds()`). Display-update paths must not invoke bond-finding unconditionally, since bond computation is expensive for large systems.
+    - _reasoning:_ Project-specific ase-gui bond calculation gating; requires semantic understanding of display update paths.
+- **[Inappropriate Use of Multi-Lifo Data Structure]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Bond-finding in ase-gui must use `NeighborList` from `ase.neighborlist` (or an equivalent sub-quadratic spatial algorithm) rather than a naive O(N²) pairwise loop.
+    - _reasoning:_ Project-specific bond-finding algorithm requirement; requires understanding of algorithm complexity.
+- **[Computation Efficiency]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In numerical methods within MD and other compute-heavy classes, use numpy vectorized array math instead of Python loops — e.g., generate all random velocities with a single call and apply conditional replacement with boolean indexing.
+    - _reasoning:_ Requires semantic identification of Python loops that should be vectorized with numpy.
+- **[Resource Efficiency]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a test condition can be verified in one or a few MD steps (e.g., demonstrating that a thermostat with zero friction reproduces `VelocityVerlet`), use the minimum number of steps required; do not run a long trajectory to check what a single step can verify.
+    - _reasoning:_ Requires semantic judgment about minimum steps needed to verify a test condition.
+- **[Computation Efficiency]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When introducing a performance optimization to a spacegroup or symmetry algorithm, verify that the refactored code does not introduce worse asymptotic complexity in degenerate cases (e.g., low-symmetry structures, slabs, or large supercells where every atom may form its own orbit). Explicitly analyze both the common-case and worst-case scaling, and note the trade-off if the new approach is faster only for high-symmetry, small-atom-count inputs.
+    - _reasoning:_ Requires semantic analysis of algorithmic complexity in both common and degenerate cases.
+- **[Resource Efficiency]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a change causes logfiles or trajectory files to be opened and closed on every optimizer or MD step (rather than held open for the duration of a run), flag the potential performance regression for fast-running simulations (e.g., classical MD with fast calculators). Verify that callers can opt into better I/O performance by passing a pre-opened file object instead of a path string, and confirm this escape hatch is documented.
+    - _reasoning:_ Requires semantic understanding of file open/close patterns across optimizer step iterations.
+- **[Computation Efficiency]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When using `NeighborList` for geometric analysis that produces a histogram or distribution (e.g., RDF), iterate directly over neighbors and accumulate counts — do not build an intermediate dense N×N distance matrix. The NeighborList approach correctly handles multiple periodic images of the same atom within the cutoff radius, whereas a distance matrix can represent only the shortest image and forces O(N²) memory allocation.
+    - _reasoning:_ Project-specific NeighborList usage for RDF; requires understanding of memory and correctness trade-offs.
+- **[Resource Efficiency]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding or migrating Sphinx Gallery tutorials (under `examples/tutorials/`), verify that computationally expensive operations use performance-optimal settings, since gallery scripts are executed during every documentation build. For GPAW calculations in particular, prefer `mode='pw'` over `mode='fd'` unless finite-difference mode is essential to the tutorial's subject matter, and avoid specifying `eigensolver='cg'` unless required — both choices can substantially reduce build time without sacrificing result accuracy.
+    - _reasoning:_ Project-specific GPAW tutorial performance settings for CI doc builds.
+
+### Code Style
+
+- **[Naming Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding new CLI options, define only the long option name (e.g., `--nimages`) by default; add a short alias (e.g., `-n`) only if the option is used frequently enough to justify it.
+    - _reasoning:_ Project-specific CLI option naming convention; requires judgment about usage frequency.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - For programmatic trajectory access, prefer Python slice notation (e.g., `traj[start:end]`) over the `index=` keyword argument or the `@`-suffix syntax; avoid adding new code that extends `@`-syntax support.
+    - _reasoning:_ Project-specific trajectory access style preference; requires semantic understanding of API patterns.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Use raw Python strings (`r'...'`) for LaTeX content in matplotlib axis labels and titles, and use `.format()` for variable substitution rather than `%`-formatting in those strings.
+    - _reasoning:_ Could be partially flagged with custom lint for LaTeX strings without r-prefix or with %-formatting.
+- **[Code Structure]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - New entries in `doc/releasenotes.rst` must be placed under the correct section heading (e.g., optimizer changes under 'Algorithms', not 'I/O').
+    - _reasoning:_ Project-specific release notes section placement; requires semantic understanding of change categories.
+- **[Naming Standards]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - When adding a temperature parameter to any new MD dynamics class in `ase/md/`, name it `temperature_K`. When adding a pressure parameter, name it `pressure_au` (ASE atomic units, eV/Å³); callers convert using `ase.units.GPa`. Do not introduce unit-specific suffixes like `pressure_GPa`.
+    - _reasoning:_ Project-specific parameter naming convention; could be partially flagged by custom lint on MD class signatures.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Don't use the `if param is None: param = default` pattern for new parameters that have no backward-compatibility requirement; declare them as normal required positional arguments.
+    - _reasoning:_ Requires semantic judgment about whether None-default pattern is needed for backward compatibility.
+- **[Naming Standards]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - Name the center-of-mass fixing attribute `fix_com` (not `fixcm`) in MD classes, following the prior art in `ase/atoms.py`.
+    - _reasoning:_ Project-specific MD class attribute naming; could be detected via custom lint rule.
+- **[Naming Standards]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - In MD `step()` method signatures and bodies, name the forces variable `forces` rather than `f` so it is greppable across the codebase.
+    - _reasoning:_ Project-specific forces variable naming convention in MD step() methods; detectable via custom lint.
+- **[Comment Requirements]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Don't add inline comments that merely restate what the adjacent docstring or the code itself already makes clear; reserve inline comments for non-obvious logic, side-effects, or project-specific invariants. Check for duplicate or near-duplicate comments on adjacent lines; each comment should contribute distinct, non-redundant information.
+    - _reasoning:_ Requires semantic judgment about whether comments add value beyond what code already states.
+- **[Comment Requirements]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Do not include literal 'Warning:' or 'Error:' prefixes inside `warnings.warn()` strings or exception messages; Python's warning infrastructure already labels warnings, and hard-coding function names (e.g., 'write_cell: ...') in messages becomes stale. Ensure all warning and error strings are grammatically correct with proper spacing.
+    - _reasoning:_ Literal 'Warning:' prefix in warn() strings could be caught by custom regex lint rule.
+- **[Trailing/Unused/Incorrect Formattings]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Do not mix automated formatter changes (e.g., from black or autopep8) with functional changes in the same commit or MR; submit formatting-only cleanups in a separate commit so reviewers can focus on the meaningful diff.
+    - _reasoning:_ Requires judgment about whether formatting changes are mixed with functional changes in a commit.
+- **[Naming Standards]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - In ASE code and tests, always use the plural name `atoms` for `Atoms` instances rather than the singular `atom`; `Atom` (singular) and `Atoms` (plural) are distinct classes in ASE, and using the singular form for an `Atoms` object is misleading.
+    - _reasoning:_ Project-specific Atoms vs Atom naming; could be partially caught with type-annotation lint.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Use `pytest.raises(ExceptionType, match=r'...')` to assert that code raises the expected exception with the expected message, rather than wrapping the call in a try/except block with a manual assert.
+    - _reasoning:_ try/except with manual assert vs pytest.raises is detectable with custom AST lint rule.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Prefer direct attribute assignment `obj.attr = value` over `setattr(obj, 'attr', value)` when the attribute name is a known string literal at write time; reserve `setattr` for cases where the attribute name is determined dynamically at runtime.
+    - _reasoning:_ setattr with string literals could be caught by custom lint; dynamic runtime cases need semantic analysis.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - When annotating parameters that accept multiple types or complex dict types, use `Union` from `typing` (e.g., `Union[str, dict[Union[int, str], str]]`) rather than the `|` union syntax, since the project targets Python versions where `|` is not supported and enforces mypy type-checking.
+    - _reasoning:_ Union | syntax for older Python can be caught by mypy/ruff with target-version configuration.
+- **[Documentation]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When writing shell command examples in documentation, do not use `python3` as the Python interpreter command — it opens the Windows Store on Windows. Prefer `python` where the environment is controlled, or use the `ase` CLI; add a note if interpreter availability varies by platform.
+    - _reasoning:_ Requires semantic understanding of documentation context to detect python3 interpreter references.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - All code examples that instantiate a profile object (e.g., `OrcaProfile`, `AbinitProfile`, `EspressoProfile`) must use explicit keyword argument names (e.g., `OrcaProfile(command='/path/to/orca')`) rather than positional arguments, for readability and to ensure examples remain correct if the constructor gains new parameters.
+    - _reasoning:_ Project-specific profile class instantiation style; requires semantic understanding of example code.
+- **[Naming Standards]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Follow PEP8 and ASE coding conventions for variable and parameter names: use lowercase snake_case throughout, avoid single-letter abbreviations, compressed shorthands, and run-together forms (e.g., prefer `cell_data` over `celldata`, `cell_lines` over `celldatarows`), and choose descriptive full names that convey meaning (e.g., prefer `temperature`, `std_energy`, `avg_temperature`, `expected_temperature`, `loginterval` over `T`, `E`, `stdE`, `avgT`, `T0`, `logint`). Name variables to reflect the physical dimension they represent (e.g., `box_length` not `volume` for a side length). Use semantically meaningful loop variable names (e.g., `for symbol in symbols` or `for structure in structures`). This applies equally to sphinx-gallery example and tutorial code, where descriptive names are especially important since the code serves as a learning reference (e.g., use `water` rather than `W`).
+    - _reasoning:_ PEP8 snake_case naming and single-letter avoidance can be partially enforced by linters.
+- **[Naming Standards]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Name factory or constructor-helper functions with a verb prefix (e.g., `make_langevin`, `create_dynamics`) so that their purpose is immediately clear from the name alone.
+    - _reasoning:_ Requires semantic judgment about whether factory function names have verb prefixes.
+- **[Naming Standards]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Class names must be nouns or noun phrases (e.g., `EnergyMeasurer`, `DataCollector`), not verb phrases, following Python and PEP8 naming conventions.
+    - _reasoning:_ Requires semantic judgment about whether class names are nouns vs verb phrases.
+- **[Trailing/Unused/Incorrect Formattings]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Remove all unused local variables, stale imports, dead code, commented-out code blocks, and inline comments that reference code no longer present in the file before merging. Verify removals by running the relevant test suite locally. When calling a function solely for its side effect (e.g., `fd.readline()` to advance a cursor), use `_` or omit the assignment rather than binding to a named variable.
+    - _reasoning:_ Unused imports and variables are lintable; commented-out code and stale comments need semantic judgment.
+- **[Code Indentation]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When a function or constructor call has many keyword arguments, place each argument on its own indented line with a trailing comma after the last argument, rather than mixing inline and multi-line styles.
+    - _reasoning:_ Multi-arg line formatting can be partially enforced by black/ruff formatters.
+- **[Comment Requirements]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When using an arbitrary numeric scaling factor or tolerance threshold (one with no strict mathematical derivation), write it as an explicit float literal (e.g., `0.67`) rather than a fraction expression (e.g., `2/3`), and add an inline comment explaining why that particular value was chosen.
+    - _reasoning:_ Requires semantic judgment about whether arbitrary numeric constants have explanatory comments.
+- **[Documentation]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - In production (non-test) modules, write docstrings using the NumPy docstring style with explicit `Parameters`, `Returns`, and `Notes` sections, as required by ASE coding standards. Docstrings in test helpers do not need this level of detail.
+    - _reasoning:_ NumPy docstring style can be partially enforced by pydocstyle/ruff D rules.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `lintable`)_
+    - Before submitting, ensure imports are ordered according to the project's codestyle. Run `ruff check --fix` to auto-correct import ordering; unordered imports will fail CI.
+    - _reasoning:_ Import ordering is fully enforceable by ruff/isort with standard configuration.
+- **[Whitespace Standards]** _(gen: `generalizable`, lint: `lintable`)_
+    - Maintain two blank lines between every top-level function and class definition in Python files to comply with PEP 8; missing blank lines will cause the project `lint` CI pipeline to fail.
+    - _reasoning:_ Two blank lines between top-level definitions is fully enforceable by PEP8/ruff E302.
+- **[Documentation]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Proofread docstrings — including NumPy-style section headers (`Parameters`, `Returns`, `Notes`) — narrative `# %%` comments in sphinx-gallery tutorial scripts (which render as prose in the HTML output), and manually-written prose in documentation RST files (especially `doc/releasenotes.rst`) for spelling, grammar, and formatting errors before merging.
+    - _reasoning:_ Spelling and grammar checking requires NLP; formatting errors could be partially caught by linters.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `lintable`)_
+    - Iterating over `dict.keys()` is equivalent to iterating over the dict directly; flag redundant `.keys()` calls in iteration contexts (e.g., `for k in d.keys()`, `list(d.keys())`) and simplify to `for k in d` or `list(d)`.
+    - _reasoning:_ Redundant dict.keys() in iteration is fully enforceable by ruff SIM118.
+- **[Whitespace Standards]** _(gen: `generalizable`, lint: `lintable`)_
+    - Keep all lines within PEP 8's 79-character limit; when a comment would exceed it, rephrase it concisely rather than wrapping.
+    - _reasoning:_ 79-character line length limit is fully enforceable by PEP8/ruff E501.
+- **[Trailing/Unused/Incorrect Formattings]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - In `changelog.d/` scriv RST fragments, do not leave a trailing blank line at the end of a bullet item. The bullet text should end immediately with the RST merge-request reference (e.g., `(:mr:\`XXXX\`)`) and no blank line should follow within that bullet. Ensure the MR cross-reference marker is preceded by exactly one space — a double space between the closing period and the opening parenthesis is a common formatting error.
+    - _reasoning:_ Project-specific scriv RST fragment formatting; trailing blank lines detectable by custom lint.
+- **[Documentation]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding journal article citations or DOI references in RST documentation, use the project's custom Sphinx roles for cross-references: `:doi:` for journal citations (e.g., `:doi:\`Author et al., Journal vol, p. XXX (year). <10.xxxx/xxxxxx>\``), `:ref:` for internal cross-references to other documentation pages, and `:git:` for linking to files or folders in the ASE repository. Avoid hard-coding full URLs, which break silently when site or repository structure changes.
+    - _reasoning:_ Project-specific Sphinx role usage for citations; requires semantic understanding of reference context.
+- **[Documentation]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In RST documentation, use the `:keyword:` role (or `:py:keyword:`) when referencing Python language keywords such as `assert`, `return`, or `yield` — never `:func:`, which implies a callable defined in a library or user code. Do not add manual `.. function::` directive blocks to re-document Python built-in keywords; the `:keyword:` role already links to the authoritative Python documentation.
+    - _reasoning:_ Project-specific RST role convention for Python keywords; requires semantic understanding of markup context.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - Enable ruff autoformatting on every new Python file added to the repository. The project is progressively migrating all source files to ruff as the standard formatter; new files must not be excluded from this tooling.
+    - _reasoning:_ Project-specific ruff exclusion list enforcement; detectable via CI configuration checks.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Prefer a ternary expression or negative list indexing over a multi-branch if/elif/else chain when all branches resolve to the same conceptual operation on a sequence (e.g., `items[-3:] if len(items) >= 3 else default` instead of separate `== 3`, `> 3`, and `else` branches).
+    - _reasoning:_ Requires semantic judgment about when if/elif chains should be replaced with ternary or negative indexing.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a dict's value type is heterogeneous (e.g., `dict[str, float | list[float]]`), prefer a `TypedDict` to make the key-value structure explicit and improve static-type-checker (mypy) compatibility; if deferring due to verbosity, add a comment acknowledging the trade-off.
+    - _reasoning:_ Requires semantic judgment about whether heterogeneous dicts warrant TypedDict definitions.
+- **[Documentation]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Do not include the `--user` flag in `pip install` commands in documentation. Users commonly work inside virtual environments or conda environments where `--user` installs pollute `~/.local` and can conflict with the active interpreter; omit the flag and let users manage their own environments.
+    - _reasoning:_ Regex-based lint could detect --user in pip install commands in documentation files.
+- **[Naming Standards]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Name private, transitional, or internal base classes with a leading underscore (e.g., `_LimitedAtoms`) to clearly signal they are not part of the public API. Avoid names such as `BaseAtoms` that imply the class is designed to be subclassed by external users.
+    - _reasoning:_ Requires semantic judgment about whether internal base classes have underscore-prefixed names.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Call `super().__init__(...)` rather than the parent class by name (e.g., `MolecularDynamics.__init__(self, ...)`) in ASE dynamics subclasses and other class hierarchies.
+    - _reasoning:_ super() vs explicit parent name could be partially caught by custom AST rule.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When dispatching on array shapes or other tuple-valued discriminants, use Python 3.10 `match`/`case` blocks instead of chained `if`/`elif`; ASE requires Python ≥ 3.10, so this syntax is always available and produces cleaner, more readable dispatch logic.
+    - _reasoning:_ Project-specific Python 3.10+ match/case preference; requires semantic judgment about dispatch patterns.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `lintable`)_
+    - Do not use redundant `import X as X` aliases where the alias is identical to the original name; write `from module import X` directly.
+    - _reasoning:_ Redundant import aliases are detectable by ruff PLC0414.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When constraining atoms by element type, use the modern idiomatic ASE patterns: `FixAtoms(mask=atoms.symbols == 'Symbol')` or `FixAtoms(indices=atoms.symbols.search('Symbol'))`, rather than manual index construction or older string-based patterns. Use `atoms.symbols.search('Element')` to retrieve atom indices for a given chemical species rather than writing manual index comprehensions.
+    - _reasoning:_ Project-specific ASE idiomatic patterns for FixAtoms; requires semantic understanding of alternatives.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When integer division is needed (e.g., computing a loop bound from an atom count), use Python's floor division operator `//` (e.g., `range(len(atoms) // 3)`) rather than wrapping float division in `int()` (e.g., `int(len(atoms) / 3)`).
+    - _reasoning:_ int(x/y) vs x//y for integer division could be partially caught by custom AST lint.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In tutorial and example code, use ASE's canonical structure-builder functions (e.g., `molecule()` from `ase.build`) to construct molecular geometries rather than hardcoding atomic positions; this models good practice for readers and makes the example easier to adapt to other systems.
+    - _reasoning:_ Project-specific ASE tutorial convention using molecule() builders vs hardcoded positions.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Use ASE's in-place multiplication shorthand `atoms *= (nx, ny, nz)` to tile a simulation cell rather than `atoms = atoms.repeat((nx, ny, nz))`; the in-place form is the idiomatic ASE style.
+    - _reasoning:_ Project-specific ASE atoms *= vs atoms.repeat() idiom preference.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In example and tutorial scripts, use matplotlib's object-oriented interface (`fig, ax = plt.subplots()` followed by `ax.plot(...)`, `ax.set_xlabel(...)`, `ax.set_ylabel(...)`, `ax.legend()`, etc.) rather than the pyplot global-state interface (`plt.plot(...)`, `plt.xlabel(...)`, etc.). In `plt.subplots()` calls, prefer explicit keyword arguments (e.g., `nrows=2`) over bare positional arguments. `plt.show()` at the end is acceptable.
+    - _reasoning:_ Requires semantic judgment about OO vs pyplot API usage in matplotlib code.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Always use context managers (`with` statement) when opening file-like objects: `ase.io.Trajectory`, `ase.db.connect()`, and regular file handles via `open()`. All write/read calls must be inside the `with` block to guarantee proper resource cleanup. This applies in both library code and example/tutorial scripts.
+    - _reasoning:_ Context manager usage for file handles partially enforceable; project-specific types need custom rules.
+- **[Trailing/Unused/Incorrect Formattings]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - In sphinx-gallery example scripts, check for duplicate import statements: because all `# %%` cells share a single module namespace, each import should appear exactly once in the file.
+    - _reasoning:_ Duplicate imports within sphinx-gallery files could be detected by custom lint with cell-aware analysis.
+- **[Naming Standards]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - Use `fd` as the variable name for file handle objects (values returned by `open()`) throughout the codebase; this is the project's established naming convention and reviewers should flag deviations.
+    - _reasoning:_ Project-specific fd naming convention for file handles; detectable via custom lint on open() returns.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In example and tutorial scripts that may be run multiple times, prefer explicit file removal (`Path(...).unlink(missing_ok=True)`) before creating output files or databases rather than opaque conditional guards (e.g., `if not list(db.select(...))`), which obscure intent and are harder for learners to follow.
+    - _reasoning:_ Requires semantic judgment about whether file cleanup patterns are clear enough for learner code.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In Sphinx Gallery tutorial scripts, do not place imports for interactive or GUI-opening functions (e.g., `from ase.visualize import view`) at the module level when the actual call is only shown inside a `.. code-block:: python` comment block. Move the import into the comment block alongside the call so it is never executed during automated doc builds or linting runs.
+    - _reasoning:_ Project-specific sphinx-gallery import placement convention for GUI/interactive functions.
+- **[Documentation]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In RST prose — both inside Sphinx Gallery script comments (lines starting with `#`) and in standalone `.rst` files — always end the introductory sentence before an indented shell command block with a double-colon (`::`) rather than a single colon. A single colon causes RST to render the indented block as a blockquote instead of a literal code block, which silently converts double-hyphen flags like `--formats` into an en-dash (`–formats`), corrupting copy-paste into a terminal.
+    - _reasoning:_ Project-specific RST double-colon requirement before code blocks; requires semantic analysis of RST prose.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `ase.gui.ui`, new code should use tkinter (`tk.*`) objects directly rather than the project's existing wrapper classes (e.g., `Label`, `Button`, `Window`). Those wrappers are legacy artifacts from the PyGTK-to-tkinter port and should not be adopted for new code.
+    - _reasoning:_ Project-specific ase-gui wrapper class deprecation; requires semantic understanding of GUI code.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When discriminating between a dict and a non-dict sequence, prefer an explicit `isinstance(x, dict)` check over `hasattr`-based type tests. For code that reads values from a configuration file (e.g., `~/.ase/gui.py`), where arbitrary mapping types are not expected, `isinstance(x, dict)` is clearer and sufficient; use `isinstance(x, collections.abc.Mapping)` only when the code must accept arbitrary third-party mapping types.
+    - _reasoning:_ Requires semantic judgment about when isinstance(x, dict) vs collections.abc.Mapping is appropriate.
+- **[Documentation]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In sphinx-gallery tutorial files, `# %%` prose cells should use plain, readable language — do not embed RST cross-reference markup such as `:class:\`~ase.X\`` or `:mod:\`~ase.Y\`` in running commentary text; reserve that markup for structured docstrings. Section-header cells should consist of a single heading line (e.g., `# Section Title`) without appended RST-style underline separators (e.g., `# ---------------`).
+    - _reasoning:_ Project-specific sphinx-gallery prose cell style; requires semantic judgment about markup usage.
+- **[Whitespace Standards]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - In sphinx-gallery tutorial scripts, the `# sphinx_gallery_thumbnail_number = ...` configuration comment must be preceded by a blank line to clearly separate it from the import block above.
+    - _reasoning:_ Could be detected via regex for sphinx_gallery_thumbnail_number without preceding blank line.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When visualizing atomic structures in Sphinx Gallery tutorial files, use `plot_atoms()` from `ase.visualize.plot` for static images and `ase.visualize.plot.animate` for animations, rather than bare matplotlib methods or manual animation wiring. These are the project's canonical visualization utilities and render correctly in compiled gallery output. Prefer extending `animate` rather than working around it if it lacks a needed feature.
+    - _reasoning:_ Project-specific canonical visualization utilities for sphinx-gallery examples.
+- **[Documentation]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - When showing GPAW parallel-run invocations in tutorials or documentation, use the form `gpaw -P<N> python <script>.py` rather than `mpiexec -np <N> gpaw-python <script>.py`, as the former is the currently recommended way to launch GPAW parallel jobs.
+    - _reasoning:_ Could be detected via regex for mpiexec/gpaw-python pattern in documentation files.
+- **[Naming Standards]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Do not use `_` as a loop variable name when the variable's value is referenced inside the loop body. Reserve `_` for genuinely discarded values; use a descriptive name (e.g., `attrib`, `step`, `item`) when the value is used.
+    - _reasoning:_ _ used as non-discarded loop variable could be partially caught by custom AST analysis.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In test code, cache results of `Atoms` accessor calls (e.g., `positions = atoms.get_positions()`, `symbols = atoms.get_chemical_symbols()`) in local variables before making assertions, rather than calling the same method multiple times inline.
+    - _reasoning:_ Requires semantic judgment about whether accessor calls are repeated unnecessarily in tests.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When asserting on lists of repeated chemical symbols or similar sequences in tests, prefer compact multiplicative list construction (e.g., `['O'] * 2 + ['N'] * 4 + ['C'] * 8 + ['H'] * 10`) over spelling out every element individually.
+    - _reasoning:_ Requires semantic judgment about whether list assertions use compact multiplicative construction.

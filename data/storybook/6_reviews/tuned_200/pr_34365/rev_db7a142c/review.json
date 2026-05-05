@@ -1,0 +1,120 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "scripts/eval/lib/agents/claude-code.ts",
+      "line_number": 32,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Debugging artifact: `debug: true` must be removed before merging. Per project rules, no debugging artifacts should be present in merged code. This option likely enables verbose SDK-level logging that would pollute eval output for all users.",
+      "index": 0
+    },
+    {
+      "file_path": "scripts/eval/lib/agents/claude-code.ts",
+      "line_number": 40,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`message.total_cost_usd as number | undefined` and `message.num_turns as number` on the next line are unverified type assertions that bypass TypeScript's type system. If the SDK types `total_cost_usd` as `number | undefined` already, the cast is redundant; if the SDK types it differently (e.g. `unknown`), fix the type upstream or use a runtime `typeof` guard: `const rawCost = message.total_cost_usd; cost = typeof rawCost === 'number' ? rawCost : undefined;`",
+      "index": 1
+    },
+    {
+      "file_path": "scripts/eval/lib/agents/claude-code.ts",
+      "line_number": 16,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`variant.effort as 'low' | 'medium' | 'high' | 'max'` is an unsafe cast. `variant` is typed as `AgentVariant`; when the agent is `claude`, the discriminated union already narrows `effort` to `ClaudeEffort = 'low' | 'medium' | 'high' | 'max'`. Narrow the variant first \u2014 `if (variant.agent !== 'claude') throw ...` or destructure after the agent check \u2014 rather than casting.",
+      "index": 2
+    },
+    {
+      "file_path": "scripts/eval/eval.ts",
+      "line_number": 130,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Non-null assertion `!` on the `Array.prototype.find` result. Although the zod schema validates `args.project` against `PROJECT_NAMES`, TypeScript cannot verify the invariant across the schema boundary, and a future refactor could break the guarantee silently. Replace with an explicit guard: `const project = PROJECTS.find((p) => p.name === args.project); if (!project) { logger.log('Unknown project'); process.exit(1); }`",
+      "index": 3
+    },
+    {
+      "file_path": "scripts/eval/eval.ts",
+      "line_number": 132,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Both branches of the ternary produce exactly the same object literal \u2014 the ternary does nothing. This is likely a copy-paste placeholder intended to discriminate the typed `AgentVariant`, but since the contents are identical it just adds noise. Either collapse to a single assignment (`const variant: AgentVariant = { agent: args.agent, model: args.model, effort: args.effort };`) or, if you need TypeScript to narrow the discriminated union, use a type assertion or a type guard instead.",
+      "index": 4
+    },
+    {
+      "file_path": "scripts/eval/lib/run-trial.test.ts",
+      "line_number": 10,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The mock paths (`'./prepare-trial'`, `'./grade'`, `'./utils'`, `'./agents/claude-code'`, `'./agents/codex'`) do not include `.ts` extensions, but the file under test (`run-trial.ts`) imports all of these with explicit `.ts` extensions (e.g. `import { prepareTrial } from './prepare-trial.ts'`). Per project rules, the module path in `vi.mock()` must exactly match the import path used in the file under test. With the `allowImportingTsExtensions` migration in progress, a mismatch here silently leaves the real implementation in place, so these tests may be calling production code instead of their mocks.",
+      "index": 5
+    },
+    {
+      "file_path": "scripts/eval/lib/run-trial.test.ts",
+      "line_number": 10,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "All five `vi.mock()` calls in this file are missing the `{ spy: true }` option required by the project's Vitest coding guidelines (applies to both factory-style and simple mocks). Add it as the second argument before the factory: `vi.mock('./prepare-trial', { spy: true }, () => ({ prepareTrial: vi.fn() }))`.",
+      "index": 6
+    },
+    {
+      "file_path": "scripts/eval/lib/run-trial.ts",
+      "line_number": 61,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`promptName || 'setup'` appears here and again in the assembled report object (~line 87). `TrialConfig.prompt` is typed as required `string`, so `promptName` can never be `undefined` or `null`\u2014the `|| 'setup'` fallback only fires for the empty string `''`, which is not a valid prompt name anyway. Remove the fallback; if an empty-string default is genuinely needed, handle it at the `TrialConfig` boundary.",
+      "index": 7
+    },
+    {
+      "file_path": "scripts/eval/lib/grade.ts",
+      "line_number": 275,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`truncateEnd` is a misleading name: the function actually keeps the *tail* (last `maxChars` characters) \u2014 it truncates the *start*, not the end. Rename to `keepTail` or `truncateStart` to match what the code does, especially since it is used to preserve the end of error output.",
+      "index": 8
+    },
+    {
+      "file_path": "scripts/eval/lib/grade.ts",
+      "line_number": 232,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`git add -A` is run unconditionally on `repoRoot` before diffing. The inline comment correctly notes this is safe on an ephemeral trial copy, but there is no defensive guard ensuring `repoRoot` is actually inside the trials directory before mutating git state. Consider asserting `repoRoot.startsWith(TRIALS_DIR)` to prevent accidental staging in the real repo if a bug in path construction causes `repoRoot` to resolve unexpectedly.",
+      "index": 9
+    },
+    {
+      "file_path": "scripts/eval/lib/projects.ts",
+      "line_number": 6,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`description` is typed as `description?: string` (optional), but all entries in `PROJECTS` supply it, and `projects.test.ts` asserts `description: expect.any(String)` for every project. The type should be `description: string` (required) to make the contract match the test expectations and prevent callers from needing to guard against `undefined`.",
+      "index": 10
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`citty` is added as a dependency in `scripts/package.json` (and appears in `yarn.lock`) but is never imported in any of the new eval source files \u2014 `eval.ts` uses `parseArgs` from `node:util` for CLI parsing instead. Remove the unused `citty` dependency to avoid false dependency signals and unnecessary install weight.",
+      "index": 11
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description prominently describes `eval-parallel.ts` as half the architecture (`eval.ts` \u2014 single run; `eval-parallel.ts` \u2014 all 8 combos), but `eval-parallel.ts` is absent from the diff. The `.gitignore` update and AGENTS.md changes also do not reference it. If it was intentionally deferred, a TODO comment in `eval.ts` pointing to the follow-up would prevent confusion. If it was accidentally omitted, it should be added before merging.",
+      "index": 12
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description mentions Google Sheets upload (`EVAL_GOOGLE_SHEETS_URL`) as part of the results pipeline, but no upload code appears in the diff. Either the feature is incomplete (in which case a TODO should be present in the results-saving path of `run-trial.ts`) or the description is out of date. Align the description with the actual implementation.",
+      "index": 13
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "In `scripts/eval/lib/package-manager.ts`, `installDeps` accepts an optional `env` parameter but applies it directly as the child process env without spreading `process.env` first: `env: env as NodeJS.ProcessEnv`. Per project rules, a custom `env` object must always spread `process.env` to inherit `PATH`, `NODE_ENV`, and other required variables. Currently all callers pass `undefined` so this is latent, but it should be fixed before other callers are added: `env: { ...process.env, ...env }`.",
+      "index": 14
+    }
+  ],
+  "cost_usd": 1.3782292499999997,
+  "duration_seconds": 954.0597507953644
+}

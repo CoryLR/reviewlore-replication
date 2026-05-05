@@ -1,0 +1,76 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 409,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`tagsValue ?? null` does not remove the `tags` URL parameter when all filters are cleared.\n\n`serializeTagsParam` is declared to return `string` and returns `''` (empty string) when both filter arrays are empty. The nullish-coalescing operator `??` only substitutes for `null` and `undefined`, so `'' ?? null` evaluates to `''`. This means the serialiser emits `{ tags: '' }`, which `setQueryParams` stores in `customQueryParams` (since `''` is neither `null` nor `undefined`) and `navigateTo` includes in the URL as `tags=`.\n\nFix: use `||` instead of `??` so that the empty string also triggers the `null` fallback:\n```ts\nreturn { tags: tagsValue || null };\n```\n`'play;test' || null` \u2192 `'play;test'` (correct), `'' || null` \u2192 `null` (removes the param, correct).",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 990,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`storyPassesFilter` only tests for `type === 'story'`, so it incorrectly returns `false` for docs entries that are present in `filteredIndex`. If a user navigates directly to a URL like `/docs/button--docs` while tag filters are active and `button--docs` exists in the filtered index, the condition evaluates to `false` and the code redirects them to the first filtered item unnecessarily.\n\nFix:\n```ts\nconst storyPassesFilter =\n  filteredIndex &&\n  (filteredIndex[storyId]?.type === 'story' || filteredIndex[storyId]?.type === 'docs');\n```",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 390,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`state: { location } = {} as any` uses an `as any` cast to satisfy the destructuring default, which bypasses TypeScript's type system entirely. A type-safe alternative is to accept `location` as an optional parameter or widen the `ModuleFn` argument type to allow `state` to be partial:\n```ts\nstate: { location } = {} as Partial<State>,\n```\nor, if the module args type already makes `state` required, rely on the caller always supplying it and remove the default entirely.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 395,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`navigateWithQueryParams` duplicates the URL-construction logic (entry-filter, sort, `${k}=${v}` join with `&`) that already exists in `url.ts`'s private `navigateTo` helper. If the format ever changes (e.g. a fix to URL-encode values or handle the `?` separator differently), both copies would need to be updated in sync.\n\nConsider exposing a method from the url module (e.g. a `navigateTo` variant on `SubAPI`, or routing through `applyQueryParams` + a path-change primitive) so stories.ts can delegate rather than re-implementing.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/tags.ts",
+      "line_number": 26,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Returning `''` (empty string) for the no-filters case creates a mismatch between the function's declared return type (`string`) and the `null`-signalling needed by its call site. The call site compensates with `tagsValue ?? null`, which is the wrong operator for this (see the related bug on line 409 of stories.ts).\n\nA cleaner contract would be to return `null` instead of `''` for the empty case and update the return type to `string | null`:\n```ts\nexport const serializeTagsParam = (included: Tag[], excluded: Tag[]): string | null => {\n  if (!included.length && !excluded.length) {\n    return null;\n  }\n  // ...\n};\n```\nThis makes the call site `tagsValue ?? null` both correct and self-documenting.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/manager-api/tests/tags.test.js",
+      "line_number": 1,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The test file is `.js` while its source (`modules/tags.ts`) is TypeScript. Every other test in this directory (e.g. `stories.test.ts`, `url.test.js`) suggests `.ts` is the project convention for new tests. Using `.ts` enables type-checking on the test itself, catching API mismatches between the test and the real function signatures at compile time.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/manager-api/store.ts",
+      "line_number": 81,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "The migration loop calls `get(storage)` for both local and session storage, and then `get(store.local)` / `get(store.session)` are called again a few lines later for the actual merge. Each of these reads deserialises from `localStorage`/`sessionStorage`. Caching the result of the first read avoids the double I/O:\n```ts\nconst local = get(store.local);\nconst session = get(store.session);\nfor (const [storage, persisted] of [[store.local, local], [store.session, session]] as const) {\n  if ('includedTagFilters' in persisted || 'excludedTagFilters' in persisted) {\n    const { includedTagFilters: _i, excludedTagFilters: _e, ...rest } = persisted;\n    set(storage, rest);\n  }\n}\nreturn { ...base, ...local, ...session };\n```\n(The existing test comment that explains \"each storage is read twice\" would then also need updating.)",
+      "index": 6
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The filter-aware story selection added to `selectFirstStory` and to the `STORY_SPECIFIED`/`SET_INDEX` handler lacks dedicated unit tests. There are no new test cases covering: (1) `selectFirstStory` when `includedTagFilters` / `excludedTagFilters` are non-empty and `filteredIndex` is populated; (2) initial navigation when the URL contains a `?tags=` parameter and the story in the path is absent from the filtered index; (3) initial navigation when the story in the path is a docs entry present in the filtered index (the docs-type regression described in the inline comment above). Without these tests, the two logic bugs identified here would not have been caught by CI.",
+      "index": 7
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The one-time migration in `Store.getInitialState` silently discards any tag filter state that was persisted in `localStorage` under the old scheme. If a user had custom filters set before upgrading, those filters will disappear on first load with no user-visible explanation. Consider logging a one-time `console.warn` (or using Storybook's `logger`) noting that stored tag filters have been reset to defaults and are now controlled via the URL, or\u2014if the new URL format is available at migration time\u2014converting the old stored arrays directly into a `tags` query string and redirecting, so the user's previous state is preserved across the upgrade.",
+      "index": 8
+    }
+  ],
+  "cost_usd": 0.70521245,
+  "duration_seconds": 529.6684098243713
+}

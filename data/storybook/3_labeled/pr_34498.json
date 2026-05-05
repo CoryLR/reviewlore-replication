@@ -1,0 +1,93 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34498,
+  "title": "Core: Improve startup performance by deferring change detection initialization",
+  "body": "## What I did\r\n\r\nDeferred initialization of the ChangeDetectionService and - more importantly - Vite module graph pre-warming, until whenever the preview has rendered the first story or docs page.\r\n\r\nChange detection requires the module graph to include all story files, which we ensure by firing a warmup request for each story file. However, this had significant impact on Storybook's startup speed, due to resource contention (warmup is async, but Node is still single-threaded).\r\n\r\n### Benchmarks\r\n\r\nIn Storybook's monorepo, `changeDetection` was adding significant overhead:\r\n\r\nWith `changeDetection=false`, average startup time (till story rendered) was 8.0s. With `changeDetection=true`, this increased to 14.5s on average, a 6.5s (~81%) slowdown.\r\n\r\nWith deferred initialization, the average startup time with `changeDetection=true` was 8.1s, only very slightly (and acceptably) slower than without change detection.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n> [!CAUTION]\r\n> This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!\r\n\r\n<!-- Please include the steps to test your changes here. For example:\r\n\r\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Open Storybook in your browser\r\n3. Access X story\r\n\r\n-->\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n\n## Summary by CodeRabbit\n\n## Release Notes\n\n* **New Features**\n  * Module graph listeners can now be registered after builder initialization.\n  * Change detection can be configured to start lazily, improving startup performance based on feature flags.\n\n* **Bug Fixes**\n  * Enhanced error handling for change detection startup failures with improved status reporting.\n\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ghengeveld",
+  "merged_at": "2026-04-09T08:34:55Z",
+  "base_ref": "next",
+  "merge_commit_sha": "aae6c9522b45169b395609dd95c2fa6d7b17c2ea",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "70229157cd0a3a5767d73bc1580c923b8e8f53e4",
+    "eaff7fe79cac2ff85c1fd9abd41559667881ae9f"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc611aKH",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Use the docs post-render signal here.**\n\n`STORY_RENDERED` waits for the first story paint, but `DOCS_PREPARED` is earlier in the docs lifecycle. On a docs-first load, this can still kick off Vite warmup while the initial docs page is rendering, which undercuts the startup deferral this PR is aiming for.\n\n\n\nAlso applies to: 174-175\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/core-server/dev-server.ts` at line 2, Replace uses of the\nSTORY_RENDERED event with DOCS_PREPARED in this dev-server code: update any\nevent listeners/subscriptions that wait for STORY_RENDERED to instead wait for\nDOCS_PREPARED (the imported symbols DOCS_PREPARED and STORY_RENDERED are\npresent) so the Vite warmup triggers after docs are prepared rather than after\nthe first story paint; also update the other occurrence(s) in the same file\nwhere STORY_RENDERED is used (the later listener around the Vite warmup logic)\nto use DOCS_PREPARED as well.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper:302c41b6-b606-4781-87d3-c62772f4070d -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/dev-server.ts",
+          "line_number": 2,
+          "start_line": null,
+          "commit_sha": "eaff7fe79cac2ff85c1fd9abd41559667881ae9f",
+          "created_at": "2026-04-08T10:18:40Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The comment points out that STORY_RENDERED is used where DOCS_PREPARED should be used instead, meaning the code's behavior does not match its intended specification \u2014 the startup deferral goal is undermined by using the wrong lifecycle event."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a specific bug where STORY_RENDERED should be replaced with DOCS_PREPARED to properly defer Vite warmup during docs-first loads, and provides explicit instructions on what to change."
+    }
+  ],
+  "review_thread_count": 2,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc612w_p",
+            "author": "valentinpalkovic",
+            "body": "I think I am a bit confused about why we need to start the change detection service here at all?",
+            "file_path": "code/core/src/core-server/dev-server.ts",
+            "line_number": 127,
+            "start_line": null,
+            "commit_sha": "eaff7fe79cac2ff85c1fd9abd41559667881ae9f",
+            "created_at": "2026-04-08T11:33:40Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc613gN2",
+            "author": "ghengeveld",
+            "body": "It ensures the `readiness` is set properly, in case the feature is disabled.",
+            "file_path": "code/core/src/core-server/dev-server.ts",
+            "line_number": 127,
+            "start_line": null,
+            "commit_sha": "eaff7fe79cac2ff85c1fd9abd41559667881ae9f",
+            "created_at": "2026-04-08T12:14:00Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "This is a pure question seeking understanding about why the change detection service is started at that location, with no implied suggestion or requested change."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 2,
+    "stage1_kept": 2,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "scripts/eval/eval.ts",
+      "line_number": 132,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Both branches of this ternary are identical, making it a no-op. The likely intent was TypeScript narrowing so that the discriminated union `AgentVariant` is satisfied, but the values assigned are the same either way. Since `args` is already typed as the Zod-discriminated union output (with `agent`, `model`, and `effort` narrowed correctly per branch), you can just destructure directly:\n\n```typescript\nconst { agent: agentField, model, effort } = args;\nconst variant = { agent: agentField, model, effort } as AgentVariant;\n```\n\nor simply cast:\n```typescript\nconst variant = args as unknown as AgentVariant;\n```\n\nAs written, the ternary provides no benefit and is misleading.",
+      "index": 0
+    },
+    {
+      "file_path": "scripts/eval/lib/agents/claude-code.ts",
+      "line_number": 16,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`variant.effort` is cast to `'low' | 'medium' | 'high' | 'max'` with `as`, but this is the exact definition of `ClaudeEffort`. Since `execute` is called via `AgentDriver.execute` which receives an `AgentVariant`, the caller should have already narrowed to a claude variant. The cast hides the fact that `variant` here isn't narrowed to `{ agent: 'claude' }`. Consider typing the parameter or narrowing before use:\n\n```typescript\nif (variant.agent !== 'claude') throw new Error('...');\nconst effort = variant.effort; // now typed as ClaudeEffort\n```",
+      "index": 1
+    },
+    {
+      "file_path": "scripts/eval/lib/agents/claude-code.ts",
+      "line_number": 40,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Lines 40\u201341 use `as` casts for `message.total_cost_usd` and `message.num_turns`. If the SDK ships proper types these casts are unnecessary; if the SDK types are `unknown` or `any` the casts silently accept any value without a runtime check. Either remove the casts if the SDK already types these fields correctly, or add explicit guards:\n\n```typescript\ncost = typeof message.total_cost_usd === 'number' ? message.total_cost_usd : undefined;\nturns = typeof message.num_turns === 'number' ? message.num_turns : 0;\n```",
+      "index": 2
+    },
+    {
+      "file_path": "scripts/eval/lib/grade.ts",
+      "line_number": 226,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`git add -A` stages every untracked and modified file in `repoRoot` before computing the diff. The comment says \"Safe: this runs on an ephemeral trial copy\" but there is no programmatic guard enforcing that. If `getChangedFiles` were ever called with a path that isn't a trial copy (e.g. during a test or if trial directory resolution has a bug), it would silently stage everything in that repo. Consider either asserting that `repoRoot` is under `TRIALS_DIR` before running this command, or using `git diff HEAD --name-status` for tracked files and a separate untracked-file walk for new files.",
+      "index": 3
+    },
+    {
+      "file_path": "scripts/eval/lib/grade.ts",
+      "line_number": 201,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "When `buildSuccess` is false, `ghostStories` is silently set to `undefined` and the grading output shows no ghost-story row. A one-line log here would make the output self-explanatory:\n\n```typescript\nif (!buildSuccess) logger.logStep('Skipping ghost stories (build failed)');\nconst ghostStories = buildSuccess ? await gradeGhostStories(projectPath, logger) : undefined;\n```",
+      "index": 4
+    },
+    {
+      "file_path": "scripts/eval/lib/prepare-trial.ts",
+      "line_number": 33,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Two related problems with the cache:\n\n1. **Race condition**: if `eval-parallel.ts` spawns several processes for the same project simultaneously and none of them find `cacheDir/.git` yet, all will try to clone and populate the cache concurrently, potentially corrupting it. A simple file-based lock (or checking for a `.lock` sentinel and waiting) would prevent this.\n\n2. **No invalidation**: the cache is populated once and never refreshed. If the `eval-baseline` branch is updated upstream, stale clones will be used indefinitely. Consider storing the remote HEAD SHA in the cache and comparing it on each run, or documenting a manual `--refresh-cache` flag.",
+      "index": 5
+    },
+    {
+      "file_path": "scripts/eval/lib/prepare-trial.ts",
+      "line_number": 39,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "If `git clone` or `installDeps` throws, the partially-created `repoRoot` and `trialDir` are left on disk. On the next run the cache check at line 33 will still be false (no `.git` in `cacheDir`), so a fresh clone will be attempted, but the stale `trialDir` may cause `mkdir` to silently succeed over garbage. Wrapping the else-branch in a try/finally that removes `trialDir` and `cacheDir` on failure would keep state consistent.",
+      "index": 6
+    },
+    {
+      "file_path": "scripts/eval/lib/agents/config.ts",
+      "line_number": 13,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`ALL_EFFORTS` (line 13) and `ALL_MODELS` (line 9) are exported but not imported anywhere in the eval harness. If they are intended for future use, a comment saying so would clarify intent; otherwise remove them to keep the public surface minimal.",
+      "index": 7
+    },
+    {
+      "file_path": "scripts/eval/lib/run-trial.ts",
+      "line_number": 47,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`promptName || 'setup'` appears twice (lines 47 and 76). Since `TrialConfig.prompt` is typed `string` (not optional) and the Zod schema already defaults it to `'setup'` before `runTrial` is called, an empty string reaching here would be a bug at the call site rather than a valid case to default away from. Remove the fallbacks and rely on the schema default, or validate `promptName` explicitly at the top of `runTrial`.",
+      "index": 8
+    },
+    {
+      "file_path": "scripts/package.json",
+      "line_number": 79,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`citty` is added as a dependency but is not imported anywhere in the eval scripts (which use `node:util parseArgs` directly) or in any other file in the diff. If it was meant to replace `parseArgs` in `eval.ts`, the migration was not completed. If it's genuinely not needed, remove it to keep the dependency tree lean.",
+      "index": 9
+    },
+    {
+      "file_path": "code/core/src/core-server/index.ts",
+      "line_number": 36,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`getComponentCandidates` and `runGhostStories` are implementation details of the ghost-stories feature being promoted to the `storybook/internal/core-server` barrel export so the eval harness can import them. This creates a maintenance obligation: future changes to the ghost-stories internals must maintain backward compatibility with the eval harness interface. Consider whether the eval harness could instead import these directly via a relative path from `scripts/`, or whether a dedicated eval-specific export path would be cleaner than mixing them into the core-server public API.",
+      "index": 10
+    },
+    {
+      "file_path": "scripts/eval/lib/agents/codex.ts",
+      "line_number": 13,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The Codex agent has no equivalent to the Claude agent's `MAX_TURNS = 50` guard. If the Codex SDK does not enforce its own turn limit, a runaway session could iterate indefinitely and incur unbounded cost. Check whether `Codex.startThread` accepts a `maxTurns` or similar option and set it explicitly, matching the Claude agent's safety boundary.",
+      "index": 11
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "**`eval-parallel.ts` is missing.** The PR description prominently describes it as the primary entry point for running all 8 model\u00d7prompt combinations with prefixed live-streamed logs, and the PR title positions the eval harness as a complete system. Only `eval.ts` (single run) is present in the diff. Either `eval-parallel.ts` was accidentally left out of this PR, or the description is ahead of the implementation \u2014 either way the discrepancy should be resolved before merging.",
+      "index": 12
+    },
+    {
+      "dimension": "Code Style",
+      "importance": "major",
+      "comment": "**`.agents/skills/review-pr/SKILL.md` is unrelated to this PR.** This new file (439 lines) is a skill definition for generating scrollable HTML PR review pages \u2014 it has nothing to do with the eval harness for Storybook setup. It appears to have been accidentally staged alongside the eval work. It should be moved to a separate PR or commit.",
+      "index": 13
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**Google Sheets upload is described but not implemented.** The PR description lists \"Google Sheets upload (set `EVAL_GOOGLE_SHEETS_URL`)\" as a results feature. No Google Sheets client code exists in the diff. If this is intentionally deferred, a `TODO` comment in `run-trial.ts` (where the report is assembled) and a note in the PR description would set accurate expectations.",
+      "index": 14
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "**No overall trial budget or wall-clock timeout.** Individual steps have timeouts (build: 300s, tsc: 120s, clone: 120s, install: 300s), but the agent execution phase (`driver.execute`) is unbounded. A slow or hung agent will block the process indefinitely. Consider adding a top-level `Promise.race` with a configurable timeout in `runTrial`, or propagating a `--timeout` CLI flag through to the agent drivers.",
+      "index": 15
+    }
+  ],
+  "cost_usd": 1.3296705999999998,
+  "duration_seconds": 850.8300323486328
+}

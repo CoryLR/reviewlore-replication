@@ -1,0 +1,52 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/trace-changed.ts",
+      "line_number": 9,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "The direct `moduleGraph.get(normalizedPath)` lookup will always miss on Windows \u2014 the exact platform this PR targets \u2014 because module graph keys still contain backslashes (e.g. `C:\\repo\\src\\Button.tsx`) while `normalizedPath` uses forward slashes. The O(1) fast-path is therefore never effective on Windows, causing the O(n) fallback loop at line 14 to run on every call. For a large project with thousands of modules and several changed files per debounce cycle, this adds up unnecessarily. A more efficient approach is to normalize the module graph keys once in `ChangeDetectionService.buildStatuses` before handing the map to `findAffectedStoryFiles`, making the direct O(1) lookup always succeed and eliminating the need for the fallback entirely.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/trace-changed.ts",
+      "line_number": 14,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "This linear scan normalizes every module graph key on each invocation. As noted on line 9, this fallback always runs on Windows because the direct lookup never matches. If the module graph has 5,000 entries and 10 files change in one debounce cycle, that is 50,000 `normalizePath` calls per scan just for the lookup phase. Pre-normalizing the map once in the caller would reduce this to a single O(n) pass shared across all changed files.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/trace-changed.ts",
+      "line_number": 29,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`changedFile` is already wrapped in `normalizePath(resolve(...))` in `ChangeDetectionService.buildStatuses` before being passed here, so this second normalization is redundant for that caller. `normalizePath` is idempotent so it is harmless, but it creates ambiguity about whether the function expects a raw OS path or a pre-normalized one. A JSDoc comment on `findAffectedStoryFiles` clarifying the expected input contract (e.g. \"all path parameters must be normalized forward-slash paths\") would make the intention clear and help future callers.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/trace-changed.ts",
+      "line_number": 64,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The returned `affectedStoryFiles` map now uses normalized forward-slash paths as keys instead of raw OS paths. This is a silent behavioral change to the function's public return type. The current sole caller (`ChangeDetectionService`) handles it correctly because `newFiles` and `storyIdsByFile` are also normalized. However, any future caller that uses the returned keys directly as OS file-system paths on Windows could break. Consider documenting this in the function's return-type JSDoc, or wrapping the return type to make the normalization guarantee explicit.",
+      "index": 3
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "No Windows-path test cases were added to `trace-changed.test.ts`. The new `getModuleNodesByNormalizedPath` helper and the normalization of `importer.file` are the core of this bug fix, but every test in the file uses POSIX-style forward-slash paths (e.g. `/repo/src/Button.tsx`). Those tests would have passed even without this PR's changes. To guard against regression, at least one test should pass a `moduleGraph` with backslash-style keys (e.g. `C:\\repo\\src\\Button.tsx`) and a `changedFile` with the equivalent backslash form, and assert that the correct story files are returned.",
+      "index": 4
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "There is an architectural asymmetry: `storyIdsByFile`, `changedFiles`, and `newFiles` are all normalized at the `ChangeDetectionService` boundary, but the `ModuleGraph` passed to `findAffectedStoryFiles` is left with its original (potentially non-normalized) keys. The `getModuleNodesByNormalizedPath` helper exists solely to paper over this gap inside `trace-changed.ts`. Normalizing the module graph once in `buildStatuses` \u2014 before the `for (const changedFile of scannedFiles)` loop \u2014 would make the invariant consistent across all maps, eliminate the O(n) fallback, remove the need for `getModuleNodesByNormalizedPath` entirely, and simplify `trace-changed.ts` back closer to its original form.",
+      "index": 5
+    }
+  ],
+  "cost_usd": 0.49740870000000004,
+  "duration_seconds": 374.8236811161041
+}

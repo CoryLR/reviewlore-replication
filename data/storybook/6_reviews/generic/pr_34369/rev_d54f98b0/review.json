@@ -1,0 +1,100 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 122,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`startChangeDetection(options)` is fire-and-forget with no error handler. Any rejection thrown inside \u2014 from `presets.apply`, `indexGenerator.getIndex()`, or `warmupRequest` \u2014 will become an unhandled promise rejection and be silently swallowed in most environments. Add at minimum a `.catch()` to log the failure:\n\n```ts\nstartChangeDetection(options).catch((e) =>\n  logger.error('Change detection failed to initialise', e)\n);\n```",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 84,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`Object.values(storyIndex.entries)` includes docs entries and virtual-module entries (e.g. `virtual:storybook/...`). Passing a virtual path to `server.warmupRequest()` will either throw or produce a no-op module that pollutes the module graph, potentially causing the `fileToModulesMap.size > 0` check on line 89 to fire prematurely. `service.ts` correctly guards this with `entry.type !== 'story' || entry.importPath.startsWith('virtual:')` \u2014 the same filter should be applied here.",
+      "index": 1
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 89,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "When `process.hrtime(startTime)[0] > 30` the interval silently self-cancels. A user whose module graph never populates will see no watcher activity and no log message explaining why. Adding a `logger.warn` here (e.g. `'Change detection: module graph did not populate within 30 s; watcher not attached'`) would make this edge-case diagnosable without having to trace the source.",
+      "index": 2
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 14,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`builder-vite` is a lower-level package that sits beneath `core-server` in the dependency graph; importing a type from `'storybook/internal/core-server'` creates an upward layer dependency. Even though it is erased at compile time, it couples the builder to the orchestrator's type surface. Consider moving `StoryIndexGenerator` (or at least the narrow slice of it needed here \u2014 `{ getIndex(): Promise<{ entries: Record<string, { importPath: string }> }> }`) to `storybook/internal/types` or a shared types package so the dependency flows downward.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 43,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Commented-out debug log should be removed before merge:\n```ts\n// logger.info(`Story ${entry.id} absolute path: ${absolutePath}`);\n```",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 97,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Only `enabled === false` suppresses startup; `enabled === undefined` (the value when `features.changeDetection` is absent from the user's config) falls through and starts the service. For a feature labelled experimental and gated behind a flag in the local `.storybook/main.ts`, this means it is **on by default** for all users who haven't explicitly configured it. If the intended behaviour is opt-in, the guard should be:\n```ts\nif (!enabled) {\n```\nIf opt-out is intentional, the comment/docs should say so explicitly.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 123,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`dispose()` cancels the debounce timer and unsubscribes from new events, but does not reset `this.rerunAfterCurrentScan` or `this.scanInFlight`. If a scan is in-flight when `dispose()` is called, the `finally` block in `scan()` will see `rerunAfterCurrentScan === true` and call `void this.scan()` one additional time after disposal. Adding `this.rerunAfterCurrentScan = false;` in `dispose()` (before the unsubscribe) prevents this.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 211,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`getChangedFiles()` begins with `const repoRoot = await this.getRepoRoot()` internally. Because both `getChangedFiles()` and `getRepoRoot()` are kicked off in the same `Promise.all`, neither has had a chance to populate `this.repoRoot` before the other reads the cache \u2014 so two concurrent `git rev-parse --show-toplevel` processes can be spawned. The simplest fix is to call `getRepoRoot()` once before the `Promise.all` and pass it through, or to cache the in-flight promise rather than the resolved value:\n```ts\nconst repoRoot = await gitDiffProvider.getRepoRoot();\nconst [changes, storyIndexGenerator] = await Promise.all([\n  gitDiffProvider.getChangedFiles(),\n  this.options.storyIndexGeneratorPromise,\n]);\n```",
+      "index": 7
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/readiness.ts",
+      "line_number": 22,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`readinessDeferred` and `readinessState` are module-level mutable singletons, and `ChangeDetectionService`'s constructor calls `resetChangeDetectionReadiness()` to take ownership of them. This means instantiating a second service (even briefly, e.g. during a hot-reload restart) silently invalidates any promise already returned to a caller from the previous instance's `getChangeDetectionReadiness()`. It also requires `internal_resetChangeDetectionReadiness` to be called manually between tests. Moving this state into the service instance (and exposing `getReadiness(): Promise<ChangeDetectionReadiness>` as an instance method) would eliminate the shared-state hazard and remove the need for a test-only reset export.",
+      "index": 8
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/git-diff-provider.test.ts",
+      "line_number": 13,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`vi.clearAllMocks()` is called in both `beforeEach` (line 13) and `afterEach` (line 17), which is redundant \u2014 `beforeEach` already resets state before each test, so the `afterEach` call does nothing useful. Remove one of them (conventionally keep `afterEach` for teardown, or `beforeEach` if you prefer a guaranteed clean start).",
+      "index": 9
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `ChangeDetectionReadiness` type used in `readiness.ts` and `resolveReadiness()` in `service.ts` is defined locally within the change-detection module but re-exported from `core-server/index.ts` as `Experimental_ChangeDetectionReadiness`. The same type literal (`{ status: 'ready' } | { status: 'unavailable'; \u2026 } | { status: 'error'; \u2026 }`) is inlined again in the `resolveReadiness` private method signature in `service.ts` rather than reusing the exported `ChangeDetectionReadiness` type. Reusing the shared type keeps both signatures in sync automatically and reduces duplication.",
+      "index": 10
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`CHANGE_DETECTION_STATUS_TYPE_ID` is defined in `code/core/src/shared/status-store/index.ts` and re-exported through both `storybook/internal/types` (via `types/modules/status.ts`) and `storybook/internal/core-server` (via `change-detection/index.ts` \u2192 `service.ts`). With two public re-export paths for the same constant, consumers may end up importing it from either location depending on what else they need, which can lead to inconsistent import style across the codebase. Settling on a single canonical export path (likely `storybook/internal/types`, which is the established home for shared constants) and removing the `core-server` re-export would eliminate the ambiguity.",
+      "index": 11
+    }
+  ],
+  "cost_usd": 1.03124115,
+  "duration_seconds": 672.6941630840302
+}

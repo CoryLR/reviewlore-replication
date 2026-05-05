@@ -1,0 +1,60 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/renderers/react/src/componentManifest/utils.ts",
+      "line_number": 191,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The warning advice `\"create a tsconfig.json that extends '${candidate}'\"` can be incorrect when `candidate` is `tsconfig.app.json`. In Angular projects, `tsconfig.app.json` is a build-subset config that itself extends `tsconfig.json` \u2014 advising users to flip that relationship creates a potential circular `extends` chain and misleads Angular users about the conventional project structure. A safer, unconditional recommendation would be: `\"Create a tsconfig.json in your project root\"` without prescribing what it should extend.",
+      "index": 0
+    },
+    {
+      "file_path": "code/frameworks/react-vite/src/plugins/react-docgen.ts",
+      "line_number": 49,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The three-candidate fallback list (`tsconfig.json` \u2192 `tsconfig.base.json` \u2192 `tsconfig.app.json`) is hardcoded inline here, duplicating `TSCONFIG_CANDIDATES` from `code/renderers/react/src/componentManifest/utils.ts`. Because these live in different packages a direct import isn't trivial, but at minimum add a comment like `// Keep in sync with TSCONFIG_CANDIDATES in renderers/react/src/componentManifest/utils.ts`. Without it, a future contributor who adds a new candidate to `TSCONFIG_CANDIDATES` (e.g., `tsconfig.workspace.json`) will not know to update the Vite and Webpack loaders, silently leaving them out of sync.",
+      "index": 1
+    },
+    {
+      "file_path": "code/presets/react-webpack/src/loaders/react-docgen-loader.ts",
+      "line_number": 85,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Same duplication issue as in `react-docgen.ts`: the three-candidate fallback list is hardcoded without any reference to `TSCONFIG_CANDIDATES` in `utils.ts`. Add a comment pointing to that constant so future maintainers know to update all three locations when a new candidate is added.",
+      "index": 2
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/utils.test.ts",
+      "line_number": 237,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `tsconfig.app.json` fallback test only asserts `expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('tsconfig.app.json'))`, but the analogous `tsconfig.base.json` test (around line 222\u2013223) asserts both `'No tsconfig.json found'` and `'tsconfig.base.json'`. For consistency and stronger regression coverage, the `tsconfig.app.json` test should also assert `expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('No tsconfig.json found'))`, ensuring the warning's introductory phrase is present regardless of which candidate is found.",
+      "index": 3
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/reactDocgenTypescript.ts",
+      "line_number": 210,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The warning message `'No tsconfig.json (or tsconfig.base.json / tsconfig.app.json) found.'` is accurate when `configPath` is `undefined`, but this hardcodes the fallback candidate names in a second location \u2014 they already appear in `TSCONFIG_CANDIDATES` in `utils.ts`. If a new candidate is added to `TSCONFIG_CANDIDATES` in the future, this message string will become stale. Consider deriving the list from `TSCONFIG_CANDIDATES` (which is not currently exported) or extracting the message string alongside the constant.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The Vite (`react-docgen.ts`) and Webpack (`react-docgen-loader.ts`) loaders silently use fallback tsconfigs for path alias resolution without emitting any log output, while `findTsconfigPath` (used for docgen) explicitly warns when a fallback is used. A user in a monorepo with only `tsconfig.base.json` will see a warning for docgen but nothing for path aliases \u2014 which may lead them to believe path alias resolution is broken or simply inconsistent behavior across the two concerns. Either add analogous `logger.debug` messages in the loader fallback paths, or add inline comments explicitly documenting that the warning omission is intentional for alias resolution.",
+      "index": 5
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `findTsconfigPath` function is wrapped with `cached`, which means the `logger.warn` side effect fires only once per unique `cwd` value. This is the right behavior (no warning spam), but it means if `invalidateCache()` is called mid-session (e.g., on an HMR reset), the warning will fire again on the next call. The tests call `invalidateCache()` in `beforeEach` which correctly isolates test cases, but the caching-of-warning behavior is not explicitly tested. Adding a test that calls `findTsconfigPath` twice with the same `cwd` (without invalidating) would confirm the warning fires exactly once, guarding against regressions in the `cached` integration.",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.7982479,
+  "duration_seconds": 603.4671926498413
+}

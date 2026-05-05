@@ -1,0 +1,15 @@
+{
+  "pr_number": 3888,
+  "source_mr_date": "2025-12-28T00:06:25.854Z",
+  "candidates": [
+    "When computing inter-atomic distances from `NeighborList` output, never call `atoms.get_distances()` on the returned neighbor indices \u2014 it ignores periodic-image offsets and yields incorrect distances for atoms near cell boundaries. Instead, capture both return values with `j_indices, offsets = nl.get_neighbors(i)` and compute distances explicitly: `d = atoms.positions[j_indices] + offsets @ atoms.cell - atoms.positions[i]; distances = np.linalg.norm(d, axis=1)`. See `ase/calculators/emt.py` for the canonical usage pattern in this codebase.",
+    "When constructing a `NeighborList` for pair-counting analysis (e.g., RDF or coordination statistics), pass `bothways=True` so every pair is enumerated in both directions. Adjust the normalization formula to account for this double-counting rather than manually halving the raw counts.",
+    "When using `NeighborList` for geometric analysis that produces a histogram or distribution (e.g., RDF), iterate directly over neighbors and accumulate counts \u2014 do not build an intermediate dense N\u00d7N distance matrix. The NeighborList approach correctly handles multiple periodic images of the same atom within the cutoff radius, whereas a distance matrix can represent only the shortest image and forces O(N\u00b2) memory allocation.",
+    "When filtering neighbor indices returned by `nl.get_neighbors()` by atomic species, use NumPy boolean masking throughout: `mask = atoms.numbers[j_indices] == target_element; j_indices, offsets = j_indices[mask], offsets[mask]`. Apply the same mask to both the index array and the corresponding offsets array to keep them in sync.",
+    "When using `np.bincount` to accumulate histogram counts into a fixed-size array, always pass `minlength=nbins + 1` and slice the result to `[:nbins + 1]`, e.g. `np.bincount(indices, minlength=nbins + 1)[:nbins + 1]`. This guarantees the output has exactly the expected length even when the largest index falls short of `nbins`.",
+    "Tests for functions that accept element-type arguments or implement partial/element-filtered analysis (e.g., partial RDFs, coordination counts) must include at least one test case covering a two-element or multi-element system, not only homogeneous single-element cases."
+  ],
+  "analysis": [],
+  "cost_usd": 0.111356,
+  "duration_seconds": 77.44933104515076
+}

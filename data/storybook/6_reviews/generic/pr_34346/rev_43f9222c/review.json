@@ -1,0 +1,100 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/manager/utils/status.test.ts",
+      "line_number": 6,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "`getChangeDetectionStatus` is imported from `'../components/sidebar/Tree'`, which is a component file. A utility test importing from a UI component is an inverted module dependency \u2014 logic flows the wrong way. The function has zero React dependencies; it operates purely on `StatusByTypeId`. It belongs in `utils/status.ts` alongside `getMostCriticalStatusValue` and `getGroupStatus`, and this test file should import it from there. This placement issue is exactly what the import pattern exposes.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 216,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`CHANGE_DETECTION_TYPE_ID = 'storybook/change-detection'` is a new local constant duplicating a string that already exists as `CHANGE_DETECTION_STATUS_TYPE_ID` in `storybook/internal/types` (which is imported in the adjacent `utils/status.tsx`). Redefining the same magic string in `Tree.tsx` means two places now own it. Import the canonical constant from the types package to eliminate the duplication and prevent the two from drifting apart.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 229,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "`getChangeDetectionStatus` is a pure data function with no React dependencies \u2014 it filters and maps over `StatusByTypeId`. Placing it in `Tree.tsx` (a rendering component) mixes concerns and makes it harder to reuse or test in isolation. The correct home is `utils/status.ts` alongside `getMostCriticalStatusValue` and `getGroupStatus`. The test file importing it from the component (status.test.ts line 6) is a direct symptom of this misplacement.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 305,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`textColor` is derived from `testStatus` alone. When a story has only a change detection status (e.g., `status-value:new`) and no test status, `testStatus` is `status-value:unknown`, and `getStatus(theme, 'status-value:unknown').textColor` returns `null`. The `LeafNode` style `color: textColor` therefore applies no color, even though a visible change detection icon is rendered in the adjacent slot. The text stays its default color despite the story being flagged. Consider computing `textColor` from whichever of `changeStatus`/`testStatus` is most critical, or from both combined.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 220,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`statusOrder` now places `new`, `modified`, and `affected` before `error`, meaning context menu items for errors appear *after* change-detection items. Meanwhile `statusPriority` in `utils/status.ts` treats `error` as the highest-priority value. Two arrays governing similar orderings but with different rankings will confuse maintainers and may produce unintuitive context menus. If these orderings are intentionally different (display order vs. criticality), a comment explaining the distinction would help; otherwise, align them.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 196,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`key=\"icon\"` on these static SVG elements inside `StatusIconMap` has no effect. React `key` props only influence reconciliation when elements appear in an array or fragment rendered as a list. Since these JSX values are stored as plain object properties and rendered individually, the `key` is silently ignored. Remove it to avoid misleading future readers about reconciliation intent. (Note: the same unnecessary `key` appears on the `modified` and `affected` entries at lines 201 and 206.)",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.stories.tsx",
+      "line_number": 322,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`(index[dualSlotStoryId] as any).parent` casts to `any` to access `.parent`, bypassing type safety. If `dualSlotStoryId` happens to resolve to a root-level entry with no `parent`, `dualSlotParentId` will be `undefined`, and `dualSlotData[undefined]` will silently create a property with key `\"undefined\"`, causing confusing runtime failures in the stories. A safer approach is to cast to a specific type that includes `parent` (e.g., `(index[dualSlotStoryId] as StoryEntry).parent`) so the TypeScript compiler can catch shape mismatches.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.stories.tsx",
+      "line_number": 435,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`BranchWithChangeDetectionPriority.render` mutates the exported story object after its initial creation via `makeDualSlotStory`. This splits the story's definition across two statements, making it easy to miss when reading the file top-to-bottom. Since `makeDualSlotStory` accepts a `Story`-shaped return, a cleaner approach is to accept an optional second argument (render override or partial Story spread) or simply define this story inline without going through the helper, keeping the full definition in one place.",
+      "index": 7
+    },
+    {
+      "file_path": "code/core/src/manager/utils/status.test.ts",
+      "line_number": 248,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test `'branch/group combined priority: error beats new'` asserts on `getMostCriticalStatusValue` directly \u2014 a different function than `getChangeDetectionStatus`. Placing it inside the `'dual-slot status splitting'` describe block misrepresents what it tests. It belongs in the existing `'getHighestStatus'` describe block above, which already covers `getMostCriticalStatusValue` behavior.",
+      "index": 8
+    },
+    {
+      "file_path": "code/core/src/manager/utils/status.test.ts",
+      "line_number": 236,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `'priority within change-detection slot'` test constructs a `StatusByTypeId` object where multiple entries share the same `typeId: 'storybook/change-detection'` but have different map keys (`'first'`, `'second'`, `'third'`). Since `StatusByTypeId` is `Record<typeId, Status>`, in real usage only one entry can exist per `typeId` key \u2014 having three entries all claiming `typeId: 'storybook/change-detection'` is an impossible runtime state. The test therefore verifies behavior that can never be reached in production. This required `as unknown as StatusByTypeId` to suppress the type error, which is a signal the scenario is artificial. Consider whether a realistic multi-value scenario (e.g., multiple *different* change-detection providers) exists and test that instead, or document why this edge case is worth covering.",
+      "index": 9
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The most systemic issue in this PR is that `getChangeDetectionStatus` is exported from a UI component file (`Tree.tsx`) rather than from the utility module (`utils/status.ts`) where it belongs. This is confirmed by three independent signals: (1) the test file must import from a component to test it, reversing the normal module dependency direction; (2) the function has no React imports or JSX; (3) the existing peers it works alongside (`getMostCriticalStatusValue`, `getGroupStatus`) all live in `utils/status.ts`. Moving the function there, and importing `CHANGE_DETECTION_STATUS_TYPE_ID` from `storybook/internal/types` rather than redefining it as a local string, would align this PR with the established architecture.",
+      "index": 10
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The story data setup in `Tree.stories.tsx` uses module-level `const` expressions (`dualSlotStoryId`, `dualSlotParentId`, `dualSlotData`) computed at import time from `index` (the large mock dataset). If `storyId` is ever undefined or a root-level entry with no parent, all five dual-slot stories will silently break at import time rather than giving a clear error. Adding a runtime assertion (e.g., `if (!dualSlotParentId) throw new Error(...)`) or a comment documenting the assumption about `storyId` having a parent would make the dependency explicit.",
+      "index": 11
+    }
+  ],
+  "cost_usd": 0.61325325,
+  "duration_seconds": 430.37755393981934
+}

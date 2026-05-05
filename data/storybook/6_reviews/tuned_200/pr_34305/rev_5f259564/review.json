@@ -1,0 +1,92 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/vitest/src/use-test-provider-state.ts",
+      "line_number": 51,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `as TestStatusValue` cast bypasses TypeScript without a runtime guard. `statusValueToStoryIdsMap` is only initialized with the five test-status keys (`pending`, `success`, `error`, `warning`, `unknown`). If `status.value` is ever `'status-value:new'`, `'status-value:modified'`, or `'status-value:affected'` under the vitest type ID \u2014 for example if a future change causes the vitest addon to emit one of these values, or if a change-detection addon shares the same type ID \u2014 `statusValueToStoryIdsMap[status.value as TestStatusValue]` resolves to `undefined` and `.push()` throws `TypeError: Cannot read properties of undefined`. The cast tells TypeScript to trust the narrowing but provides no actual runtime guarantee. Add an explicit guard:\n```typescript\nif (status.value in statusValueToStoryIdsMap) {\n  statusValueToStoryIdsMap[status.value as TestStatusValue].push(status.storyId);\n}\n```\nThis keeps the map correct and makes the implicit assumption explicit.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager/utils/status.tsx",
+      "line_number": 33,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The priority array places `'status-value:new'` at index 5 and `'status-value:affected'` at index 3, meaning `getMostCriticalStatusValue` will pick `new` over `affected`. But the story comment in `StatusesChangeDetectionPriority` explicitly documents the intended ordering as `error > warning > affected > modified > new` \u2014 i.e., `affected` should win. These two are directly contradictory. Semantically, `affected` (a dependency changed and may have caused a regression) is a stronger signal than `new` (a brand-new story that has never been reviewed). If the story comment reflects the design intent, `new` and `affected` must be swapped in this array:\n```typescript\n'status-value:new',\n'status-value:modified',\n'status-value:affected',\n```\nIf the implementation is intentional, the comment must be corrected. Right now one of them is wrong.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager/utils/status.tsx",
+      "line_number": 59,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`getStatus` returns `null` as the color (second tuple element) for `new`, `modified`, and `affected`. In `Tree.tsx`, `getStatus(theme, status)[1]` is used to set the `color` prop on branch node wrappers \u2014 `null` there means no colored left-border or visual accent on the group row. At the same time, `StatusButton.tsx`'s `withStatusColor` correctly returns `theme.fgColor.accent` for these same statuses (styling the button icon itself). Having two separate, inconsistent sources of truth for the same status color is fragile: the button is tinted but the group-row border is not. Consider returning `theme.fgColor.accent` from `getStatus` for these statuses so both layers use the same value.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 193,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`StatusIconMap` maps all three new status values to `null`, so individual story leaf nodes will not render any status badge when their own status is `new`, `modified`, or `affected`. Only parent component/group nodes will display the icon via `showBranchStatus`. This means a story's own status is silently invisible in the tree, while its parent group shows it. If this is intentional (show change signals at the group level only), add a brief inline comment here explaining the design decision so future maintainers don't assume it is an oversight.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 404,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `as StatusValue[]` cast is used to satisfy `Array.prototype.includes`, which TypeScript types strictly (the argument must be the element type). Using a cast to suppress this check hides the potential type mismatch. A cleaner alternative is to use a `Set` with an explicit type, which provides an `O(1)` lookup and a type-safe `.has()` method that accepts a wider type:\n```typescript\nconst BRANCH_STATUS_SET = new Set<StatusValue>([\n  'status-value:modified',\n  'status-value:affected',\n  'status-value:new',\n  'status-value:warning',\n  'status-value:error',\n]);\nconst showBranchStatus = BRANCH_STATUS_SET.has(status);\n```\nDefining this at module scope also avoids recreating the set on every render.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/types/modules/core-common.ts",
+      "line_number": 546,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`changeDetection?: boolean` is declared in `features` with `@default true`, but nothing in this PR reads or acts on it. Per the project's feature-flag convention, the default must also be set in `common-preset.ts` and all usage sites must reference the same identifier. This flag is currently a dead declaration. Either implement it fully in this PR (read the flag in the change-detection code paths and respect it), or remove it until the implementation is ready to avoid misleading users who might set it and see no effect.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Sidebar.stories.tsx",
+      "line_number": 641,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The inline comment `// priority ordering (most critical wins): error > warning > affected > modified > new` documents `affected` as more critical than `new`. But `statusPriority` in `status.tsx` gives `new` (index 5) a higher rank than `affected` (index 3), making `new` win. This comment and the implementation are contradictory and cannot both be correct. Whichever represents the intended design, the other needs to be updated.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/manager/utils/status.test.ts",
+      "line_number": 193,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Group aggregation propagation is tested for `status-value:new` and `status-value:affected`, but there is no analogous test for `status-value:modified`. All three go through the same aggregation path today, but a dedicated test for `modified` guards against any future divergence (e.g., a copy-paste error that accidentally skips one variant in the propagation logic).",
+      "index": 7
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Sidebar.stories.tsx",
+      "line_number": 556,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The five new stories (`StatusesNew`, `StatusesModified`, `StatusesAffected`, `StatusesMixed`, `StatusesChangeDetectionPriority`) all use `play: waitForChecklistWidget`, which waits for the checklist widget \u2014 not the status icons. None of these stories assert that the new status badges actually render in the sidebar tree with correct aria-labels (e.g., `expect(canvas.getAllByTestId('tree-status-button')).toHaveLength(n)`). Without assertions on the actual DOM output, these stories provide visual snapshots but no regression guard for the change-detection icon behavior.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The priority inversion between the `statusPriority` array (`new > modified > affected`) and the story comment (`affected > modified > new`) is the most important design question this PR needs to resolve before merging. From a change-detection standpoint, `affected` stories have an indirect dependency that changed and may have silently regressed \u2014 they arguably deserve the highest priority among the three. `new` stories have never been reviewed but carry no regression risk. Whichever ordering is chosen, the PR should document the rationale explicitly (perhaps in a JSDoc comment on `statusPriority`) so the intent is clear to future contributors.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description states 'Not testable yet. This needs further integration.' for manual testing. Adding new `StatusValue` variants affects sidebar rendering, group aggregation logic, and the vitest addon's status map \u2014 these are load-bearing surfaces. Given the color inconsistency between `getStatus` (returns `null`) and `withStatusColor` (returns `theme.fgColor.accent`), and the silent absence of leaf-node badges, the lack of manual verification is a risk. Consider at minimum validating with a sandbox story that shows a realistic sidebar tree with all three new statuses present simultaneously.",
+      "index": 10
+    }
+  ],
+  "cost_usd": 0.9157411,
+  "duration_seconds": 764.4887750148773
+}

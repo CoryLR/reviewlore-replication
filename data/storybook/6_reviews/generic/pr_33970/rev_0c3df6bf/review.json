@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.stories.tsx",
+      "line_number": 12,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "This import crosses package boundaries via a raw `src/` path: `'../../../../core/src/manager/utils/toHaveLiveRegion'`. It bypasses the `core` package's public export contract and will silently break if the file is ever moved. The matcher should be re-exported through `core`'s public entry point (e.g. a test-utils barrel) and imported via the package name rather than a relative path into another package's source directory.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+      "line_number": 19,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The JSDoc for `text` says \"string for exact match\", but the implementation on line 61 uses `content.includes(text)`, which is substring matching. For example, `{ text: 'passed' }` would match a live region containing `'3 tests passed, 1 failed'`. Either change the implementation to `content === text` for exact matching (to match the documented contract) or update the JSDoc to say \"string for substring match\".",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+      "line_number": 76,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The failure message shows `aria-live=\"(implicit)\"` for elements that carry an implicit live region via `role` (e.g. `role=\"status\"` or `role=\"alert\"`). This is confusing when debugging. Consider showing the effective level alongside the role, e.g. `role=\"status\" (implicit polite)`, so the output tells the developer why the region was selected and what level was expected.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+      "line_number": 25,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Vitest custom matchers conventionally include `this: MatcherContext` (from `vitest`) as the first parameter so the implementation can access `this.isNot`, `this.utils.printReceived`, etc. Without it the `.not` path still works (because `pass` is honoured), but the signature is non-standard and will require a breaking change if the implementation ever needs matcher context utilities.\n\n```ts\nimport type { MatcherContext } from 'vitest';\nexport function toHaveLiveRegion(\n  this: MatcherContext,\n  container: HTMLElement,\n  options: LiveRegionMatcherOptions\n): { pass: boolean; message: () => string }\n```",
+      "index": 3
+    },
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.stories.tsx",
+      "line_number": 380,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Both `AnnouncesTestRunFinished` and `AnnouncesTestRunCrashed` use `setTimeout(..., 100)` to trigger a state transition. A hard-coded 100 ms delay is timing-sensitive and can produce intermittent failures in slow CI environments. `AnnouncesTestRunStart` uses a cleaner approach \u2014 intercepting `mockStore.send` to drive the transition deterministically. Consider applying the same pattern here so the transition is triggered by user action or a mock, not a timer.",
+      "index": 4
+    },
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.tsx",
+      "line_number": 143,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `useRef` and `useEffect` hooks are placed after ~140 lines of derived-value computations in the component body. React's rules allow this, but convention is to group all hooks near the top of the function (before computed values) so readers can see the component's side-effect profile at a glance without scrolling past a large block of logic. Moving them above the status-value derivations would improve readability.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The PR description states that `extend-to-be-announced` is added as a devDependency in `code/core/package.json` and registered via `import 'extend-to-be-announced/vitest'` in `code/.storybook/storybook.setup.ts`. Neither of these changes appears in the diff, and the exploration agent confirmed they are absent from the codebase. The new stories also use the custom `toHaveLiveRegion` matcher rather than `toBeAnnounced`. If this integration was intentionally dropped, the PR description should be updated. If it is still planned, it represents an incomplete implementation \u2014 the setup file import and the core devDependency are missing.",
+      "index": 6
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `AnnouncesTestRunStart` story initialises `useState` from `args.testProviderState` (`React.useState<TestProviderState>(args.testProviderState)`). Because `useState` only uses its initialiser on mount, changing the arg via Storybook controls after initial render will not update the displayed state. This is a known Storybook limitation with the `render`+`useState` pattern and is acceptable for these test-only stories, but a brief comment explaining why `args` is used only for initialisation would prevent future confusion.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.40127704999999997,
+  "duration_seconds": 319.77556705474854
+}

@@ -1,0 +1,107 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3736,
+  "title": "Rewrite `ELK` based on `GenericFileIOCalculator`",
+  "body": "This MR rewrites the `ELK` calculator based on `GenericFileIOCalculator`. This\n\n- reduces the usage of `FileIOCalculator`\n- simplifies the dependency of `ELK` (before both `FileIOCalculator` and `GetOutputsMixin`, now only `GenericIOCalculator` (as itself is a subclass of `GetOutputsMixin`))\n\nAccording to the description in !2120, `ELK` probably does not have many users, and the core usage does not change (`test_elk.py` passes essentially as is).\nI would therefore think it is OK to just replace the old `ELK` with the new one.\n\nI guess `test_command.py` is not for `GenericFileIOCalculator` subclasses, so I removed the corresponding tests for `elk`.\n\nThe overhaul of `ELK` was also suggested in !2952. Since `git rebase` looked to me a bit complicated, I would just like to have a new clean one.\n\nCloses !2952, #1030\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://wiki.fysik.dtu.dk/ase/development/contribute.html)\n- [~] [**Doc strings** in code changed in this MR are up to date.](https://wiki.fysik.dtu.dk/ase/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [~] [**Unit tests** have been added for new or changed code.](https://wiki.fysik.dtu.dk/ase/development/tests.html)\n- [x] [**Changes** have been added in `changelog.d` using `scriv`.](https://wiki.fysik.dtu.dk/ase/development/writing_changelog.html)\n- [x] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "yuzie007",
+  "merged_at": "2025-07-17T15:06:31.565Z",
+  "base_ref": "master",
+  "merge_commit_sha": "b27ea87efd9ae50967dac103044e6eb65acbbd10",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2602201528",
+          "author": "askhl",
+          "body": "Perhaps we should (although mostly for more commonly used calculators) provide a `command=None` parameter, and if it is not None, we show a warning/error with precise instructions?  We can also warn about ASE_ELK_COMMAND.  It probably doesn't matter much in this case though.\n\nIf we port calculators that are more widespread (e.g. Siesta) we should probably be more careful and provide them in a different module or with a different classname.",
+          "file_path": "ase/calculators/elk.py",
+          "line_number": 149,
+          "commit_sha": "84d937a23b95bf1e6a24e318836b61639761e8a8",
+          "base_sha": "c062d5f1eeebe88772b8787525e9d7e84c33f208",
+          "created_at": "2025-07-03T18:42:45.199Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2604406635",
+          "author": "yuzie007",
+          "body": "I agree on both `command` and `ASE_ELK_COMMAND`, and in the revised commits, I followed how `Espresso` does.",
+          "file_path": "ase/calculators/elk.py",
+          "line_number": 149,
+          "commit_sha": "84d937a23b95bf1e6a24e318836b61639761e8a8",
+          "base_sha": "c062d5f1eeebe88772b8787525e9d7e84c33f208",
+          "created_at": "2025-07-04T23:47:08.270Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding a `command=None` parameter, providing warnings/errors for deprecated usage, and warns about how to handle more widespread calculator ports \u2014 all concrete code change suggestions."
+    }
+  ],
+  "review_thread_count": 3,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2604406640",
+            "author": "yuzie007",
+            "body": "Thank you @askhl for the review! For the suggestion, I followed accordingly.\n\nTaking this chance, I also added a documentation and a small example for `ELK` (cf. #174, #1030).\n\nDuring the survey I noticed a few related things:\n\n- While the `species_dir` argument is used in `Elk`, internally Elk uses `sppath` for specifying the path to the species files.\nIt may therefore be natural to have it in `config.ini` with this name.\n\n- At this moment we need to explicitly specify `tasks=0`, which indicates a single-point calculation. Probably we can set `tasks=0` for `write_elk_in` by default so that `Elk` works without any arguments by default. (Maybe soon in a separate MR.)",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-07-04T23:47:08.780Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2633872632",
+            "author": "askhl",
+            "body": "Great.  Thanks a lot @yuzie007!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-07-17T15:06:25.688Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment and thanks \u2014 no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 3,
+    "stage1_kept": 2,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 1,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1,
+    "stage3_cost_usd": 0.012539
+  }
+}

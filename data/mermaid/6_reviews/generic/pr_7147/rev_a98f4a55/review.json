@@ -1,0 +1,128 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 27,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`themeVariables` from `getConfig()` is a flat object with properties like `primaryColor`, `background`, `primaryTextColor`, etc. It does not have a `wardley` sub-object. Every `themeVariables.wardley?.X` access evaluates to `undefined`, so the entire wardley-specific theme layer (axisColor, componentFill, linkStroke, evolutionStroke, etc.) always falls through to the hardcoded defaults. The documented theme integration is non-functional as written. Other diagram types (e.g. radar, pie) either read flat themeVariables properties directly or add their entries to the theme variable definitions. Consider either reading from flat themeVariables keys (e.g. `themeVariables.primaryColor`) or defining a proper wardley theme variable set in the theme system.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 452,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Division by zero: when `distance === 0` (source and target nodes share the exact same position), `dx / distance` and `dy / distance` produce `NaN`, resulting in `NaN` SVG coordinates and a broken render with no visible error. The same unguarded division appears in all four position callbacks (`x1`, `y1`, `x2`, `y2`) and in the trend rendering section. Add a guard: `if (distance < 0.001) return sourcePos.x;` (or equivalent per axis).",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 387,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`const height = configValues.nodeRadius * 4;` declared inside the `data.pipelines.forEach` callback shadows the outer `height` variable that holds the canvas height (declared earlier as `const height = data.size?.height ?? configValues.height`). Both variables are in scope simultaneously in this closure, which is a likely source of future confusion or bugs. Rename this to `pipelineBoxHeight` (matching the adjacent comment) or similar.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 442,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "The same `dx`, `dy`, `distance`, `radius`, `sourcePos`, and `targetPos` computation is independently repeated inside each of the four `.attr('x1', ...)`, `.attr('y1', ...)`, `.attr('x2', ...)`, `.attr('y2', ...)` D3 callbacks. Additionally, `data.nodes.find((n) => n.id === link.source)` performs an O(n) linear scan per callback per link. Since the `positions` Map already holds the projected coordinates, consider using D3's `.each()` to compute once per element, or pre-compute a `Map<linkId, {x1, y1, x2, y2}>` and bind it as data before the selectAll.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 950,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`textNode.getComputedTextLength()` is a browser DOM API that returns `0` in JSDOM (used by Vitest) and in server-side rendering environments. When it returns 0, the annotation box width is determined entirely by the hardcoded `+ 105` buffer, producing inconsistent rendering across environments. The `105` magic number comment confirms this is a workaround rather than a solution. Consider estimating text width from character count and font size (e.g. `text.length * fontSize * 0.6`), which is portable and predictable. Alternatively, use `getBBox()` consistently\u2014it also returns 0 in JSDOM but at least doesn't rely on a layout-dependent API.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyParser.ts",
+      "line_number": 613,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The dual-scale heuristic `visibility <= 1.0 ? visibility * 100 : visibility` creates a silent ambiguity. A value of `1.5` (a plausible typo for `0.15`) passes the `<= 1.0` check as false, is treated as `1.5%` (near-bottom of the Y axis), and is accepted without error. Conversely, `0.5` and `50` both silently map to the same position with no warning. The documented syntax specifies 0.0\u20131.0 only. The legacy 0\u2013100 passthrough path should either be removed entirely, or an explicit range check should be added before this conversion so that values between `1.0` and `100.0` that look like fractions (e.g. `1.05`) are rejected or at minimum warned about.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyParser.ts",
+      "line_number": 445,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`handleEvolve` calls `db.addTrend(nodeId, targetX, node.y)` to draw the evolution arrow. `WardleyBuilder.addTrend` stores trends in a `Map` keyed by `nodeId`. The `handleTrend` function (handling `-.-` syntax) calls the same `db.addTrend`. If both `evolve Kettle 0.62` and `Kettle -.- (90, 43)` appear for the same component, the second call silently overwrites the first and only one arrow is rendered. These two features have different visual semantics and should use separate storage. Consider storing evolution arrows separately from `-.-` movement trends.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyBuilder.ts",
+      "line_number": 141,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`addPipelineComponent` directly mutates the node object retrieved from the `Map` (`node.inPipeline = true`), and `startPipeline` similarly mutates `node.isPipelineParent = true`. Direct mutation of Map values bypasses the builder's merge logic in `addNode` and makes the mutation invisible at the call site. If a caller holds a prior reference to the node object, the mutation will be observed unexpectedly. Prefer replacing the Map entry: `this.nodes.set(componentId, { ...node, inPipeline: true })`. The same pattern applies to `pipeline.componentIds.push(componentId)` which mutates the stored pipeline object.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyParser.ts",
+      "line_number": 134,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Unrecognized `classdef` statements are silently swallowed with no log message or user-visible warning. While the comment says it is intentional, a user who writes `classDef foo` (a supported Mermaid keyword in other diagrams) will get no feedback that it had no effect. At minimum, emit `log.warn('classDef is not supported in Wardley Maps and will be ignored')` so the behavior is diagnosable.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyParser.ts",
+      "line_number": 519,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "In `handleLink`, if either `source` or `target` has not yet been declared as a component (forward reference or typo), `addNodeIfCoords` silently does nothing because `required` defaults to `false`. The link is still registered via `db.addLink`. Later, the renderer silently discards these links via the `!positions.has(link.source)` filter, with no error or warning visible to the user. Consider performing link validation in `WardleyBuilder.build()` once all nodes are known, throwing if a link references a non-existent node ID.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyParser.spec.ts",
+      "line_number": 15,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The first test uses `Alpha(10, 20)` / `Beta(30, 40)` syntax and `x-axis` / `y-axis` keywords, which do not appear anywhere in the documentation (`docs/syntax/wardley.md`). If this is a supported legacy format, it needs to be documented. If it is not intended to be part of the public API, this test validates behavior users can't discover, and the canonical `component Name [visibility, evolution]` / `evolution` syntax should be used instead. The test also does not call `db.clear()` via `beforeEach` before asserting coordinate values, though `beforeEach` is wired up\u2014verify that the implicit reset from `beforeEach` is sufficient for all test ordering scenarios.",
+      "index": 10
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyParser.ts",
+      "line_number": 703,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`slugify` normalizes component names to Map keys. Different labels that produce the same slug\u2014e.g. `\"My App\"` and `\"My-App\"` both become `\"my_app\"`\u2014are treated as the same component. The second `addNode` call merges into the first silently, potentially overwriting coordinates or labels. This can lead to surprising rendering bugs for users with similarly-named components. Consider detecting the collision in `WardleyBuilder.addNode` by checking whether the existing entry has a different original label, and throwing or warning accordingly.",
+      "index": 11
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`WardleyAccelerator` and `WardleyDeaccelerator` in `wardleyBuilder.ts` are structurally identical interfaces (`{ name: string; x: number; y: number }`). They are stored in separate arrays, rendered by copy-pasted blocks in the renderer (~50 lines each), and exposed separately in `WardleyBuildResult`. Consider unifying them into a single `WardleyForce` type with a `kind: 'accelerator' | 'deaccelerator'` discriminator. This would halve the interface surface, eliminate the duplicate rendering code, and make future changes to force element styling require only one update.",
+      "index": 12
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The renderer contains several unexplained magic numbers that affect visual output and are not derivable from configuration: `1.6` for `squareSize` (pipeline parent node size), `1.05` for title font scale, `120`/`80` for area rectangle dimensions, `105` as an annotation box width buffer, `1.5` for annotation circle stroke width, and `0.7`/`1.2` for market node triangle geometry. These should be extracted into named constants at the top of the file (or added to `WardleyDiagramConfig`) with comments explaining their purpose. As written, future maintainers have no way to know whether changing `1.6` to `1.8` is safe.",
+      "index": 13
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The 7 unit tests in `wardleyParser.spec.ts` cover only the parser. There are no unit tests for `wardleyBuilder.ts` (e.g. verifying `build()` throws on missing coordinates, that `clear()` resets all state, that `addNode` merge logic preserves fields correctly) or for `wardleyDb.ts` (e.g. that `textSanitizer` is applied). The renderer has no unit-level tests at all, with only E2E snapshot tests providing coverage. Since the renderer contains non-trivial logic (pipeline box positioning, annotation box clamping, link endpoint calculation), targeted unit tests would catch regressions faster and more precisely than visual diffs.",
+      "index": 14
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The Cypress E2E spec (`cypress/integration/rendering/wardley.spec.js`) contains 6 tests described as visual regression tests, but no snapshot baseline image files appear in the diff. Without committed baselines, the tests will either auto-generate on first run (providing no regression guarantee) or fail immediately. Confirm that the baseline images are committed elsewhere in the repo or that the CI pipeline is configured to auto-accept first-run snapshots intentionally. The PR description claims 12 E2E tests; only 6 are visible in this diff\u2014clarify whether additional test files are expected.",
+      "index": 15
+    }
+  ],
+  "cost_usd": 1.3134595000000004,
+  "duration_seconds": 834.5106420516968
+}

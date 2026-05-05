@@ -1,0 +1,390 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 5173,
+  "title": "feat: Add point styling for quadrant chart",
+  "body": "## :bookmark_tabs: Summary\r\n![new_colors](https://github.com/mermaid-js/mermaid/assets/109927235/b23d47ed-f10e-4961-a4bd-11e225f4bf77)\r\n\r\naddes ability to add point styling to quadrant charts\r\n- radius\r\n- color\r\n- stroke color\r\n- stroke width\r\n\r\nResolves #4995\r\n\r\n## :straight_ruler: Design Decisions\r\n```md\r\nquadrantChart\r\n      title Reach and engagement of campaigns\r\n      x-axis Low Reach --> High Reach\r\n      y-axis Low Engagement --> High Engagement\r\n      quadrant-1 We should expand\r\n      quadrant-2 Need to promote\r\n      quadrant-3 Re-evaluate\r\n      quadrant-4 May be improved\r\n      Campaign A: [0.9, 0.2] radius: 12\r\n      Campaign B: [0.9, 0.4] radius: 10 color: #ff3300\r\n      Campaign C: [0.9, 0.6] radius: 25 color: #00ff33 stroke_color: #10f0f0\r\n      Campaign D: [0.9, 0.8] radius: 15 color: #ff33f0 stroke_color: #00ff0f stroke_width: 5px\r\n      Campaign A11: [0.1, 0.8] radius: 15\r\n      Campaign D11: [0.1, 0.6] color: #ff33f0\r\n      Campaign E11: [0.1, 0.4] stroke_color: #fff000\r\n      Campaign F11: [0.1, 0.2] stroke_width: 5px\r\n```\r\nadds ability to add those 4 parameters\r\n## :x:  the problem\r\nit can either accept one of the 4 paramaters or accept 1,2,3 or 4 params in this specific order\r\nit would accept one of those 4\r\n```md\r\n      radius: 2\r\n      radius: 10 color: #198463 \r\n      radius: 30 color: #ff3300 border_color: #10f0f0 \r\n      radius: 15 color: #ff33f0 border_color: #00ff0f border_width: 5px\r\n```\r\nit wouldnt accept for example \r\n```md\r\ncolor: #ff33f0 radius: 15 border_color: #00ff0f border_width: 5px\r\n```\r\n### the reason\r\ni am unfimiliar with jison so i did this to make accepting parmas optional in file `packages/mermaid/src/diagrams/quadrant-chart/parser/quadrant.jison`\r\n```md\r\npoints\r\n  : text point_start point_x point_y {yy.addPoint($1, $3, $4);}\r\n  | text point_start point_x point_y point_radius {yy.addPoint($1, $3, $4, $5);}\r\n  | text point_start point_x point_y point_color  {yy.addPoint($1, $3, $4, \"\", $5);}\r\n  | text point_start point_x point_y stroke_color {yy.addPoint($1, $3, $4, \"\", \"\", $5);}\r\n  | text point_start point_x point_y stroke_width {yy.addPoint($1, $3, $4, \"\", \"\", \"\", $5);}\r\n  | text point_start point_x point_y point_radius point_color {yy.addPoint($1, $3, $4, $5, $6);}\r\n  | text point_start point_x point_y point_radius point_color stroke_color {yy.addPoint($1, $3, $4, $5, $6, $7);}\r\n  | text point_start point_x point_y point_radius point_color stroke_color stroke_width {yy.addPoint($1, $3, $4, $5, $6, $7, $8);}\r\n  ;\r\n```\r\nfollowing this pattren to include all possible combination it would require 81 lines like this\r\nand this is where i need advice on how to deal with this\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added necessary unit/e2e tests. (will add more after finishing the pr)\r\n- [ ] (not yet will add them when the pr is complete) :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/docs/community/development.md#3-update-documentation) is used for all new features.\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "ilyes-ced",
+  "merged_at": "2024-04-16T03:47:07Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "3809732e48a0822fad596d0815a6dc0e166dda94",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "0d8fe3b626309e4833d9c89fc2c9e01427f7b238",
+    "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85WUvIG",
+          "author": "sidharthv96",
+          "body": "Instead of adding the styling options here, you can accept a styling string here and parse and process it in JS like what's done in flowchart. \r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/34e0942fa227086bd3db8d68876dd3637dc41e8a/packages/mermaid/src/diagrams/flowchart/parser/flow.jison#L502C1-L539C1",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/parser/quadrant.jison",
+          "line_number": 126,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-01-11T04:23:26Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85YCtc-",
+          "author": "sidharthv96",
+          "body": "As this is a new feature, I think throwing error is the best option, instead of silently ignoring/logging it?",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/quadrantDb.ts",
+          "line_number": 73,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-02-03T17:54:01Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85YCtkD",
+          "author": "sidharthv96",
+          "body": "Please add some unit tests for this function. ",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/quadrantDb.ts",
+          "line_number": 57,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-02-03T17:57:04Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85YCtoc",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n      `\r\n    );\r\n```",
+          "file_path": "cypress/integration/rendering/quadrantChart.spec.js",
+          "line_number": 277,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-02-03T18:00:23Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85YCtrL",
+          "author": "sidharthv96",
+          "body": "This parsing should be done in jison.",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/quadrantDb.ts",
+          "line_number": 104,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-02-03T18:02:06Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85YCtso",
+          "author": "sidharthv96",
+          "body": "then jison will throw error.",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/quadrantDb.ts",
+          "line_number": 107,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-02-03T18:02:33Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85YjNmQ",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\nexport interface QuadrantPointInputType extends Point, StylesObject {\r\n  text: string;\r\n}\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/quadrantBuilder.ts",
+          "line_number": 28,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-02-11T16:35:00Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85YjNrO",
+          "author": "sidharthv96",
+          "body": "```ts\r\nexport interface QuadrantPointType extends Point, Pick<StylesObject, 'strokeColor' | 'strokeWidth'> {\r\n  fill: string;\r\n  radius: number;\r\n  text: QuadrantTextType;\r\n}\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/quadrantBuilder.ts",
+          "line_number": 45,
+          "start_line": 40,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-02-11T16:37:27Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85YjNx0",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n  private classes: Record<string, StylesObject> = {};\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/quadrantBuilder.ts",
+          "line_number": 135,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-02-11T16:40:05Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85YjN0s",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n    this.classes[className] = styles;\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/quadrantBuilder.ts",
+          "line_number": 225,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-02-11T16:41:11Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85YjN5G",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n        fill: point.color || this.themeConfig.quadrantPointFill,\r\n        radius: point.radius || this.config.pointRadius,\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/quadrantBuilder.ts",
+          "line_number": 518,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-02-11T16:42:58Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85YjN5u",
+          "author": "sidharthv96",
+          "body": "Same with strokeColor and strokeWidth",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/quadrantBuilder.ts",
+          "line_number": 518,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-02-11T16:43:17Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85YjN7u",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n      'value for stroke-color #f677779 is invalid, please use a valid hex code'\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/quadrantDb.spec.ts",
+          "line_number": 42,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-02-11T16:44:13Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85YjN93",
+          "author": "sidharthv96",
+          "body": "Can you add few more tests, with varying spaces like these?\r\n\r\n```\r\nstroke-width: 3px, color: #309708, radius: 20, stroke-color: #5060ff\r\nstroke-width: 3px,color:#309708, radius: 20, stroke-color: #5060ff\r\nstroke-width: 3px,  color:#309708, radius: 20,stroke-color: #5060ff\r\n```",
+          "file_path": "cypress/integration/rendering/quadrantChart.spec.js",
+          "line_number": 247,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-02-11T16:45:38Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85YjOCc",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n  for (const style of styles) {\r\n```\r\n\r\nNo need to check for length when using for-of loops. :)\r\nThis will avoid one layer of nesting. ",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/quadrantDb.ts",
+          "line_number": 60,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-02-11T16:47:35Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85YjOEp",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n      const [key, value] = item.trim().split(/\\s*:\\s*/);\r\n      if (key == 'radius') {\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/quadrantDb.ts",
+          "line_number": 62,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-02-11T16:48:26Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85YjOHp",
+          "author": "sidharthv96",
+          "body": "Please move this check into utils file, to a function like `isValidHexCode`.\r\nSimilar with other checks here as well.",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/quadrantDb.ts",
+          "line_number": 68,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-02-11T16:49:46Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85YjOK3",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n          throw new InvalidStyleError(\r\n```\r\n\r\nAnd you can add a custom error class. ",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/quadrantDb.ts",
+          "line_number": 81,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-02-11T16:51:26Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85YjONG",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n      text: textSanitizer(textObj.text),\r\n      className,\r\n      ...stylesObject,\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/quadrantDb.ts",
+          "line_number": 105,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-02-11T16:52:49Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85bl6hm",
+          "author": "sidharthv96",
+          "body": "We use `===` by convention. ",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/quadrantDb.ts",
+          "line_number": 82,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-03-23T17:27:10Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85bl6jo",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n      throw new Error(`style named ${key} is not supported.`);\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/quadrant-chart/quadrantDb.ts",
+          "line_number": 88,
+          "start_line": null,
+          "commit_sha": "eb4a6fd2ed26baa36ee2cb7ea795345ea1331f4d",
+          "created_at": "2024-03-23T17:28:02Z",
+          "is_outdated": true
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 20
+}

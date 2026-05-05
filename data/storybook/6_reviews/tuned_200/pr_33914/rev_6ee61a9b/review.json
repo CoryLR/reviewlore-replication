@@ -1,0 +1,100 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 232,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Empty `catch {}` block violates the project rule that catch blocks must never silently swallow errors. Warmup failures\u2014such as TypeScript type-checker crashes, a corrupted LanguageService after a bad file change, or unhandled API shapes\u2014disappear without a trace. Change to `catch (err) { logger.debug(`[reactComponentMeta] Warmup extraction failed: ${err}`); }` using `logger` from `storybook/internal/node-logger`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 354,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Empty `catch {}` block violates the project rule. When extraction fails for a component\u2014due to a type-checker crash, an unexpected AST shape, or a logic error in this PR\u2014the failure is invisible. The entry is silently dropped with no way to diagnose why props are missing in the manifest. At minimum log at debug level: `catch (err) { logger.debug(`[reactComponentMeta] Failed to resolve props for ${entry.storyFilePath}#${entry.exportName}: ${err}`); }`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 364,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Compound-component props silently overwrite each other when two entries share the same `componentPath` and `exportName` but have different `memberAccess`. For example, if story A renders `<Accordion.Root />` and story B renders `<Accordion.Item />`, both importing the named export `Accordion` from the same file, `batchExtract` produces two entries `{componentPath: 'accordion.tsx', exportName: 'Accordion', memberAccess: 'Root'}` and `{..., memberAccess: 'Item'}`. Both land in the same `byComponentPath` bucket; the second `propsTypes.set('Accordion', itemType)` overwrites the first. `serializeComponentDocs` then produces Item's props, and the result-mapping loop assigns those to both story A and story B\u2014story A gets the wrong props with no error. This directly undermines the compound-component support that is a primary goal of this PR. Consider keying `byComponentPath` by `${componentPath}::${exportName}::${memberAccess ?? ''}` or restructuring so each `(storyFilePath, exportName, memberAccess)` triple is serialized independently.",
+      "index": 2
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 149,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`this.commandLine.fileNames.includes(fileName)` is O(n) per file. `ensureFiles` is called with all story + component file paths on every extraction request, making this O(n\u00b2) over the total file count. For large design systems like Mantine with hundreds of components, this adds up. Maintain a parallel `Set<string>` that mirrors `commandLine.fileNames` for O(1) membership checks: `if (!this.fileNameSet.has(fileName)) { this.commandLine.fileNames.push(fileName); this.fileNameSet.add(fileName); }`.",
+      "index": 3
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+      "line_number": 18,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`import { type FSWatcher, existsSync, watch } from 'fs'` and `import * as path from 'path'` (line 19) use bare module specifiers. The project convention is `node:` prefixes for Node.js built-ins\u2014visible throughout `code/core/src/core-server/` and in the test files introduced by this same PR (e.g., `import * as path from 'node:path'`). Update both to `'node:fs'` and `'node:path'`. The same applies to the bare `import * as path from 'path'` in `ComponentMetaProject.ts`.",
+      "index": 4
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+      "line_number": 620,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`dispose()` clears all projects and snapshots but never resets `ComponentMetaManager.instance`. If `dispose()` is called (e.g., in test teardown or if a future code path explicitly disposes the manager) and then `getInstance()` is called again, it returns the already-disposed manager\u2014whose `configProjects`, `inferredProject`, and `fsFileSnapshots` have all been cleared\u2014rather than creating a fresh one. Add `ComponentMetaManager.instance = undefined;` at the start of `dispose()`, or document that `getInstance()` must not be called after `dispose()`.",
+      "index": 5
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/componentMetaExtractor.ts",
+      "line_number": 1228,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Per the project rule, file reads at runtime must be wrapped in `try/catch`. `typescript.sys.readFile(filePath)` can throw\u2014for example `EACCES` if permissions changed, or `EISDIR` if the path unexpectedly points to a directory\u2014in addition to returning `undefined`. The existing `if (!content) { return defaults; }` guard only handles the `undefined` case. Wrap the call: `let content: string | undefined; try { content = typescript.sys.readFile(filePath); } catch { return defaults; }`.",
+      "index": 6
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 126,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`watch: boolean` is declared as a required (non-optional) property in the `PresetPropertyFn` options type, but it is effectively optional. In `manifests.ts`, `getManifests` passes `watch` which has type `boolean | undefined` (defaults to `undefined` when no argument is supplied, e.g. in `writeManifests`). In `generator.test.ts`, the `runManifests` helper works around this with an `as Parameters<typeof manifests>[1]` cast that suppresses the type error. The runtime code already handles `undefined` safely via `if (manager && watch)`. Change the type to `watch?: boolean` to accurately reflect the contract and eliminate the unsafe cast.",
+      "index": 7
+    },
+    {
+      "file_path": "code/package.json",
+      "line_number": 38,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`--max_old_space_size` for `storybook:ui:build` is increased from 4096 MB to 5120 MB. This change is unrelated to the PR's stated purpose and has no explanation in the description or commit message. If the new Volar dependencies or the expanded test infrastructure increases build-time memory consumption, that should be documented. Otherwise this belongs in a separate, focused PR.",
+      "index": 8
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/reactDocgenTypescript.test.ts",
+      "line_number": 1207,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "~360 lines of tests covering `DtsComponent`, `ForwardRef`, `RenamedExport`, `DisplayNameOverride`, and `Barrel` patterns are removed with only the comment \"RDT returns [] for all of these. These patterns are covered by RPT tests instead.\" This is ambiguous on two points: (1) it is unclear whether these are pre-existing RDT limitations being acknowledged, or regressions introduced by this PR; (2) \"RPT tests\" is not a defined term in this codebase\u2014presumably this means the new `componentMetaExtractor.checker.test.ts`, but readers have no way to cross-reference. Rewrite the comment to name the exact file that covers each pattern, and clarify whether the failures are pre-existing.",
+      "index": 9
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Performance Issue",
+      "importance": "major",
+      "comment": "`ComponentMetaProject.ts` statically imports `@volar/language-core` and `@volar/typescript` at the module top level. Because `ComponentMetaProject` is re-exported from `checker/index.ts`, which is imported by `generator.ts`, these packages are unconditionally bundled into every installation of `@storybook/react`\u2014even when `experimentalReactComponentMeta` is `false` (the default). Both packages pull in `path-browserify`, `vscode-uri`, and a significant amount of Volar infrastructure. The existing `ComponentMetaManager.getInstance()` already demonstrates the right pattern by lazily importing `typescript` via `import('typescript')`. The Volar packages should follow the same approach: gate the static imports behind a dynamic `import()` inside the feature's code path (e.g., inside `ComponentMetaProject`'s constructor or a static factory, only reached when the flag is enabled) so that users who do not opt in pay no bundle cost.",
+      "index": 10
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`ComponentMetaManager.watchDirectory` uses `fs.watch(dir, { recursive: true }, ...)`. The `recursive` option is only supported on Linux in Node.js \u2265 22.0.0; on Node 20 LTS (still widely used and still in the project's support matrix), `recursive` is silently ignored on Linux\u2014subdirectory changes will not be detected and file-watching will appear to work without actually updating props. The error is caught and swallowed at `logger.debug`, so users get no feedback. Either document the Node 22 minimum as a prerequisite for this feature in the flag's JSDoc, or replace the bespoke `fs.watch` layer with `chokidar`, which is already a Storybook dependency and handles cross-platform recursive watching correctly on all supported Node versions.",
+      "index": 11
+    }
+  ],
+  "cost_usd": 1.1700578,
+  "duration_seconds": 633.3793919086456
+}

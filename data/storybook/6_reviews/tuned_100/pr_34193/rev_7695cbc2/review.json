@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/babel/vitest-config-helpers.ts",
+      "line_number": 185,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`canUpdateVitestConfigFile` now returns `true` for patterns like `export default mergeConfig(viteConfig, 'string')` because `getEffectiveMergeConfigCall` only verifies the callee is named `mergeConfig` \u2014 it does not validate that any argument resolves to a config object. The old `isSafeToExtendWorkspace` check rejected this case explicitly. With the new code, the pattern passes this gate, but during the actual update in `updateVitestFile.ts` every argument returns `null` from `getConfigObjectFromMergeArg` (a string resolves to a StringLiteral, not an ObjectExpression), so the update becomes a silent no-op. The user experience regresses from a clear `'Found an invalid Vitest config file'` message to silence. Consider adding a validity check here: `getEffectiveMergeConfigCall` should be treated as a positive signal only when at least one of its arguments resolves to a non-null config object via `getConfigObjectFromMergeArg`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/babel/vitest-config-helpers.ts",
+      "line_number": 18,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`isImportedDefineConfigLikeIdentifier` is an internal implementation detail \u2014 it is only ever called by `isDefineConfigLike` within this same file and has no external consumers anywhere in the codebase. Exporting it from the public `storybook/internal/babel` barrel adds unnecessary API surface that callers might depend on, complicating future refactors. It should remain unexported (remove it from `index.ts` as well).",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/babel/vitest-config-helpers.ts",
+      "line_number": 175,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`resolveExpression(exportDefault.declaration, parsedAst)` is called here to obtain `effectiveDecl` for the arrow-function guard, then called a second time for the same input inside `getTargetConfigObject` (line 122 of this file). Since `resolveExpression` is a pure function on an already-parsed AST, the result can be computed once, stored, and passed into both checks to avoid the redundant traversal.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/babel/vitest-config-helpers.ts",
+      "line_number": 226,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`canUpdateVitestWorkspaceFile` now accepts any `ArrayExpression` for the default export, regardless of element types. The previous `isWorkspaceConfigArray` helper required every element to be a `StringLiteral` or `ObjectExpression`. If the actual `updateWorkspaceFile` logic assumes elements satisfy that constraint, passing arrays with other element types (e.g. spread elements, template literals) could cause unexpected behavior downstream. This behavioral change is not acknowledged in the PR description or tests.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/babel/index.ts",
+      "line_number": 20,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`isImportedDefineConfigLikeIdentifier` is re-exported here as part of the public `storybook/internal/babel` surface, but it has no consumers outside of `vitest-config-helpers.ts` itself. Exporting internal helper functions that aren't part of a deliberate public API makes it harder to refactor them later. It should be removed from this export block.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/cli/AddonVitestService.test.ts",
+      "line_number": 780,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The test `'should reject mergeConfig with invalid object (non-object argument)'` (which covered `export default mergeConfig(viteConfig, 'string')`) was silently removed and not replaced with any assertion about that pattern. With the new `canUpdateVitestConfigFile`, this input now returns `true` \u2014 a behavior change that goes completely untested. Either add a test asserting the new behavior is intentional and document why a silent no-op is acceptable, or restore the rejection of this pattern (see comment on `vitest-config-helpers.ts` line 185).",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The PR description states \"This is a pure refactor that moves code without changing behavior,\" but the behavior has changed in at least two observable ways that affect real users: (1) `export default {}` (a plain object) was previously rejected by the old `isDefineConfigExpression`/`isMergeConfigExpression` guards and is now accepted \u2014 this is a genuine improvement but not a no-op change; (2) `export default mergeConfig(viteConfig, 'string')` was previously rejected and is now accepted by the gate check (though the actual update silently does nothing). The PR description should accurately reflect these behavioral changes, and any intentional relaxations should be explicitly documented and covered by tests.",
+      "index": 6
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The old `AddonVitestService.isSafeToExtendWorkspace` enforced a specific constraint: if the config object has a `test` property, and that `test` object has a `workspace` property, the `workspace` value must be an `ArrayExpression`. This validation has been silently dropped with no comment explaining the decision. If this constraint was protecting the actual update logic from a failure mode (e.g. `workspace` holding a non-array that the merge code can't handle), removing it without a replacement or explanation is a latent correctness risk. The PR should either document why this check is no longer needed or add an equivalent guard in `canUpdateVitestConfigFile`.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.66446065,
+  "duration_seconds": 399.5041379928589
+}

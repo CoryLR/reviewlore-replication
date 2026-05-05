@@ -1,0 +1,106 @@
+{
+  "inline_comments": [
+    {
+      "file_path": ".changeset/pretty-lemons-sip.md",
+      "line_number": 5,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Per project convention, the first word of the description following the commit-type prefix must be capitalized. Change `implement` to `Implement`: `feat: Implement neo look styling for mindmap diagrams`.",
+      "index": 0
+    },
+    {
+      "file_path": "cypress/integration/rendering/mindmap-neo-look.spec.ts",
+      "line_number": 3,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `looks` array is `['neo'] as const` \u2014 a single-element array. The outer `looks.forEach` loop therefore runs exactly once and adds no generality; `look` is always `'neo'`. Consider removing the outer loop and hardcoding `look` at the `imgSnapshotTest` call site, or documenting why this wrapping structure is intentional (e.g., to make it easy to add `'classic'` in future).",
+      "index": 1
+    },
+    {
+      "file_path": "cypress/integration/rendering/mindmap-neo-look.spec.ts",
+      "line_number": 23,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Per project rules, the `default` case in a `switch` statement must call `log.error(...)` or throw an error rather than silently returning a value. The current `return label` silently swallows any unrecognized shape. Since this is a test helper with a closed `mindmapShapes` tuple, a throw is the right guard:\n```typescript\ndefault:\n  throw new Error(`Unknown mindmap shape: ${shape}`);\n```",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.ts",
+      "line_number": 219,
+      "dimension": "Performance Issue",
+      "importance": "major",
+      "comment": "`getConfig()` is called at the top of `flattenNodes`, which is a recursive function \u2014 it calls `this.flattenNodes(child, processedNodes)` for every child node. This violates the project rule: *\"Never call `getConfig()` inside recursive or shared helper functions where it would be re-invoked on every recursion.\"* For a large mindmap tree, `getConfig()` executes once per node. Move the call to the non-recursive entry point (e.g., `getData()`) and pass `conf` as a parameter down to `flattenNodes`.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.ts",
+      "line_number": 305,
+      "dimension": "Performance Issue",
+      "importance": "major",
+      "comment": "Same issue as `flattenNodes`: `getConfig()` is called at the top of `generateEdges`, which is also recursive \u2014 the loop body calls `this.generateEdges(child, edges)`. `getConfig()` therefore executes once per node. Pass `conf` as a parameter from the non-recursive caller instead of re-fetching it on every frame of the recursion.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/styles.ts",
+      "line_number": 29,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `.section-${i - 1} span { color: ... }` rule is placed in the general CSS block without a `[data-look=\"neo\"]` selector guard. This means the rule fires for classic and handDrawn looks too, silently changing span label colours for all mindmap renders \u2014 not just neo ones. If this is intentional (e.g., fixing HTML label colours across all looks), it should be called out explicitly in the PR description and reviewed independently; otherwise scope it to neo:\n```css\n[data-look=\"neo\"] .section-${i - 1} span {\n  color: ${options['cScaleLabel' + i]};\n}\n```",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/styles.ts",
+      "line_number": 54,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The neo-specific CSS selectors are very long single-line strings that exceed any reasonable line-length limit and are difficult to read or diff. For example:\n```\n[data-look=\"neo\"].mindmap-node.section-${i - 1} rect, [data-look=\"neo\"].mindmap-node.section-${i - 1} path, ...\n```\nConsider extracting the repeated prefix into a template variable and breaking the selector list across lines:\n```typescript\nconst sel = `[data-look=\"neo\"].mindmap-node.section-${i - 1}`;\nsections += `\n  ${sel} rect,\n  ${sel} path,\n  ${sel} circle,\n  ${sel} polygon { ... }\n`;\n```",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/styles.ts",
+      "line_number": 78,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Inside `genGradient`, the rule `.section-${i - 1} line { stroke-width: 0; }` has **no** `[data-look=\"neo\"]` selector. `genGradient` is invoked whenever `options.useGradient` is truthy \u2014 regardless of the active look. This means that for any gradient-enabled theme used with classic or handDrawn look, all `.section-*` line elements have their stroke width suppressed to zero, hiding lines that should be visible. Scope the rule:\n```css\n[data-look=\"neo\"] .section-${i - 1} line {\n  stroke-width: 0;\n}\n```",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/mermaidAPI.ts",
+      "line_number": 167,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The project convention requires `assignWithDepth` (or `cleanAndMerge`) rather than a shallow object spread when merging config/theme objects, to avoid silent shared-reference mutations. Although `themeVariables` is effectively flat in practice, using the spread operator `{ ...config.themeVariables, ... }` deviates from the codebase-wide pattern. Prefer:\n```typescript\nimport { assignWithDepth } from './utils.js';\n// ...\nassignWithDepth({ theme: config.theme, look: config.look }, config.themeVariables)\n```",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid/src/themes/theme-default.js",
+      "line_number": 143,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "This is a cosmetic-only whitespace change to `dropShadow` (`'drop-shadow( 1px ..., rgba(185,185,185,1))'` \u2192 `'drop-shadow(1px ..., rgba(185, 185, 185, 1))'`). While the two values are CSS-equivalent, modifying any shared theme variable in `theme-default.js` requires verifying the rendered appearance across all five built-in themes before merging per project rules. Additionally, unrelated cosmetic fixes mixed into a feature PR make the diff harder to review. Consider moving this to a dedicated clean-up PR.",
+      "index": 9
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The neo-specific colour ternaries in `genSections` and `getStyles` are inconsistently grouped across the three CSS properties they control (fill, stroke, text colour). For example, `neutral` is included alongside redux themes in the fill rule (`fill: ... theme === 'neutral' ? options.mainBkg : ...`) but is absent from the edge stroke rule (`stroke: theme?.includes('redux') || theme === 'neo-dark' ? options.nodeBorder : ...`). This means nodes in the neutral theme receive `mainBkg` fill but a section-scale stroke colour, likely producing a visual mismatch. Centralise the per-theme colour decisions into a small helper that returns `{ fill, stroke, labelColor }` based on theme, then reference it consistently in all three rules.",
+      "index": 10
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "In the Cypress test, the grandchildren are all appended at 6-space indentation, which in mindmap's indentation-driven syntax means they become children of the **last** 4-space-indented node (`n4`, the bang shape), not of their respective parents. The comment says *\"Add grandchildren to each child with different shapes\"* but the generated tree does not match that description \u2014 all grandchildren end up under one parent. While the snapshot may still serve as a useful visual regression fixture, the misleading comment should be corrected to accurately describe the actual tree structure produced.",
+      "index": 11
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `genSections` helper destructures `const { theme, look } = options;` at its top level, but `options` is typed as `any` and declared optional (`options?: any`) in the `DiagramStylesProvider` signature. If `options` is `undefined`, the destructuring throws a `TypeError` at runtime. Although `genSections` is only called internally from `getStyles` (which always supplies `options`), the type contract doesn't enforce this. Adding an early-return guard (`if (!options) return '';`) or narrowing the internal helper's parameter type would make the contract explicit and safe.",
+      "index": 12
+    }
+  ],
+  "cost_usd": 0.9592568000000001,
+  "duration_seconds": 688.5405011177063
+}

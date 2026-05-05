@@ -1,0 +1,76 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.test.ts",
+      "line_number": 12,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`CHANGE_DETECTION_STATUS_TYPE_ID` is imported from `'./service'`, but `service.ts` imports that constant from `'storybook/internal/types'` \u2014 it never re-exports it. This is a compile-time error that would prevent the test file from building. Change the import to `'storybook/internal/types'` (or re-export the constant from `service.ts` if callers are expected to obtain it from there).",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 102,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `enabled === false` strict-equality check means change detection runs whenever `enabled` is `undefined` \u2014 i.e., whenever the caller passes `features?.changeDetection` and the user has not set the flag. The feature type declares `@default false`, but with this guard an unconfigured project silently becomes a participant. The check should be `if (!enabled)` (or the call-site in `dev-server.ts` should supply an explicit fallback: `features?.changeDetection ?? false`) so that the opt-in semantics match the documented default.",
+      "index": 1
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 79,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`indexGenerator` is used immediately after `presets.apply()` with no null/undefined guard. Per the project rule, the result of `presets.apply()` must be validated before use; if the `storyIndexGenerator` preset is absent the call returns `undefined` and `.getIndex()` on the next line throws `TypeError: Cannot read properties of undefined`. Add an explicit runtime guard \u2014 e.g. `if (!indexGenerator) { logger.warn('Change detection: storyIndexGenerator preset unavailable'); return; }` \u2014 before calling `.getIndex()`.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/dev-server.ts",
+      "line_number": 119,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`changeDetectionService.dispose()` is only called in the preview-builder error path; the normal `SIGINT`/`SIGTERM` shutdown handler (`cancelTelemetry`) does not dispose the service. This leaves the debounce timer and the `onModuleGraphChange` subscription alive until the process exits. Dispose in the SIGINT/SIGTERM handler or in the `cancelTelemetry` callback so resources are cleaned up on graceful shutdown.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 43,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Commented-out debug statement (`// logger.info(\\`Story ${entry.id} absolute path: ${absolutePath}\\`);`) should be removed before merging. Per project guidelines, commented-out code must either be deleted entirely or replaced with a `// TODO:` that names the reason it is disabled and when it will be re-enabled.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 128,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`dispose()` clears `debounceTimer` and calls `unsubscribe`, but does not reset `this.rerunAfterCurrentScan`. If a scan is in-flight when `dispose()` is called and `rerunAfterCurrentScan` is already `true`, the `finally` block of `scan()` will dispatch `void this.scan()` after disposal, causing the service to mutate the status store after it has been torn down. Set `this.rerunAfterCurrentScan = false` inside `dispose()` (and consider adding an `isDisposed` guard at the top of `scan()`) to prevent post-disposal writes.",
+      "index": 5
+    },
+    {
+      "file_path": "code/.storybook/main.ts",
+      "line_number": 144,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`changeDetection: true` is committed to the shared `.storybook/main.ts`. The feature type documents `@default false` with a TODO to flip it before the 10.4 release, which means this opt-in line in the shared dev config is a developer-era testing override. Per project rules, developer-specific values should not be committed to shared config files \u2014 drive this via an environment variable (`process.env.STORYBOOK_CHANGE_DETECTION`) or a git-ignored local override instead. If keeping it is intentional (e.g., to dog-food the feature during development), add an inline comment explaining that this will be removed before release.",
+      "index": 6
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The module-level singleton pattern in `readiness.ts` (`readinessDeferred` / `readinessState`) combined with the instance-level `readinessResolved` flag in `ChangeDetectionService` creates a subtle inconsistency: if `resetChangeDetectionReadiness()` is called on the module (e.g., for an in-process server restart) the module-level deferred is refreshed, but the still-alive service instance has `readinessResolved = true` and will silently refuse to push any further updates. Since `resetChangeDetectionReadiness()` is called inside the constructor, a new instance must be created for each server lifecycle \u2014 confirm that `dev-server.ts` constructs a fresh `ChangeDetectionService` on restart (rather than reusing an existing one) or the readiness state will be permanently stale after the first restart.",
+      "index": 7
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `features` block type in `StorybookConfigRaw` documents `changeDetection` with `@default false`, but the runtime behavior (the `enabled === false` check in `ChangeDetectionService.start`) treats `undefined` as \"enabled\". The TODO comment says \"Turn to true before 10.4 release\", implying the intent is to flip the default \u2014 but that flip should happen in the common preset (as required by project rules for opt-out feature flags), not by quietly relying on `undefined !== false`. Either honour the current `@default false` semantics now (use `!enabled` or supply `?? false` at the call-site) or explicitly set the default to `true` in the common preset and update the JSDoc.",
+      "index": 8
+    }
+  ],
+  "cost_usd": 0.8482042000000001,
+  "duration_seconds": 757.3436658382416
+}

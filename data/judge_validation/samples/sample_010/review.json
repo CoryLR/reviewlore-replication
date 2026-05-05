@@ -1,0 +1,76 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttDb.js",
+      "line_number": 307,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`isTimestampFormat` is computed but never used to alter control flow. The comment above it says \"strict parsing fails - throws an error\" but no `throw` (or early `return`) is present. The code falls straight through to `const d = new Date(str)` unconditionally, meaning this entire block is dead code with zero behavioral effect. If the intent is to disallow native-Date fallback for non-timestamp formats, the body of the `if (!isTimestampFormat)` block must `throw new Error(...)` (or `return` a sentinel) instead of only calling `log.debug()`.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 622,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`getEstimatedTickCount` does not guard against NaN propagation. If either domain date is invalid, `maxTime - minTime` evaluates to `NaN`. `NaN / intervalMs` is `NaN`, `Math.ceil(NaN)` is `NaN`, and the critical comparison `NaN > MAX_TICK_COUNT` evaluates to `false`. The guard is silently bypassed and the invalid tick interval reaches the switch statement \u2014 exactly the crash scenario this PR aims to prevent.\n\nFix by explicitly checking for non-finite or zero interval before dividing:\n```js\nconst timeDiffMs = maxTime - minTime;\nconst intervalMs = dayjs.duration({ [interval ?? 'day']: every }).asMilliseconds();\nif (!isFinite(timeDiffMs) || !intervalMs) {\n  return Infinity; // forces the guard to clamp ticks\n}\nreturn Math.ceil(timeDiffMs / intervalMs);\n```",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 725,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The top axis guard (`if (estimatedTicks <= MAX_TICK_COUNT)`) silently skips tick application when the limit is exceeded \u2014 there is no `else` branch and no `log.warn()`. The bottom axis (around line 660) emits a warning that helps diagnose the invalid date/interval. The top axis failure is invisible in logs, making it very hard to distinguish a legitimate rendering decision from a bug. Add a symmetric `else { log.warn(...) }` block matching the bottom axis.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 619,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`getEstimatedTickCount` is defined inside `draw`, but it is a pure function that captures nothing from the outer scope (only the module-level `dayjs` import is needed). Defining it inside `draw` means a new function object is allocated on every call to `draw`. Move it to module level \u2014 above `draw` \u2014 so its intent is clear and it can be reused or tested independently.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 650,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The tick-validation block (domain extraction \u2192 `getEstimatedTickCount` \u2192 switch) is copy-pasted verbatim for the bottom axis and again for the top axis. The duplication has already introduced a behavioral divergence (the asymmetric warning in the top axis block). Consider extracting a helper like `applyTickInterval(axis, timeScale, every, interval, warnOnExcess)` that is called for both axes, removing the duplicated logic.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 666,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The comment `// D3 using its default automatic tick generation` reads as an incomplete sentence and is grammatically incorrect. Prefer something like `// Fall back to D3's default automatic tick generation.`",
+      "index": 5
+    },
+    {
+      "file_path": ".changeset/tricky-rivers-stand.md",
+      "line_number": 5,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Typo: `diagramtype` should be `diagram type` (two words).",
+      "index": 6
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `parseInt(resultTickInterval[1], 10)` change is an improvement over passing a raw string to D3's `.every()`. However, if `resultTickInterval[1]` were somehow non-numeric, `parseInt` would return `NaN`, which \u2014 combined with the NaN propagation bug in `getEstimatedTickCount` \u2014 could still bypass the guard. The upstream regex (validated before `resultTickInterval` is used) appears to already ensure the captured group is numeric, but it is worth adding an explicit guard or an assertion (`if (!Number.isFinite(every)) return;`) after the `parseInt` call as defense in depth.",
+      "index": 7
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description says the root cause included a Temporal Dead Zone (TDZ) error, but no TDZ fix is visible in this diff. If the TDZ fix was applied and then reverted, or if it is addressed elsewhere, the PR description should be updated to accurately reflect what is actually being changed. Accurate PR descriptions are important for traceability during future debugging.",
+      "index": 8
+    }
+  ],
+  "cost_usd": 0.3758308,
+  "duration_seconds": 269.1988317966461
+}

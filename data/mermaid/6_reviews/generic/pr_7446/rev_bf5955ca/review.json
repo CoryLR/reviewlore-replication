@@ -1,0 +1,55 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/requirementBox.ts",
+      "line_number": 185,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`requirementEdgeLabelBackground` is a theme variable for edge label backgrounds and is semantically unrelated to whether `nodeStyles` should be applied to node paths. Using it as a guard here means: if a theme defines `requirementEdgeLabelBackground` but has no `borderColorArray`, node path styles are still applied; if a theme defines neither, node path styles are silently skipped even when `nodeStyles` is non-empty (e.g. from a user `style` statement). A cleaner condition that expresses the actual intent would be:\n\n```ts\nif (nodeStyles && node.look !== 'handDrawn') {\n  shapeSvg.selectAll('.outer-path path').attr('style', nodeStyles);\n}\n```",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/requirementBox.ts",
+      "line_number": 174,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The divider line previously received `nodeStyles` as an inline `style` attribute (`dividerLine.attr('style', nodeStyles)`), so user-defined `style` and `class` statements in the diagram would propagate to the divider. Now it only receives `class='divider'`, which means custom styling from the diagram source is silently dropped for the divider in both classic and neo looks. If preserving user styles on the divider is acceptable to drop, this should be called out explicitly in the PR description as an intentional change.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/requirement/styles.js",
+      "line_number": 4,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`genColor` calls `configApi.getConfig()` internally, but `getStyles` also calls `configApi.getConfig()` immediately before invoking `genColor(options)` (line 31). This results in two `getConfig()` calls per `getStyles` invocation. Consider passing the already-fetched `config` (or just `look` and `themeVariables`) as a parameter to `genColor` to avoid the redundant lookup:\n\n```js\nconst genColor = (options, { look, themeVariables }) => { ... };\n// in getStyles:\nreturn `${genColor(options, { look, themeVariables })}...`;\n```",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/requirement/styles.js",
+      "line_number": 21,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "There is an extra space in the CSS descendant selector: `.node  rect` (two spaces between `.node` and `rect`). While functionally equivalent in CSS, it is inconsistent with the `.node path` rule on line 16 which uses a single space. Please normalise to a single space.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/requirement/styles.js",
+      "line_number": 76,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `.edgeLabel` rule is indented with 4 spaces (`    .edgeLabel {`) while every other CSS rule in the file uses 2-space indentation. This inconsistency was introduced by this PR (the original used 2 spaces). Please align to the 2-space convention used by the surrounding rules.",
+      "index": 4
+    },
+    {
+      "file_path": "cypress/integration/rendering/requirementDiagram-neo-themes.spec.ts",
+      "line_number": 97,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Building `diagram` with `+=` inside a `forEach` loop is an O(n\u00b2) string-concatenation pattern. For the small test data here it has no measurable impact, but the idiomatic alternative is to collect parts in an array and join at the end:\n\n```ts\nconst parts: string[] = [`requirementDiagram\\n`];\nrelationshipTypes.forEach((_rel, i) => {\n  parts.push(`    requirement req_${i} { ... }\\n`);\n  parts.push(`    element elem_${i} { ... }\\n`);\n});\nconst diagram = parts.join('');\n```\nThis also makes the intent clearer.",
+      "index": 5
+    }
+  ],
+  "general_comments": [],
+  "cost_usd": 0.5615626499999999,
+  "duration_seconds": 424.31922006607056
+}

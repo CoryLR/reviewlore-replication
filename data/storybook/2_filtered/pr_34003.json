@@ -1,0 +1,118 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34003,
+  "title": "Hotfix: Backport host/origin validation to requests and websocket connections",
+  "body": "## What I did\r\n\r\nThis is a backport of #33835 for Storybook v9.1.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n- Run `npx ngrok http 6006`\r\n- Verify that the ngrok URL serves an Invalid host error\r\n- Update `.storybook/main.ts` to set `core.allowedHosts` to include the ngrok hostname (no protocol), then restart Storybook\r\n- Verify that the ngrok URL serves Storybook properly, and it works\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\nThis pull request has been released as version `0.0.0-pr-34003-sha-5f27e882`. Try it out in a new sandbox by running `npx storybook@0.0.0-pr-34003-sha-5f27e882 sandbox` or in an existing project with `npx storybook@0.0.0-pr-34003-sha-5f27e882 upgrade`.\r\n<details>\r\n<summary>More information</summary>\r\n\r\n| | |\r\n| --- | --- |\r\n| **Published version** | [`0.0.0-pr-34003-sha-5f27e882`](https://npmjs.com/package/storybook/v/0.0.0-pr-34003-sha-5f27e882) |\r\n| **Triggered by** | @ghengeveld |\r\n| **Repository** | [storybookjs/storybook](https://github.com/storybookjs/storybook) |\r\n| **Branch** | [`origin-validation-v9`](https://github.com/storybookjs/storybook/tree/origin-validation-v9) |\r\n| **Commit** | [`5f27e882`](https://github.com/storybookjs/storybook/commit/5f27e882807b4816fba5d30490232706dc8354e7) |\r\n| **Datetime** | Wed Mar  4 10:23:03 UTC 2026 (`1772619783`) |\r\n| **Workflow run** | [22665164930](https://github.com/storybookjs/storybook/actions/runs/22665164930) |\r\n\r\nTo request a new release of this pull request, mention the `@storybookjs/core` team.\r\n\r\n_core team members can create a new canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=34003`_\r\n</details>\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Host validation for the dev server with a new allowedHosts configuration and startup display of allowed hosts.\n\n* **Behavior Change**\n  * Host handling now follows configured allowedHosts behavior; previous permissive warning removed.\n\n* **Tests**\n  * Extensive tests added for host validation, token/channel access, and related edge cases.\n\n* **Documentation / Chores**\n  * Updated release workflow and added release entry for 9.1.20.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ghengeveld",
+  "merged_at": "2026-03-05T21:12:59Z",
+  "base_ref": "v9",
+  "merge_commit_sha": "9f4bd71cc716bd884398c0c3e815f7f3ea635ea8",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "20887f19d26d1f6e74712eeec4812f325031420b",
+    "046ce4d35020916e996521e04c18abfdf1052eaa"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r1Rh2",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**`allowedHosts` may drift between first-pass config and runtime enforcement.**\n\n`allowedHosts` is captured from the first `presets.apply('core')`, but runtime checks are driven later from final presets in `storybookDevServer`. If a later preset mutates `core.allowedHosts`, the warning/startup output here can diverge from actual behavior.\n\nConsider re-reading `allowedHosts` from the final preset pass before emitting warnings/startup info.\n\n\n\nAlso applies to: 271-271\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/core-server/build-dev.ts` around lines 143 - 156, The warning\nuses allowedHosts captured from the initial presets.apply('core', {}) call which\ncan differ from the final runtime presets used by storybookDevServer; update the\nlogic in build-dev.ts to re-fetch or read core.allowedHosts from the final\npreset pass (the same presets used by storybookDevServer) immediately before the\nhost === '0.0.0.0' check so the message reflects runtime enforcement, i.e.,\nreplace or refresh the earlier allowedHosts value obtained from\npresets.apply('core', {}) with the final preset result before emitting the\nlogger.warn that references allowedHosts.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/build-dev.ts",
+          "line_number": 156,
+          "start_line": 143,
+          "commit_sha": "046ce4d35020916e996521e04c18abfdf1052eaa",
+          "created_at": "2026-03-04T09:58:42Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests re-reading allowedHosts from the final preset pass before emitting warnings to avoid divergence between config and runtime enforcement."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r1Rh8",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Update stale `allowedHosts` documentation text.**\n\nLine 48 says host validation is \u201ccurrently only for WebSocket connections\u201d, but this PR also introduces HTTP Host-header validation middleware. Please align the comment with actual behavior.\n\n\n\n<details>\n<summary>\ud83d\udcdd Suggested doc fix</summary>\n\n```diff\n-   * Enable hostname validation, currently only for WebSocket connections. Set to `[]` to disallow\n-   * all hosts except known local/network address, or `true` to allow all hosts.\n+   * Enable hostname validation for development HTTP requests and WebSocket connections.\n+   * Set to `[]` to disallow all hosts except known local/network addresses, or `true` to allow all hosts.\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/types/modules/core-common.ts` around lines 47 - 50, The comment\nfor the allowedHosts option is stale: update the documentation for the\nallowedHosts property (in core-common.ts) to state that hostname validation\napplies to both WebSocket connections and HTTP Host-header validation\nmiddleware, and clarify semantics for values (e.g., `[]` to disallow all\nnon-local hosts, `true` to allow all hosts, or a list of allowed hostnames) so\nthe doc matches the implemented behavior.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 98e74eb",
+          "file_path": "code/core/src/types/modules/core-common.ts",
+          "line_number": 50,
+          "start_line": 47,
+          "commit_sha": "046ce4d35020916e996521e04c18abfdf1052eaa",
+          "created_at": "2026-03-04T09:58:42Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests updating stale documentation text to reflect that host validation now applies to both HTTP requests and WebSocket connections, not just WebSocket."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r2ESW",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Fix typo in release page reference.**\n\nLine 20 says `GitHuB`; please change it to `GitHub` for documentation quality.\n\n<details>\n<summary>\u270f\ufe0f Proposed fix</summary>\n\n```diff\n-11. Observe the generated release in GitHuB releases page and make modifications to the release notes if necessary\n+11. Observe the generated release in GitHub releases page and make modifications to the release notes if necessary\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n11. Observe the generated release in GitHub releases page and make modifications to the release notes if necessary\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn @.github/workflows/publish.md at line 20, Replace the typo \"GitHuB\" with the\ncorrect \"GitHub\" in the release instruction text (the string \"Observe the\ngenerated release in GitHuB releases page...\"); update the displayed string so\nit reads \"Observe the generated release in GitHub releases page...\" to fix the\ndocumentation spelling error.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": ".github/workflows/publish.md",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "98e74eb845a2f7f4d6a65d719284bc0a459395d6",
+          "created_at": "2026-03-04T10:44:24Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests fixing a typo ('GitHuB' \u2192 'GitHub') in documentation."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r2ESe",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Clarify the release note to include WebSocket origin validation**\n\nLine 3 is too generic for a security hotfix and misses the WebSocket part. Please make this entry explicit so users understand the full behavior change (HTTP host validation + WebSocket origin validation).\n\n<details>\n<summary>\u270d\ufe0f Suggested changelog wording</summary>\n\n```diff\n-- Add request validation\n+- Core: Validate host/origin for HTTP requests and WebSocket connections - [`#34003`](https://github.com/storybookjs/storybook/pull/34003)\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n- Core: Validate host/origin for HTTP requests and WebSocket connections - [`#34003`](https://github.com/storybookjs/storybook/pull/34003)\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@CHANGELOG.md` at line 3, Update the CHANGELOG entry that currently reads \"Add\nrequest validation\" to explicitly state that the release adds both HTTP host\nvalidation and WebSocket origin validation (e.g., replace that single-line note\nwith a brief sentence like \"Add request validation: enforce HTTP Host header\nvalidation and WebSocket Origin validation to fix security issue\"), so the\nupdate clearly communicates the full behavior change; locate the line containing\nthe exact text \"Add request validation\" and replace it with the clarified\nwording.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:triton:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "CHANGELOG.md",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "046ce4d35020916e996521e04c18abfdf1052eaa",
+          "created_at": "2026-03-04T10:44:24Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests clarifying the changelog entry to explicitly mention both HTTP host validation and WebSocket origin validation instead of the generic 'Add request validation'."
+    }
+  ],
+  "review_thread_count": 4,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 4,
+    "stage1_kept": 4,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

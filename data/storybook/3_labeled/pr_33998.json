@@ -1,0 +1,230 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33998,
+  "title": "Controls: Add maxPresetColors option to ColorControl",
+  "body": "## What does this PR do?\n\nCloses #20298\n\nAdds a new optional `maxPresetColors` prop to `ColorConfig` (and by extension `ColorControl`) that allows users to configure or remove the hardcoded 27-color preset limit.\n\n### Problem\n\nThe `ColorControl` component has a hardcoded limit of 27 preset colors:\n\n```ts\nreturn initialPresets.concat(selectedColors).filter(Boolean).slice(-27);\n```\n\nThis prevents users with design systems that have more than 27 colors from displaying all their presets in the color picker control.\n\n### Solution\n\nAdd a `maxPresetColors?: number` option to `ColorConfig`:\n- Defaults to `27` for backward compatibility\n- Setting to `0` or `Infinity` removes the limit entirely\n- Any other positive number limits presets to that count\n\n### Usage\n\n```ts\n// In your story argTypes or meta\ncolor: {\n  control: {\n    type: 'color',\n    presetColors: myDesignSystemColors, // More than 27 colors!\n    maxPresetColors: 50, // Show up to 50\n    // or:\n    maxPresetColors: 0, // Show all, no limit\n  },\n},\n```\n\n## Changes\n\n- `types.ts`: Added `maxPresetColors?: number` to `ColorConfig` interface with JSDoc\n- `Color.tsx`: Updated `usePresets` hook to accept and use `maxPresetColors` parameter; updated `ColorControl` to pass it through  \n- `Color.stories.tsx`: Added two new stories demonstrating the feature (`WithMaxPresetColors` and `WithUnlimitedPresetColors`)\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Added maxPresetColors to color controls to limit visible preset colors (default 27; 0 or Infinity disables the limit). Oldest presets are dropped in most-recently-used order.\n\n* **Examples**\n  * Added three example stories: capped preset list (5 visible), unlimited preset list (40 presets), and an example showing fallback behavior for an invalid negative setting.\n\n* **Documentation**\n  * Exposed maxPresetColors option in config docs with default and behavior described.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "mixelburg",
+  "merged_at": "2026-03-24T13:02:03Z",
+  "base_ref": "next",
+  "merge_commit_sha": "acf3e68fd15c95e173d3dceee4cb0187954376ee",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "77d706fd0a5615bb4aae4bc1d94de794c8e49e74",
+    "32c985a386710512f7174ea1cb315ffc25beac1e"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rtYiS",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Guard `maxPresetColors` against invalid values before slicing.**\n\nThe current branch handles `0`/`Infinity`, but values like negatives or non-integers can lead to unexpected truncation behavior.\n\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n-    if (!maxPresetColors || maxPresetColors === Infinity) {\n+    if (maxPresetColors === 0 || maxPresetColors === Infinity) {\n       return combined;\n     }\n-    return combined.slice(-maxPresetColors);\n+    const normalizedLimit =\n+      Number.isInteger(maxPresetColors) && maxPresetColors > 0 ? maxPresetColors : 27;\n+    return combined.slice(-normalizedLimit);\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    if (maxPresetColors === 0 || maxPresetColors === Infinity) {\n      return combined;\n    }\n    const normalizedLimit =\n      Number.isInteger(maxPresetColors) && maxPresetColors > 0 ? maxPresetColors : 27;\n    return combined.slice(-normalizedLimit);\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/docs/src/blocks/controls/Color.tsx` around lines 335 - 338, The\nslice branch must guard against negative, non-integer, NaN, or Infinity values\nfor maxPresetColors before calling combined.slice; update the logic where\nmaxPresetColors is used (the block referencing combined and maxPresetColors in\nColor.tsx) to coerce and validate it into a safe positive integer (e.g., if\ntypeof maxPresetColors !== 'number' || !isFinite(maxPresetColors) ||\nmaxPresetColors <= 0 return combined; otherwise use const n =\nMath.floor(maxPresetColors) and return combined.slice(-Math.min(n,\ncombined.length))). Ensure you reference and use the existing combined and\nmaxPresetColors identifiers when implementing the checks.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 42d56f8",
+          "file_path": "code/addons/docs/src/blocks/controls/Color.tsx",
+          "line_number": 338,
+          "start_line": null,
+          "commit_sha": "7383be324e0068057399588ee550f1e4decc6a48",
+          "created_at": "2026-03-03T22:21:29Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The comment identifies that the guard condition for maxPresetColors doesn't handle negative, non-integer, or NaN values properly, leading to unexpected truncation behavior \u2014 a logic/edge case defect."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6rz_gI",
+          "author": "Sidnioulz",
+          "body": "@mixelburg see this feedback. You'll want to either throw an explicit error or define a behaviour (same as 0/infinite) documented in the JSDoc.",
+          "file_path": "code/addons/docs/src/blocks/controls/Color.tsx",
+          "line_number": 338,
+          "start_line": null,
+          "commit_sha": "7383be324e0068057399588ee550f1e4decc6a48",
+          "created_at": "2026-03-04T08:44:40Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6uP36e",
+          "author": "mixelburg",
+          "body": "Updated \u2014 invalid values (negative, non-integer, NaN) now fall back to the default of 27, consistent with the existing behavior for `0` and `Infinity`.",
+          "file_path": "code/addons/docs/src/blocks/controls/Color.tsx",
+          "line_number": 338,
+          "start_line": null,
+          "commit_sha": "7383be324e0068057399588ee550f1e4decc6a48",
+          "created_at": "2026-03-12T09:38:59Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a concrete code fix to guard against invalid values for maxPresetColors before slicing, with a specific diff provided."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rtYiY",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Normalize `expandLevel` before storing it in state.**\n\n`expandLevel` is user-configurable, so invalid numeric values (e.g. negative, fractional, `NaN`) can leak into state and produce inconsistent expansion behavior.\n\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n+  private getExpandLevel = () => {\n+    const raw = this.props.api.getCurrentParameter<ActionsParameters['actions']>(PARAM_KEY)?.expandLevel;\n+    return Number.isInteger(raw) && raw >= 0 ? raw : 1;\n+  };\n+\n   override componentDidMount() {\n@@\n-    const expandLevel =\n-      api.getCurrentParameter<ActionsParameters['actions']>(PARAM_KEY)?.expandLevel ?? 1;\n-    this.setState({ expandLevel });\n+    this.setState({ expandLevel: this.getExpandLevel() });\n   }\n@@\n-    const expandLevel =\n-      api.getCurrentParameter<ActionsParameters['actions']>(PARAM_KEY)?.expandLevel ?? 1;\n-    this.setState({ expandLevel });\n+    this.setState({ expandLevel: this.getExpandLevel() });\n   };\n```\n</details>\n\n\nAlso applies to: 68-70\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/actions/containers/ActionLogger/index.tsx` around lines 49 -\n51, The retrieved expandLevel from\napi.getCurrentParameter<ActionsParameters['actions']>(PARAM_KEY) must be\nnormalized before calling this.setState; validate that the value is a finite\nnumber, coerce to an integer (e.g. Math.floor), clamp to a safe range (minimum 0\nor 1 as your UI expects), and fall back to the default (1) for NaN/invalid\ninputs, then pass that sanitized value to this.setState({ expandLevel }); apply\nthe same normalization logic to the other assignment site around the 68-70 block\nso both places use the same validated, clamped integer for expandLevel.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/actions/containers/ActionLogger/index.tsx",
+          "line_number": 51,
+          "start_line": null,
+          "commit_sha": "04577ebf28c9d1c094e4d799377119f8ae5abb65",
+          "created_at": "2026-03-03T22:21:29Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The comment flags that invalid numeric values for expandLevel (negative, fractional, NaN) can leak into state and cause inconsistent behavior \u2014 a missing input validation / edge case logic error."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests normalizing expandLevel before storing in state, with a specific code change provided."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rz4XJ",
+          "author": "Sidnioulz",
+          "body": "@mixelburg I think you might have mixed up two branches here. This appears unrelated.",
+          "file_path": "code/core/src/actions/components/ActionLogger/index.tsx",
+          "line_number": 33,
+          "start_line": null,
+          "commit_sha": "04577ebf28c9d1c094e4d799377119f8ae5abb65",
+          "created_at": "2026-03-04T08:37:46Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment points out that code from an unrelated branch was mixed in, which is a code organization/structural concern rather than a defect in logic itself."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6uP3zG",
+          "author": "mixelburg",
+          "body": "You're right, those ActionLogger changes were from a different branch. Already reverted them.",
+          "file_path": "code/core/src/actions/components/ActionLogger/index.tsx",
+          "line_number": 33,
+          "start_line": null,
+          "commit_sha": "04577ebf28c9d1c094e4d799377119f8ae5abb65",
+          "created_at": "2026-03-12T09:38:54Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that unrelated code appears to have been included from a different branch, implying the change should be removed or separated."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rz-Ig",
+          "author": "Sidnioulz",
+          "body": "Those stories would be more useful if you added `startOpen: true`, so they get captured in Chromatic and we have visual regression on them.\n\nEven better if you write a play function that opens the popover and expects the count of presets that you've configured in the args. Then we have visual and behaviour regression.",
+          "file_path": "code/addons/docs/src/blocks/controls/Color.stories.tsx",
+          "line_number": 102,
+          "start_line": 71,
+          "commit_sha": "32c985a386710512f7174ea1cb315ffc25beac1e",
+          "created_at": "2026-03-04T08:43:20Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment suggests improving stories with startOpen and play functions to add visual and behavioral regression coverage \u2014 primarily a concern about test/story completeness and intent clarity."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6uP32h",
+          "author": "mixelburg",
+          "body": "Done \u2014 added `startOpen: true` to both `WithMaxPresetColors` and `WithUnlimitedPresetColors` stories so Chromatic captures them open.",
+          "file_path": "code/addons/docs/src/blocks/controls/Color.stories.tsx",
+          "line_number": 102,
+          "start_line": 71,
+          "commit_sha": "32c985a386710512f7174ea1cb315ffc25beac1e",
+          "created_at": "2026-03-12T09:38:56Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding startOpen: true and a play function to the stories for visual and behavior regression coverage."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6ui8PV",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check if `@sveltejs/vite-plugin-svelte` version 7.x exists\ncurl -s \"https://registry.npmjs.org/@sveltejs/vite-plugin-svelte\" | jq '.versions | keys | map(select(startswith(\"7.\"))) | sort | .[-5:]'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 114\n\n---\n\n\n\n</details>\n\n**Document or split the peerDependency change.**\n\nThis `package.json` change is outside the stated PR scope. According to the comments summary, the PR should contain \"only the three ColorControl files,\" but this extends `@sveltejs/vite-plugin-svelte` peer compatibility to v7. While the version exists and the change is valid, either document it in the PR description (explaining the \"accidental downgrade\" fix mentioned in the commit) or split it into a separate PR for clarity.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/frameworks/svelte-vite/package.json` at line 70, The change broadened\nthe peerDependency for \"@sveltejs/vite-plugin-svelte\" in package.json (the\ndependency string on that package) which is outside this PR's stated scope;\nupdate the PR by either adding a clear note in the PR description documenting\nthis peerDependency change and the \"accidental downgrade\" fix, or remove the\nchange from this branch and put the updated \"@sveltejs/vite-plugin-svelte\" peer\nrange into a separate focused PR so only the three ColorControl files remain in\nthis PR.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/frameworks/svelte-vite/package.json",
+          "line_number": 70,
+          "start_line": null,
+          "commit_sha": "f1cf7c86a802facbc451b3609cb3b2a9aba8eb53",
+          "created_at": "2026-03-13T01:12:08Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "high",
+          "label_reasoning": "The comment notes that a peerDependency change is outside the PR's stated scope and recommends either documenting it or splitting it into a separate PR \u2014 a code organization and PR structure concern."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests that the out-of-scope peerDependency change be documented in the PR description or split into a separate PR."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6wXRYW",
+          "author": "Sidnioulz",
+          "body": "```suggestion\n    presetColors: Array.from({ length: 40 }, (_, i) => {\n      const hue = Math.round((i / 40) * 360);\n      return { color: `hsl(${hue}, 70%, 50%)`, title: `Color ${i + 1}` };\n    }),\n```\n\nnit: Let's demonstrate it stops at the default value",
+          "file_path": "code/addons/docs/src/blocks/controls/Color.stories.tsx",
+          "line_number": 113,
+          "start_line": null,
+          "commit_sha": "2ba5df42d1a12c93c63d5981c07519b3ffde0ea1",
+          "created_at": "2026-03-19T09:42:13Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "medium",
+          "label_reasoning": "The nit suggests changing the story's preset data to better demonstrate the default value behavior, which is about how the example/documentation illustrates the feature rather than a functional defect."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Provides a code suggestion to change the presetColors array to demonstrate the default max value cutoff."
+    }
+  ],
+  "review_thread_count": 6,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 6,
+    "stage1_kept": 6,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

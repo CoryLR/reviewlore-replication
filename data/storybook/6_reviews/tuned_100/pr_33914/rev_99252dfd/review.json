@@ -1,0 +1,76 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/utils/manifests/render-components-manifest.ts",
+      "line_number": 9,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This 5-level relative path import crosses a package boundary from `code/core` into `code/renderers/react`. This is an architectural violation: `core` must not depend on a specific renderer. If the renderer package or its internal directory structure is ever reorganized, this import silently breaks the build. Instead, define the `DocsManifest`/`ComponentDoc` shape in a shared location (e.g., `storybook/internal/types` or a dedicated `types` package) and import from there. At minimum, add a lint rule or a `package.json` `exports` constraint to guard this boundary.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/utils/manifests/manifests.ts",
+      "line_number": 35,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`writeManifests` calls `getManifests(presets)` without passing a `watch` option, so the `watch` parameter defaults to `undefined`. This `undefined` is forwarded through `presets.apply` to the `manifests` preset in `generator.ts`, which declares its options as `{ manifestEntries: IndexEntry[]; watch: boolean }` \u2014 a non-optional boolean. Downstream, `createComponentMetaManager(watch)` also declares `watch: boolean`. Passing `undefined` here is a TypeScript-invisible runtime type violation. At runtime the behavior happens to be correct (falsy `undefined` prevents caching and watching, and the `finally` block disposes the manager), but the intent is obscured and a future refactor could break it. Fix: call `getManifests(presets, { watch: false })` explicitly.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/types/modules/core-common.ts",
+      "line_number": 379,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The project-specific rule for this field states: use an open-ended string-union type so the field can accommodate non-React engines (`'vue-component-meta'`, `'svelte2tsx'`, custom analyzers). The field currently uses a closed union `'react-docgen' | 'react-docgen-typescript' | 'react-component-meta'`. Every new engine requires a PR to change this type. Consider widening to `string` or `(string & {})` with a comment listing the known values, so Vue, Svelte, and other renderer presets can write their own engine identifier without touching `core-common.ts`.",
+      "index": 2
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/types.ts",
+      "line_number": 15,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The JSDoc says `(1 = outermost JSX element)` but the actual value for the outermost element is `0`. In `getComponentImports.ts`, the depth counter is incremented by `JSXElement.enter` before the `JSXOpeningElement` visitor fires, so `const depth = jsxDepth - 1` yields `0` for a top-level element. The test snapshots confirm this: `ButtonGroup` (outermost) has `jsxDepth: 0`, `Button` (nested) has `jsxDepth: 1`. Change the JSDoc to `(0 = outermost JSX element)`.",
+      "index": 3
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/componentMeta/ComponentMetaManager.ts",
+      "line_number": 430,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `watchProgramSourceDirs` function walks up from each source-file directory to find a package root with an unbounded `while (candidate !== path.dirname(candidate))` loop. On a filesystem without a `package.json` or `tsconfig.json` between the source file and the drive root (e.g., files generated in `/tmp` without node_modules), this loop runs all the way to `/`, which can take tens of thousands of iterations. The `checker/ComponentMetaManager.ts` sibling correctly caps this with `const MAX_WALK_DEPTH = 10` and `depth < MAX_WALK_DEPTH`. Apply the same guard here.",
+      "index": 4
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/test-helpers.ts",
+      "line_number": 21,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`process.getBuiltinModule('node:fs')` was introduced in Node.js v22.3.0. If the project's minimum engine requirement is below that version, this call will throw a `TypeError` at test startup in CI or on developer machines running older Node. The same pattern in `componentMeta/test-helpers.ts` uses `import * as fs from 'node:fs'` (the standard API) \u2014 use that form here too, or confirm and document the Node 22.3+ requirement.",
+      "index": 5
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 37,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`componentMetaManager` is a module-level singleton (`let componentMetaManager: ComponentMetaManager | undefined`). When tests import `generator.ts`, the singleton persists across test cases and test files because module scope is shared within a Vitest worker. The `generator.test.ts` spy approach (`vi.spyOn(ComponentMetaManager.prototype, 'batchExtract')`) mitigates this for batchExtract itself, but the cached manager instance could carry stale state between tests. Consider resetting or exporting a `resetManagerForTesting()` helper, and call it in `afterEach`.",
+      "index": 6
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "There are three near-identical files that exist in two places simultaneously:\n\n1. `componentMetaExtractor.ts` at the `componentManifest/` root (1,732 lines) and `componentMeta/componentMetaExtractor.ts` (1,732 lines) \u2014 identical logic, only relative import paths differ (`./types` vs `../types`).\n2. `checker/ComponentMetaManager.ts` (~620 lines) and `componentMeta/ComponentMetaManager.ts` (~620 lines) \u2014 same class body, differ only in minor details (the `checker/` version has the `MAX_WALK_DEPTH` guard; `componentMeta/` does not).\n3. `checker/ComponentMetaProject.ts` (~465 lines) and `componentMeta/ComponentMetaProject.ts` (~465 lines) \u2014 near-identical.\n\nThis is roughly 4,000 lines of duplicated code. `generator.ts` imports `ComponentMetaManager` from `./checker` and uses the root `componentMetaExtractor.ts`; the `componentMeta/` directory appears to be an intermediate refactoring artifact that was never deleted. The `componentMeta/` variants (and their test files) should be removed, or if they represent a planned redesign, the difference must be clearly documented and the `checker/` variants removed instead. As-is, bug fixes applied to one copy will silently diverge from the other.",
+      "index": 7
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "In `render-components-manifest.ts`, the new `parseReactComponentMeta` function serializes the prop `type` as `prop.type?.raw ?? prop.type?.name`. For enum props, `raw` contains the union literal string (e.g. `'\"solid\" | \"outline\"'`), which renders correctly in the manifest debugger. However, for optional non-enum props, `type.name` is the full optional string (e.g. `'string | undefined'`) rather than the stripped `'string'` that `parseReactDocgen` and `parseReactDocgenTypescript` produce. This means the three engines render optional props inconsistently in the debugger. Consider filtering `undefined` from the type name in `parseReactComponentMeta` to match the behaviour of the other parsers.",
+      "index": 8
+    }
+  ],
+  "cost_usd": 1.7084954499999998,
+  "duration_seconds": 656.2788858413696
+}

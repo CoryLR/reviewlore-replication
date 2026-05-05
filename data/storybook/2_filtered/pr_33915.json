@@ -1,0 +1,74 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33915,
+  "title": "Core: Fix error reporting in ManagerErrorBoundary",
+  "body": "## What I did\r\n\r\nRestores the (unhandled) error reporting which broke due to the introduction of the React error boundary.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [x] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n> [!CAUTION]\r\n> This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!\r\n\r\n<!-- Please include the steps to test your changes here. For example:\r\n\r\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Open Storybook in your browser\r\n3. Access X story\r\n\r\n-->\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Error telemetry is now sent when the app's error boundary catches an error.\n\n* **Tests**\n  * Story-based tests expanded with interactive play functions covering error rendering, custom messages, normal renders, console output, and telemetry assertions; new error-simulating story components added.\n\n* **Refactor**\n  * Storybook decorator updated to install/restore global mocks and wrap stories to ensure correct teardown.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ghengeveld",
+  "merged_at": "2026-03-09T14:10:18Z",
+  "base_ref": "next",
+  "merge_commit_sha": "f7004869bb59bc9437ead0861e7f89d428ea17fc",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "0096e34aad1adc5175cb2a6bf1caed3b2fca2ad3",
+    "a0acb253b59536eeca8655b2a4553489fc971c04"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6qHnoK",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Side effects and `RestoreGlobals` component definition in the render body introduce two correctness risks.**\n\n**1. Side effects executed during render (lines 66\u201369)**\n\n`spyOn`, `mockClear`, and the global mutation all run in the render body of the decorator function, which React treats as a render-phase call. In React Strict Mode, render functions are invoked twice. Each call to `spyOn(console, 'error')` stacks a new spy wrapping the previous one; the single `mockRestore()` in the cleanup then only unwraps the innermost wrapper, leaving the previous spy in place. Moving the setup into a `useEffect` (with the same cleanup) eliminates the double-invocation risk and keeps side effects out of the render phase.\n\n**2. `RestoreGlobals` defined inline creates an unstable component type (lines 71\u201380)**\n\nA new function reference for `RestoreGlobals` is produced on every render of the decorator. React compares component types by reference to decide whether to reuse or remount a subtree. Because the reference changes every render, React will unmount and immediately remount `RestoreGlobals` on any re-render of the decorator, firing the cleanup `useEffect` prematurely\u2014restoring globals and the spy before the story is finished.\n\nThe fix is to move `RestoreGlobals` outside the decorator (or outside the `meta` block entirely) so its identity is stable, and to move the setup side effects into a `useEffect` within it.\n\n\n\n<details>\n<summary>\ud83d\udd27 Proposed fix</summary>\n\n```diff\n+// Stable component defined at module scope to prevent remounting on re-renders\n+const RestoreGlobals = ({ children }: { children: React.ReactNode }) => {\n+  useEffect(() => {\n+    const spy = spyOn(console, 'error').mockImplementation(() => {});\n+    consoleErrorSpy = spy;\n+    sendTelemetryErrorMock.mockClear();\n+    const originalSendTelemetryError = globalThis.sendTelemetryError;\n+    globalThis.sendTelemetryError = sendTelemetryErrorMock;\n+    return () => {\n+      spy.mockRestore();\n+      globalThis.sendTelemetryError = originalSendTelemetryError;\n+    };\n+  }, []);\n+  return <>{children}</>;\n+};\n+\n decorators: [\n   (Story) => {\n-    consoleErrorSpy = spyOn(console, 'error').mockImplementation(() => {});\n-    sendTelemetryErrorMock.mockClear();\n-    const originalSendTelemetryError = globalThis.sendTelemetryError;\n-    globalThis.sendTelemetryError = sendTelemetryErrorMock;\n-\n-    const RestoreGlobals = ({ children }: { children: React.ReactNode }) => {\n-      useEffect(\n-        () => () => {\n-          consoleErrorSpy.mockRestore();\n-          globalThis.sendTelemetryError = originalSendTelemetryError;\n-        },\n-        []\n-      );\n-      return <>{children}</>;\n-    };\n-\n     return (\n       <RestoreGlobals>\n         <Story />\n       </RestoreGlobals>\n     );\n   },\n ],\n```\n\n> Note: With this approach `consoleErrorSpy` is set inside the effect, so play functions (which run after mount) will always see the initialized value.\n\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n// Stable component defined at module scope to prevent remounting on re-renders\nconst RestoreGlobals = ({ children }: { children: React.ReactNode }) => {\n  useEffect(() => {\n    const spy = spyOn(console, 'error').mockImplementation(() => {});\n    consoleErrorSpy = spy;\n    sendTelemetryErrorMock.mockClear();\n    const originalSendTelemetryError = globalThis.sendTelemetryError;\n    globalThis.sendTelemetryError = sendTelemetryErrorMock;\n    return () => {\n      spy.mockRestore();\n      globalThis.sendTelemetryError = originalSendTelemetryError;\n    };\n  }, []);\n  return <>{children}</>;\n};\n\ndecorators: [\n  (Story) => {\n    return (\n      <RestoreGlobals>\n        <Story />\n      </RestoreGlobals>\n    );\n  },\n],\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn\n`@code/core/src/manager/components/error-boundary/ManagerErrorBoundary.stories.tsx`\naround lines 65 - 87, Move the RestoreGlobals component definition out of the\ndecorator so its identity is stable, and move all side-effect setup currently\nbeing run in the render body (spyOn(console, 'error'),\nsendTelemetryErrorMock.mockClear(), saving originalSendTelemetryError and\nassigning globalThis.sendTelemetryError) into a useEffect inside RestoreGlobals;\ninside that effect assign consoleErrorSpy, call mockClear, set\nglobalThis.sendTelemetryError = sendTelemetryErrorMock, and return a cleanup\nthat calls consoleErrorSpy.mockRestore() and restores\nglobalThis.sendTelemetryError to the saved originalSendTelemetryError so\nteardown happens correctly even with React Strict Mode and the decorator no\nlonger creates a new component reference each render.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:churro -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/error-boundary/ManagerErrorBoundary.stories.tsx",
+          "line_number": 87,
+          "start_line": null,
+          "commit_sha": "b4bacca0adc24e9c49160684431cb739ede664aa",
+          "created_at": "2026-02-25T16:39:24Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies two concrete correctness risks (render-phase side effects and unstable component reference) and provides a specific diff/fix to move RestoreGlobals outside the decorator and setup into useEffect."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6qL376",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\nfd \"ManagerErrorBoundary.tsx\" --type f | grep -v \".stories.tsx\" | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 137\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat code/core/src/manager/components/error-boundary/ManagerErrorBoundary.tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 6026\n\n---\n\n\n\n</details>\n\n**Play function assertions are thorough and well-structured.**\n\nGood coverage: DOM state, console output shape, and telemetry call count + payload. The `expect.any(Error)` / `expect.any(String)` matchers keep assertions resilient to irrelevant changes.\n\nHowever, the assertions confirm that `ManagerErrorBoundary.tsx` calls `console.error()` directly at lines 168-169. Per coding guidelines, client-side logging must use `logger` from `storybook/internal/client-logger` instead of `console` methods. Update the production component to use the logger import.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn\n`@code/core/src/manager/components/error-boundary/ManagerErrorBoundary.stories.tsx`\naround lines 106 - 125, The component ManagerErrorBoundary is calling\nconsole.error directly (observed in ManagerErrorBoundary.tsx) which violates\nclient-side logging policy; replace those console.error calls with the shared\nlogger from 'storybook/internal/client-logger' by importing logger (or the\nappropriate named export) and invoking logger.error with the same message and\nerror/stack arguments, and remove or replace any console.* usages in the\ncomponent (e.g., the two calls currently emitting 'Storybook Manager UI Error:'\nand 'Component Stack:') so tests still receive the same values but production\nlogging uses the imported logger.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/error-boundary/ManagerErrorBoundary.stories.tsx",
+          "line_number": 125,
+          "start_line": 106,
+          "commit_sha": "a0acb253b59536eeca8655b2a4553489fc971c04",
+          "created_at": "2026-02-25T20:16:12Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment flags a coding guideline violation (direct console.error usage instead of the shared logger) and requests a specific change: replace console.error calls in ManagerErrorBoundary.tsx with the logger from 'storybook/internal/client-logger'."
+    }
+  ],
+  "review_thread_count": 2,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 2,
+    "stage1_kept": 2,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

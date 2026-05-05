@@ -1,0 +1,25 @@
+{
+  "pr_number": 2069,
+  "source_mr_date": "2020-11-09T13:30:03.099Z",
+  "candidates": [
+    "When adding a temperature parameter to any new MD dynamics class in `ase/md/`, name it `temperature_K` to stay consistent with the convention used by `Langevin`, `VelocityVerlet`, `NVTBerendsen`, and `NPTBerendsen`.",
+    "Don't use the `if param is None: param = default` pattern for new parameters that have no backward-compatibility requirement; declare them as normal required positional arguments.",
+    "Don't override `todict()` in new MD subclasses unless there is a clear, documented serialization purpose. If you do override it, ensure every dictionary key matches the exact corresponding `__init__` parameter name (e.g. use `'fixcm'` not `'fix-cm'`, `'temperature_K'` not `'temperature_eV'`).",
+    "When implementing Box-Muller or other log-based transforms on uniform random samples, use `log(1 - y)` rather than `log(y)` to avoid a domain error when the sampled value is exactly 0.",
+    "New MD thermostat implementations must include a test (or a linked open issue) that verifies RATTLE constraints are preserved during and after thermalization \u2014 e.g. check that constrained DOFs remain constrained and that average kinetic energy reflects the reduced DOF count.",
+    "Name the center-of-mass fixing attribute `fix_com` (not `fixcm`) in MD classes, following the prior art in `ase/atoms.py`.",
+    "In MD `step()` method signatures and bodies, name the forces variable `forces` rather than `f` so it is greppable across the codebase.",
+    "In numerical methods within MD classes, use numpy array math instead of Python loops \u2014 e.g. generate all random velocities with a single vectorized call and apply conditional velocity replacement with boolean array indexing.",
+    "Related MD tests (for `VelocityVerlet`, `Langevin`, `Andersen`, etc.) must share setup code via common helper functions, pytest fixtures, or `@pytest.mark.parametrize`; never copy-paste test setup or assertion logic across test files.",
+    "When a test condition can be verified in one or a few MD steps (e.g. demonstrating that a thermostat with probability/friction set to zero reproduces `VelocityVerlet`), use the minimum number of steps required; do not run a long trajectory to check what a single step can verify.",
+    "In MD classes that generate per-atom random data, store those arrays as instance attributes and broadcast them via `self.communicator` before use, so parallel runs under gpaw or asap3 keep all MPI tasks synchronized.",
+    "When `communicator=None` is passed to an MD class constructor, replace it immediately with `DummyMPI()` in `__init__` rather than sprinkling `if self.communicator is not None:` guards throughout `step()`. This keeps `step()` clean and matches the pattern now used by both `Langevin` and `Andersen`.",
+    "Common logic shared across MD subclasses \u2014 such as center-of-mass velocity (`_get_com_velocity`), center-of-mass position correction, or momentum adjustment \u2014 must live in `MolecularDynamics` in `ase/md/md.py` rather than being duplicated in each subclass.",
+    "Temperature assertions in MD tests must use tight quantitative bounds justified by a controlled RNG seed (e.g., `|avg_temp - 300| < 10 K` over a long trajectory). Loose sanity-check ranges such as `T > 50 and T < 1000` are not meaningful and should be removed; rely on the longer-trajectory asap3-backed tests instead.",
+    "New functionality for `ase/atoms.py` that extends existing behavior (e.g. moving atoms to a specific center-of-mass position) should be expressed as a new keyword argument on an existing method such as `atoms.center()`, not as an entirely new standalone method, in order to keep the `Atoms` API coherent.",
+    "Don't add inline comments that merely restate what the adjacent docstring or the code itself already makes clear; reserve inline comments for non-obvious logic, side-effects, or project-specific invariants."
+  ],
+  "analysis": [],
+  "cost_usd": 0.16882624999999998,
+  "duration_seconds": 89.34019494056702
+}

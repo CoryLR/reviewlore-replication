@@ -1,0 +1,93 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4837,
+  "title": "refactor: Unify the edgeMarker adding logic",
+  "body": "## :bookmark_tabs: Summary\n\nSimplify and unify the logic to add edgeMarker \n\n## :straight_ruler: Design Decisions\n\nKeeping it separate will add more bugs when a PR modifies only one place. \n\n### :clipboard: Tasks\n\nMake sure you\n\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\n- [x] :computer: have added necessary unit/e2e tests.\n- [x] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/docs/community/development.md#3-update-documentation) is used for all new features.\n- [x] :bookmark: targeted `develop` branch\n",
+  "author": "sidharthv96",
+  "merged_at": "2023-11-27T10:19:44Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "25e9bb354ea11392ec515cfffa42cc20c88ae398",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "7ca76b02e15bed5dea79ebaf2aec294bae09a1b0",
+    "b5ba09500ffa2ef1a78d92b6c852bdc81466ea99"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85P_TDN",
+          "author": "aloisklink",
+          "body": "Currently, the default action for an unrecognized arrow type is to ignore it:\r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/2049915c2ad5d1de713548b25d39d9db93d675f5/packages/mermaid/src/dagre-wrapper/edges.js#L564\r\n\r\nThis PR changes it to instead add an invalid edge marker (could this cause SVG corruption/attacks if we add a string with a `)` in it?)\r\n\r\nIf we want to the old behavior, maybe something like the following is better?\r\n\r\n```ts\r\n\r\nconst arrowTypesMap = {\r\n  \"arrow_cross\": \"cross\",\r\n  \"arrow_point\": \"point\",\r\n  \"arrow_barb\": \"barb\",\r\n  \"arrow_circle\": \"circle\",\r\n  \"aggregation\": \"aggregation\",\r\n  \"extension\": \"extension\",\r\n  \"composition\": \"composition\",\r\n  \"dependency\": \"dependency\",\r\n  \"lollipop\": \"lollipop\",\r\n} as const;\r\n\r\nconst addEdgeMarker = (\r\n  svgPath: SVG,\r\n  position: 'start' | 'end',\r\n  arrowType: string,\r\n  url: string,\r\n  id: string,\r\n  diagramType: string\r\n) => {\r\n  if (arrowTypesMap[arrowType] === undefined) {\r\n    // TODO: should we log a debug/warning message?\r\n    return; // unknown arrow type, ignore\r\n  }\r\n  \r\n  const suffix = position === 'start' ? 'Start' : 'End';\r\n  svgPath.attr(`marker-${position}`, `url(${url}#${id}_${diagramType}-${arrowTypesMap[arrowType]}${suffix})`);\r\n};\r\n```",
+          "file_path": "packages/mermaid/src/dagre-wrapper/edgeMarker.ts",
+          "line_number": 40,
+          "start_line": null,
+          "commit_sha": "b5ba09500ffa2ef1a78d92b6c852bdc81466ea99",
+          "created_at": "2023-09-30T18:03:00Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "SQL Injection",
+          "label_confidence": "high",
+          "label_reasoning": "The comment raises a security concern about potential SVG injection/corruption by passing unsanitized arrow type strings into SVG attributes (analogous to injection vulnerabilities), and suggests a safe allowlist approach to prevent invalid/malicious values from being inserted."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Srvzg",
+          "author": "sidharthv96",
+          "body": "Done",
+          "file_path": "packages/mermaid/src/dagre-wrapper/edgeMarker.ts",
+          "line_number": 40,
+          "start_line": null,
+          "commit_sha": "b5ba09500ffa2ef1a78d92b6c852bdc81466ea99",
+          "created_at": "2023-11-08T21:07:04Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "The comment flags a potential security concern (SVG corruption/attacks) and suggests a concrete alternative implementation to preserve the old behavior of ignoring unrecognized arrow types."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85P_TMt",
+          "author": "aloisklink",
+          "body": "Do we need to test for invalid/malicious arrow types? My gut feeling is that these might produce an invalid SVG file, but I don't enough about SVG to be sure!\r\n\r\n```suggestion\r\n\r\n  it('should not add invalid markers', () => {\r\n    const arrowTypeStart = 'this is an invalid marker';\r\n    const arrowTypeEnd = ') url(https://my-malicious-site.example)';\r\n    addEdgeMarkers(svgPath, { arrowTypeStart, arrowTypeEnd }, url, id, diagramType);\r\n    expect(svgPath.attr).not.toHaveBeenCalled();\r\n  });\r\n});\r\n```",
+          "file_path": "packages/mermaid/src/dagre-wrapper/edgeMarker.spec.ts",
+          "line_number": 79,
+          "start_line": null,
+          "commit_sha": "b5ba09500ffa2ef1a78d92b6c852bdc81466ea99",
+          "created_at": "2023-09-30T18:09:30Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "SQL Injection",
+          "label_confidence": "high",
+          "label_reasoning": "The comment specifically flags a potential injection vulnerability where malicious arrow type strings (e.g., containing `) url(https://my-malicious-site.example)`) could corrupt or attack the generated SVG output, and requests test coverage for this security concern."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment explicitly suggests adding a test case for invalid/malicious arrow types, including a code suggestion with the specific test to add."
+    }
+  ],
+  "review_thread_count": 2,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 2,
+    "stage1_kept": 2,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

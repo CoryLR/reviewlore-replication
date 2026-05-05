@@ -1,0 +1,637 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 6282,
+  "title": "Refactor fontawesome icon usage.",
+  "body": "## :bookmark_tabs: Summary\r\n\r\n- FontAwesome icons can now be embedded as SVG when the FontAwesome icon pack is **registered** in the Mermaid configuration. Otherwise, the icon will still be rendered using FontAwesome CSS (`<i>` tag).  \r\n- Updated styles to properly set **fill color and positioning** for registered SVG icons. No extra styles are needed for FontAwesome CSS-based icons, as they inherit styles from FontAwesome.  \r\n- **Only the flowchart diagram supports registered FontAwesome icons.**  \r\n\r\nSee https://github.com/mermaid-js/mermaid-cli/issues/474\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\n### When text contains a FontAwesome icon reference:\r\n\r\n- Check if the FontAwesome **icon pack** is registered in the Mermaid configuration.  \r\n- If the **icon is registered**, replace it with a **stringified SVG representation**.  \r\n- If the **icon is not found**, fallback to rendering it with **FontAwesome CSS** (`<i>` tag with the appropriate class).  \r\n\r\n### Update to styles.\r\n\r\n- We had a style defined that adds fill to all `path` elements inside `node` class. Now we are overriding this style to have `fill: currentColor` also reverting stroke and stroke-width to default\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [X] :book: have read the [contribution guidelines](https://mermaid.js.org/community/contributing.html)\r\n- [X] :computer: have added necessary unit/e2e tests.\r\n- [ ] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://mermaid.js.org/community/contributing.html#update-documentation) is used for all new features.\r\n- [X] :butterfly: If your PR makes a change that should be noted in one or more packages' changelogs, generate a changeset by running `pnpm changeset` and following the prompts. Changesets that add features should be `minor` and those that fix bugs should be `patch`. Please prefix changeset messages with `feat:`, `fix:`, or `chore:`.\r\n",
+  "author": "saurabhg772244",
+  "merged_at": "2025-04-20T08:04:40Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "1c1d7d03005cb109bf37cf20bdef224c54f7ee42",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "e8ee4bdb48e36f068b9c9fa8161cddb421d13d48",
+    "4077088f1832a92db5b536112000ade474358dc5"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J851BxX_",
+          "author": "aloisklink",
+          "body": "**issue(blocking)**: I'm not sure why we still need the free/pro difference, or the different class names. Can we change this function to output the exact same thing if users haven't set an icon pack?\r\n\r\n**suggestion**: Maybe something like the following (we should probably also update the function TSDoc comment too):\r\n\r\n```suggestion\r\n  // The letters 'bklrs' stand for possible endings of the fontawesome prefix (e.g. 'fab' for brands, 'fak' for fa-kit) // cspell: disable-line\r\n  return text.replace(\r\n    /(fa[bklrs]?):fa-([\\w-]+)/g, // cspell: disable-line\r\n    (fullMatch, prefix, iconName) => {\r\n      const registeredIconName = `${prefix}:${iconName}`;\r\n      if (await isIconAvailable(registeredIconName)) {\r\n        return await getIconSVG(registeredIconName, undefined, { class: 'label-icon' });\r\n      } else {\r\n        // fall back to FontAwesome CSS\r\n        return `<i class='${s.replace(':', ' ')}'></i>`;\r\n      }\r\n    },\r\n  );\r\n```",
+          "file_path": "packages/mermaid/src/rendering-util/createText.ts",
+          "line_number": 224,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-20T11:28:54Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Function Consistency",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment questions the need for free/pro distinction and different class names, suggesting the function output should be consistent regardless of icon pack setting."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J851ImMp",
+          "author": "saurabhg772244",
+          "body": "I will update regex but as of the text.replace() does not take async call back so we will have to update with other way.",
+          "file_path": "packages/mermaid/src/rendering-util/createText.ts",
+          "line_number": 224,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-21T09:50:20Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J851I6a9",
+          "author": "aloisklink",
+          "body": "Ah, that makes sense! Good catch.\r\n\r\nThe next question is, can we write it in such a way that uses `Promise.all()` to download these icon packets in parallel? (although maybe it's overkill to write the code like that, since it will only result in a performance improvement if you're using multiple icon packs in the same node label).\r\n\r\n",
+          "file_path": "packages/mermaid/src/rendering-util/createText.ts",
+          "line_number": 224,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-21T10:45:48Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J851LmlW",
+          "author": "saurabhg772244",
+          "body": "Fixed in https://github.com/mermaid-js/mermaid/pull/6282/commits/2fb7bc2806f3d91dc9840ae988dc06e1329ca9a9",
+          "file_path": "packages/mermaid/src/rendering-util/createText.ts",
+          "line_number": 224,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-21T18:17:17Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly requests a code change with a concrete suggestion and asks to update the TSDoc comment."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J851Bx0I",
+          "author": "aloisklink",
+          "body": "**question(blocking)**: Why has the class changed from `fab` to `fa-brands` and is this a breaking change? Do we need to put this info in the PR description and changeset entry?",
+          "file_path": "packages/mermaid/src/rendering-util/createText.spec.ts",
+          "line_number": 9,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-20T11:30:19Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "medium",
+          "label_reasoning": "The class name changed from 'fab' to 'fa-brands', which may be a breaking change \u2014 the behavior no longer matches what users expect based on prior API contract."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J851Lmuw",
+          "author": "saurabhg772244",
+          "body": "Fixed in https://github.com/mermaid-js/mermaid/pull/6282/commits/16573d97f5afcc324889219486f8d7aba7fb2f02",
+          "file_path": "packages/mermaid/src/rendering-util/createText.spec.ts",
+          "line_number": 9,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-21T18:17:41Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Questions a class name change that may be a breaking change and asks if it needs to be documented in the PR description and changeset entry \u2014 implies action needed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J851BzkN",
+          "author": "aloisklink",
+          "body": "**suggestion(non-blocking but recommended)**: I think you can revert these changes, since it looks like these `pnpm-lock.yaml` are not needed for your PR, but will just increase the risk of merge conflicts by a lot.",
+          "file_path": "pnpm-lock.yaml",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "8857e77495f7dfeba1afa46c09a89ae4b14c8970",
+          "created_at": "2025-02-20T11:35:43Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Dead-Code Related Issues",
+          "label_confidence": "medium",
+          "label_reasoning": "Suggests reverting unneeded pnpm-lock.yaml changes that are unnecessary for the PR and introduce risk."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J851Lm5M",
+          "author": "saurabhg772244",
+          "body": "Updated in https://github.com/mermaid-js/mermaid/pull/6282/commits/83a6e696c617f77cced630e5d04b60a99405390a",
+          "file_path": "pnpm-lock.yaml",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "8857e77495f7dfeba1afa46c09a89ae4b14c8970",
+          "created_at": "2025-02-21T18:18:15Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests reverting changes to pnpm-lock.yaml."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J851KAMU",
+          "author": "github-advanced-security",
+          "body": "## Incomplete HTML attribute sanitization\n\nCross-site scripting vulnerability as the output of [this final HTML sanitizer step](1) may contain single quotes when it reaches this attribute definition.\nCross-site scripting vulnerability as the output of [this final HTML sanitizer step](2) may contain single quotes when it reaches this attribute definition.\n\n[Show more details](https://github.com/mermaid-js/mermaid/security/code-scanning/188)",
+          "file_path": "packages/mermaid/src/rendering-util/createText.ts",
+          "line_number": 206,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-21T14:22:58Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "SQL Injection",
+          "label_confidence": "high",
+          "label_reasoning": "This is an XSS (cross-site scripting) vulnerability due to incomplete HTML attribute sanitization \u2014 single quotes in output can escape attribute context. Best mapped to injection vulnerability category."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a cross-site scripting vulnerability (XSS), which implies the code must be fixed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J851RDJD",
+          "author": "aloisklink",
+          "body": "This is still a bit confusing.\r\n\r\nUsing this syntax, only FontAwesome icons are supported, but this documentation makes it seem like any icon pack is supported.\r\n\r\nAnd it's a bit confusing with https://github.com/mermaid-js/mermaid/blob/2fb7bc2806f3d91dc9840ae988dc06e1329ca9a9/docs/syntax/flowchart.md?plain=1#L1943-L1955 too.\r\n\r\nI think we also need to add a `<MERMAID_RELEASE_VERSION>` to tell users what version of Mermaid supports this.\r\n\r\nMaybe we can instead have something like:\r\n\r\n````markdown\r\nIt is possible to add icons from fontawesome.\r\n\r\nThe icons are accessed via the syntax fa:#icon class name#.\r\n\r\n```mermaid-example\r\nflowchart TD\r\n    B[\"fa:fa-twitter for peace\"]\r\n    B-->C[fa:fa-ban forbidden]\r\n    B-->D(fa:fa-spinner)\r\n    B-->E(A fa:fa-camera-retro perhaps?)\r\n```\r\n\r\nThere are two ways to display these FontAwesome icons:\r\n\r\n### Register FontAwesome icon packs (v<MERMAID_RELEASE_VERSION>+)\r\n\r\n<Add instructions here (maybe with list of supported prefixes) and make a note that it will fallback to FontAwesome CSS if these aren't setup>\r\n\r\n### Register FontAwesome CSS\r\n\r\nMermaid supports Font Awesome if the CSS is included on the website.\r\nMermaid does not have any restriction on the version of Font Awesome that can be used.\r\n\r\nPlease refer the [Official Font Awesome Documentation](https://fontawesome.com/start) on how to include it in your website.\r\n\r\nAdding this snippet in the `<head>` would add support for Font Awesome v6.5.1\r\n\r\n```html\r\n<link\r\n  href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css\"\r\n  rel=\"stylesheet\"\r\n/>\r\n```\r\n````",
+          "file_path": "docs/syntax/flowchart.md",
+          "line_number": 1925,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-24T10:52:19Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "high",
+          "label_reasoning": "The documentation is misleading \u2014 it implies any icon pack is supported when only FontAwesome is, and lacks version information. This is a documentation clarity issue."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J851aBoy",
+          "author": "saurabhg772244",
+          "body": "Updated in https://github.com/mermaid-js/mermaid/pull/6282/commits/e045e0b42dd736e13c35b3a81b0c5c03b4857027",
+          "file_path": "docs/syntax/flowchart.md",
+          "line_number": 1925,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-25T13:12:12Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Points out confusing documentation and provides a concrete suggested rewrite of the docs, including adding a version placeholder."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J851RFAG",
+          "author": "aloisklink",
+          "body": "This is still pretty confusing to me.\r\n\r\nI think we need to clarify it's only FontAwesome icons, and it's not in Mindmaps.\r\n\r\nMaybe something like:\r\n\r\n> FontAwesome icons can now be embedded as SVGs in flowcharts if they are registered via `mermaid.registerIconPacks`.\r\n\r\nAnd we should list what diagram types support it. I don't think your code changes anything for mindmaps, for example.",
+          "file_path": ".changeset/proud-seahorses-wash.md",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-24T10:56:41Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "high",
+          "label_reasoning": "The changeset entry is confusing and lacks clarity about which diagram types are supported and the scope of the change."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J851aB6H",
+          "author": "saurabhg772244",
+          "body": "Updated in https://github.com/mermaid-js/mermaid/pull/6282/commits/e045e0b42dd736e13c35b3a81b0c5c03b4857027",
+          "file_path": ".changeset/proud-seahorses-wash.md",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-25T13:12:56Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests clarification in the changeset text and asks to list supported diagram types \u2014 concrete documentation changes implied."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J851RG4J",
+          "author": "aloisklink",
+          "body": "There seems to a red border around all these icons.\r\n\r\nIs this normal (I'm like 80% sure it's just an issue with the E2E tests).\r\n\r\n![image](https://github.com/user-attachments/assets/cff34e37-53da-44fd-9b09-2c3fbdb7c687)\r\n",
+          "file_path": "cypress/integration/rendering/flowchart-icon.spec.js",
+          "line_number": 31,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-24T11:02:17Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "medium",
+          "label_reasoning": "Unexpected red border appearing around icons in E2E tests suggests unintended visual behavior possibly caused by a CSS side effect."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J851aB0n",
+          "author": "saurabhg772244",
+          "body": "Fixed in https://github.com/mermaid-js/mermaid/pull/6282/commits/e045e0b42dd736e13c35b3a81b0c5c03b4857027",
+          "file_path": "cypress/integration/rendering/flowchart-icon.spec.js",
+          "line_number": 31,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-25T13:12:41Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential visual issue (red border around icons) and asks if it needs to be fixed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J851RIc0",
+          "author": "aloisklink",
+          "body": "These tests are flaky:\r\n\r\n![Flowchart-Icon-2-icon-verify-if-icons-are-working-from-fontawesome-library-forest-theme diff](https://github.com/user-attachments/assets/34fc0da3-578f-4b24-811a-98022ebfd729)\r\n\r\nI think we need to:\r\n\r\n- Instead of using https://github.com/mermaid-js/mermaid/blob/2fb7bc2806f3d91dc9840ae988dc06e1329ca9a9/cypress/platform/e2e.html#L9-L12, we might want to use a local version of FontAwesome, like what the docs site uses: https://github.com/mermaid-js/mermaid/blob/3eaf8b717770a119cd0ea5303632b6430330f239/packages/mermaid/src/docs/package.json#L21\r\n- We might need something like `await Promise.all(Array.from(document.fonts, (font) => font.load()))` to forcibly wait for all fonts to load before starting to render the diagram: https://github.com/mermaid-js/mermaid-cli/blob/7b19bf7f230b95fde1ba1a4bbda78bc96e696773/src/index.js#L255",
+          "file_path": "cypress/integration/rendering/flowchart-icon.spec.js",
+          "line_number": 17,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-24T11:06:46Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "medium",
+          "label_reasoning": "Flaky tests due to relying on an external CDN for FontAwesome and not waiting for fonts to load \u2014 improper test setup and resource loading practices."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J851fHAV",
+          "author": "saurabhg772244",
+          "body": "Fixed in https://github.com/mermaid-js/mermaid/pull/6282/commits/b0c1460940602a4551d6dec568580554602f5284",
+          "file_path": "cypress/integration/rendering/flowchart-icon.spec.js",
+          "line_number": 17,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-26T07:45:10Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Identifies flaky tests and provides specific steps to fix them (use local FontAwesome, wait for fonts to load)."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J851RPSt",
+          "author": "aloisklink",
+          "body": "**issue**: I'm not sure how big of a deal this is, but this doesn't seem safe to me, since if one of the SVGs has `fa:xxxxx` in it (maybe even as a comment), it will replace it.\r\n\r\nMaybe something like the following is better:\r\n\r\n```ts\r\nconst pendingReplacements = Array<string>();\r\n\r\ntext.replace(/(fa[bklrs]?):fa-([\\w-]+)/g, (fullMatch, prefix, iconName) => {\r\n  replacements.push((async() => {\r\n    const registeredIconName = `${prefix}:${iconName}`;\r\n    if (await isIconAvailable(registeredIconName)) {\r\n      return await getIconSVG(registeredIconName, undefined, { class: 'label-icon' });\r\n    } else {\r\n      // fall back to FontAwesome CSS\r\n      return `<i class='${s.replace(':', ' ')}'></i>`;\r\n    }\r\n  })());\r\n});\r\n\r\nconst replacements = await Promise.all(pendingReplacements);\r\nreturn text.replace(/(fa[bklrs]?):fa-([\\w-]+)/g, () => replacements.shift());\r\n```\r\n\r\nIf we're using the same regex twice, make sure to reset `lastIndex` inbetween calls.",
+          "file_path": "packages/mermaid/src/rendering-util/createText.ts",
+          "line_number": 214,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-24T11:22:01Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The replacement logic is unsafe because if SVG output contains 'fa:xxxxx' patterns, it will be re-replaced in subsequent iterations \u2014 a logical flaw in the replacement approach."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J851aCAU",
+          "author": "saurabhg772244",
+          "body": "Updated in https://github.com/mermaid-js/mermaid/pull/6282/commits/e045e0b42dd736e13c35b3a81b0c5c03b4857027",
+          "file_path": "packages/mermaid/src/rendering-util/createText.ts",
+          "line_number": 214,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-25T13:13:14Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags a safety concern with regex replacement and provides an alternative implementation."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J851fdgZ",
+          "author": "aloisklink",
+          "body": "**issue(not sure if blocking or not)**: I don't know about this.\r\n\r\nI feel like this might make it harder to debug issues where the font fails to load.\r\n\r\nMaybe just doing:\r\n\r\n```suggestion\r\n  await loadFontAwesomeCSS();\r\n  await Promise.all(Array.from(document.fonts, (font) => font.load()));\r\n```\r\n\r\nThat way we get a JavaScript error when it fails to load and Cypress fails?\r\n\r\nI don't know. @sidharthv96 and @saurabhg772244, what are your thoughts?",
+          "file_path": "cypress/platform/viewer.js",
+          "line_number": 41,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-26T08:53:56Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Unchecked Return",
+          "label_confidence": "medium",
+          "label_reasoning": "Swallowing font load errors silently makes it harder to detect failures; the suggestion is to let errors propagate rather than catching and ignoring them."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a code change to surface errors more clearly rather than silently swallowing them, with a concrete code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J851fhsN",
+          "author": "aloisklink",
+          "body": "```suggestion\r\n### Register FontAwesome icon packs (v<MERMAID_RELEASE_VERSION>+)\r\n```\r\n\r\nMaybe we should use `<MERMAID_RELEASE_VERSION>` instead? I think the next version will probably be `v11.5.0`, but it might even be `v12.0.0` if we have breaking changes to release.",
+          "file_path": "packages/mermaid/src/docs/syntax/flowchart.md",
+          "line_number": 1248,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-26T09:05:12Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "Documentation uses a hardcoded version number instead of a placeholder, which may be inaccurate and harder to maintain."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests using a version placeholder instead of a hardcoded version string, with a specific code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J851fkIP",
+          "author": "aloisklink",
+          "body": ":grimacing: I really don't like this...\r\n\r\nCould we maybe instead change the `border: 2px solid darkred` to only apply on the root Mermaid SVG, maybe with something like:\r\n\r\n```css\r\ndiv.mermaid svg:first-of-type {\r\n  border: 2px solid darkred;\r\n}\r\n```\r\n\r\n(FYI, I'm not a CSS expert, so I have no idea if the above will work!)",
+          "file_path": "cypress/platform/e2e.html",
+          "line_number": 19,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-26T09:11:47Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The CSS rule applies a red border too broadly (to all SVGs), not just the root Mermaid SVG, causing unintended visual effects on icon SVGs."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85123a6",
+          "author": "saurabhg772244",
+          "body": "Updated in https://github.com/mermaid-js/mermaid/pull/6282/commits/a31adc63a97d7d189fa616c057b766c6dfcc1591",
+          "file_path": "cypress/platform/e2e.html",
+          "line_number": 19,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-03-03T11:04:10Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags a CSS concern and proposes a more scoped CSS selector as an alternative."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J851ft3C",
+          "author": "aloisklink",
+          "body": "**issue(blocking)**:\r\n\r\nThis change now causes the following E2E tests to fail https://github.com/mermaid-js/mermaid/blob/1d9c2aab8db7b18f48815e90f2c0806f621542f7/cypress/integration/rendering/flowchart-v2.spec.js#L82-L124\r\n\r\nWe could remove the `fa:fa-car` icon? Or update the widths to the new value.",
+          "file_path": "cypress/platform/viewer.js",
+          "line_number": 38,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-26T09:34:08Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The change breaks existing E2E tests due to modified behavior around font icon rendering \u2014 a regression introduced by the refactor."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J851gyWK",
+          "author": "sidharthv96",
+          "body": "The change in the images seems to be the `/rendering` prefix in the test name. Please fix that as well. \r\n\r\n<img width=\"288\" alt=\"image\" src=\"https://github.com/user-attachments/assets/8bd6f8bd-db20-4c7e-a945-093168868a30\" />\r\n\r\n<img width=\"296\" alt=\"image\" src=\"https://github.com/user-attachments/assets/c5cc166d-d01d-4141-881c-f77697ea9c25\" />\r\n",
+          "file_path": "cypress/platform/viewer.js",
+          "line_number": 38,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-26T12:49:02Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies failing E2E tests caused by the change and suggests specific fixes (remove the icon or update widths)."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J851fxUp",
+          "author": "aloisklink",
+          "body": "**nitpick**: We should try to avoid hyperlink text like **here** or **click here** or **learn more** (see [W3C \"Don't use 'click here' as link text\" guidelines](https://www.w3.org/QA/Tips/noClickHere))\r\n\r\n```suggestion\r\nYou can register your own FontAwesome icon pack following the [\"Registering icon packs\" instructions](../config/icons.md).\r\n```\r\n\r\n",
+          "file_path": "packages/mermaid/src/docs/syntax/flowchart.md",
+          "line_number": 1250,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-26T09:42:46Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "Link text 'here' or 'click here' violates accessibility/documentation guidelines; the suggestion improves hyperlink text per W3C guidelines."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a web accessibility/usability issue with link text and provides a concrete documentation fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J851fyNU",
+          "author": "aloisklink",
+          "body": "**suggestion**: Is it worth also listing the prefixes that are supported here? E.g. stating that you have to use `fa`/`fab`/etc.?\r\n\r\n",
+          "file_path": "packages/mermaid/src/docs/syntax/flowchart.md",
+          "line_number": 1260,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-26T09:45:00Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "Documentation is incomplete \u2014 it doesn't list the supported prefixes (fa, fab, etc.), leaving users without necessary information."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85123k_",
+          "author": "saurabhg772244",
+          "body": "Added in https://github.com/mermaid-js/mermaid/pull/6282/commits/a31adc63a97d7d189fa616c057b766c6dfcc1591",
+          "file_path": "packages/mermaid/src/docs/syntax/flowchart.md",
+          "line_number": 1260,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-03-03T11:04:38Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding supported prefix information to the documentation."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J851fzzq",
+          "author": "aloisklink",
+          "body": "**question(blocking since it might causes us to get sued/DMCA-ed otherwise)**: Sorry! I missed this in my last review.\r\n\r\nWhere did you get this icon from? Are we allowed to legally place it in our code? And if we do, do we need to add a license/copyright text here?\r\n\r\nEven if we don't need to place a license here, I think we probably still need a comment here saying that.\r\n\r\nYou can use the [`@license` JSDoc tag](https://jsdoc.app/tags-license) (and [`@copyright`](https://jsdoc.app/tags-copyright) if you need that too, e.g. like the MIT license that Mermaid uses).",
+          "file_path": "packages/mermaid/src/rendering-util/createText.spec.ts",
+          "line_number": 44,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-26T09:48:57Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Comment Requirements",
+          "label_confidence": "high",
+          "label_reasoning": "Missing license/copyright attribution for an embedded icon asset \u2014 requires a @license or @copyright comment to comply with legal requirements."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85124CB",
+          "author": "saurabhg772244",
+          "body": "Updated in https://github.com/mermaid-js/mermaid/pull/6282/commits/a31adc63a97d7d189fa616c057b766c6dfcc1591",
+          "file_path": "packages/mermaid/src/rendering-util/createText.spec.ts",
+          "line_number": 44,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-03-03T11:06:02Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Raises a legal/licensing concern about an included icon and requests a license comment or attribution be added."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J851gwqA",
+          "author": "sidharthv96",
+          "body": "We should consolidate this into a single location, it's duplicated 5 times ",
+          "file_path": "packages/mermaid/src/diagrams/kanban/styles.ts",
+          "line_number": 121,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-02-26T12:44:11Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Duplication",
+          "label_confidence": "high",
+          "label_reasoning": "The same code is duplicated 5 times and should be consolidated into a single location."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85124HT",
+          "author": "saurabhg772244",
+          "body": "Updated in https://github.com/mermaid-js/mermaid/pull/6282/commits/a31adc63a97d7d189fa616c057b766c6dfcc1591",
+          "file_path": "packages/mermaid/src/diagrams/kanban/styles.ts",
+          "line_number": 121,
+          "start_line": null,
+          "commit_sha": "4077088f1832a92db5b536112000ade474358dc5",
+          "created_at": "2025-03-03T11:06:17Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests consolidating duplicated code into a single location."
+    }
+  ],
+  "review_thread_count": 17,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 17,
+    "stage1_kept": 17,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

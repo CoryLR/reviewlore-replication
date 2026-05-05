@@ -1,0 +1,172 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "instructions.md",
+      "line_number": 1,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "This file is an AI implementation prompt accidentally committed to the repository. It has no place in the codebase \u2014 it is development scratch content and should be removed from the commit. Add it to `.gitignore` or simply delete it.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/config.type.ts",
+      "line_number": 1071,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`packages/mermaid/src/config.type.ts` is auto-generated from `packages/mermaid/src/schemas/config.schema.yaml` and must not be modified manually. The `layoutAlgorithm` field was already added to the YAML schema correctly; this manual edit to `config.type.ts` must be removed and the file regenerated via the project's build script to stay in sync.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/render.ts",
+      "line_number": 54,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`Promise.all` is used here to insert nodes concurrently. Per the project's architectural rule (tracked in issue #3577), diagram database modules rely on module-level mutable state, so concurrent rendering calls can corrupt each other's output. Each `insertNode` / `insertCluster` call must be awaited sequentially in a `for...of` loop, not parallelised with `Promise.all`.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/cose-bilkent/render.ts",
+      "line_number": 54,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Same `Promise.all` concurrency issue as in the tidy-tree renderer. Node insertion must be sequential. Replace the `Promise.all(data4Layout.nodes.map(...))` pattern with a `for...of` loop using `await` on each insertion.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 72,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`preferredLayout` is computed from `conf?.layoutAlgorithm ?? layout ?? 'cose-bilkent'` but is only ever used in a debug log (line 73). It is never applied to `data4Layout.layoutAlgorithm`, which is set earlier on line 68 using only the top-level `layout` config. This means the mindmap-specific `layoutAlgorithm` config key (added to the schema and exposed to users) is silently ignored at runtime. Either use `preferredLayout` to set `data4Layout.layoutAlgorithm`, or remove the dead computation.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 33,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "`_updateNodeDimensions` is defined here but is never called anywhere in this file or the rest of the codebase. It is dead code. Either wire it into the rendering pipeline where it is needed, or remove it.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 13,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`_drawNodes` is defined here but is never called from the exported `draw` function. It only calls itself recursively, meaning it is effectively dead code in the new rendering flow. Remove it if it is no longer needed, or document why it is retained.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/preprocess.ts",
+      "line_number": 31,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This block forces the top-level `config.layout` to `'tidy-tree'` for any mindmap that doesn't already set a layout. This conflicts with two things: (1) the schema default for `mindmap.layoutAlgorithm` is `'cose-bilkent'`, and (2) the PR description states cose-bilkent is the default. More architecturally, injecting diagram-specific defaults in the preprocessing layer is the wrong place \u2014 per project conventions, diagram defaults belong in `config.schema.yaml`, not in `processFrontmatter`. This logic should be removed from preprocessing and the schema default should be the authority.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/package.json",
+      "line_number": 42,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `peerDependencies` entry for `mermaid` uses the hardcoded version `\"^11.0.2\"` instead of the `\"workspace:^\"` protocol. Per the project convention for monorepo packages, peer dependencies on sibling workspace packages must use `workspace:^` so that `pnpm publish` automatically resolves to the correct released version. Change this to `\"mermaid\": \"workspace:^\"`.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/package.json",
+      "line_number": 10,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The top-level `\"types\": \"dist/layouts.d.ts\"` field is redundant because the same path is already declared inside the `exports` field. Per project rules, having both creates conflicting type resolution. Remove the top-level `\"types\"` field and rely solely on the `exports` entry.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/createGraph.ts",
+      "line_number": 2,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The import `from './types.ts'` uses a `.ts` extension, which is non-standard for this codebase. All other files in the project use `.js` extensions in TypeScript imports (TypeScript resolves them to `.ts` at compile time). Using `.ts` explicitly is only valid under `\"moduleResolution\": \"bundler\"` or similar settings, and is inconsistent with the rest of the project. Change to `'./types.js'`.",
+      "index": 10
+    },
+    {
+      "file_path": "packages/mermaid-layout-elk/src/render.ts",
+      "line_number": 596,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Multiple `log.debug('APA01 ...')` statements were left throughout this function (edge validation loop, `before`/`after` markers, full graph structure dumps). These are clearly development tracing calls and should be removed before merging. Per project convention, only meaningful diagnostic logs should remain.",
+      "index": 11
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/edges.js",
+      "line_number": 438,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The commented-out `// lineData = fixCorners(lineData);` should be removed. The old `fixCorners` function has already been deleted, so this comment is stale dead code. If the behaviour needs to be re-evaluated later, that discussion belongs in a tracking issue, not in a commented-out line.",
+      "index": 12
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/question.ts",
+      "line_number": 80,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`// @ts-ignore TODO fix this (KNSV)` should be replaced with `// @ts-expect-error: <descriptive reason>` (e.g. `// @ts-expect-error: calcIntersect is added dynamically; fix when node typing is tightened`). `@ts-ignore` silences all errors on the line regardless of whether an error actually exists, while `@ts-expect-error` fails loudly if the suppression is no longer needed.",
+      "index": 13
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/bang.ts",
+      "line_number": 67,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`bang` uses `intersect.rect` for its `calcIntersect` implementation even though the shape is a star-burst / explosion outline, not a rectangle. For the ELK layout edge-trimming logic this will cause edges to connect to the wrong boundary point. The same issue exists in `cloud.ts`. Consider using an ellipse or polygon approximation, or at least document that `rect` is a deliberate simplification with known inaccuracy.",
+      "index": 14
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/render.ts",
+      "line_number": 121,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`log.debug('APA01 positionedEdge', positionedEdge)` is a leftover development trace. Per project convention, remove excessively chatty or prefixed debug statements before merging.",
+      "index": 15
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "**`mindmap.layoutAlgorithm` config is never honoured.** The PR adds `layoutAlgorithm` to both the YAML schema and `config.type.ts`, exposing it as a user-facing config key. However, `mindmapRenderer.ts` reads the top-level `layout` config (via `getRegisteredLayoutAlgorithm(layout, ...)`) and ignores `conf?.layoutAlgorithm` entirely \u2014 the `preferredLayout` variable that combines both is only printed in a debug log. The end result is that setting `config.mindmap.layoutAlgorithm` in frontmatter has no effect on rendering. The renderer needs to be updated to prefer `conf?.layoutAlgorithm` when present.",
+      "index": 16
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "**Conflicting layout defaults across three locations.** The schema sets `layoutAlgorithm` default to `'cose-bilkent'`. The PR description also states cose-bilkent is the default. Yet `preprocess.ts` intercepts every mindmap render and forces `config.layout = 'tidy-tree'` unless a layout was already explicitly set. These three sources disagree. The preprocessing override will win in practice, silently making tidy-tree the actual default despite what the schema and the description say. Decide on one canonical default, remove the preprocessing injection, and let the schema be the authority.",
+      "index": 17
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "**`instructions.md` at the repository root.** This file is a verbatim AI implementation prompt ('Please help me implement the tidy-tree algorithm'). It should not be committed to a public repository. It contains no persistent value for contributors and exposes the development workflow in a way that is likely unintentional. Delete the file and add it to `.gitignore` (or `.instructions/` which is already gitignored by this PR).",
+      "index": 18
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**`packages/mermaid-layout-tidy-tree/README.md` is not valid Markdown.** The code examples throughout the README (installation commands, TypeScript snippets, HTML blocks) are written as bare text without fenced code blocks. GitHub will render them as plain paragraphs rather than formatted code. Add triple-backtick fences with the appropriate language identifiers (`sh`, `ts`, `html`) around each example.",
+      "index": 19
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**`mermaid-layout-tidy-tree` package has no `scripts` field.** The `package.json` contains an empty `\"scripts\": {}`. There is no `build` script, so there is no declared way to produce the `dist/` output that `exports` and `module` point to. The build configuration should either be added here or the package should be wired into the root-level build system and that linkage documented.",
+      "index": 20
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "**`validateLayoutData` in the cose-bilkent layout module requires `rootNode`**, which is a mindmap-specific concept. This makes the supposedly generic cose-bilkent layout algorithm implicitly coupled to the mindmap diagram type. Any flowchart or other diagram type that tries to use `cose-bilkent` layout will fail validation with 'Root node is required'. Either remove the `rootNode` check from the generic validator, or make the validator diagram-type aware.",
+      "index": 21
+    }
+  ],
+  "cost_usd": 2.1136709,
+  "duration_seconds": 338.2144536972046
+}

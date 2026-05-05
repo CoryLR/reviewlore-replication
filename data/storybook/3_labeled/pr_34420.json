@@ -1,0 +1,327 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34420,
+  "title": "Core: Implement Git change detection",
+  "body": "## What I did\r\n\r\nAdded Git change detection for the ChangeDetectionService so that whenever a new commit is created or the branch is switched, the module graph will be reevaluated. In practice, this means that as soon as file changes are committed, components will no longer be marked \"modified\".\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n- Ensure `features.changeDetection` is enabled. Start Storybook and keep it running.\r\n- Modify a component file; verify relevant stories get a modified/affected status.\r\n- Create a new story file that is picked up by Storybook; verify these stories get a \"new\" status.\r\n- Commit both changes (`git commit -am \"test\"`); verify both statuses clear after the commit (no longer shown as changed/new).\r\n- Reset HEAD back to before the commit (`git reset HEAD~1 --hard`) but be aware this will drop local changes.\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\nThis pull request has been released as version `0.0.0-pr-34420-sha-fbb1632a`. Try it out in a new sandbox by running `npx storybook@0.0.0-pr-34420-sha-fbb1632a sandbox` or in an existing project with `npx storybook@0.0.0-pr-34420-sha-fbb1632a upgrade`.\n<details>\n<summary>More information</summary>\n\n| | |\n| --- | --- |\n| **Published version** | [`0.0.0-pr-34420-sha-fbb1632a`](https://npmjs.com/package/storybook/v/0.0.0-pr-34420-sha-fbb1632a) |\n| **Triggered by** | @ghengeveld |\n| **Repository** | [storybookjs/storybook](https://github.com/storybookjs/storybook) |\n| **Branch** | [`git-change-detection`](https://github.com/storybookjs/storybook/tree/git-change-detection) |\n| **Commit** | [`fbb1632a`](https://github.com/storybookjs/storybook/commit/fbb1632ad1a9130931d13057aebff80274829a0d) |\n| **Datetime** | Wed Apr  1 14:05:44 UTC 2026 (`1775052344`) |\n| **Workflow run** | [23852750591](https://github.com/storybookjs/storybook/actions/runs/23852750591) |\n\nTo request a new release of this pull request, mention the `@storybookjs/core` team.\n\n_core team members can create a new canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=34420`_\n</details>\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Change detection now watches git repository state and automatically rescans (debounced) when refs/HEAD change; detects intent-to-add files so new files are reported correctly.\n  * Service can run with change detection disabled and reports readiness as unavailable when so configured.\n\n* **Bug Fixes**\n  * Improved watcher lifecycle, reuse and teardown to avoid stray watchers and ensure cleanup on service dispose.\n  * More robust handling of worktree/HEAD transitions and watcher errors.\n\n* **Tests**\n  * Expanded tests covering git-state subscriptions, debounce behavior, watcher semantics and unsubscribe safety.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ghengeveld",
+  "merged_at": "2026-04-02T14:46:55Z",
+  "base_ref": "next",
+  "merge_commit_sha": "c6391a672d01e48d29c48ac7a8fcbf5aef78d593",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "c2bcb9d2a9dc3a61d423d871a78dc0c159a4f6b2",
+    "d4d3de2ff155877b9303118c793e0598bcee7f1b"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zyhZF",
+          "author": "copilot-pull-request-reviewer",
+          "body": "If the current branch ref file doesn't exist (common when refs are packed and no loose ref is present yet), watchFile() returns undefined and no branch watcher is installed. In that state, new commits on the current branch typically won't touch .git/HEAD or packed-refs, so git state changes can be missed entirely. Consider adding a fallback watcher (e.g., watch the refs/heads directory or retry installing the branch watcher on 'rename'/packed-refs events) so commits are still detected when the ref file is created later.\n```suggestion\n      const branchRefPath = join(gitDir, branchRef);\n      const watcher = this.watchFile('branch', branchRefPath, () => {\n        this.emitGitStateChange();\n      });\n\n      // If the branch ref file does not exist yet (e.g., refs are packed),\n      // fall back to watching the refs/heads directory so we can retry\n      // installing the branch watcher when the ref file is created later.\n      if (!watcher) {\n        const headsDir = join(gitDir, 'refs', 'heads');\n        this.watchFile('branch', headsDir, () => {\n          if (this.gitStateCallbacks.size === 0) {\n            return;\n          }\n\n          // The directory changed; attempt to reconfigure the branch watcher.\n          void this.configureBranchWatcher(gitDir);\n          this.emitGitStateChange();\n        });\n      }\n```",
+          "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+          "line_number": 192,
+          "start_line": null,
+          "commit_sha": "c42b35e9c552762b12caa887df79f57dfc315221",
+          "created_at": "2026-03-31T14:39:01Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Missing fallback watcher when branch ref file doesn't exist (packed refs scenario), causing git state changes to be missed entirely."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding a fallback watcher for when the branch ref file doesn't exist, with a concrete code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zyhZy",
+          "author": "copilot-pull-request-reviewer",
+          "body": "onGitStateChange() kicks off ensureWatchers() without awaiting it. If a consumer unsubscribes before setupWatchers() finishes, the cleanup runs before watchers exist and the in-flight setup can still create watchers afterward, leaving open FSWatchers with zero callbacks registered. Consider tying cleanup to watcherSetupInFlight (e.g., when the last callback unsubscribes, await/finally the in-flight setup then clearAllWatchers) or re-check callback count immediately before/after each watcher is created.",
+          "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+          "line_number": 114,
+          "start_line": null,
+          "commit_sha": "b7bd52680148ec75dee402c2082b640091a73450",
+          "created_at": "2026-03-31T14:39:01Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Concurrency Issues",
+          "label_confidence": "high",
+          "label_reasoning": "Race condition where unsubscribing before async watcher setup finishes can leave orphaned FSWatchers with no registered callbacks."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a race condition between unsubscribe and watcher setup, and suggests tying cleanup to watcherSetupInFlight."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zyhaM",
+          "author": "copilot-pull-request-reviewer",
+          "body": "getGitDir() assumes <repoRoot>/.git is a directory. In git worktrees/submodules, .git is often a file containing a 'gitdir: \u2026' pointer, so the watcher paths (<repoRoot>/.git/HEAD, etc.) won't exist and commit/branch switching won't be detected. Consider resolving the actual git dir via `git rev-parse --git-dir` (or parsing the .git file) before wiring watchers.",
+          "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+          "line_number": 253,
+          "start_line": 222,
+          "commit_sha": "d4d3de2ff155877b9303118c793e0598bcee7f1b",
+          "created_at": "2026-03-31T14:39:01Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "getGitDir() assumes .git is always a directory, but in worktrees/submodules it's a file pointer, causing watcher paths to be incorrect and git state changes to be missed."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that .git may be a file in worktrees/submodules and suggests resolving the actual git dir via `git rev-parse --git-dir`."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zykxi",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Potential race condition when unsubscribing during watcher setup.**\n\nIf the last callback unsubscribes while `ensureWatchers()` is still in flight, `clearAllWatchers()` may execute before `setupWatchers()` completes, leaving orphaned watchers. The `setupWatchers` method does check `gitStateCallbacks.size === 0` at lines 120-122 and 177-179, which mitigates this partially, but there's still a window where watchers could be created after the check passes.\n\nConsider adding a check in `watchFile` or ensuring `clearAllWatchers` is called after the in-flight setup completes.\n\n<details>\n<summary>\ud83d\udee1\ufe0f Proposed fix to handle race condition</summary>\n\n```diff\n   return () => {\n     this.gitStateCallbacks.delete(callback);\n\n     if (this.gitStateCallbacks.size === 0) {\n+      // Wait for any in-flight setup to complete before clearing\n+      void this.watcherSetupInFlight?.then(() => {\n+        if (this.gitStateCallbacks.size === 0) {\n+          this.clearAllWatchers();\n+        }\n+      });\n-      this.clearAllWatchers();\n     }\n   };\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/core-server/change-detection/GitDiffProvider.ts` around lines\n89 - 100, The unsubscribe path can race with in-flight watcher setup triggered\nby ensureWatchers(); update the logic so clearAllWatchers cannot run while setup\nis still creating watchers: add an internal inFlightSetup Promise or boolean\nflag set by ensureWatchers()/setupWatchers() and check it before creating\nwatchers in watchFile (or await it in clearAllWatchers), and on unsubscribe in\nonGitStateChange ensure you either await the inFlightSetup to finish before\ncalling clearAllWatchers or flip a cancelled flag that setupWatchers/watchFile\nrespects (checking gitStateCallbacks.size === 0 plus the cancelled flag) to\navoid creating orphaned watchers; reference functions: onGitStateChange,\nensureWatchers, setupWatchers, watchFile, clearAllWatchers, and the\ngitStateCallbacks collection.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot:d3cd56bc-c1bb-4408-8276-890e8b6719d3 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 23dc61f",
+          "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+          "line_number": 100,
+          "start_line": null,
+          "commit_sha": "a2185a21ea310608abdaa7df4cd8ceccf60dc1a8",
+          "created_at": "2026-03-31T14:41:11Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Concurrency Issues",
+          "label_confidence": "high",
+          "label_reasoning": "Race condition between unsubscribe (clearAllWatchers) and in-flight setupWatchers, potentially leaving orphaned watchers after cleanup."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a race condition with a proposed fix. Though marked as addressed, it still represents an actionable code change suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zzMzO",
+          "author": "copilot-pull-request-reviewer",
+          "body": "When a watcher emits an `error`, the handler closes it and removes it from `this.watchers`, but there\u2019s no attempt to re-establish watchers. If this happens (e.g. transient FS watcher errors), git state change detection will silently stop for the lifetime of the provider. Consider triggering a watcher re-setup (with backoff) when an error occurs while callbacks are registered.\n```suggestion\n    // Retry state is kept local to this watcher setup invocation.\n    let remainingRetries = 5;\n    let retryDelayMs = 1000;\n\n    const createWatcher = (): FSWatcher | undefined => {\n      if (!this.isWatcherSetupCurrent(generation)) {\n        return undefined;\n      }\n\n      try {\n        const watcher = this.fileSystem.watch(filePath, { persistent: false }, () => {\n          if (this.isWatcherSetupCurrent(generation)) {\n            onChange();\n          }\n        });\n\n        if (!this.isWatcherSetupCurrent(generation)) {\n          watcher.close();\n          return undefined;\n        }\n\n        watcher.on('error', () => {\n          watcher.close();\n          if (this.watchers[key] === watcher) {\n            delete this.watchers[key];\n          }\n\n          if (!this.isWatcherSetupCurrent(generation)) {\n            return;\n          }\n\n          if (remainingRetries > 0) {\n            const delay = retryDelayMs;\n            remainingRetries -= 1;\n            retryDelayMs *= 2;\n\n            setTimeout(() => {\n              if (!this.isWatcherSetupCurrent(generation)) {\n                return;\n              }\n              createWatcher();\n            }, delay);\n          }\n        });\n\n        this.clearWatcher(key);\n        this.watchers[key] = watcher;\n        return watcher;\n      } catch (error) {\n        if (this.isEnoentError(error)) {\n          return undefined;\n        }\n\n        throw error;\n      }\n    };\n\n    return createWatcher();\n```",
+          "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+          "line_number": 171,
+          "start_line": 138,
+          "commit_sha": "d4d3de2ff155877b9303118c793e0598bcee7f1b",
+          "created_at": "2026-03-31T15:07:24Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "On watcher error, the watcher is closed and removed but no retry/re-setup is attempted, causing git state change detection to silently stop for the lifetime of the provider."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that watcher errors silently stop detection and suggests implementing retry with backoff, with a concrete code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zzUmo",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Stop retrying watcher setup forever when a generation installs nothing.**\n\nIf `setupWatchers()` finishes with `this.watchers` still empty\u2014e.g. `git rev-parse` fails outside a repo, `.git` is missing, or every watched path returns `ENOENT`\u2014this `while` loop immediately starts another setup cycle. Because the caller fire-and-forgets `ensureWatchers()`, that becomes an unbounded background loop of `git`/fs work instead of a graceful no-op.\n\n\n<details>\n<summary>\ud83d\udca1 One way to gate retries to stale generations only</summary>\n\n```diff\n   private readonly gitStateCallbacks = new Set<GitStateChangeCallback>();\n   private readonly watchers: Partial<Record<WatcherKey, FSWatcher>> = {};\n   private watcherSetupInFlight: Promise<void> | undefined;\n+  private watcherSetupInFlightGeneration: number | undefined;\n   private watcherSetupGeneration = 0;\n@@\n   private async ensureWatchers(): Promise<void> {\n     while (this.gitStateCallbacks.size > 0 && Object.keys(this.watchers).length === 0) {\n       if (!this.watcherSetupInFlight) {\n-        this.watcherSetupInFlight = this.setupWatchers(this.watcherSetupGeneration);\n+        this.watcherSetupInFlightGeneration = this.watcherSetupGeneration;\n+        this.watcherSetupInFlight = this.setupWatchers(this.watcherSetupInFlightGeneration);\n       }\n \n+      const awaitedGeneration = this.watcherSetupInFlightGeneration;\n       await this.watcherSetupInFlight;\n+\n+      if (awaitedGeneration === this.watcherSetupGeneration) {\n+        break;\n+      }\n     }\n   }\n@@\n     } catch {\n       // Watching git state is opportunistic; scanning still runs from module graph updates.\n     } finally {\n-      this.watcherSetupInFlight = undefined;\n+      if (this.watcherSetupInFlightGeneration === generation) {\n+        this.watcherSetupInFlight = undefined;\n+        this.watcherSetupInFlightGeneration = undefined;\n+      }\n     }\n   }\n```\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper:454e8ebe-5bba-447b-a81f-1717211ddebf -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+          "line_number": 135,
+          "start_line": null,
+          "commit_sha": "b7bd52680148ec75dee402c2082b640091a73450",
+          "created_at": "2026-03-31T15:12:53Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The while loop in ensureWatchers() can become an unbounded background loop if setupWatchers always installs zero watchers (e.g., outside a git repo), causing infinite retries."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags an infinite retry loop when watcher setup installs nothing, with a concrete proposed fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zzUmw",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udf10 Web query:\n\n`In Node.js `fs.watch()`, what happens on Linux/macOS when a watched file is atomically replaced or deleted and recreated, and are directory watches recursive for nested paths like `refs/heads/feature/foo`?`\n\n\ud83d\udca1 Result:\n\nOn Linux and macOS, when a watched file is atomically replaced (e.g., via mv or cp followed by rm, common in editors for safe saves), fs.watch typically emits a 'rename' event for the deletion/removal of the original file (IN_DELETE_SELF or equivalent kqueue event), followed by another 'rename' event for the creation of the new file with the same name. This is because atomic replacement unlinks the original inode and links a new one, appearing as delete then create to the watcher. Subsequent changes to the new file emit 'change' events normally. However, platform differences exist: Linux (inotify) reliably distinguishes metadata/content changes; macOS (kqueue for files, FSEvents for dirs) may emit 'change' for atime updates or coalesce events. Events may be missed or coalesced under rapid operations due to OS buffers. Directory watches with recursive: true (supported on macOS natively via FSEvents, on Linux since Node.js v19.7.0/v18.13.0 via userland traversal) watch all nested paths, including deep ones like refs/heads/feature/foo. The filename in events is relative to the watched directory, so changes deep in subdirs emit with the full relative path (e.g., 'heads/feature/foo'). Non-recursive watches only monitor the top-level directory.\n\nCitations:\n\n- 1: https://oneuptime.com/blog/post/2026-01-22-nodejs-watch-file-changes/view\n- 2: https://github.com/nodejs/node/issues/49916\n- 3: https://github.com/nodejs/node/issues/47058\n- 4: https://stackoverflow.com/questions/20153244/nodejs-atomic-file-replace-operation-trigger-only-one-time-some-watchers\n- 5: https://github.com/nodejs/node/issues/36005\n- 6: https://github.com/nodejs/node/pull/45098\n- 7: https://nodejs.org/docs/latest/api/fs.html\n- 8: https://emcrisostomo.github.io/fswatch/doc/1.8.0/fswatch.html/Monitors.html\n- 9: https://deepwiki.com/libuv/libuv/3.1-file-system-events\n- 10: https://github.com/nodejs/node/issues/52055\n- 11: https://github.com/oven-sh/bun/issues/24875\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, let's examine the GitDiffProvider.ts file to understand the context\ncat -n code/core/src/core-server/change-detection/GitDiffProvider.ts | head -250 | tail -150\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 5085\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check Node.js version requirement in package.json\ncat -n code/package.json | grep -A 5 -B 5 '\"engines\"'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's a root package.json with Node version info\ncat -n package.json | grep -A 5 -B 5 '\"engines\"' || echo \"No engines field found\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 87\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Get the full context around lines 123-130 and 198-207\nsed -n '115,145p' code/core/src/core-server/change-detection/GitDiffProvider.ts\necho \"---\"\nsed -n '190,215p' code/core/src/core-server/change-detection/GitDiffProvider.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1757\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check Node.js version requirements\ncat -n code/.nvmrc 2>/dev/null || echo \"No .nvmrc found\"\ncat -n .nvmrc 2>/dev/null || echo \"No .nvmrc at root\"\n\n# Check if there's a minimum Node version in code/package.json\ngrep -A 10 '\"engines\"' code/package.json || echo \"No engines field\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 120\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for any tests or issues related to git watching\nrg -i \"git.*watch|atomic.*ref|inode.*stale\" code/core/src/core-server/change-detection/ -A 3 -B 3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 9030\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there are any related tests\nfd -t f \"\\.test\\.\" code/core/src/core-server/change-detection/ | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 270\n\n---\n\n\n\n</details>\n\n**Watch parent directories instead of individual Git ref files to avoid inode staleness after atomic replacement.**\n\nCurrently, these watches monitor `HEAD`, `packed-refs`, and specific branch ref files individually. Git atomically replaces these files via unlink+rename, which on Linux/macOS causes `fs.watch()` to become bound to the old inode after the first update\u2014subsequent file changes won't trigger callbacks. The fallback to directory watching (line 204) only activates if the initial file watch fails to establish, not if it becomes stale after atomic replacement.\n\nThe proactive fix is to watch parent directories (`gitDir` for HEAD/packed-refs, `dirname(branchRef)` for branch refs) and re-read state on events. This avoids both the inode staleness issue and the brittleness of coarse-grained fallbacks like `refs/heads`, which won't catch deeply nested refs like `refs/heads/feature/foo` on non-recursive platforms (though Node.js 22 does support `recursive: true`).\n\nApplies to lines 123-130 and 198-207.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/core-server/change-detection/GitDiffProvider.ts` around lines\n123 - 130, The current file watches individual ref files (HEAD, packed-refs,\nbranch ref files) which breaks when Git atomically replaces files because\nfs.watch can stay bound to the old inode; update GitDiffProvider to watch parent\ndirectories instead: replace per-file watches in the block that calls\nwatchFile(generation, 'head', join(gitDir, 'HEAD'), ...), watchFile(...\n'packedRefs', join(gitDir, 'packed-refs'), ...) and the branch-watching logic\ninside configureBranchWatcher so they watch gitDir (for HEAD/packed-refs) and\ndirname(branchRef) (for branch refs) and on any directory event call\nemitGitStateChange() and re-read the specific ref; keep the existing fallback\nbehavior but prefer directory watches to avoid inode staleness while retaining\nre-read semantics used by emitGitStateChange and configureBranchWatcher.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper:454e8ebe-5bba-447b-a81f-1717211ddebf -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+          "line_number": 130,
+          "start_line": null,
+          "commit_sha": "23dc61f836114d01d0e8fff465acda8f8c10947a",
+          "created_at": "2026-03-31T15:12:53Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Watching individual git ref files is unreliable because git atomically replaces them, causing fs.watch to bind to stale inodes and miss subsequent changes after the first update."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags inode staleness after atomic file replacement by Git and suggests watching parent directories instead of individual files."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60DYJ2",
+          "author": "copilot-pull-request-reviewer",
+          "body": "`configureBranchWatcher` is started with `void ...` from an FS watch callback. If `configureBranchWatcher()` ever rejects (e.g. read errors other than ENOENT), this becomes an unhandled promise rejection and can crash or destabilize the process. Wrap the async call in a `.catch(...)` (or make the callback async and handle errors) and consider triggering `scheduleWatcherRebuild()` on failure.\n```suggestion\n        void this.configureBranchWatcher(gitDir, generation).catch(() => {\n          // Prevent unhandled promise rejections from the watcher callback.\n        });\n```",
+          "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+          "line_number": 131,
+          "start_line": null,
+          "commit_sha": "cb354405d7e18dde3dbe9f002570b0539e01e746",
+          "created_at": "2026-04-01T09:06:12Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Unchecked Return",
+          "label_confidence": "high",
+          "label_reasoning": "configureBranchWatcher() is called with void from an FS watch callback without a .catch(), creating an unhandled promise rejection risk on errors."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags unhandled promise rejection from void configureBranchWatcher() and suggests adding .catch() handling."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60DYKh",
+          "author": "copilot-pull-request-reviewer",
+          "body": "Same unhandled-promise issue here: `configureBranchWatcher` is invoked with `void ...` from the branch watcher callback. If it throws/rejects, it will surface as an unhandled rejection. Please handle the returned promise (e.g. `.catch(...)`) and decide whether to rebuild watchers or ignore specific errors.\n```suggestion\n        this.configureBranchWatcher(gitDir, generation).catch((error) =>\n          this.handleConfigureBranchWatcherError(error),\n        );\n      });\n\n      if (!branchWatcher) {\n        this.watchFile(generation, 'branch', join(gitDir, 'refs', 'heads'), () => {\n          this.emitGitStateChange();\n          this.configureBranchWatcher(gitDir, generation).catch((error) =>\n            this.handleConfigureBranchWatcherError(error),\n          );\n        });\n      }\n    }\n  }\n\n  private handleConfigureBranchWatcherError(_error: unknown): void {\n    // Intentionally ignore errors from configureBranchWatcher to avoid\n    // unhandled promise rejections in watcher callbacks.\n  }\n```",
+          "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+          "line_number": 223,
+          "start_line": null,
+          "commit_sha": "cb354405d7e18dde3dbe9f002570b0539e01e746",
+          "created_at": "2026-04-01T09:06:13Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Unchecked Return",
+          "label_confidence": "high",
+          "label_reasoning": "Same unhandled promise rejection issue \u2014 configureBranchWatcher() called with void in branch watcher callback without error handling."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Same unhandled promise rejection issue with a concrete code suggestion including a helper error handler method."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60DYK-",
+          "author": "copilot-pull-request-reviewer",
+          "body": "Same unhandled-promise issue in the fallback watcher path: `void this.configureBranchWatcher(...)` can reject without being observed. Handle the promise to avoid unhandled rejections (and optionally trigger a watcher rebuild/backoff when reconfiguration fails).\n```suggestion\n        this.configureBranchWatcher(gitDir, generation).catch(() => {\n          // Swallow errors from watcher reconfiguration to avoid unhandled promise rejections.\n        });\n      });\n\n      if (!branchWatcher) {\n        this.watchFile(generation, 'branch', join(gitDir, 'refs', 'heads'), () => {\n          this.emitGitStateChange();\n          this.configureBranchWatcher(gitDir, generation).catch(() => {\n            // Swallow errors from watcher reconfiguration to avoid unhandled promise rejections.\n          });\n```",
+          "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+          "line_number": 218,
+          "start_line": null,
+          "commit_sha": "cb354405d7e18dde3dbe9f002570b0539e01e746",
+          "created_at": "2026-04-01T09:06:13Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Unchecked Return",
+          "label_confidence": "high",
+          "label_reasoning": "Same unhandled promise rejection issue in the fallback watcher path \u2014 void configureBranchWatcher() without .catch() can surface as an unhandled rejection."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Same unhandled promise rejection issue in the fallback watcher path, with a concrete code suggestion."
+    }
+  ],
+  "review_thread_count": 11,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc60ewFt",
+            "author": "valentinpalkovic",
+            "body": "When is `.git` a file?",
+            "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+            "line_number": 232,
+            "start_line": null,
+            "commit_sha": "d4d3de2ff155877b9303118c793e0598bcee7f1b",
+            "created_at": "2026-04-02T13:10:37Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc60g3jj",
+            "author": "ghengeveld",
+            "body": "When people do weird things.",
+            "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+            "line_number": 232,
+            "start_line": null,
+            "commit_sha": "d4d3de2ff155877b9303118c793e0598bcee7f1b",
+            "created_at": "2026-04-02T14:46:46Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure question seeking understanding with no implied suggestion or code change request."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 11,
+    "stage1_kept": 11,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1
+  }
+}

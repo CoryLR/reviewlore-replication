@@ -1,0 +1,108 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/create-storybook/src/generators/REACT_NATIVE/metroConfig.ts",
+      "line_number": 9,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`METRO_SETUP_DOCS_LINK` is still a placeholder string `'TODO_REPLACE_WITH_REACT_NATIVE_METRO_DOCS_LINK'`. This value is shown to the user in the post-install output and embedded in the fallback comment written to the user's metro config file. It must be replaced with the real URL before this ships \u2014 users who hit the fallback path will be directed to a broken link.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/generators/REACT_NATIVE/index.ts",
+      "line_number": 17,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "Module-level mutable variables (`lastMetroCodemodResult`, `lastScriptDerivationResult`) are used to shuttle state from `configure` to `postConfigure`. The `GeneratorModule` interface doesn't support passing state between these two hooks, so this pattern relies on implicit sequential execution. If `configure` throws partway through, `postConfigure` will silently read `undefined` or stale values from a prior run. In tests, these variables persist across test cases, so any test that calls `postConfigure` without first calling `configure` in the same test will observe leftover state.\n\nA cleaner approach: capture these values as local variables inside a factory closure, or return them from `configure` using the `GeneratorModule` type's extension point if one exists. At minimum, the `postConfigure` body should guard with a defensive check and log a warning if the expected state is absent.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/generators/REACT_NATIVE/metroConfig.ts",
+      "line_number": 97,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The catch fallback `STORYBOOK_PACKAGE_PATTERNS.some((pattern) => source.includes(pattern))` is too broad. `STORYBOOK_PACKAGE_PATTERNS` contains the bare string `'storybook'`, so any source file that mentions the word \"storybook\" in a comment, variable name, or string literal \u2014 e.g. `// configure storybook` \u2014 would return `true` here and cause `runMetroCodemodOrFallback` to skip the file as if it were already configured. Consider narrowing the fallback to a regex that matches an actual import or require statement, e.g. `/require\\(['\"]@?storybook/` or `/from ['\"]@?storybook/`.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/generators/REACT_NATIVE/metroConfig.ts",
+      "line_number": 34,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`STORYBOOK_PACKAGE_PATTERNS` contains both `'storybook'` and `'storybook/'`. Since `'storybook'` is a prefix of `'storybook/'`, the third entry is always redundant \u2014 any string that contains `'storybook/'` also contains `'storybook'`. Remove `'storybook/'` to eliminate the dead entry and make the intent clearer.",
+      "index": 3
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/generators/REACT_NATIVE/metroConfig.ts",
+      "line_number": 12,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`EXPO_CREATE_METRO_COMMAND` defines a `command: 'expo'` field, but the call site prepends it into `args` rather than using it as `command`:\n```ts\nargs: [EXPO_CREATE_METRO_COMMAND.command, ...EXPO_CREATE_METRO_COMMAND.args]\n```\nThe named field `command` suggests it should be passed as the `command` option to `runPackageCommand`, but `runPackageCommand`'s type omits `command` and uses `args[0]` as the executable. This creates a misleading abstraction. Either restructure the constant to be a flat `args` array (`['expo', 'customize', 'metro.config.js']`), or document why `command` is merged into `args`.",
+      "index": 4
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/generators/REACT_NATIVE/metroConfig.ts",
+      "line_number": 257,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`if (!changed) { return { action: 'already-configured' }; }` is dead code. When `matchedExport` is `true` (checked on the preceding line), every code path inside the loop either (a) returns `'already-configured'` directly, (b) sets `changed = true`, or (c) returns `'unsupported'`. There is no execution path where `matchedExport` is `true` and `changed` remains `false`. The check can be removed to avoid confusing future readers.",
+      "index": 5
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/generators/REACT_NATIVE/metroConfig.ts",
+      "line_number": 262,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`shouldUseEsmImport` is only `true` for `.ts` files. A `metro.config.js` that uses ESM syntax (e.g. `export default ...`) would receive a CJS `require()` injection, producing a mixed-module file that would fail at runtime. While `.js` ESM metro configs are uncommon today, the logic would be more correct as:\n```ts\nconst shouldUseEsmImport = usesEsmSyntax(source);\n```\nsince the file extension is not a reliable indicator of whether the file is already ESM.",
+      "index": 6
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/generators/REACT_NATIVE/generateEntrypoint.ts",
+      "line_number": 18,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`getEntrypointTemplatePath()` takes no parameters and always returns the same value. It wraps a constant computation that is only ever called in one place. Exporting it as a function obscures the fact that it's a fixed path and makes the public API of this module unnecessarily larger. Consider inlining it as a module-level `const ENTRYPOINT_TEMPLATE_PATH = join(ENTRYPOINT_TEMPLATE_DIR, 'index.js')` instead.",
+      "index": 7
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/generators/REACT_NATIVE/generateScripts.ts",
+      "line_number": 11,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The outer `.trim()` in `` `${STORYBOOK_ENV_PREFIX} ${scriptValue}`.trim() `` is redundant. Both `STORYBOOK_ENV_PREFIX` (a hard-coded string with no leading/trailing whitespace) and `scriptValue` (already `.trim()`-ed at the call site before being passed in) are clean. The outer trim does nothing and should be removed.",
+      "index": 8
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 28,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`check` filters addons present in `addons`, but does not verify that those same addons are absent from `deviceAddons`. If a user has already partially migrated manually (addon removed from `addons` but somehow still in `deviceAddons`, or the migration is re-run), `run` will call `appendValueToArray(['deviceAddons'], addon)` again, potentially creating duplicate entries. Consider filtering out addons that are already present in `mainConfig.deviceAddons` (if it can be read from `mainConfig`) or documenting the assumption that `appendValueToArray` is idempotent.",
+      "index": 9
+    },
+    {
+      "file_path": "MIGRATION.md",
+      "line_number": 1322,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "\"In Storybook 9, on-device addons\u2026\" is placed inside the **9.x \u2192 10.0.0** migration chapter, so the correct version reference is Storybook 10, not 9. Change to \"In Storybook 10, on-device addons\u2026\" (or \"As of Storybook 10, \u2026\") to avoid reader confusion about which version introduced this requirement.",
+      "index": 10
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The `configure` \u2192 `postConfigure` state-passing pattern using module-level variables is a structural concern that affects the whole `index.ts` generator. Because `GeneratorModule.postConfigure` only receives `{ packageManager }`, there is no first-class way to pass data from `configure` to `postConfigure`. The module-level solution works today but will break silently in any test that exercises `postConfigure` independently, and it makes the generator non-reentrant. Other generators in the codebase avoid this pattern entirely by either not implementing `postConfigure` or by computing all necessary data inside it from scratch. If the framework cannot be extended to thread state through these hooks, consider computing the platform run guidance and metro codemod summary directly inside `postConfigure` by re-reading `packageManager.primaryPackageJson` and checking the file system \u2014 it keeps the logic self-contained and eliminates the hidden coupling.",
+      "index": 11
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Several of the new files (`generateEntrypoint.ts`, `generateScripts.ts`, `metroConfig.ts`) export internal helpers (`getEntrypointExtension`, `getEntrypointTemplatePath`, `containsStorybookImport`, `prependMetroFallbackComment`, `transformMetroConfigSource`) primarily to make them testable. This is a reasonable trade-off for unit testing, but the public surface area of these modules is wider than necessary for production use. Consider whether some of these helpers can remain unexported and covered via integration-style tests of the top-level function, keeping the module's public contract narrow.",
+      "index": 12
+    }
+  ],
+  "cost_usd": 1.0939846000000002,
+  "duration_seconds": 786.2300128936768
+}

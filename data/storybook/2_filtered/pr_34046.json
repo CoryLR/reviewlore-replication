@@ -1,0 +1,52 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34046,
+  "title": "Next.js: Add support for v16.2",
+  "body": "Closes #\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\n<!-- Briefly describe what your PR does -->\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n> [!CAUTION]\r\n> This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!\r\n\r\n<!-- Please include the steps to test your changes here. For example:\r\n\r\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Open Storybook in your browser\r\n3. Access X story\r\n\r\n-->\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n\n## Summary by CodeRabbit\n\n* **Refactor**\n  * Improved Next.js version compatibility handling in the SWC loader configuration by implementing dynamic import resolution with fallback support for multiple Next.js versions.\n\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "valentinpalkovic",
+  "merged_at": "2026-03-06T15:02:17Z",
+  "base_ref": "next",
+  "merge_commit_sha": "552c36ab9a440d615139a506724292dc62842d78",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "5d67667f5e2689606330c34d46cea790058c74d1",
+    "02dfa45f86817698b9998c0a4e934d0aaf519496"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6sm9V2",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Limit fallback to module-resolution failures only.**\n\nAt Line 68, the broad `catch` masks *any* runtime error from the v16.2 path and silently falls back to legacy code. Re-throw non-resolution errors so real failures are not hidden.  \n\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n async function getSupportedBrowsers(projectRoot: string, isDevelopment: boolean) {\n   try {\n     // `@ts-expect-error` - Correct import since Next.js v16.2\n     return (await import('next/dist/build/get-supported-browsers.js')).getSupportedBrowsers(\n       projectRoot,\n       isDevelopment\n     );\n-  } catch (e) {\n+  } catch (error: unknown) {\n+    const moduleResolutionError =\n+      error instanceof Error &&\n+      'code' in error &&\n+      ((error as NodeJS.ErrnoException).code === 'MODULE_NOT_FOUND' ||\n+        (error as NodeJS.ErrnoException).code === 'ERR_MODULE_NOT_FOUND') &&\n+      error.message.includes('next/dist/build/get-supported-browsers.js');\n+\n+    if (!moduleResolutionError) {\n+      throw error;\n+    }\n+\n     // TODO: Remove as soon as we don't have to support Next.js < 16.2 anymore\n     return (await import('next/dist/build/utils.js')).getSupportedBrowsers(\n       projectRoot,\n       isDevelopment\n     );\n   }\n }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nasync function getSupportedBrowsers(projectRoot: string, isDevelopment: boolean) {\n  try {\n    // `@ts-expect-error` - Correct import since Next.js v16.2\n    return (await import('next/dist/build/get-supported-browsers.js')).getSupportedBrowsers(\n      projectRoot,\n      isDevelopment\n    );\n  } catch (error: unknown) {\n    const moduleResolutionError =\n      error instanceof Error &&\n      'code' in error &&\n      ((error as NodeJS.ErrnoException).code === 'MODULE_NOT_FOUND' ||\n        (error as NodeJS.ErrnoException).code === 'ERR_MODULE_NOT_FOUND') &&\n      error.message.includes('next/dist/build/get-supported-browsers.js');\n\n    if (!moduleResolutionError) {\n      throw error;\n    }\n\n    // TODO: Remove as soon as we don't have to support Next.js < 16.2 anymore\n    return (await import('next/dist/build/utils.js')).getSupportedBrowsers(\n      projectRoot,\n      isDevelopment\n    );\n  }\n}\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/frameworks/nextjs/src/swc/loader.ts` around lines 62 - 73, The try/catch\naround the dynamic import of \"next/dist/build/get-supported-browsers.js\" in\nloader.ts is too broad and hides real runtime errors; change the catch to only\nperform the fallback import when the failure is a module-resolution error (e.g.\nerror.code === 'ERR_MODULE_NOT_FOUND' or the Node-specific \"Cannot find module\"\ncondition), and re-throw the caught error for any other error; specifically\nupdate the block that calls getSupportedBrowsers (the dynamic import returning\ngetSupportedBrowsers(projectRoot, isDevelopment)) so it only falls back to\nimporting \"next/dist/build/utils.js\" when the error indicates the module is not\nfound, otherwise throw the error.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/frameworks/nextjs/src/swc/loader.ts",
+          "line_number": 73,
+          "start_line": 62,
+          "commit_sha": "02dfa45f86817698b9998c0a4e934d0aaf519496",
+          "created_at": "2026-03-06T13:54:44Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a bug where a broad catch block silently masks all runtime errors and provides a concrete proposed fix to narrow the catch to only module-resolution failures, re-throwing other errors."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

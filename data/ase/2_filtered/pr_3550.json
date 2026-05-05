@@ -1,0 +1,511 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3550,
+  "title": "Add isotropic NPT with MTK equations",
+  "body": "# Summary\n\nThis MR adds isotropic NPT by [MTK equations](https://pubs.aip.org/aip/jcp/article-abstract/101/5/4177/165484/Constant-pressure-molecular-dynamics-algorithms?redirectedFrom=PDF), which uses Nose-Hoover-like chains for both thermostats and barostats.\nUnlike the current `ase.md.npt.NPT` in ASE, this implementation introduces a barostat damping parameter `pdamp` (in time unit), which is compatible with [`pdamp` parameter of `fix npt` in LAMMPS](https://docs.lammps.org/fix_nh.html).\n\nThis MR is the successor of https://gitlab.com/ase/ase/-/merge_requests/3508#6433009258019751b6f20e6d0523153680af7086, and my implementation note for the MTK equations is in the same PDF for the previous Nose-Hoover chain implementation, https://github.com/lan496/lan496.github.io/blob/main/notes/nose_hoover_chain/main.pdf.\n\nYou seem to be preparing for the next 3.24 release.\nSo, I would appreciate it if you could review this MR after the 3.24 release.\n\n# Testing\n\n## Conserved quantity\n\nIn `ase/test/md/test_nose_hoover_chain.py`, I have checked the new isotropic NPT integrator conserves the following energy-like quantity.\n![image](/uploads/8d3335238fa3e25b768e2fd753074286/image.png)\n\ncf. Eq. (5.9.7) of [Tuckerman's Statistical Mechanics](https://global.oup.com/academic/product/statistical-mechanics-theory-and-molecular-simulation-9780198825562?cc=jp&lang=en&).\n\n## External pressure \n\nFirst, I performed NPT with this new integrator by changing external pressures `pressure_GPa` from 0 to 100.\nThe figure below shows the volumes during NPT trajectories, and the equilibrium volumes decrease by applying the external pressure as expected.\n\n![image](/uploads/d4a5781933f17f651de52d70e5e8a7ae/image.png)\n\n## Barostat damping parameter (`pdamp`) dependency\n\nNext, I performed NPT by changing `pdamp` parameter with `pressure_GPa=10` and `tdamp=100*timestep`.\nThe figure below shows the instantaneous stress tensors during NPT trajectories.\nHere I define the stress tensors by `pxx = -atoms.get_stress()[0, 0]` and so on.\nThe average of the diagonal stresses by the red line is close to the external pressure `pressure_GPa=10` as expected.\nAlso, the stress tensors are well-controlled in wide range of `pdamp` from `100*timestep` to `10000*timestep`.\n\n![image](/uploads/5b9e075c5cf901946b404ec1c392b7f8/image.png)\n\nI checked the distributions of instantaneous pressure with Q-Q plot for these trajectories.\nIf the distribution is normal, the ordered points should line up straight.\nAll cases distribute like normal distributions within 2\u03c3 regions.\n\n![image](/uploads/c8bf17b5d08e47c9e9f73816a2bea264/image.png)\n\n\n## Scripts\n\n<details><summary>Scripts for the tesings</summary>\n\n```python\nfrom typing import Union, IO\nimport weakref\nfrom concurrent.futures import ThreadPoolExecutor, as_completed\n\nimport numpy as np\nimport asap3\nfrom ase.parallel import world\nfrom ase.md.md import MolecularDynamics\nfrom ase.md.logger import MDLogger\nfrom ase import Atoms\nimport ase.units\nimport ase.build\nfrom ase.calculators.emt import EMT\nfrom ase.md.velocitydistribution import MaxwellBoltzmannDistribution, Stationary\n\nfrom ase.md.nose_hoover_chain import NoseHooverChainNVT, IsotropicMTKNPT\n\nclass CustomMDLogger(MDLogger):\n\n    def __init__(\n        self,\n        dyn: MolecularDynamics,\n        atoms: Atoms,\n        logfile: Union[IO, str],\n    ):\n        self.dyn: MolecularDynamics = weakref.proxy(dyn)\n        self.atoms = atoms\n\n        self.logfile = self.openfile(file=logfile, mode='w', comm=world)\n\n        self.hdr = \"step,time(ps),epot(eV/atom),ekin(eV/atom),etot(eV/atom),temperature(K),volume(Ang3/atom),pxx(GPa),pyy(GPa),pzz(GPa),pyz(GPa),pzx(GPa),pxy(GPa)\"\n        self.fmt = \"%d\" + \",%.8f\" * 12 + \"\\n\"\n\n        self.logfile.write(self.hdr + \"\\n\")\n\n    def __call__(self):\n        num_atoms = len(self.atoms)\n        epot_eV_per_atom = self.atoms.get_potential_energy() / num_atoms\n        ekin_eV_per_atom = self.atoms.get_kinetic_energy() / num_atoms\n        etot_eV_per_atom = epot_eV_per_atom + ekin_eV_per_atom\n        temperature_K = self.atoms.get_temperature()\n        volume_Ang3_per_atom = self.atoms.get_volume() / num_atoms\n\n        stress_GPa = self.atoms.get_stress(include_ideal_gas=True, voigt=False) / ase.units.GPa\n        pxx_GPa = -stress_GPa[0, 0]\n        pyy_GPa = -stress_GPa[1, 1]\n        pzz_GPa = -stress_GPa[2, 2]\n        pyz_GPa = -stress_GPa[1, 2]\n        pzx_GPa = -stress_GPa[2, 0]\n        pxy_GPa = -stress_GPa[0, 1]\n\n        steps = self.dyn.nsteps\n        time_ps = self.dyn.get_time() / (1000 * ase.units.fs)\n\n        dat = (\n            steps,\n            time_ps,\n            epot_eV_per_atom,\n            ekin_eV_per_atom,\n            etot_eV_per_atom,\n            temperature_K,\n            volume_Ang3_per_atom,\n            pxx_GPa,\n            pyy_GPa,\n            pzz_GPa,\n            pyz_GPa,\n            pzx_GPa,\n            pxy_GPa,\n        )\n\n        self.logfile.write(self.fmt % dat)\n        self.logfile.flush()\n\ndef run_iso_npt(pdamp_timestep: int, pressure_GPa: int):\n    atoms = ase.build.bulk(\"Cu\", crystalstructure='hcp', a=2.53, c=4.0).repeat((4, 4, 4))\n    atoms.calc = asap3.EMT()\n\n    temperature_K = 300\n    rng = np.random.default_rng(0)\n    MaxwellBoltzmannDistribution(atoms, temperature_K=temperature_K, force_temp=True, rng=rng)\n    Stationary(atoms)\n\n    timestep = 1.0 * ase.units.fs\n    md = IsotropicMTKNPT(\n        atoms,\n        timestep=timestep,\n        temperature_K=temperature_K,\n        pressure_GPa=float(pressure_GPa),\n        tdamp=100 * timestep,\n        pdamp=pdamp_timestep * timestep,\n    )\n    logfile = f'iso-npt_pressure-{pressure_GPa}_pdamp-{pdamp_timestep}.log'\n    md.attach(CustomMDLogger(md, atoms, logfile), interval=100)\n    md.run(100_000)\n```\n\n</details>\n\n# Checklist\n\n- [x] I am familiar with [ASE's contribution guidelines](https://wiki.fysik.dtu.dk/ase/development/contribute.html).\n- [x] [**Doc strings**](https://wiki.fysik.dtu.dk/ase/development/python_codingstandard.html#writing-documentation-in-the-code) in code changed in this MR are up to date.\n- [x] [**Unit tests** have been added for new or changed code.](https://wiki.fysik.dtu.dk/ase/development/tests.html)\n- [ ] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "lan496",
+  "merged_at": "2025-01-30T20:01:19.150Z",
+  "base_ref": "master",
+  "merge_commit_sha": "d2d04cef41e384565d65cfa7868956cf067fd572",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2264400688",
+          "author": "thangckt",
+          "body": "hi @lan496, \n\nIs it possible to have option like as `mask` in `NPT` class?\nThanks",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2024-12-18T07:35:03.332Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2264432548",
+          "author": "lan496",
+          "body": "Thank you for your suggestions!\nI am also considering an anisotropic NPT with MTK equations after this MR.\nSo, let me think the `mask` input for the latter MR.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2024-12-18T07:59:36.593Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests a feature addition \u2014 adding a `mask` option similar to the `NPT` class."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2302446361",
+          "author": "schiotz",
+          "body": "I have tested this with a copper system (EMT potential).  The fluctuations in enthalpy and volume are as they should be in the NpT ensemble.  But the time evolution of these quantities seem a bit unnatural, there is a clear periodic oscillation in the volumen and pressure of the system.  The period of the oscillation is proportional to ``pdamp``.  I know this is common with Nos\u00e9-Hoover, but I thought that using a NH chain should prevent this from happening.  \n\nI am enclosing a figure illustrating this, and the script producing it.  The script first using NPTBerendsen to bring the system to the correct pressure and temperature.  NPTBerendsen has way too small fluctuations in both enthalpy and volume (but the mean is correct).  IsotropicMTKNPT quickly grows the fluctuations to the right amount, but the time evolution look a bit weird, even after quite some time.\n\n![isotropic_mtk_npt_2x2x2](/uploads/20e8c44f0cdcb72874029663ca7d283d/isotropic_mtk_npt_2x2x2.png)[isotropic_mtk_debug.py](/uploads/dcf929dd67823e38a961b79193557953/isotropic_mtk_debug.py)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-01-17T14:06:15.421Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2303959400",
+          "author": "lan496",
+          "body": "Thank you for your testing. I agree these periodic fluctuations are weird. \nI will check my implementation and compare it with other Nose-Hoover-like NpT implementations in LAMMPS.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-01-18T01:53:44.784Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2305545309",
+          "author": "lan496",
+          "body": "After fixing the mass for barostat (https://gitlab.com/ase/ase/-/merge_requests/3550/diffs?commit_id=4bdc617117a8c6101ffdc63478cac10eff68e0e0), the oscillation looks slightly better in the below figure. \n\n![isotropic_mtk_npt_2x2x2.orig](/uploads/ddd79cec559d3bc21b307686b58ea570/isotropic_mtk_npt_2x2x2.orig.png)\n\nThen, I changed the original timestep and damping parameter into the following:\n```\n# dt = 1.0 * fs\ntdamp = 100 * dt\npdamp = 1000 * dt\n```\nI think these choices for damping parameters are common in LAMMPS.\nThis resulted in better convergence in volumes and pressures.\n![isotropic_mtk_npt_2x2x2](/uploads/46ffef13b1fb0f1d2ce4feb4f920fe3f/isotropic_mtk_npt_2x2x2.png)\n\nSo, I think the weird fluctuations mainly come from the damping parameter choice.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-01-20T09:19:49.739Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2305981602",
+          "author": "schiotz",
+          "body": "I tried it.  Your new parameters are smaller, so the fluctuations will be faster - fast enough that the lines overlap on the plot.  If you expand the x-axis the fluctuations are still there, and still have the same magnitude (they should not become smaller, their magnitude is given by the desired spread in V, at most we could hope that they would be more irregular).\n\nI strongly suspect that this oscillatory behaviour is a property of Nose-Hoover sampling.  I thought that using a chain would solve this, but apparently not.  I do find it a bit strange that all the thermostats / barostats in the chains have the same damping time, I thought that varying them would help preventing such oscillations.  But trying that did not help much.\n\nFinally, I don't fully understand the _R factors in the barostat. I have not studied the paper, it is obviously one it takes a while to fully understand :-)  \n\nIn the thermostat, the similar factors are _Q.  The first one is larger than the rest by a factor ``3 * self._num_atoms_global``, obviously the number of degrees of freedom being thermostated.  But then why is the similar factor 9 in the barostat, as if we were barostating nine degrees of freedom (a fully flexible unit cell) instead of just 1 (the volume).  Does this mean the original formulation with a factor 1 here was actually correct?  I do not see any significant change in the oscillations between the two - not if I run a couple of times.\n\n\n![isotropic_mtk_npt_2x2x2](/uploads/53805d4e4081c380306e55a47a44afe5/isotropic_mtk_npt_2x2x2.png)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-01-20T12:57:52.290Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2307409661",
+          "author": "lan496",
+          "body": "> I strongly suspect that this oscillatory behaviour is a property of Nose-Hoover sampling.\n\nI also think such oscillation is inevitable for MTK equations.\nI've performed NPT in LAMMPS with the following script (fcc 2x2x2 Cu, 300 K, 0 bar)\n```\n# Inputs from outside\nvariable dt          equal 0.001\nvariable temperature equal 300\nvariable pressure    equal 0.0\n\nunits      metal\natom_style atomic\nboundary   p p p\ntimestep   ${dt}\n\nneigh_modify delay 0\n\nlattice         fcc 3.615\nregion          box block 0 2 0 2 0 2\ncreate_box      1 box\ncreate_atoms    1 box\n\n# https://www.ctcms.nist.gov/potentials/entry/2001--Mishin-Y-Mehl-M-J-Papaconstantopoulos-D-A-et-al--Cu-1/\npair_style eam/alloy\npair_coeff * * Cu01.eam.alloy Cu\n\nthermo_style  custom step time vol temp pe etotal press pxx pyy pzz pxy pxz pyz\nthermo_modify norm no\nthermo        100\n\n# Initialize with zero momentum and zero angular momentum\nvelocity all create ${temperature} 1234 mom yes rot yes\n\nfix f_npt all npt iso ${pressure} ${pressure} $(1000*dt) temp ${temperature} ${temperature} $(100*dt)\n\nrun 1000000\n```\n\nThe below figure shows the last 20 ps from the LAMMPS calculation.\nThe trajectory from the LAMMPS' NpT also shows oscillation around a few picoseconds.\n![image](/uploads/a4b96068706a015f6cc89ca2f97b45a9/image.png)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-01-21T10:39:59.462Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2307432424",
+          "author": "lan496",
+          "body": "> Finally, I don't fully understand the _R factors in the barostat.\n\n_R represents masses for barostat momenta, or $Q_{b_{i}}$ in [the original paper](https://pubs.aip.org/aip/jcp/article-abstract/101/5/4177/165484/Constant-pressure-molecular-dynamics-algorithms?redirectedFrom=PDF).\n\n> But then why is the similar factor 9 in the barostat, as if we were barostating nine degrees of freedom (a fully flexible unit cell) instead of just 1 (the volume).\n\nThese masses for extended variables do not change the validity of equations of motion in MTK.\nHere I use the suggested value in [Sec.2-F of the original paper](https://pubs.aip.org/aip/jcp/article-abstract/101/5/4177/165484/Constant-pressure-molecular-dynamics-algorithms?redirectedFrom=PDF), but I do not fully understand why they claimed these choices.\nActually, I cannot find an explanation for the mass choices in the original paper ...",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-01-21T10:51:27.377Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2307510934",
+          "author": "schiotz",
+          "body": "Thank you for investigating this, I agree with your conclusions.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-01-21T11:33:06.155Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential issue with periodic oscillations in volume and pressure, implying the behavior may need to be investigated and fixed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2304428914",
+          "author": "schiotz",
+          "body": "In ASE, we try to use units based on eV, \u00c5, u, and Kelvin.  So pressure should be in eV/\u00c5^3.  We previously had all kind of pressure units in play, both atomic, GPa and bar, and tried to clean it up in the Dynamics, at least.  So now all dynamics that require a pressure takes it as atomic units (called ``pressure`` or ``pressure_au``), but those who previously took it in GPa still accept a parameter ``pressure_GPa`` or something like that).\n\nI suggest renaming to ``pressure_au`` and adapt the code similarly.  The user can still set e.g. 1 GPa by writing ``pressure_au=1/ase.units.GPa``.",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 238,
+          "commit_sha": "f962ec93f14b40cb96dd42feb48651191f571687",
+          "base_sha": "ab4eb7838022a1aaee5be481a579a928d064336a",
+          "created_at": "2025-01-18T20:29:14.835Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2304429033",
+          "author": "schiotz",
+          "body": "Of course i meant ``pressure_au=1*ase.units.GPa`` :-)",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 238,
+          "commit_sha": "f962ec93f14b40cb96dd42feb48651191f571687",
+          "base_sha": "ab4eb7838022a1aaee5be481a579a928d064336a",
+          "created_at": "2025-01-18T20:30:29.968Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2305340715",
+          "author": "lan496",
+          "body": "Fixed in https://gitlab.com/ase/ase/-/merge_requests/3550/diffs?commit_id=5be81bb4b9b3f50af1ea093c450a5f8771e69f29",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 238,
+          "commit_sha": "f962ec93f14b40cb96dd42feb48651191f571687",
+          "base_sha": "ab4eb7838022a1aaee5be481a579a928d064336a",
+          "created_at": "2025-01-20T07:04:54.505Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests renaming the pressure parameter to `pressure_au` and adapting the code to use atomic units consistently."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2304428916",
+          "author": "schiotz",
+          "body": "This variable should be kept so it can be reused in two places below (then one of those functions will also work with domain decomposition, the other will still need to be replaced by inheritance in Asap).\n\n``self._num_atoms_global = ...``",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 288,
+          "commit_sha": "f962ec93f14b40cb96dd42feb48651191f571687",
+          "base_sha": "ab4eb7838022a1aaee5be481a579a928d064336a",
+          "created_at": "2025-01-18T20:29:15.260Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2305341213",
+          "author": "lan496",
+          "body": "Fixed in https://gitlab.com/ase/ase/-/merge_requests/3550/diffs?commit_id=4837df926fe773c91c674d0143516422aa7e88ca",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 288,
+          "commit_sha": "f962ec93f14b40cb96dd42feb48651191f571687",
+          "base_sha": "ab4eb7838022a1aaee5be481a579a928d064336a",
+          "created_at": "2025-01-20T07:05:12.072Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests introducing a `self._num_atoms_global` variable and reusing it in multiple places."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2304428919",
+          "author": "schiotz",
+          "body": "``len(self.atoms)`` -> ``self._num_atoms_global``",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 380,
+          "commit_sha": "f962ec93f14b40cb96dd42feb48651191f571687",
+          "base_sha": "ab4eb7838022a1aaee5be481a579a928d064336a",
+          "created_at": "2025-01-18T20:29:15.484Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2305341361",
+          "author": "lan496",
+          "body": "Fixed in https://gitlab.com/ase/ase/-/merge_requests/3550/diffs?commit_id=4837df926fe773c91c674d0143516422aa7e88ca",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 380,
+          "commit_sha": "f962ec93f14b40cb96dd42feb48651191f571687",
+          "base_sha": "ab4eb7838022a1aaee5be481a579a928d064336a",
+          "created_at": "2025-01-20T07:05:18.215Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests a specific code substitution: replace `len(self.atoms)` with `self._num_atoms_global`."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2304428923",
+          "author": "schiotz",
+          "body": "``len(self.atoms)`` -> ``self._num_atoms_global``",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 394,
+          "commit_sha": "f962ec93f14b40cb96dd42feb48651191f571687",
+          "base_sha": "ab4eb7838022a1aaee5be481a579a928d064336a",
+          "created_at": "2025-01-18T20:29:15.701Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2305341577",
+          "author": "lan496",
+          "body": "Fixed in https://gitlab.com/ase/ase/-/merge_requests/3550/diffs?commit_id=4837df926fe773c91c674d0143516422aa7e88ca",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 394,
+          "commit_sha": "f962ec93f14b40cb96dd42feb48651191f571687",
+          "base_sha": "ab4eb7838022a1aaee5be481a579a928d064336a",
+          "created_at": "2025-01-20T07:05:26.733Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Same as index 5 \u2014 requests replacing `len(self.atoms)` with `self._num_atoms_global`."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2304428924",
+          "author": "schiotz",
+          "body": "Why set element 0 and the rest separately, when the expression is the same?\n\nOr perhaps one of the lines is a cut-and-paste error, and should be different?",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 427,
+          "commit_sha": "4bdc617117a8c6101ffdc63478cac10eff68e0e0",
+          "base_sha": "ab4eb7838022a1aaee5be481a579a928d064336a",
+          "created_at": "2025-01-18T20:29:15.903Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2305508551",
+          "author": "lan496",
+          "body": "Thank you for your catch! self._R[0] should be \"d^2 kT tau^2\".",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 427,
+          "commit_sha": "4bdc617117a8c6101ffdc63478cac10eff68e0e0",
+          "base_sha": "ab4eb7838022a1aaee5be481a579a928d064336a",
+          "created_at": "2025-01-20T08:58:41.326Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions why element 0 and the rest are set separately with the same expression, implying either a simplification or a bug fix is needed."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2304428925",
+          "author": "schiotz",
+          "body": "I have added some comments to the code.  The last one could possibly be related to the oscillations that we observe.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-01-18T20:29:16.316Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Mentions added comments and flags that one may be related to observed oscillations, implying there is an issue to investigate and potentially fix."
+    }
+  ],
+  "review_thread_count": 14,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2281853007",
+            "author": "lan496",
+            "body": "@schiotz I will fix this MR to work with the domain decomposition after https://gitlab.com/ase/ase/-/merge_requests/3571?view=parallel is merged.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-01-04T23:54:26.163Z",
+            "is_outdated": false
+          },
+          {
+            "id": "2281913204",
+            "author": "schiotz",
+            "body": "Thank you very much indeed for these contributions!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-01-05T08:54:18.241Z",
+            "is_outdated": false
+          },
+          {
+            "id": "2283881370",
+            "author": "lan496",
+            "body": "I've followed up in https://gitlab.com/ase/ase/-/merge_requests/3550/diffs?commit_id=f962ec93f14b40cb96dd42feb48651191f571687.\n\nAs discussed in https://gitlab.com/ase/ase/-/issues/1602, the most time-cosuming parts other than potentials looks to be `np.sum(p**2 / self._masses)` in `_integrate_p_eta_j` and `_integrate_p_xi_j`.\n\n### cProfile visualization by SnakeViz\n\n![debug.svg](/uploads/d4d07137c9a93f6cda99080d12882fe5/debug.svg)\n\n### Script\n\n```python\nimport asap3\nimport ase.build\nfrom ase.md.nose_hoover_chain import IsotropicMTKNPT\n\natoms = ase.build.bulk('Al').repeat((2, 2, 2))\natoms.calc = asap3.EMT()\n\ntimestep = 1.0\nmd = IsotropicMTKNPT(\n    atoms,\n    timestep=timestep,\n    temperature_K=300.0,\n    pressure_GPa=0.0,\n    tdamp=100.0 * timestep,\n    pdamp=1000.0 * timestep,\n    logfile='-',\n)\nmd.run(10_000)\n```",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-01-06T23:52:37.694Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2297619439",
+            "author": "lan496",
+            "body": "@schiotz @askhl I apologize for bothering you. How can I proceed with this MR? I believe it is ready for review.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-01-15T07:59:30.985Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2297630810",
+            "author": "schiotz",
+            "body": "I'll try to test and review it, but I am very busy today and tomorrow.  Friday or Monday.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-01-15T08:08:17.473Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure status update about the reviewer's availability; no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2307526939",
+            "author": "schiotz",
+            "body": "@askhl @yuzie007 \n\nI think this MR can be merged now.  It is a very valuable contribution to ASE, we need a good MD algorithm for the NPT ensemble.  And it is self-contained, does not affect any other part of ASE.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-01-21T11:38:27.229Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Meta-discussion about merging the PR; no code change suggested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2323774635",
+            "author": "askhl",
+            "body": "Thank you very much @lan496, and also @schiotz and @yuzie007.  Very interesting MD developments these days.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-01-30T20:01:11.649Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Social acknowledgment with no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2323775315",
+            "author": "askhl",
+            "body": "Also congratulations on reaching 76.0 % coverage for, I think, the first time. :rocket:",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-01-30T20:01:50.773Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Congratulatory remark about code coverage; no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 14,
+    "stage1_kept": 12,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 2,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 4,
+    "stage3_cost_usd": 0.025789
+  }
+}

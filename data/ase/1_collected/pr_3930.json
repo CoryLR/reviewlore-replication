@@ -1,0 +1,51 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3930,
+  "title": "Allowing a `Path` object for `restart` for `Optimizer` (again) by fixing `Optimizer.todict` (closes #1851)",
+  "body": "closes #1851\n\n## Summary\n\nThis MR fixes the above issue by converting `restart` into `str` in the `Optimizer.todict` method.\n\n## Details\n\nI found the issue in #1851 has been introduced in !3899 (abc2c1a12e26948bd1693deaba5c5c1871ef23a8), more specifically e70a5056ff97dec4e3e15519f4da69890fc911c0.\n\nThe origin of the issue is that, in the `Optimizer.todict` method, we set `restart` as a dictionary value as is, but a `Path` object cannot be converted to a JSON-compatible dictionary value.\n\nIn ASE 3.26.0, the issue did not happen (or not visible) because the `todict` method is called only in the beginning from `Dynamics.attach` ([here](https://gitlab.com/ase/ase/-/blob/3.26.0/ase/optimize/optimize.py?ref_type=tags#L185)) via `Dynamics.__init__` ([here](https://gitlab.com/ase/ase/-/blob/3.26.0/ase/optimize/optimize.py?ref_type=tags#L130-134)), where `restart` has not been defined yet (it is set in `Optimize.__init__` *after* `super().__init__`) and therefore not set in the `description` dictionary.\nAfter !3899, on the other hand, the `todict` method is called at every step [here](https://gitlab.com/ase/ase/-/merge_requests/3899/diffs#201b79af7d56c4d20c4b58814a15b0399dd67888_112_172), even after the `restart` has been defined, and if `restart` is not `str`, the issue in #1851 is raised.\n\nIn the present MR, I fix this by converting `restart` into `str` in the `Optimizer.todict` method, which should work also for the `Path` object.\nWe do not have to check the exsistence of `restart` with `hasattr`, because in `Optimizer` it should exist anyway.\n\n@AndrewRosen, @askhl could you maybe have a look? Since a `Path` object for `restart` worked in 3.26.0, it would be nice to fix before releasing 3.27.0.\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [x] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [x] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [x] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [x] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "yuzie007",
+  "merged_at": "2025-12-28T13:53:51.006Z",
+  "base_ref": "master",
+  "merge_commit_sha": "9b5923597e8835565aa92afd0ad856c6ec6b1c34",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2975606878",
+          "author": "askhl",
+          "body": "Thanks a lot @yuzie007.  Looks very good so I'll merge.\n\n(Normally it's considered bad practice to save paths in the first place: It can be a security problem if the path reveals something about the host machine, and saving a path is also often questionable because files can very well be moved.  So in my opinion we should probably stop saving this piece of information altogether.)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-12-28T13:53:45.255Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2975701630",
+          "author": "AndrewRosen",
+          "body": "@yuzie007 thanks! There is one small breaking change here.\n\n```python\nfrom ase.build import bulk\nfrom ase.optimize import BFGS\nfrom pathlib import Path\nfrom ase.calculators.emt import EMT\n\natoms = bulk(\"Cu\")\natoms.calc = EMT()\ndyn = BFGS(atoms, trajectory=\"opt.traj\", restart=None)\ndyn.run()\nassert dyn.todict()['restart'] is None\n```\n\nWhereas before, `dyn.todict()['restart']` would be `None`, now it is the `str` form of `\"None\"`.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-12-28T20:21:45.740Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 2
+}

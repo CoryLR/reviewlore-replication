@@ -1,0 +1,128 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/defaultConfig.ts",
+      "line_number": 265,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`useWidth` is not a valid property on `TreeViewDiagramConfig` or `BaseDiagramConfig` \u2014 the correct property name is `useMaxWidth`. Additionally, per the project convention, new diagram config entries in `defaultConfig.ts` must explicitly set `useMaxWidth: true` (only `gitGraph` intentionally deviates). As written this line silently adds an unrecognized key (TypeScript should catch this) while leaving `useMaxWidth` without an explicit default, which means `configureSvgSize(svg, totalHeight, totalWidth, config.useMaxWidth)` in the renderer won't behave as expected. Change to:\n```ts\ntreeView: {\n  ...defaultConfigJson.treeView,\n  useMaxWidth: true,\n},\n```",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/parser/parser.jison",
+      "line_number": 11,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `[\\s]+` rule (SPACELIST) matches all whitespace including newline characters (`\\n`). Because it appears before the `[\\n]+` rule (NL) on line 12, jison will always prefer SPACELIST when it sees a newline \u2014 making the `NL` token unreachable. As a result, the `eol: NL` production in the grammar can never fire; only `eol: EOF` is reachable. This means there is no way to parse line endings as logical separators. The lexer rules for whitespace and newlines need to be restructured so that newlines produce `NL` and spaces/tabs produce a separate `SPACELIST`-equivalent token. For example:\n```\n[\\n]+       return \"NL\";\n[^\\S\\n]+   return \"SPACELIST\";\n```",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/parser/parser.jison",
+      "line_number": 27,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`yy.addNode($2.length, $3)` uses the total character length of the SPACELIST token as the indentation level. Because `[\\s]+` consumes newlines as well as spaces (see line 11 issue), the SPACELIST for `\\n    packages` would be 5 characters (1 newline + 4 spaces) rather than 4, causing every node's depth to be off by the number of preceding newlines. Even if the lexer is fixed to exclude newlines from SPACELIST, using raw character count as the level is fragile: a mix of tabs and spaces, or a user who uses different amounts of indentation per level, will produce arbitrary or non-monotonic level numbers. Consider converting the SPACELIST length to an explicit level index (e.g., divide by a fixed indent unit) or counting indent tokens instead of characters.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/detector.ts",
+      "line_number": 7,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The PR description's usage example shows `treeView-beta` as the diagram keyword, but the detector regex `/^\\s*treeView/` (with no suffix) and the jison grammar token `\"treeView\"` both use just `treeView`. This creates two problems: (1) if the diagram name is intended to be `treeView-beta`, the detector currently matches both `treeView` and `treeView-beta`, potentially conflicting with a future stable `treeView` diagram; (2) per project convention (`packet-beta`, `block-beta`), beta diagrams must include the `-beta` suffix in their id, detector regex, and grammar keyword so the graduation process works correctly. Decide on one consistent name and apply it everywhere (id constant, grammar keyword, detector regex, and schema key).",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/renderer.ts",
+      "line_number": 70,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "For the root node rendered at `depth = 0`, `indent = 0`, so `x1 = indent - config.rowIndent = -config.rowIndent` (a negative value). This draws a horizontal stub line to the *left* of the canvas origin, which partially overflows outside the viewBox (the viewBox left offset of `-lineThickness/2` only compensates for line stroke width, not for a full `rowIndent`-wide stub). The auxiliary root `/` should not have a connector line at all since it has no parent. Guard the `positionLine` call in `drawNode` so it is skipped when `depth === 0`, or better yet, avoid rendering the auxiliary root entirely (see related comment on line 100).",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/renderer.ts",
+      "line_number": 100,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`processNode(root)` passes the `auxRoot` object (name `'/'`, level `-1`) as the starting node. This means every rendered tree has an unwanted `'/'` label at the top, with all user-specified nodes indented one level deeper than intended. Since `auxRoot` is an invisible container, rendering should skip it and start from its children:\n```ts\nroot.children.forEach((child) => processNode(child, 0));\n```\nThis matches the intent of `auxRoot` as described in `db.ts` \u2014 it is a synthetic sentinel, not a display node.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/renderer.ts",
+      "line_number": 118,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Setting `viewBox` via d3's `.attr('viewBox', ...)` risks the attribute being silently lowercased to `viewbox` by d3 or certain DOM wrappers, which breaks SVG rendering since the attribute name is case-sensitive in SVG. Use the native DOM API instead:\n```ts\nsvg.node()!.setAttribute('viewBox', `-${config.lineThickness / 2} 0 ${totalWidth} ${totalHeight}`);\n```",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/renderer.ts",
+      "line_number": 119,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`configureSvgSize` should be called *before* setting the `viewBox` attribute, following the established pattern in `pieRenderer.ts` and the project rule. The current order (viewBox then `configureSvgSize`) means the SVG element dimensions are configured after the viewBox is already written. Swap lines 118 and 119.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/styles.ts",
+      "line_number": 8,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `fontFamily` string has a stray unmatched double-quote: `'trebuchet ms\",verdana,arial,sans-serif'`. This will produce invalid CSS. Multi-word font names must be wrapped in CSS quotes, so the value should be:\n```ts\nfontFamily: '\"trebuchet ms\",verdana,arial,sans-serif',\n```",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/db.ts",
+      "line_number": 14,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Module-level bare mutable variables (`let cnt`, `let stack`) are used here. The project rule for functional-export DB modules requires using the `ImperativeState` utility from `packages/mermaid/src/utils/imperativeState.ts` for all mutable state, so that state is encapsulated and reset is explicit. For a new diagram type the project also prefers the class-based DB architecture. Consider either migrating to `ImperativeState` or a class-based design.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/db.ts",
+      "line_number": 27,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "In `clear()`, `stack = [auxRoot]` resets the stack before `auxRoot.children = []` clears the node's children. While this is safe because both variables reference the same object, the `auxRoot` name (`'/'`) and level (`-1`) are never re-initialised in `clear()`. This means that if something mutates `auxRoot.name` or `auxRoot.level` between renders, subsequent diagrams will silently use the corrupted values. Explicitly reset all fields of `auxRoot` inside `clear()` for defensive correctness.",
+      "index": 10
+    },
+    {
+      "file_path": "packages/mermaid/src/diagram-api/diagram-orchestration.ts",
+      "line_number": 95,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`treeView` is missing a trailing comma. All other entries in the `registerLazyLoadedDiagrams` call use trailing commas \u2014 add one for consistency:\n```ts\n    treeView,\n```",
+      "index": 11
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "**No tests at any layer.** The PR checklist marks tests as done, but no test files appear in the diff. The project requires test coverage at three layers for a new diagram: (1) DB-layer unit tests (e.g., `treeView/db.spec.ts`) verifying `addNode`, `getRoot`, `clear`, and config methods; (2) parser-level unit tests verifying valid diagram strings, whitespace handling, and invalid inputs; and (3) Cypress end-to-end/snapshot tests (`cypress/integration/rendering/treeView.spec.js`) asserting correct SVG output. At minimum a `styles.spec.ts` entry is also needed to verify the styles function produces valid CSS.",
+      "index": 12
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "**Accessibility not wired up.** `db.ts` imports and re-exports `setAccTitle`, `setAccDescription`, `setDiagramTitle` from `commonDb`, and `TreeViewDb` extends `DiagramDBBase`. However, the jison grammar contains no `accTitle`, `accDescr`, or `title` tokens and no corresponding grammar productions. These setter functions are therefore never called by the parser, so screen-reader accessibility metadata (`%%{ init: {...} }%%` frontmatter titles, accessible descriptions) silently does nothing for treeView diagrams. The grammar needs explicit productions for these accessibility tokens, with `yy.setAccTitle(...)` / `yy.setAccDescription(...)` / `yy.setDiagramTitle(...)` actions.",
+      "index": 13
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**No documentation file in the diff.** The PR checklist claims documentation was added, but no `packages/mermaid/src/docs/syntax/treeView.md` (or equivalent) appears in the diff. New diagram types require a syntax documentation page covering: the diagram keyword, indentation rules, supported syntax variants, configuration options (`rowIndent`, `paddingX`, `paddingY`, `lineThickness`, theme variables), and a 'Related Diagrams' section. The doc page should use `(v<MERMAID_RELEASE_VERSION>+)` for the version gate, not a hardcoded version.",
+      "index": 14
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "**`getBBox()` is called inside `positionLabel` before the element is guaranteed to be in a live browser DOM.** `SVGTextElement.getBBox()` returns `{width:0,height:0}` in JSDOM (used by unit tests) and throws in some headless environments, which would cause all label widths and heights to be zero \u2014 collapsing the entire layout. The project recommends using the `computeDimensionOfText` utility from `packages/mermaid/src/rendering-util/createText.ts` instead, as it handles environment differences and cleanup automatically.",
+      "index": 15
+    }
+  ],
+  "cost_usd": 0.6334844,
+  "duration_seconds": 480.3342921733856
+}

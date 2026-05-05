@@ -1,0 +1,138 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/preprocess.ts",
+      "line_number": 30,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Silently changing the default mindmap layout to `'tidy-tree'` will break existing users who have not installed and registered `@mermaid-js/layout-tidy-tree`. The tidy-tree algorithm is NOT included in the default bundle \u2014 only `dagre` is always available, and `cose-bilkent` only when `includeLargeFeatures=true`. When `tidy-tree` is unregistered, `getRegisteredLayoutAlgorithm` falls back to `cose-bilkent`, which is itself unavailable in the non-large-features build (e.g., the `tiny` package). This means users on the standard build will silently fall back to an unexpected layout. The PR description also says cose-bilkent is the default, contradicting this code. Consider only applying this default when tidy-tree is actually registered, or document the required opt-in clearly.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 13,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`_drawNodes` is defined but never called anywhere in this file. The new `draw` export delegates entirely to `render(data4Layout, svg)`, which handles node insertion internally. This function (and `_updateNodeDimensions` at line 33) are dead code left over from the refactoring and should be removed.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 33,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`_updateNodeDimensions` is defined but never called. It's a remnant of the old rendering path and should be removed along with `_drawNodes`.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 79,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`const mm = db.getMindmap()` is called and checked for null, but the variable `mm` is never referenced after that. Simplify to `if (!db.getMindmap()) { return; }` to avoid the misleading impression that `mm` is used downstream.",
+      "index": 3
+    },
+    {
+      "file_path": "instructions.md",
+      "line_number": 1,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "This file appears to be a development artifact (a single line pointing to documentation that already exists at `docs/config/tidy-tree.md`). It should not be committed to the repository root.",
+      "index": 4
+    },
+    {
+      "file_path": "cypress/platform/knsv2.html",
+      "line_number": 133,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "All the new `<pre>` elements (and the existing ones) share `id=\"diagram4\"`. Duplicate IDs are invalid HTML and will cause any code that queries by ID to behave unpredictably. Even for a development test page, use unique IDs (e.g., `diagram5`, `diagram6`, \u2026) or omit IDs entirely.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layout.ts",
+      "line_number": 33,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`let intersectionShift = 50;` is declared here but unconditionally overwritten to `30` a few lines later inside the `try` block. The initial value of `50` is never observed. Either initialize directly to `30`, or move the declaration inside the `try` block.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/createGraph.ts",
+      "line_number": 122,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "After `data4Layout.edges = data4Layout.edges.filter((edge) => edge.id !== edgeIdToRemove)`, the subsequent `findIndex` searching for `edge.id` (which equals `edgeIdToRemove`) will always return `-1` because the filter just removed all matching edges. The `splice` on the next line is unreachable dead code. The filter alone is sufficient to remove the original edge.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/cose-bilkent/layout.ts",
+      "line_number": 47,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`validateLayoutData` throws `'Root node is required'` when `data.rootNode` is absent. `rootNode` is a mindmap-specific property and is `undefined` for every other diagram type (flowcharts, sequence, etc.). Since cose-bilkent is registered as a general-purpose layout algorithm (via `registerDefaultLayoutLoaders`), any non-mindmap diagram that requests it will crash here. Remove the `rootNode` requirement from validation or move it to the mindmap-specific code path.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid-layout-elk/src/render.ts",
+      "line_number": 613,
+      "dimension": "Performance Issue",
+      "importance": "major",
+      "comment": "`JSON.stringify(elkGraph, null, 2)` and `JSON.stringify(g, null, 2)` are passed as arguments to `log.debug()`. JavaScript evaluates all arguments before invoking the function, so the full serialization of the graph (potentially thousands of nodes/edges) happens on *every* render regardless of the active log level. This can cause significant latency in production. Guard these behind a level check or replace with lighter summary information.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layout.ts",
+      "line_number": 490,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`midX` and `midY` are computed from the initial `startPos`/`endPos` values, which are subsequently overwritten when waypoints are added (the second intersection re-calculation further down). As a result, `midX`/`midY` in the returned `PositionedEdge` do not reflect the actual midpoint of the rendered edge path \u2014 they reflect the straight-line midpoint before waypoints were inserted. Recompute them after the final positions are determined.",
+      "index": 10
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/edges.js",
+      "line_number": 435,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`// lineData = fixCorners(lineData);` \u2014 `fixCorners` has been deleted. Remove this stale commented-out line.",
+      "index": 11
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/intersect/intersect-line.js",
+      "line_number": 5,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The entire function body is wrapped in a superfluous `{}` block. It adds an extra level of indentation with no semantic purpose. Remove the extra braces.",
+      "index": 12
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/types.ts",
+      "line_number": 42,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`isGroup` has been changed from required (`isGroup: boolean`) to optional (`isGroup?: boolean`) in `BaseNode`. Existing callers that call functions or narrow types using `BaseNode` directly (not the `Node = ClusterNode | NonClusterNode` union) may encounter unexpected `undefined` values where they previously expected a boolean. If the intent is just to make construction easier, a better approach is to keep the required contract and ensure all construction sites supply the field.",
+      "index": 13
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Several debug-era log prefixes \u2014 `APA01`, `APA12`, `UIO`, `abc88`, `abc89` \u2014 remain in `packages/mermaid-layout-elk/src/render.ts`. While some were removed in this PR, others persist (e.g., `log.debug('APA01 processing edges\u2026')`). These appear to be development-only tracing statements. Clean them up before merging to keep production log output readable.",
+      "index": 14
+    },
+    {
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "In `packages/mermaid-layout-elk/src/`, manually-written `.d.ts` files (`find-common-ancestor.d.ts`, `render.d.ts`) sit alongside their corresponding `.ts` source files. TypeScript normally auto-generates `.d.ts` output during compilation; having both hand-written declarations and source in the same directory is unusual and can cause the compiler to pick up conflicting definitions. Verify this pattern is intentional and document why the auto-generated output is not used here.",
+      "index": 15
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "In `packages/mermaid-layout-tidy-tree/src/layout.ts`, `combineAndPositionTrees` accepts three underscore-prefixed parameters (`_leftBoundingBox`, `_rightBoundingBox`, `_data`) that are never read inside the function. If they are not needed, remove them from the signature to avoid confusion about whether future callers are expected to supply meaningful values.",
+      "index": 16
+    }
+  ],
+  "cost_usd": 3.75760765,
+  "duration_seconds": 622.6635971069336
+}

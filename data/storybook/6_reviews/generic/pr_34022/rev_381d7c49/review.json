@@ -1,0 +1,46 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/builders/builder-vite/src/plugins/storybook-external-globals-plugin.ts",
+      "line_number": 59,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`new RegExp(globalsList.map(escapeKeys).join('|'))` produces `new RegExp('')` when `globalsList` is empty. An empty RegExp matches every string, so the code filter would pass all files through to the handler \u2014 which immediately returns `undefined` via the inner guard, but only after crossing the JS/Rust boundary on every file, defeating the performance goal. Consider guarding the filter: only set `filter: { code: globalsCodeFilter }` when `globalsList.length > 0`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/plugins/vite-inject-mocker/plugin.ts",
+      "line_number": 45,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The filter regex `/\\/vite-inject-mocker-entry\\.js/` is a substring match, so it passes through any source that contains that path (e.g. `/prefix/vite-inject-mocker-entry.js`), while the handler's guard `source === ENTRY_PATH` performs an exact string comparison. The handler correctly returns `undefined` for anything the regex over-matches, so there is no correctness bug, but the filter could be tightened to eliminate the discrepancy: use an anchored pattern like `new RegExp('^' + ENTRY_PATH.replace('.', '\\\\.') + '$')` or simply pass the string `ENTRY_PATH` directly as the filter id for an exact match.",
+      "index": 1
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/plugins/vite-mock/plugin.ts",
+      "line_number": 175,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `return null` after the `if (id === normalizedPreviewConfigPath)` block is unreachable in Vite \u2265 6.3, because the `filter: { id: normalizedPreviewConfigPath }` already guarantees the handler only runs when `id` matches. It is only exercised in Vite < 6.3, where the HookObject filter is ignored and the handler runs for all files. A short comment (e.g. `// backward compat: only reachable in Vite < 6.3 where filter is not applied`) would make the intent clear and prevent it from being removed as dead code.",
+      "index": 2
+    },
+    {
+      "file_path": "code/frameworks/vue3-vite/src/plugins/vue-component-meta.ts",
+      "line_number": 150,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The original code used `} catch {` (no binding). This PR changes it to `} catch (e) {`, introducing a variable `e` that is never used \u2014 the body simply returns `undefined`. ESLint's `no-unused-vars` rule (or TypeScript's equivalent) will warn about unused catch bindings. Revert to `} catch {` to match the original intent and avoid the lint warning.",
+      "index": 3
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR applies a consistent pattern across all plugins: add a `filter` to the HookObject for Vite \u2265 6.3, while retaining the existing inner guard (`filter(id)`, `code.includes(...)`, `id ===`, etc.) for backward compatibility with Vite < 6.3. However, none of the modified files add a comment to explain this dual-layer design. To a future maintainer, the inner guards now appear redundant and may be removed as \"dead code\" \u2014 breaking compatibility with older Vite versions. Adding a one-line comment at each inner guard (e.g. `// inner check retained for Vite < 6.3 compatibility where HookObject filters are ignored`) would make the intent self-evident without relying on the PR description.",
+      "index": 4
+    }
+  ],
+  "cost_usd": 0.4928205,
+  "duration_seconds": 272.4487421512604
+}

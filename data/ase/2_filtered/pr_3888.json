@@ -1,0 +1,349 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3888,
+  "title": "Use NeighborList in geometry.rdf.get_rdf",
+  "body": "I found RDFs very slow, this is because ```geometry.rdf.get_rdf``` uses ```Atoms.get_all_distances``` as a fallback (Analysis does not supply distances either).\n\n**Unless there a reason not to that I am missing**, I have gone ahead and implemented it as the changes are not large but impactful.\n\nThat is, since we have an ```rmax``` we can use a ```NeighborList``` (where the natural cutoffs are rmax) to both speed things up and dramatically reduce memory load (see plot). I've done this in ```geometry.rdf.get_rdf```. Results are the same (tests and a quick FCC Argon test).\n\n### Benchmark\n![benchmark](/uploads/ebdc3421474c72c13de9f73378c11405/benchmark.png){width=720 height=359}\n\nIn all cases an rmax of 6 Angstroms was used.\n\n### Validity check\n![rdf-example](/uploads/b825cdd5fa036298a709c4beb99457cb/rdf-example.png){width=405 height=312}\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [~] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [~] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [ ] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [~] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)\n\n---\n\n## Reproduction\n\n```python\nfrom ase.geometry.rdf import get_rdf\nfrom ase.build import bulk\nfrom time import time\nfrom ase.io import write\n\nfrom argparse import ArgumentParser\n\nparser = ArgumentParser()\nparser.add_argument(\"n\", type=int)\nargs = parser.parse_args()\natoms = bulk('Ar', 'fcc', cubic=True).repeat(args.n)\nrdf, r = get_rdf(atoms, 6.0, 128)\n```\n\n```shell\nfor n in {4..12}\ndo\n\tres=\"$(/usr/bin/time -f \"%e %M\" python3 bench_rdf.py $n 2>&1)\"\n\techo $((n*n*n)) $res\ndone\n```\n\nData I got,\n\nMR\n```\n64 1.03 70788\n125 1.12 77012\n216 1.34 88820\n343 1.75 119868\n512 2.43 178092\n729 3.62 289100\n1000 5.82 470532\n1331 9.38 777492\n1728 16.63 1253148\n```\n\nmaster\n```\n64 1.08 130928\n125 1.34 304208\n216 2.10 775780\n343 3.79 1854264\n512 7.46 4003348\n729 13.61 8011988\n1000 24.70 15017292\n```\n\nwhich tapped out here as I had 16 GB only.",
+  "author": "apw951",
+  "merged_at": "2025-12-28T00:06:25.854Z",
+  "base_ref": "master",
+  "merge_commit_sha": "5f1b0e0966b030d8fc22a512e127b369bdd4f158",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2904033801",
+          "author": "yuzie007",
+          "body": "1. We should be aware of the cases that `indices` have duplicated elements due to mirror images.\nTo be sure that the distance matrix is consistent with `atoms.get_all_distances(mic=True)`, we need to take the image with the shortest distance.\n\n2. Since `_` here contain the displacement vectors already, `atoms.get_distances(...)` here should be not necessary. Instead we can use e.g. `np.linalg.norm(_, axis=1)`.\n\nI actually also think that, with `NeighborList`, we probably do not need to construct the distance matrix but rather construct the RDF from the neighbor info.",
+          "file_path": "ase/geometry/rdf.py",
+          "line_number": 79,
+          "commit_sha": "d0c0b267539132adf8ccefbd9129536e1b9d0e8c",
+          "base_sha": "7b49912311c59f0c17d7d38f51ce5a173c9e7c86",
+          "created_at": "2025-11-21T00:19:05.890Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2904711650",
+          "author": "apw951",
+          "body": "Thanks for reviewing. On point 2 this is what I had though initially. But it seems the the second return (PrimitiveNeighborList.displacements[a]) is some integer array not distances. What am I missing?\n\n```python\nimport numpy as np\nfrom ase.build import bulk\nfrom ase.neighborlist import NeighborList\n\natoms = bulk('Ar', 'fcc', cubic=True).repeat(10)\nnl = NeighborList(np.ones(len(atoms)) * 6.0)\nnl.update(atoms)\n\ninds, disps = nl.get_neighbors(1)\n\nfor i in range(len(inds)):\n    print(disps[i])\n    print(atoms.get_distance(1, i, mic=True))\n```\n\n```shell\npython3 a.py \n[0 0 0]\n3.7193816690412396\n[0 0 0]\n0.0\n[0 0 0]\n3.7193816690412396\n[0 0 0]\n3.7193816690412396\n[0 0 0]\n3.7193816690412396\n...\n```\n\nIn fact if you look at the last atom its some ones and zeros\n<details>\n<summary>Click to expand</summary>\n```\n[[0 0 0]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 0 1]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 0]\n [0 1 1]\n [0 1 1]\n [0 1 1]\n [0 1 1]\n [0 1 1]\n [0 1 1]\n [0 1 1]\n [0 1 1]\n [0 1 1]\n [0 1 1]\n [0 1 1]\n [0 1 1]\n [0 1 1]\n [0 1 1]\n [0 1 1]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 0]\n [1 0 1]\n [1 0 1]\n [1 0 1]\n [1 0 1]\n [1 0 1]\n [1 0 1]\n [1 0 1]\n [1 0 1]\n [1 0 1]\n [1 0 1]\n [1 0 1]\n [1 0 1]\n [1 0 1]\n [1 0 1]\n [1 0 1]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 0]\n [1 1 1]\n [1 1 1]\n [1 1 1]\n [1 1 1]\n [1 1 1]\n [1 1 1]\n [1 1 1]\n [1 1 1]\n [1 1 1]\n [1 1 1]]\n```\n</details>",
+          "file_path": "ase/geometry/rdf.py",
+          "line_number": 79,
+          "commit_sha": "d0c0b267539132adf8ccefbd9129536e1b9d0e8c",
+          "base_sha": "7b49912311c59f0c17d7d38f51ce5a173c9e7c86",
+          "created_at": "2025-11-21T08:49:00.278Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2905125220",
+          "author": "yuzie007",
+          "body": "Oh, you're right. That's my misunderstanding. The second part returns the indices for mirror images, not the distances.\nSo, we still need to re-compute the distances out of the `NeighborList` object.",
+          "file_path": "ase/geometry/rdf.py",
+          "line_number": 79,
+          "commit_sha": "d0c0b267539132adf8ccefbd9129536e1b9d0e8c",
+          "base_sha": "7b49912311c59f0c17d7d38f51ce5a173c9e7c86",
+          "created_at": "2025-11-21T11:14:38.103Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies two specific issues with the implementation and suggests concrete fixes: handling duplicate indices and using np.linalg.norm instead of atoms.get_distances. Also suggests a broader architectural change."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2904033818",
+          "author": "yuzie007",
+          "body": "Thank you so much @apw951 for the MR!\nThe speed-up of the RDF calculation is amazing.\n\nActually, with `NeighborList`, we can further improve `get_rdf`.\nIn the present implementation (master and the present MR), only one image for each atom in the unit cell is considered.\nDue to this, we need ensure that `rmax` is not too large.\nOn the other hand, `NeighborList` considers multiple images within the cutoff radius for each atom, and therefore we can remove the above limitation.\nThis allows e.g. to obtain the correct RDF from the primitive cell up to larger cutoff distance, consistently with the RDF obtained from the supercell.\n\nFrom this viewpoint, I feel it is a bit detour to construct the distance matrix, which can count only one mirror image for each atom.\n\nIf you also agree, could you maybe revise the MR accordingly?\nIt would require a bit more changes below but makes the code much robust and flexible.\n\nAnother way to proceed the MR rather quickly may be to accept the present changes mostly as is, since the speed-up is already so fancy.\nIf we go this way, I would request to make an independent function for the distance-matrix construction based on `NeighborList` for better readability for future.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-11-21T00:19:06.470Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2904751224",
+          "author": "apw951",
+          "body": "Thanks for revieing @yuzie007, I can certainly look into doing this regarding the distance matrix, it is a detour. When I've implemented RDFs elsewhere to get around the current speed issue here, I don't bother collecting it. I just query neighbors.\n\nOnly thing is the comment above re the return value of ```nl.get_neighbors(a)```.\n\nI will work on it.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-11-21T09:04:43.995Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests a revision to the MR to use NeighborList more directly instead of constructing a distance matrix, or alternatively suggests creating an independent function for distance-matrix construction."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2967222055",
+          "author": "yuzie007",
+          "body": "We can probably re-write this part using NumPy index trick as\n```python\nmask = atoms.numbers[j_indices] == elements[1]\nj_indices = j_indices[mask]\noffsets = offsets[mask]\n```",
+          "file_path": "ase/geometry/rdf.py",
+          "line_number": 90,
+          "commit_sha": "b6c18dbb189c3de3451988ac32cf358ae6eae460",
+          "base_sha": "7b49912311c59f0c17d7d38f51ce5a173c9e7c86",
+          "created_at": "2025-12-20T05:18:53.455Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a specific code rewrite using NumPy index tricks with a concrete code example."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2967222056",
+          "author": "yuzie007",
+          "body": "It would be better to consider mirror images for the neighbor-list-based calculations.\nFor this, I would suggest storing the cell shifts e.g. as\n```python\nj_indices, offsets = nl.get_neighbors(i)\n```\nwhere `offsets` is used below.\n(Please also refer to [the usage in `emt.py`](https://gitlab.com/ase/ase/-/blob/3.26.0/ase/calculators/emt.py?ref_type=tags#L251-254).)",
+          "file_path": "ase/geometry/rdf.py",
+          "line_number": 86,
+          "commit_sha": "b6c18dbb189c3de3451988ac32cf358ae6eae460",
+          "base_sha": "7b49912311c59f0c17d7d38f51ce5a173c9e7c86",
+          "created_at": "2025-12-20T05:18:54.111Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests storing cell shifts from get_neighbors and using offsets, with a concrete code example and reference."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2967222058",
+          "author": "yuzie007",
+          "body": "`atoms.get_distances` consider only one image per atom, regardless if the neighbor list includes multiple images.\n\nAlthough a bit cumbersome, we can consider the distances of multiple images with the explicit calculation e.g. as\n```python\nps = atoms.positions\nd = ps[j_indices] + offsets @ atoms.cell - ps[i]\ndistances = np.sqrt(np.add.reduce(d**2, axis=1))\n# or np.linalg.norm(d, axis=1) which is a bit slower\n```\n\n(BTW I think the distance calculation functionality should rather be in the `NeighborList` class, but this should be in a separate MR.)",
+          "file_path": "ase/geometry/rdf.py",
+          "line_number": 95,
+          "commit_sha": "b6c18dbb189c3de3451988ac32cf358ae6eae460",
+          "base_sha": "7b49912311c59f0c17d7d38f51ce5a173c9e7c86",
+          "created_at": "2025-12-20T05:18:54.299Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that atoms.get_distances ignores multiple images and provides a concrete alternative implementation using explicit distance calculation."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2967222060",
+          "author": "yuzie007",
+          "body": "We can probably write as\n```python\nrdf += np.bincount(indices, minlength=nbins + 1)[:nbins + 1]\n```\nwhich guarantees the RHS giving the array of the length of `nbins + 1` to be consistent with `rdf`.",
+          "file_path": "ase/geometry/rdf.py",
+          "line_number": 98,
+          "commit_sha": "b6c18dbb189c3de3451988ac32cf358ae6eae460",
+          "base_sha": "7b49912311c59f0c17d7d38f51ce5a173c9e7c86",
+          "created_at": "2025-12-20T05:18:54.451Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a specific rewrite using np.bincount with minlength to guarantee consistent array length."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2967222061",
+          "author": "yuzie007",
+          "body": "It may be safer to use `bothways=True`.\n(The twice more counts are absorbed by the scaling-factor change for `norm` above.)",
+          "file_path": "ase/geometry/rdf.py",
+          "line_number": 82,
+          "commit_sha": "b6c18dbb189c3de3451988ac32cf358ae6eae460",
+          "base_sha": "7b49912311c59f0c17d7d38f51ce5a173c9e7c86",
+          "created_at": "2025-12-20T05:18:54.606Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests using bothways=True for safety with an explanation of how the scaling factor would absorb the change."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2967222062",
+          "author": "yuzie007",
+          "body": "Similarly to above, we may be able to write\n```python\n    else:\n        indices = np.asarray(np.ceil(distance_matrix / dr), dtype=int)\n        if elements is None:\n            x = indices.ravel()\n        else:\n            j_indices = np.where(atoms.numbers == elements[1])[0]\n            x = indices[i_indices][:, j_indices].ravel()\n        rdf = np.bincount(x, minlength=nbins + 1)[:nbins + 1].astype(float)\n```",
+          "file_path": "ase/geometry/rdf.py",
+          "line_number": 112,
+          "commit_sha": "b6c18dbb189c3de3451988ac32cf358ae6eae460",
+          "base_sha": "7b49912311c59f0c17d7d38f51ce5a173c9e7c86",
+          "created_at": "2025-12-20T05:18:54.762Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Provides a concrete code rewrite suggestion using NumPy array tricks for a specific block."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2967222063",
+          "author": "yuzie007",
+          "body": "I would suggest\n```python\nrho = natoms / vol  # average number density\nnorm = 4.0 * math.pi * dr * rho * len(i_indices)\n```\nwhere the change of the scaling factor is absorbed by `bothways=True` for `NeighborList`.",
+          "file_path": "ase/geometry/rdf.py",
+          "line_number": 79,
+          "commit_sha": "b6c18dbb189c3de3451988ac32cf358ae6eae460",
+          "base_sha": "7b49912311c59f0c17d7d38f51ce5a173c9e7c86",
+          "created_at": "2025-12-20T05:18:54.910Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a specific change to the norm/rho calculation with a concrete code example."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2967222066",
+          "author": "yuzie007",
+          "body": "Shall we test a system with two elements?",
+          "file_path": "ase/test/geometry/test_geometry_rdf.py",
+          "line_number": 83,
+          "commit_sha": "0d81515157363253c87a237ddb9c34ae926f5a06",
+          "base_sha": "7b49912311c59f0c17d7d38f51ce5a173c9e7c86",
+          "created_at": "2025-12-20T05:18:55.124Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding a test case for a two-element system, implying a missing test."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2967222069",
+          "author": "yuzie007",
+          "body": "Thank you @apw951 for the revision! Sorry for responding late.\nIt is nice that we can see further acceleration and memory efficiency.\n\nI made a few additional suggestions, mostly to use NumPy array tricks.\n\n> Handle duplicated elements due to mirror images; take the image with the shortest distance.\n\nRegarding this, I would rather say we *should* consider real distances of mirror-image atoms, rather than mapping back to the shortest ones. As I wrote in my previous comment, this is indeed the good thing to use `NeighborList` rather than the distance matrix, where the latter can consider only the images with the shortest distance and thus required supercell construction for RDF at distant regions. On the other hand, `NeighborList` can consider this even based on the primitive cell with considering the offsets of the mirror images.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-12-20T05:18:55.556Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Clarifies that mirror-image distances should be considered (not just shortest), implying the implementation should handle offsets properly \u2014 an actionable architectural suggestion."
+    }
+  ],
+  "review_thread_count": 13,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2915670891",
+            "author": "apw951",
+            "body": "@yuzie007 I have refactored to now not compute the distance matrix when using ```NeighborList```. Scaling is now linear in that case,\n\n![rdf](/uploads/2defbf80c1e1f2a975d24b11d07dc481/rdf.png){width=718 height=359}\n\nI also added some tests to check the DM and NL methods are the same.\n\nStill need, \n\n- [ ] Handle duplicated elements due to mirror images; take the image with the shortest distance.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-11-26T13:51:34.896Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2975410804",
+            "author": "yuzie007",
+            "body": "Since the core of the MR is already fixed, and I would like to proceed another fix in !3921, I implemented my suggestions on my side and would like to merge it now. (Failures in the last pipeline look irrelevant to the present MR.) Thank you @apw951 once again for the amazing improvement of `get_rdf`!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-12-28T00:06:07.984Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "This is a meta/process comment about merging the MR and thanking the contributor, with no concrete code change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 13,
+    "stage1_kept": 12,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 1,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1,
+    "stage3_cost_usd": 0.029325499999999997
+  }
+}

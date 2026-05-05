@@ -1,0 +1,62 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 229,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`getChangeDetectionStatus` is a pure data-transformation utility with no React or rendering dependency, yet it is exported from a component file. Every other status utility (`getMostCriticalStatusValue`, `getGroupStatus`, `getStatus`) lives in and is exported from `utils/status.tsx`, which is already imported here. Moving this function (along with `CHANGE_DETECTION_TYPE_ID`) to `utils/status.tsx` would keep the utilities cohesive and avoid the awkward test import from a component file (`import { getChangeDetectionStatus } from '../components/sidebar/Tree'`).",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 196,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `key=\"icon\"` prop on these inline SVG elements has no effect. React only uses `key` for reconciliation when elements appear in an array/list; on a plain JSX value stored in an object map it is silently ignored. The other icons in this map (`ErrorStatusIcon`, `WarnStatusIcon`, etc.) don't carry a `key` either, so this is also inconsistent. Remove the `key` prop from all three SVG wrappers.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 224,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The updated `statusOrder` places `new`, `modified`, and `affected` between `success` and `warning`/`error`. This array drives the context-menu sort (`statusOrder.indexOf(a[1].value) - statusOrder.indexOf(b[1].value)`), so any change-detection status that does not have `sidebarContextMenu: false` would sort *above* `error` and `warning` in the menu \u2014 likely the wrong precedence. All current callers set `sidebarContextMenu: false` to filter them out before sorting, so this is latent today, but the ordering is a trap for future additions. Consider placing `new`/`modified`/`affected` after `error` and `warning` to reflect their lower visual urgency, or add a comment explaining the deliberate ordering choice.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 233,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`Object.values(statuses)` is called twice \u2014 once to build `changeValues` and again to build `testValues`. A single pass with `reduce` (or `forEach`) would halve the iteration and make the partitioning intent clearer:\n```ts\nconst { changeValues, testValues } = Object.values(statuses).reduce(\n  (acc, status) => {\n    if (status.typeId === CHANGE_DETECTION_TYPE_ID) {\n      acc.changeValues.push(status.value);\n    } else {\n      acc.testValues.push(status.value);\n    }\n    return acc;\n  },\n  { changeValues: [] as StatusValue[], testValues: [] as StatusValue[] }\n);\n```",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.stories.tsx",
+      "line_number": 437,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Mutating the `render` property of `BranchWithChangeDetectionPriority` after construction via `makeDualSlotStory` is an unusual and fragile pattern \u2014 it's easy to miss that the story was created one way and then silently overridden. Consider extending `makeDualSlotStory` to accept an optional `initialSelectedId` parameter, or simply create this story inline without the factory. Either approach keeps the story's full definition in one place.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/manager/utils/status.test.ts",
+      "line_number": 246,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test `'branch/group combined priority: error beats new'` doesn't call `getChangeDetectionStatus` at all \u2014 it directly asserts on `getMostCriticalStatusValue`. It is logically unrelated to the dual-slot splitting behaviour being tested in this `describe` block and belongs in the existing `'getHighestStatus'` suite above. Placing it here creates a misleading grouping that implies it is testing the new splitting logic.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The string literal `'storybook/change-detection'` appears as a hardcoded value in Tree.tsx (`CHANGE_DETECTION_TYPE_ID`), in all five new story objects in Tree.stories.tsx, and in the test file. There is no shared constant for this ID anywhere in the codebase. If the type ID ever changes, every occurrence must be updated manually. Exporting the constant from `utils/status.tsx` (or a dedicated types/constants file) and importing it in stories and tests would give a single source of truth.",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.568093,
+  "duration_seconds": 381.77946615219116
+}

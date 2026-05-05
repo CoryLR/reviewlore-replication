@@ -1,0 +1,114 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/sequenceRenderer.ts",
+      "line_number": 1017,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`bounds.newActivation()` is called for both `CENTRAL_CONNECTION` (line 1018) and `CENTRAL_CONNECTION_REVERSE` (line 1021) signal types. `newActivation` draws a visual activation bar on an actor's lifeline \u2014 that is the correct behavior for `ACTIVE_START`, but it is semantically wrong for central-connection circle markers, which exist only to record which actors need a circle drawn on their lifeline at message time. This will produce spurious activation bars that never close (there is no corresponding `ACTIVE_END` emitted for these signals). The actual circles are drawn later in `drawCentralConnection` via the `msg.centralConnection` property. These two cases should be plain `break` statements (or a no-op comment explaining why no activation tracking is needed).",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/sequenceRenderer.ts",
+      "line_number": 295,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`actors.get(msg.from)` and `actors.get(msg.to)` (lines 293\u2013294) return `undefined` when the actor key is not in the map. Accessing `.x` and `.width` on the `undefined` result at lines 295\u2013296 will throw a `TypeError` at runtime. Add null guards before dereferencing:\n```ts\nif (!fromActor || !toActor) return;\n```",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/sequenceRenderer.ts",
+      "line_number": 288,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `startx` and `stopx` parameters (lines 288\u2013289) are declared in `drawCentralConnection`'s signature but never read \u2014 the function independently recomputes actor centers using `fromActor.x + fromActor.width / 2`. These dead parameters should be removed; they mislead callers into thinking the function respects the already-adjusted `startx`/`stopx` values from `buildMessageModel`.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/sequenceRenderer.ts",
+      "line_number": 305,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`width` and `height` are not valid SVG presentation attributes for a `<circle>` element \u2014 a circle's size is controlled solely by its `r` attribute. These two `.attr()` calls are silently ignored by every browser and should be removed.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/sequenceRenderer.ts",
+      "line_number": 410,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The new `msg` parameter added to `drawMessage` carries no TypeScript type annotation. It should be typed as `Message` (from `./types`) to preserve type safety throughout the renderer and to make the function signature self-documenting.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/sequenceRenderer.ts",
+      "line_number": 593,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The variable `x` is used exclusively as a sequence-number offset adjustment for reverse/bidirectional arrows. The single-letter name makes the intent opaque; a name like `sequenceNumOffset` or `reverseArrowOffset` would make the purpose clear without needing the reader to trace the variable to its only two use sites.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/svgDraw.js",
+      "line_number": 1757,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`insertStickTopArrowHead` (line 1757) and `insertStickBottomArrowHead` (line 1775) both hardcode `.attr('stroke', 'black')`. Unlike filled arrowheads, stick arrowheads are open paths where the stroke color determines their entire visual appearance. Hardcoding black means these markers will be invisible on dark themes and incorrect on any custom theme. Use `currentColor` (which inherits the parent element's computed color) or apply the same CSS class used by the existing marker elements so the theme stylesheet controls the color.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/parser/sequenceDiagram.jison",
+      "line_number": 78,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The updated ACTOR regex is substantially more complex than the original. It now combines a leading `[^...]+` character-class quantifier with a `((?!<long-alternation>)[-]*[^...]+)*` nested repetition, and the lookahead itself contains 13+ alternations, some of which overlap with the character classes in the outer quantifiers. This structure is a candidate for catastrophic backtracking (ReDoS) on adversarially crafted actor names, which are user-supplied input. Please validate this pattern with a ReDoS checker (e.g., `vuln-regex-detector` or `safe-regex`) before merging. If possible, rewrite the ACTOR rule to use a simpler negative lookahead strategy rather than embedding the full set of arrow tokens inside the lookahead.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/parser/sequenceDiagram.jison",
+      "line_number": 78,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The trailing inline comment `//final_4.11` on the ACTOR regex line is a development artifact and must be removed before this is merged.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDb.ts",
+      "line_number": 299,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`centralConnection ?? 0` uses `0` as the sentinel \"no connection\" value, but `LINETYPE.SOLID = 0`. Every ordinary message without a central connection will store `centralConnection: 0`, which is numerically identical to the `SOLID` linetype value. The code avoids false positives today only because `hasCentralConnection` explicitly checks against constants 59, 60, and 61 \u2014 but any future code that checks `msg.centralConnection` without that guard will silently treat all regular solid-line messages as having a central connection. Prefer `undefined` as the absent-value sentinel (the `Message` interface in `types.ts` already declares `centralConnection?: number`) and omit the `?? 0` fallback.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+      "line_number": 2314,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The two tests `'1 should parse '` and `'2 should parse '` (around lines 2314 and 2333) have non-descriptive names with a trailing space, and both bodies assign `diagram.db.getMessages()` to a local variable but make no assertions on it. They are effectively no-op tests that pass unconditionally even if parsing is completely broken. Please add meaningful assertions (expected message counts, expected LINETYPE values per arrow token) and replace the numeric prefixes with descriptive names such as `'should parse all eight half-arrow types'` and `'should parse bidirectional central connection syntax'`.",
+      "index": 10
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The 16 new `LINETYPE` constants follow two different naming conventions. Forward half-arrows use a compact form: `SOLID_TOP`, `SOLID_BOTTOM`, `STICK_TOP`, `STICK_BOTTOM` (and `*_DOTTED` variants). Reverse half-arrows insert `_ARROW_` in the middle: `SOLID_ARROW_TOP_REVERSE`, `STICK_ARROW_BOTTOM_REVERSE_DOTTED`, etc. This asymmetry makes the constants impossible to enumerate predictably and creates a high chance of typos at call sites. All 16 constants should follow one uniform pattern \u2014 for example `SOLID_HALF_TOP`, `SOLID_HALF_TOP_DOTTED`, `SOLID_HALF_TOP_REVERSE`, `SOLID_HALF_TOP_REVERSE_DOTTED` \u2014 so forward, dotted, reverse, and reverse-dotted variants are mechanically derivable from each other.",
+      "index": 11
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`hasCentralConnection` and `calculateCentralConnectionOffset` are `const` function expressions first *called* inside `drawMessage` (around line 478) and `buildMessageModel`, but *defined* roughly 1,150 lines later (around line 1615). Because both are `const` declarations, they are subject to the Temporal Dead Zone \u2014 the only reason this is safe today is that `drawMessage` and `buildMessageModel` are themselves `const` function expressions that are never called until after the entire module has been evaluated. This is a fragile dependency on module load order. Moving these two helpers immediately before `drawMessage` eliminates the ordering risk and makes the file readable top-to-bottom.",
+      "index": 12
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The central connection circles drawn by `drawCentralConnection` have no CSS class attribute. Without a class, circles render with browser defaults (solid black fill in most environments) and do not respond to the mermaid theme system \u2014 they will appear black in dark mode and ignore any custom palette. Add `.attr('class', 'centralConnectionCircle')` (or a similar class) to the circle element, and add a corresponding style rule in the diagram's theme/stylesheet that uses a theme variable (e.g., `signalColor`) for both fill and stroke, consistent with how other sequence-diagram SVG elements are themed.",
+      "index": 13
+    }
+  ],
+  "cost_usd": 1.1650702000000002,
+  "duration_seconds": 590.4638910293579
+}

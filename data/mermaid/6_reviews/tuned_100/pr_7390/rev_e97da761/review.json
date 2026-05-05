@@ -1,0 +1,116 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.ts",
+      "line_number": 219,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Per the project rule, `getConfig()` must only be called inside `clear()` in diagram DB classes \u2014 not inside per-operation methods like `flattenNodes`. The `look` and `theme` values should be stored as class fields (e.g., `private look?: string; private theme?: string;`) and initialized/reset inside `clear()` by calling `getConfig()` there once. `flattenNodes` should then reference `this.look` and `this.theme` instead. The same issue applies to the new `getConfig()` call added in `generateEdges` (around line 305).",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.ts",
+      "line_number": 305,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Same issue as in `flattenNodes`: `getConfig()` is called inside a per-operation method. Since `generateEdges` is called from `getData()` at render time \u2014 same as `flattenNodes` \u2014 both should read `look` and `theme` from class fields initialized in `clear()`, not by calling `getConfig()` on each invocation. Having two separate `getConfig()` calls that may race or diverge between the two methods is also a subtle consistency risk.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/styles.ts",
+      "line_number": 20,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The stroke-width value is conditioned on `look === 'neo'`, but the CSS rule that uses it (`section-${i-1} rect, path, circle, polygon { stroke-width: ... }`) is NOT scoped with a `[data-look=\"neo\"]` selector. This means when `look === 'neo'`, the narrower stroke width is written into the unscoped `.section-X` CSS and applied to all nodes regardless of their `data-look` attribute value. All other neo-specific visual changes in this PR correctly use `[data-look=\"neo\"]` scoping. The stroke-width rule should follow the same pattern:\n```css\n[data-look=\"neo\"].mindmap-node.section-${i-1} rect, ... {\n  stroke-width: ${Math.max(10 - (i - 1) * 2, 2)};\n}\n```\nAnd the classic stroke-width rule should remain as the unscoped baseline.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/styles.ts",
+      "line_number": 29,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The newly-added `.section-${i - 1} span` block has an extra leading space before the selector (5 spaces instead of 4), making it inconsistently indented compared to the adjacent `.section-${i - 1} text` block directly above it. This also means `color` inside the block is aligned differently. The indentation should match the surrounding blocks.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/styles.ts",
+      "line_number": 56,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The fill and stroke rules for `[data-look=\"neo\"]` sections use explicit equality checks: `theme === 'redux' || theme === 'redux-dark'`. But the edge stroke rule a few lines below uses `theme?.includes('redux')`. These two approaches are inconsistent and can diverge silently if a new redux-variant theme is added \u2014 one branch would pick it up automatically and the other wouldn't. Pick one approach (preferably the explicit union of known values, since `includes` is more fragile) and apply it consistently throughout the function.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/styles.ts",
+      "line_number": 63,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `neutral` theme is included in the fill condition (`theme === 'neutral'`) so its node fill uses `mainBkg`, but the edge stroke condition does not include `neutral` \u2014 it falls through to `options['cScale' + i]`. This means in the `neutral` theme, node fills and edge strokes use different color sources, which may produce visually mismatched section coloring. Verify whether this is intentional and add a comment if so; otherwise add `theme === 'neutral'` to the edge stroke condition as well.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/styles.ts",
+      "line_number": 75,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `genGradient` loop iterates `i` from `0` to `THEME_COLOR_LIMIT` and generates selectors for `section-${i - 1}`. When `i === 0` this produces `section--1`, which is not a valid class name used anywhere in the diagram output. This first iteration generates dead CSS. The loop should either start at `i = 1`, or use `section-${i}` with a matching adjustment to the section index convention, consistent with how `genSections` handles the same offset.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/defaultMindmapNode.ts",
+      "line_number": 30,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The neo path descends with `v${h - rd}` (instead of `v${h - 2 * rd}` used in the classic path) and closes the bottom with `H${-w / 2}` followed by `Z`. The `Z` closure connects `(-w/2, h/2)` back to the starting point `(-w/2, h/2 - rd)`, creating a short diagonal segment on the left side rather than a clean flat bottom edge. A brief inline comment explaining the intentional left-side geometry of the tab shape would help reviewers and future maintainers understand this is deliberate.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/roundedRect.ts",
+      "line_number": 10,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`themeVariables?.radius` uses optional chaining, implying `themeVariables` could be `undefined`. But the third parameter is destructured as `{ config: { themeVariables } }` from `ShapeRenderOptions`, so if `config.themeVariables` is absent the destructuring itself would not throw \u2014 but the intent is unclear. Additionally, `radius` is not a documented standard property of `themeVariables`; verify it exists in the theme objects (e.g., check `theme-base.js`) or rename to the correct property (possibly `nodeBorderRadius` or similar) to avoid silently always falling back to `5`.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid/src/mermaidAPI.ts",
+      "line_number": 167,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`theme` and `look` are plain config properties, not theme variables, yet they are being injected directly into the `themeVariables` spread passed to `getStyles`. This conflates two conceptually distinct namespaces. A cleaner approach would be to extend `getStyles`'s signature to accept `config` properties separately (or pass a richer options bag), rather than polluting `themeVariables` with non-theme config. At minimum, the `styles.ts` type definition that was expanded to include `theme?` and `look?` should include a comment explaining these are injected config values, not actual CSS theme variables.",
+      "index": 9
+    },
+    {
+      "file_path": "cypress/integration/rendering/mindmap-neo-look.spec.ts",
+      "line_number": 29,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test only renders diagrams in `neo` look. There are no tests verifying that classic/handDrawn look is unaffected by the new CSS rules. Because the stroke-width CSS is currently not scoped to `[data-look=\"neo\"]` (see `styles.ts` comment), a regression in classic look would go undetected. Adding at least one snapshot for `look: 'classic'` would provide a safety net.",
+      "index": 10
+    },
+    {
+      "file_path": "cypress/integration/rendering/mindmap-neo-look.spec.ts",
+      "line_number": 5,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`mindmapShapes` omits `hexagon` and the default node shape (`defaultMindmapNode`), which are both valid mindmap node types and are affected by the shape-routing change in `mindmapDb.ts` (the `isReduxTheme` branch). Adding them \u2014 particularly the default shape \u2014 would give confidence that the redux-vs-non-redux shape selection works correctly at the E2E level.",
+      "index": 11
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The theme-branching logic (e.g., `theme === 'redux' || theme === 'redux-dark' || theme === 'neutral'`) is duplicated across `genSections`, `getStyles`, and `mindmapDb.ts`'s `getShapeFromType`. If a new theme is added (e.g., `redux-light`), all three locations need to be updated in sync. Consider extracting a small helper such as `isReduxTheme(theme)` or `isNeutralTheme(theme)` and importing it in both `styles.ts` and `mindmapDb.ts` so the branching logic lives in exactly one place.",
+      "index": 12
+    },
+    {
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The long `[data-look=\"neo\"].mindmap-node.section-${i - 1} rect, [data-look=\"neo\"].mindmap-node.section-${i - 1} path, [data-look=\"neo\"].mindmap-node.section-${i - 1} circle, [data-look=\"neo\"].mindmap-node.section-${i - 1} polygon` selector string appears verbatim in both `genSections` and `genGradient`. Extracting it into a template helper (e.g., `neoNodeSelector(i)`) would reduce the risk of a typo in one copy going unnoticed and make the CSS generation easier to read.",
+      "index": 13
+    }
+  ],
+  "cost_usd": 0.8410904000000001,
+  "duration_seconds": 393.3998200893402
+}

@@ -1,0 +1,30 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/build-dev.ts",
+      "line_number": 311,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`logger.error` is built with `createLogFunction(clack.log.error, console.error, CLI_COLORS.error)`. Inside `createLogFunction`, `CLI_COLORS.error` is applied to the message in the `currentTaskLog` branch: `cliColors && typeof message === 'string' ? cliColors(message) : message`. Passing `CLI_COLORS.error('Smoke tests failed.')` pre-colors the string, so in the task-log code path the color is applied twice, producing redundant ANSI escape sequences. In every other code path `logger.error` already delegates error styling to clack or the console. Use `logger.error('Smoke tests failed.')` and let the logger own the coloring \u2014 consistent with all other `logger.error` call sites in the codebase.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/build-dev.ts",
+      "line_number": 316,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`logger.outro('')` is the only call in the codebase that passes an empty string to `outro`. Every other call site in `bin/core.ts` passes a meaningful summary message (e.g., `'Storybook exited with an error'`, `'Storybook build completed successfully'`). Passing `''` renders an orphaned clack bottom-border with no text, which looks visually odd. Consider consolidating: move the pass/fail message into `outro` itself and remove the preceding `logger.error`/`logger.step` calls, e.g. `logger.outro(problems.length > 0 ? CLI_COLORS.error('Smoke tests failed.') : CLI_COLORS.success('Smoke tests passed.'))`. That matches the established pattern where `outro` carries the final human-readable verdict.",
+      "index": 1
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR checklist explicitly marks no automated test coverage (\u00f8). The new conditional branching \u2014 the failure path emitting `logger.error` and the success path emitting `logger.step`, plus the always-run `logger.outro('')` \u2014 is exercised only by manually running `storybook dev --smoke-test`. A unit test that stubs the logger, exercises both the `problems.length > 0` and `problems.length === 0` branches, and asserts (a) the correct logger methods are called with the expected messages and (b) `process.exit` is called with `1` vs `0` would guard against silent regressions in future refactors.",
+      "index": 2
+    }
+  ],
+  "cost_usd": 0.3607573500000001,
+  "duration_seconds": 205.91854810714722
+}

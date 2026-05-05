@@ -1,0 +1,88 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "ase/visualize/plot.py",
+      "line_number": 70,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The type annotation `atoms: Atoms` is incorrect \u2014 the function body explicitly handles the case where `atoms` is a `list`. This annotation will mislead type-checkers and users alike. Consider `atoms: Atoms | list[Atoms]` to accurately reflect the accepted types, or better yet, drop the `list` support entirely and require callers to unwrap their list before calling.",
+      "index": 0
+    },
+    {
+      "file_path": "ase/visualize/plot.py",
+      "line_number": 103,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`plt.subplots()` is now called before the `isinstance(atoms, list)` guard (lines 105\u2013107). If a caller passes an invalid list (length != 1), a matplotlib Figure is created and leaked before the `AssertionError` fires. The old code ran the list check first. Consider reordering: validate/unwrap `atoms` before potentially creating a new figure.",
+      "index": 1
+    },
+    {
+      "file_path": "ase/visualize/plot.py",
+      "line_number": 77,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`plot_atoms_raw()` is referenced in the docstring as plain text. ASE uses Sphinx, so this should be a proper RST cross-reference \u2014 `:func:`plot_atoms_raw`` or `:func:`ase.visualize.plot.plot_atoms_raw`` \u2014 so it renders as a hyperlink in the generated docs.",
+      "index": 2
+    },
+    {
+      "file_path": "ase/visualize/plot.py",
+      "line_number": 115,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`plot_atoms_raw` silently diverges from `plot_atoms` in that it does not handle a `list[Atoms]` input \u2014 passing a list will cause a confusing internal error deep in `PlottingVariables`. Either mirror the list-unwrapping logic here (so users can freely substitute one for the other), or add an explicit guard with a clear error message, and document the difference.",
+      "index": 3
+    },
+    {
+      "file_path": "ase/visualize/plot.py",
+      "line_number": 115,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The third bullet in `plot_atoms_raw`'s docstring \u2014 'set matplotlib axis properties directly by calling ax.set()' \u2014 does not correspond to any behaviour of `plot_atoms`; it is generic Matplotlib guidance. The \"To reproduce the additional features of plot_atoms\" framing implies each bullet maps to something `plot_atoms` does, which makes this bullet confusing. Remove or reframe it.",
+      "index": 4
+    },
+    {
+      "file_path": "changelog.d/20260302_142033_a.j.jackson_new_plotting_function_no_plt_axis.rst",
+      "line_number": 1,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The changelog entry is filed under the \"I/O\" section, but these changes are purely about the visualization/plotting API. Check whether the project has a dedicated \"Visualization\" category in its changelog; if so, this entry should be moved there.",
+      "index": 5
+    },
+    {
+      "file_path": "changelog.d/20260302_142033_a.j.jackson_new_plotting_function_no_plt_axis.rst",
+      "line_number": 19,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Typo: \"unweildy\" should be \"unwieldy\".",
+      "index": 6
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `animate` function still uses `ax = plt.gca()` when no `ax` is provided (line 55 of the new file, unchanged). The changelog entry explicitly identifies `plt.gca()` as a hazard \u2014 'possibly overwriting an unrelated plot' \u2014 as the motivation for changing `plot_atoms`. `animate` has the same footgun and was not addressed. Consider applying the same fix (`ax, fig = plt.subplots()` or similar) for consistency and to honour the stated rationale.",
+      "index": 7
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Because `plot_atoms` now unconditionally calls `ax.set_axis_off()`, the `ax.axis('off')` call inside `animate` (line 61, unchanged) is now redundant: every call to `plot_atoms(atoms, ax=ax, ...)` within the animation loop will set the axis off anyway. The redundancy is harmless, but it leaves stale code that may confuse future readers. If `animate` is updated to address the `plt.gca()` issue noted above, this line should also be removed.",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR title refers to a function named `plot_only_atoms`, but the actual function added is `plot_atoms_raw`. If the name was changed during development, the PR title was not updated. This makes it harder to find this PR when searching by function name.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "All checklist items in the PR description are unchecked (`[ ]`), including documentation, unit tests, and changelog. The changelog entry exists, but there are no new tests for `plot_atoms_raw` in `ase/test/test_matplotlib_plot.py`. A test covering at least the basic call path for `plot_atoms_raw` should be added.",
+      "index": 10
+    }
+  ],
+  "cost_usd": 0.27730005,
+  "duration_seconds": 180.57887506484985
+}

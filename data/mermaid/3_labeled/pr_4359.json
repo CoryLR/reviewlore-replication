@@ -1,0 +1,178 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4359,
+  "title": "Add `suppressErrorRendering` option to avoid inserting 'Syntax error' message to DOM directly",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nThis PR adds new boolean option `suppressErrorRendering`. When it is set to `true`, mermaid won't insert 'Syntax error' message to DOM directly so that the user can take full control on handling the error.\r\n\r\nResolves #4358\r\nResolves #3205\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nI think there are two options to realize this feature:\r\n\r\n- Adding new option\r\n- Adding new argument to `mermaid.render`\r\n\r\nI chose the first one because (1) it should affect all APIs such as `mermaid.run` and (2) adding new argument to the function should be avoided since it makes the API more complicated.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added unit/e2e tests (if appropriate) (Note: I couldn't find an error test case for `mermaid.render`. Please let me know if I'm missing something)\r\n- [x] :notebook: have added documentation (if appropriate)\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "rhysd",
+  "merged_at": "2024-03-23T10:00:43Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "78587e11c7346dbe908ecb21351894495693a36d",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "725b618111efa80ca19e089b608006ff1d77f132",
+    "ecfa149efcddf31e5bca05651d9db8fa3b75ca5d"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85GZj1c",
+          "author": "sidharthv96",
+          "body": "Error diagram is initialized on line 479 too. \r\nPlease verify that. ",
+          "file_path": "packages/mermaid/src/mermaidAPI.ts",
+          "line_number": 516,
+          "start_line": null,
+          "commit_sha": "ecfa149efcddf31e5bca05651d9db8fa3b75ca5d",
+          "created_at": "2023-04-29T17:23:52Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "medium",
+          "label_reasoning": "The reviewer is flagging a potential duplicate initialization of the error diagram, suggesting a logic/semantic issue in the code flow."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85GaDfy",
+          "author": "rhysd",
+          "body": "Thanks. I fixed this at b4618f9",
+          "file_path": "packages/mermaid/src/mermaidAPI.ts",
+          "line_number": 516,
+          "start_line": null,
+          "commit_sha": "ecfa149efcddf31e5bca05651d9db8fa3b75ca5d",
+          "created_at": "2023-04-30T13:51:42Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "The reviewer flags that error diagram is also initialized on line 479 and asks the author to verify, implying a potential issue that needs to be addressed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PEO5X",
+          "author": "aloisklink",
+          "body": "@sidharthv96, is removing this `throw e;` line in https://github.com/mermaid-js/mermaid/pull/4359/commits/16c12a42c7892eb268e4afdc9e9cf589ce9138a4 the expected behavior?\r\n\r\nIt seems like currently, the `mermaid.render()` function will render an error diagram, then throw an exception if the `diag.renderer.draw` function fails.\r\n\r\nBut now, it will only do that if `suppressErrorRendering: true`.\r\n\r\nWould something like the following be better, since then by default, the behavior would be the same?\r\n\r\n```ts\r\nif (config.suppressErrorRendering) {\r\n  removeTempElements();\r\n} else {\r\n  errorRenderer.draw(text, id, version);\r\n}\r\nthrow e;\r\n```\r\n\r\n",
+          "file_path": "packages/mermaid/src/mermaidAPI.ts",
+          "line_number": 455,
+          "start_line": null,
+          "commit_sha": "ecfa149efcddf31e5bca05651d9db8fa3b75ca5d",
+          "created_at": "2023-09-14T20:59:45Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The reviewer points out that removing `throw e` changes the default behavior of mermaid.render() \u2014 errors are no longer thrown unless suppressErrorRendering is true \u2014 which deviates from the original/expected behavior."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85PFGOd",
+          "author": "sidharthv96",
+          "body": "Nice catch. Fixed. :) ",
+          "file_path": "packages/mermaid/src/mermaidAPI.ts",
+          "line_number": 455,
+          "start_line": null,
+          "commit_sha": "ecfa149efcddf31e5bca05651d9db8fa3b75ca5d",
+          "created_at": "2023-09-15T03:13:20Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "The reviewer proposes a specific alternative code implementation to preserve the default throwing behavior, suggesting the current code changes the behavior unexpectedly."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PImUk",
+          "author": "aloisklink",
+          "body": "I'm getting a race-condition when running the E2E test. The following seems to fix it:\r\n\r\n```suggestion\r\n      cy.get('#test').find(\"svg\").should(($svg) => {\r\n        expect($svg).to.have.length(2); // all failing diagrams should not appear!\r\n        $svg.each((_index, svg) => {\r\n          expect(cy.$$(svg)).to.be.visible;\r\n\r\n          // none of the diagrams should be error diagrams\r\n          expect($svg).to.not.contain(\"Syntax error\");\r\n        });\r\n      });\r\n```\r\n\r\n### See screenshot of before and after:\r\n\r\n![configuration spec-should-not-render-error-diagram-if-suppressErrorRendering-is-set diff](https://github.com/mermaid-js/mermaid/assets/19716675/61d57753-6e8e-4f78-b056-7d0aa30f2690)\r\n",
+          "file_path": "cypress/integration/other/configuration.spec.js",
+          "line_number": 135,
+          "start_line": null,
+          "commit_sha": "ecfa149efcddf31e5bca05651d9db8fa3b75ca5d",
+          "created_at": "2023-09-15T18:35:26Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Concurrency Issues",
+          "label_confidence": "high",
+          "label_reasoning": "The reviewer explicitly identifies a race condition in the E2E test and provides a fix to address it."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The reviewer identifies a race condition in the E2E test and provides a concrete code suggestion to fix it."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PImhn",
+          "author": "aloisklink",
+          "body": "I'm getting a race-condition when running the E2E test. The following seems to fix it:\r\n\r\n```suggestion\r\n      cy.get('#test').find(\"svg\").should(($svg) => {\r\n        expect($svg).to.have.length(5); // all five diagrams should be rendered!\r\n        $svg.each((_index, svg) => {\r\n          expect(cy.$$(svg)).to.be.visible;\r\n        });\r\n\r\n        // some of the diagrams should be error diagrams\r\n        expect($svg).to.contain(\"Syntax error\");\r\n      });\r\n```\r\n\r\n### Screenshot of before and after\r\n\r\n![configuration spec-should-render-error-diagram-if-suppressErrorRendering-is-not-set diff](https://github.com/mermaid-js/mermaid/assets/19716675/01215341-150d-4b5e-a60e-874fa2c84ecb)\r\n",
+          "file_path": "cypress/integration/other/configuration.spec.js",
+          "line_number": 145,
+          "start_line": null,
+          "commit_sha": "ecfa149efcddf31e5bca05651d9db8fa3b75ca5d",
+          "created_at": "2023-09-15T18:36:23Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Concurrency Issues",
+          "label_confidence": "high",
+          "label_reasoning": "Same as index 2 \u2014 the reviewer explicitly identifies a race condition in a related E2E test and provides a fix."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85PJotu",
+          "author": "sidharthv96",
+          "body": "Added the checks.",
+          "file_path": "cypress/integration/other/configuration.spec.js",
+          "line_number": 145,
+          "start_line": null,
+          "commit_sha": "ecfa149efcddf31e5bca05651d9db8fa3b75ca5d",
+          "created_at": "2023-09-16T08:25:35Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85PKZc0",
+          "author": "aloisklink",
+          "body": "Looks good! If you really want to, you could also replace the current Cypress code by using the `urlSnapshotTest` function in https://github.com/mermaid-js/mermaid/blob/4201e4775d9206a5fc44006a2e26747cfc10ef78/cypress/helpers/util.ts#L75-L82, which checks for `.rendered`, but :shrug:, what we have already works, so there's no need to change anything.\r\n\r\nI'll let Knut officially approve this PR, just in case there's some security issue with `secure` keys that I haven't spotted.",
+          "file_path": "cypress/integration/other/configuration.spec.js",
+          "line_number": 145,
+          "start_line": null,
+          "commit_sha": "ecfa149efcddf31e5bca05651d9db8fa3b75ca5d",
+          "created_at": "2023-09-17T18:09:41Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The reviewer identifies a race condition in another E2E test and provides a concrete code suggestion to fix it."
+    }
+  ],
+  "review_thread_count": 4,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 4,
+    "stage1_kept": 4,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

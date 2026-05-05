@@ -1,0 +1,168 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3905,
+  "title": "(Re-)enable setting atomic radii in GUI via the local config",
+  "body": "Previously, it was possible to specify a custom radius for each atom through the \\~/.ase/gui.py configuration file using `gui_default_settings['covalent_radii']`. However, this feature seems to have been disabled in 7d2b447882902b46296c063273b867ae94090cf7 and later deleted from the code entirely (although this does not seem entirely intentional, as the documentation and related code were not changed accordingly).\n\nThis MR adds said functionality back with slight tweaks to also allow the use of a dictionary format and element symbols for the configuration.\n\nCloses: ase/ase#928\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [x] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [x] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [x] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)",
+  "author": "lempelto",
+  "merged_at": "2026-02-02T08:53:25.087Z",
+  "base_ref": "master",
+  "merge_commit_sha": "e311e0ab9a04202b94799229e43357ead6243830",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3049684774",
+          "author": "yuzie007",
+          "body": "In ASE 3.13.0 and before, the `covalent_radii` setting is supposed to be given in a list/tuple of 2-element lists/tuples (https://gitlab.com/ase/ase/-/blob/3.13.0/ase/gui/images.py?ref_type=tags#L66-68), and the present documentation https://ase-lib.org/ase/gui/basics.html also follows this.\nI therefore agree that it is reasonable to support this type.\n\nI would suggest, instead of `hasattr`, it may be explicit to do\n`if not isinstance(radii, dict):`.\nIn principle we can also do [`if not isinstance(radii, Mapping):`](https://docs.python.org/3/library/collections.abc.html#collections.abc.Mapping), but in the present case, `radii` should be simply read from the configuration file `~/.ase/gui.py`, and therefore we do not have to assume the abstract class.",
+          "file_path": "ase/gui/images.py",
+          "line_number": 68,
+          "commit_sha": "c378e19aa6d6be421e62bcb067e40ab647a65348",
+          "base_sha": "1b29724eed669b62cf98a9a980b9a377b5bdf881",
+          "created_at": "2026-02-01T06:09:24.660Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Redundancy Handling",
+          "label_confidence": "medium",
+          "label_reasoning": "The reviewer suggests replacing `hasattr` with `isinstance` for a more explicit and idiomatic type check, which is about code clarity and proper use of Python idioms."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests replacing `hasattr` with `isinstance(radii, dict)` or `isinstance(radii, Mapping)` \u2014 a concrete code change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3049684776",
+          "author": "yuzie007",
+          "body": "Maybe a matter of taste, I would prefer e.g.\n```python\nfor key, value in _radii.items():\n    atomic_number = key if isinstance(key, int) else atomic_numbers[key]\n    self.covalent_radii[atomic_number] = value\n```",
+          "file_path": "ase/gui/images.py",
+          "line_number": 75,
+          "commit_sha": "c378e19aa6d6be421e62bcb067e40ab647a65348",
+          "base_sha": "1b29724eed669b62cf98a9a980b9a377b5bdf881",
+          "created_at": "2026-02-01T06:09:25.268Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Smelling",
+          "label_confidence": "medium",
+          "label_reasoning": "The reviewer suggests a cleaner, more readable refactoring of the loop logic for iterating over radii, which is a general code quality/readability improvement."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests an alternative implementation with a specific code snippet \u2014 a concrete refactor."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3049684777",
+          "author": "yuzie007",
+          "body": "Let's use `@pytest.mark.parametrize` e.g.\n```python\n@pytest.mark.parametrize(\n    'radii',\n    [{'Cl': 5.0, 1: 3.0}, [[17, 5.0], ['H', 3.0]]],\n)\ndef test_custom_radii(gui, radii):\n    hcl = molecule('HCl')\n    radius_scale = gui.images.atom_scale\n\n    gui.new_atoms(hcl)\n    gui.images.configure_radii(radii)\n    radii = gui.images.get_radii(gui.atoms)\n    assert radii[0] / radius_scale == pytest.approx(5.0)\n    assert radii[1] / radius_scale == pytest.approx(3.0)\n```",
+          "file_path": "ase/test/gui/test_run.py",
+          "line_number": 705,
+          "commit_sha": "c378e19aa6d6be421e62bcb067e40ab647a65348",
+          "base_sha": "1b29724eed669b62cf98a9a980b9a377b5bdf881",
+          "created_at": "2026-02-01T06:09:25.584Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "high",
+          "label_reasoning": "The reviewer suggests using `@pytest.mark.parametrize` to follow pytest idioms and reduce test duplication, which is a Python/pytest-specific convention for writing parameterized tests."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests using `@pytest.mark.parametrize` with a specific code example \u2014 a concrete test refactor."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3049684782",
+          "author": "yuzie007",
+          "body": "Thank you @lempelto for reviving the custom radius setting option!\n\nI agree, this has been disabled maybe simply by accident, and it should be reasonable to reactivate this option.\n\nI have left a few suggestions on the code. Also,\n\n1. It would be nice if you have also `changelog` with `scriv`.\n2. It might also be helpful for users if we update `doc/ase/gui/basics.rst`, specifically https://ase-lib.org/ase/gui/basics.html#defaults, like\n```rst\n  gui_default_settings['covalent_radii'] = [[29, 1.6]]  # or {29: 1.6}\n```\nThen I think this MR will be ready to be merged.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-01T06:09:26.079Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "The reviewer requests documentation updates (changelog and user-facing docs in `basics.rst`) to clarify the new feature for users, primarily a documentation/comment concern."
+        },
+        {
+          "id": "3050032126",
+          "author": "lempelto",
+          "body": "Hi. Thanks for the comments!\n\nI've made the changes you suggested",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-01T20:06:55.260Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding a changelog entry and updating documentation in `doc/ase/gui/basics.rst` \u2014 concrete missing documentation tasks."
+    }
+  ],
+  "review_thread_count": 5,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3050757942",
+            "author": "yuzie007",
+            "body": "Thank you so much @lempelto for the revision! This looks good to me, and I am going to merge.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-02T08:53:19.581Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment and status update (approval and merge notice) with no code change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 5,
+    "stage1_kept": 5,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1,
+    "stage3_cost_usd": 0.018555750000000003
+  }
+}

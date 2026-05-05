@@ -1,0 +1,37 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33885,
+  "title": "CSF-Factories: Fix ConfigFile parser false warning on `definePreview({...}).type<T>()` export default",
+  "body": "- [x] Understand the issue: `ConfigFile` parser warns on `definePreview({...}).type<{...}>()` in `export default`\n- [x] Fix `ExportDefaultDeclaration` handler in `ConfigFile.ts` to unwrap chained calls like `.type<T>()`\n- [x] Add test case for `definePreview({...}).type<{...}>()` in `ConfigFile.test.ts`\n- [x] Run tests to verify the fix (126 tests pass)\n- [x] Fix prettier formatting in `ConfigFile.ts`\n\n<!-- START COPILOT ORIGINAL PROMPT -->\n\n\n\n<details>\n\n<summary>Original prompt</summary>\n\n> \n> ----\n> \n> *This section details on the original issue you should resolve*\n> \n> <issue_title>[Bug]: `ConfigFile` parser warns on `definePreview({...}).type<{...}>()` in `export default`</issue_title>\n> <issue_description>### Describe the bug\n> \n> When using `.type()` chaining on `export default definePreview(...)`, the `ConfigFile` parser emits:\n> \n> ```\n> CSF Parsing error: Expected 'ObjectExpression' but found 'CallExpression' instead in 'CallExpression'.\n> ```\n> \n> This happens because the `ExportDefaultDeclaration` handler in `ConfigFile.parse()` only unwraps a single level of `CallExpression`:\n> \n> ```javascript\n> // src/csf-tools/CsfFile.ts (ConfigFile class)\n> let decl = self._resolveDeclaration(node.declaration, parent);\n> t3.isCallExpression(decl) && t3.isObjectExpression(decl.arguments[0]) && (decl = decl.arguments[0]);\n> t3.isObjectExpression(decl) ? self._parseExportsObject(decl) : logger2.warn(...)\n> ```\n> \n> `.type<T>()` is a call with **zero value arguments** (only a TypeScript type parameter), so `decl.arguments[0]` is `undefined`, the unwrap fails, and the warning is emitted.\n> \n> Note: The `CallExpression` visitor separately catches the nested `definePreview({...})` call and parses it correctly, so the build still succeeds \u2014 but the warning is confusing and unnecessary.\n> \n> ### Reproduction link\n> \n> https://github.com/yuheiy/storybook-definepreview-type-csf-error\n> \n> ### Reproduction steps\n> \n> ```tsx\n> // .storybook/preview.tsx\n> import { definePreview } from '@storybook/react-vite';\n> \n> export default definePreview({\n>   parameters: {\n>     /* ... */\n>   },\n> }).type<{\n>   parameters: {\n>     customParam?: string;\n>   };\n> }>();\n> ```\n> \n> ```sh\n> storybook build\n> # or\n> storybook dev\n> ```\n> \n> ### System\n> \n> ```bash\n> \u2502\n> \n> \u2502  Storybook Environment Info:\n> \u2502\n> \n> \u2502  System:\n> \u2502  OS: macOS 15.7.3\n> \u2502  CPU: (10) arm64 Apple M1 Max\n> \u2502  Shell: 5.9 - /bin/zsh\n> \u2502  Binaries:\n> \u2502  Node: 24.13.0 -\n> \u2502  XXXXXXXX\n> \u2502  Yarn: 2.4.3 -\n> \u2502  /Users/yuhei.yasuda/.local/share/mise/installs/node/24.12.0/bin/yarn\n> \u2502  npm: 11.6.2 -\n> \u2502  /Users/yuhei.yasuda/.local/share/mise/installs/node/24.12.0/bin/npm\n> \u2502  pnpm: 10.28.2 - /Users/yuhei.yasuda/Library/pnpm/pnpm <----- active\n> \u2502  Browsers:\n> \u2502  Chrome: 144.0.7559.133\n> \u2502  Firefox: 146.0.1\n> \u2502  Safari: 26.2\n> \u2502  npmPackages:\n> \u2502  @storybook/addon-a11y: ^10.2.4 => 10.2.4\n> \u2502  @storybook/addon-docs: ^10.2.4 => 10.2.4\n> \u2502  @storybook/addon-vitest: ^10.2.4 => 10.2.4\n> \u2502  @storybook/react-vite: ^10.2.4 => 10.2.4\n> \u2502  storybook: ^10.2.4 => 10.2.4\n> ```\n> \n> ### Additional context\n> \n> _No response_</issue_description>\n> \n> ## Comments on the Issue (you are @copilot in this section)\n> \n> <comments>\n> </comments>\n> \n\n\n</details>\n\n\n\n<!-- START COPILOT CODING AGENT SUFFIX -->\n\n- Fixes storybookjs/storybook#33798\n\n<!-- START COPILOT CODING AGENT TIPS -->\n---\n\n\ud83d\udcac We'd love your input! Share your thoughts on Copilot coding agent in our [2 minute survey](https://gh.io/copilot-coding-agent-survey).\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n\n## Summary by CodeRabbit\n\n* **Bug Fixes**\n  * Improved parsing of complex factory declaration patterns to ensure more robust configuration file handling.\n\n* **Tests**\n  * Added test coverage for chained factory declaration patterns.\n\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "copilot-swe-agent",
+  "merged_at": "2026-03-03T12:40:29Z",
+  "base_ref": "next",
+  "merge_commit_sha": "011e08179b8a82c67e40f97d74fffba334dd6a17",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "1a6a7a1e296daa8cc54430d40cd0ba835ff8c0dc",
+    "2bdb54a73586347cdc6303ff119bb0cb778073be"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rfrRM",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Assert warning suppression explicitly in this regression test.**\n\nThis test only validates parsed data; it can still pass even if the parser logs the false warning again. Please also assert that no warning is emitted during parse for this `.type<T>()` pattern.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/csf-tools/ConfigFile.test.ts` around lines 296 - 312, The test\nmust assert that no warning is emitted during parse for the .type<T>() chaining\ncase: wrap the call to loadConfig(source).parse() with a spy on the warning\nemitter (e.g., jest.spyOn(console, 'warn') or the test logger used by\nloadConfig), call parse via loadConfig(source).parse(), then expect the spy not\nto have been called, and finally restore the spy; reference the existing\nloadConfig(...) and parse() calls so you add the spy before parse and the\nexpect(spy).not.toHaveBeenCalled() after.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/csf-tools/ConfigFile.test.ts",
+          "line_number": 312,
+          "start_line": 296,
+          "commit_sha": "2bdb54a73586347cdc6303ff119bb0cb778073be",
+          "created_at": "2026-03-03T09:44:34Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 1
+}

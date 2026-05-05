@@ -1,0 +1,90 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 911,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`state.includedStatusFilters.filter(...)` and `state.excludedStatusFilters.filter(...)` will throw a `TypeError` if either array is `undefined` \u2014 which can happen when a user upgrades and their persisted localStorage state lacks these new fields. Notice that `recomputeStatusFilter` guards with `?? []` and `selectFirstStory` uses `?.length ?? 0`, but `removeStatusFilters` does not. Fix: `(state.includedStatusFilters ?? []).filter(...)` and `(state.excludedStatusFilters ?? []).filter(...)`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager-api/tests/stories.test.ts",
+      "line_number": 1843,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`vi.mock('../stores/status')` is called inside an `it()` body. Vitest hoists all `vi.mock` calls to the top of the file at transpile time regardless of where they appear in source, so placing them inside test bodies doesn't create per-test mocks \u2014 the call is hoisted once and subsequent calls inside `it()` are no-ops. Per project convention, place a single `vi.mock('../stores/status')` at the top of the file (alongside the existing top-level mocks at lines 44/47) and configure per-test return values via `vi.mocked(fullStatusStore.getAll).mockReturnValue(...)` inside `beforeEach` or the individual test body.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/FilterPanel.tsx",
+      "line_number": 172,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`hasItems` only considers `builtInItems` and `tagItems`, ignoring `statusItems`. When a Storybook project has no user tags and no docs/play/test stories (so both lists are empty), but statuses are present, `hasItems` is `false` \u2014 the entire action bar (including the \"Clear filters\" button) is never rendered. A user who has applied status filters has no way to clear them from the panel. Fix: `const hasItems = builtInItems.length > 0 || tagItems.length > 0 || statusItems.length > 0;`",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager-api/tests/statuses.test.ts",
+      "line_number": 11,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Per project convention, all `vi.mock()` calls must include the `{ spy: true }` option. This factory-style mock omits it. The same applies to the `vi.mock('../stores/status')` calls inside `it()` blocks in `stories.test.ts`.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/FilterPanel.utils.ts",
+      "line_number": 22,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`BUILT_IN_TAGS` uses raw string literals (`'dev'`, `'test'`, `'autodocs'`, etc.) instead of the canonical `Tag` enum constants (`Tag.DEV`, `Tag.TEST`, `Tag.AUTODOCS`, etc.) exported from `../../shared/constants/tags`. The project rule requires that Storybook tag strings be referenced via the canonical `Tag` object everywhere in the codebase, not as hardcoded raw strings.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/FilterPanel.stories.tsx",
+      "line_number": 12,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Import ordering is incorrect: `@storybook/react-vite` (a third-party/Storybook package) appears on line 12, after local relative imports on lines 9\u201311. Package imports should precede relative imports. The corrected order should be: `storybook/internal/types` \u2192 `@storybook/react-vite` \u2192 `storybook/manager-api` (`'../../../manager-api'`) \u2192 local relative imports.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/statuses.ts",
+      "line_number": 64,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`fullStatusStore.getAll()` is called inside the inner closure, meaning it executes once per index entry on every filter pass. For a Storybook with hundreds of stories, this is O(n) store reads per filter invocation. Because `recomputeStatusFilter()` is already called whenever statuses change (via `fullStatusStore.onAllStatusChange`), it is safe to hoist the read to the outer closure \u2014 capture `allStatuses` once when `computeStatusFilterFn` is called, and the filter will be rebuilt with fresh data whenever statuses actually change.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 1213,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`({ search: '' } as any)` is used to satisfy `queryFromLocation`'s type signature when `location` is undefined. Per project rules, `as any` casts that bypass the type system should be avoided. A cleaner fix is to update `queryFromLocation` to accept `Location | undefined` (returning empty strings for all params when undefined) or to construct a properly typed partial that satisfies the signature without casting.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`parseStatusesParam` and `serializeStatusesParam` are tested comprehensively in the new dedicated `statuses.test.ts`. The additions to `stories.test.ts` (the `describe('parseStatusesParam', ...)` and `describe('serializeStatusesParam', ...)` blocks) are near-identical duplicates of those same test cases. Any future change to these functions will require updating assertions in two files. Remove the duplicates from `stories.test.ts` and keep the coverage in `statuses.test.ts`.",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The same eight `StatusValue` variants are now enumerated in three separate constant arrays across the codebase: `STATUS_VALUES` (in `shared/status-store/index.ts`), `STATUS_DISPLAY_ORDER` (in `FilterPanel.utils.ts`), and the pre-existing `statusPriority` (in `manager/utils/status.tsx`). Each serves a distinct purpose, but adding a ninth status value in the future requires updating all three arrays plus the `StatusValue` union type \u2014 with no compile-time enforcement that they stay in sync. Consider adding a comment on each array cross-referencing the others so future authors know to update all of them.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The \"Select all\" button (in `FilterPanel.tsx`) only calls `api.setAllTagFilters(filterIds, [])` and does not touch status filters. Now that the panel presents both tag and status filters, the label \"Select all\" may mislead users into thinking it selects every visible filter category. Either update the label to \"Select all tags\" to clarify scope, or extend the handler to also apply `api.setAllStatusFilters(STATUS_DISPLAY_ORDER, [])` for consistency.",
+      "index": 10
+    }
+  ],
+  "cost_usd": 0.9540517999999999,
+  "duration_seconds": 676.8306040763855
+}

@@ -1,0 +1,76 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/storybook-package-name-conflict.ts",
+      "line_number": 7,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `packageName` field in `StorybookPackageNameOptions` is never consumed. The `Fix` type defines `prompt()` as `() => string` \u2014 it takes no arguments and cannot receive the check result. There is also no `run()` method on this `notification`-type fix, so the returned `{ packageName }` only serves as a non-null truthy signal. The interface could be simplified to `Record<string, never>` (or `{}`) to make clear that the result carries no data that callers use, rather than implying the name is forwarded somewhere.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/storybook-package-name-conflict.ts",
+      "line_number": 26,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Tied to the above: `return { packageName }` suggests the caller uses this value, but nothing does. Returning `return {}` (with a simplified result type) would be more honest about intent and prevent future maintainers from assuming `packageName` flows into `prompt()` or some other handler.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/commands/PreflightCheckCommand.ts",
+      "line_number": 92,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "This `checkPackageNameConflict` method duplicates the detection logic already present in the new `storybookPackageNameConflict` automigrate fix: both check `name === 'storybook'` and warn the user. These live in separate packages (`create-storybook` vs `cli-storybook`) targeting different CLI entry points, so a user could see both warnings across different sessions, but the check logic is identical. If the condition ever needs to change (e.g., also flag other reserved names), it must be updated in two separate places. Consider extracting the detection into a shared utility that both callers use, or at minimum adding a comment linking the two implementations so they stay in sync.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/commands/PreflightCheckCommand.ts",
+      "line_number": 97,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The warning message here says \"Please rename the \\\"name\\\" field...\" while the automigrate fix says \"To fix this, rename the \\\"name\\\" field...\". The messages are slightly inconsistent. A user who hits both paths (e.g., via `create-storybook` today and `automigrate` later) will see different wording for the same problem. Keeping them verbatim-identical, or deriving both from a single source string, would avoid confusion.",
+      "index": 3
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/storybook-package-name-conflict.test.ts",
+      "line_number": 49,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The prompt test assertions (`toContain('storybook')`, `toContain('node_modules/storybook')`, `toContain('rename')`) are loose enough to pass even with a significantly different message. Because `prompt()` uses `picocolors` to wrap text in ANSI escape codes, checking for plain substrings works (the text is still a substring of the escape-wrapped output), but it also means a regression that changes `node_modules/storybook` to, say, `$STORYBOOK_DIR` would not be caught. Consider adding a snapshot test or stripping ANSI codes (via a utility like `strip-ansi`) and asserting on the clean output for a more reliable test.",
+      "index": 4
+    },
+    {
+      "file_path": "code/lib/eslint-plugin/docs/rules/no-stories-of.md",
+      "line_number": 26,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "This quote-style change (single \u2192 double quotes in the `import` example) is unrelated to the PR's stated purpose of adding a package-name-conflict automigrate check. Bundling unrelated formatting changes into the same PR makes the diff harder to review and can complicate bisection if either change causes a regression. These changes should ideally be in a separate housekeeping commit or PR.",
+      "index": 5
+    },
+    {
+      "file_path": "docs/configure/integration/eslint-plugin.mdx",
+      "line_number": 78,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Same concern as the `no-stories-of.md` change: these single-to-double-quote conversions in the ESLint plugin docs are unrelated to the automigrate feature being added. Keeping unrelated formatting fixups out of feature PRs keeps the review focused and the git history clean.",
+      "index": 6
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The PR introduces the same package-name-conflict detection in two places: the `storybookPackageNameConflict` automigrate fix (triggered by `storybook automigrate`) and `PreflightCheckCommand.checkPackageNameConflict` (triggered by `create storybook`). Both independently read `primaryPackageJson.packageJson.name`, compare it to `'storybook'`, and emit a warning. This duplication means the fix's condition, message, and any future expansion (e.g., catching additional reserved names) must be updated in two separate packages. A shared helper \u2014 even something as simple as a `isStorybookNameConflict(packageManager)` utility in a common package \u2014 would give both callsites a single source of truth and ensure they stay in sync.",
+      "index": 7
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The automigrate fix uses `picocolors` to produce rich colored output (cyan, yellow, red highlights), while the `PreflightCheckCommand` warning uses plain `dedent` text with no color. This means the same underlying problem is presented with different visual fidelity depending on which Storybook command the user runs. If both paths are expected long-term, it would be worth aligning on a consistent presentation style \u2014 either both use color, or neither does.",
+      "index": 8
+    }
+  ],
+  "cost_usd": 0.44286475,
+  "duration_seconds": 486.00416588783264
+}

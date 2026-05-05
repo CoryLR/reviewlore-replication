@@ -1,0 +1,75 @@
+{
+  "batch_number": 1,
+  "mr_count": 10,
+  "candidate_count": 53,
+  "batch_date_range": "2016-12-07 to 2021-10-08",
+  "rules_before": {
+    "Code Defect": [],
+    "Maintainability and Readability": [],
+    "Performance Issue": [],
+    "Code Style": []
+  },
+  "cost_usd": 0.1682805,
+  "rules_after": {
+    "Code Defect": [
+      "When modifying bond display code in `ase/gui/view.py`, verify that bonds are computed independently for each image frame rather than cached from a previous frame. Navigating a trajectory with 'show bonds' active must display bonds derived from the current frame's actual atomic positions.",
+      "When implementing destructive per-atom operations (e.g., delete, element change) in ase-gui's multi-frame trajectory context, explicitly decide and document whether the operation applies to the current frame only, to all frames, or collapses the sequence to a single frame.",
+      "When reviewing a hand-written character-by-character parser in `ase/io/extxyz.py` that replaces a regex-based one, verify that Unicode handling is not regressed: Python's `re` module natively understands Unicode character properties, while hand-written character classifiers must explicitly replicate that behavior.",
+      "The low-level properties-string parser (`key_val_str_to_dict` in `ase/io/extxyz.py`) should not implicitly reshape flat numeric arrays based on element count (e.g., silently converting a 9-element array into a 3\u00d73 matrix). Such shape transformations belong in the caller, not inside the parser.",
+      "When adding or modifying CLI commands, keep the completion option lists in `ase/cli/complete.py` synchronized with the options actually defined in the command module; consider adding an automated test that detects drift.",
+      "Use raw Python strings (`r'...'`) for LaTeX content in matplotlib axis labels and titles to avoid unintended escape sequences; use `.format()` for variable substitution rather than `%`-formatting in those strings.",
+      "When registering a program in `ase/io/formats.py` that has both an input and output format, ensure each variant uses a distinct `magic` bytes value so ASE can reliably autodetect file type.",
+      "When adding a new calculator, register its snake_case name in the `names` list in `ase/calculators/calculator.py` (so `get_calculator_class()` works) and add its executable(s) to `default_executables` in `ase/calculators/autodetect.py` (so `ase info --calculators` reports it).",
+      "Use `round()` rather than `int()` when converting a floating-point value to an integer (e.g., summing initial magnetic moments). `int()` truncates toward zero and can produce wrong results due to floating-point rounding.",
+      "Library code must not call `print()` to stdout or stderr \u2014 those streams belong to the caller. Route diagnostic output through the instance's logfile attribute or the standard `logging` module.",
+      "When changing existing default parameter values in optimizer or MD classes (e.g., `maxstep`), flag the change explicitly in the review \u2014 users' simulations depend silently on these defaults, and any modification will alter behavior without a visible API change.",
+      "When overriding `todict()` in MD or optimizer subclasses, ensure every dictionary key matches the exact corresponding `__init__` parameter name (e.g., use `'fixcm'` not `'fix-cm'`, `'temperature_K'` not `'temperature_eV'`).",
+      "When implementing Box-Muller or other log-based transforms on uniform random samples, use `log(1 - y)` rather than `log(y)` to avoid a domain error when the sampled value is exactly 0.",
+      "In MD classes that generate per-atom random data, store those arrays as instance attributes and broadcast them via `self.communicator` before use, so parallel runs under gpaw or asap3 keep all MPI tasks synchronized."
+    ],
+    "Maintainability and Readability": [
+      "When an MR adds a new implementation or significantly rewrites an existing algorithm (e.g., an MD integrator or dynamics method), require that at least one short test exercising the new code path is included before merging.",
+      "When introducing a new I/O backend for trajectories or adding features to `BundleTrajectory`, evaluate whether the code can be implemented as a pluggable backend for the common `Trajectory` class or shared with it. The project goal is a single trajectory class with multiple pluggable backends; avoid siloing trajectory functionality.",
+      "Any change to ase-gui behaviour must be accompanied by a test in `ase/test/gui/`. When adding features or fixing bugs, expand the relevant test file there rather than relying solely on manual testing.",
+      "Extract non-trivial computed expressions that represent a meaningful concept into a named variable rather than inlining the expression (e.g., assign `nebsteps = len(self.images) // nimages` and use `nebsteps` thereafter).",
+      "NEB force-curve fitting logic (fitting images to an energy-vs-path band, producing `ForceFit` objects) belongs in `ase.utils.forcecurve` via `fit_raw`, `fit_images`, and `ForceFit`; do not duplicate this logic in `ase.neb` or other modules.",
+      "When data has inherent structure not captured by the file format (e.g., multiple NEB bands concatenated in a single trajectory), prefer an explicit data structure or stored metadata over runtime heuristics that infer structure from patterns.",
+      "Utility classes that represent a collection of data should accept a single canonical input type in their constructor; support for multiple input types (strings, trajectories, lists, GUI objects) should be provided through separate factory functions or IO modules, not by special-casing each type inside `__init__`.",
+      "ASE CLI plotting commands should display an interactive plot by default and require an explicit `--output`/`-o` flag to write to a file; when file output is supported, accept common formats (pdf, svg, png).",
+      "When adding any user-visible feature (new CLI command, renamed or deprecated class, new public API), add an entry to the project release notes.",
+      "In `FileIOCalculator` subclasses, set the class attribute `discard_results_on_any_change = True` directly on the class rather than overriding `set()` to achieve the same effect; the superclass handles it automatically.",
+      "Keep new `FileIOCalculator` subclass constructors minimal. Avoid forwarding parameters like `restart`, `ignore_bad_restart_file`, and `atoms` unless they are explicitly exercised by tests.",
+      "New calculators should include an entry in `ase/test/standardization/test_ch4_energy.py` so they participate in the project-wide standardised multi-calculator energy benchmark.",
+      "Logic inside a calculator that depends only on external data (e.g., the command string, the job prefix, a file path) should be extracted into standalone module-level functions rather than instance methods, keeping the calculator class lean and the functions independently testable.",
+      "When using `subprocess.call` (or similar) in a context where the subprocess is intentionally expected to fail or exit non-zero, add a comment explaining that failure is expected and describe what should happen if the command fails in an unexpected way.",
+      "Do not manually create or enter a temporary directory inside individual tests. The project's global `autouse=True` fixture in `conftest.py` already runs every test inside a fresh temporary directory.",
+      "When introducing or reviewing new public-facing API in ASE, prefer fully descriptive names over abbreviations (e.g., `atoms.calculator` rather than `atoms.calc`). Flag abbreviated names as candidates for renaming in the next major version.",
+      "When deprecating a public API, follow a phased rollout: introduce a `DeprecationWarning` paired with a release-notes entry in one release, then escalate to `FutureWarning` in the subsequent release. Verify that the project's pytest configuration surfaces `DeprecationWarning`s so CI catches deprecated call sites.",
+      "Optimizer default parameter values should be stored as a class-level `defaults` dict that extends the parent class's defaults (e.g., `defaults = {**Optimizer.defaults, 'alpha': 70.0}`), not in a separate centralized defaults module.",
+      "Do not use `warnings.warn()` for common, recoverable algorithm events such as step-size scaling or a Hessian having negative eigenvalues; these are normal occurrences that should instead be written to the optimizer's logfile.",
+      "New MD thermostat implementations must include a test (or a linked open issue) that verifies RATTLE constraints are preserved during and after thermalization.",
+      "Related MD tests (for `VelocityVerlet`, `Langevin`, `Andersen`, etc.) must share setup code via common helper functions, pytest fixtures, or `@pytest.mark.parametrize`; never copy-paste test setup or assertion logic across test files.",
+      "When `communicator=None` is passed to an MD class constructor, replace it immediately with `DummyMPI()` in `__init__` rather than sprinkling `if self.communicator is not None:` guards throughout `step()`.",
+      "Common logic shared across MD subclasses \u2014 such as center-of-mass velocity, position correction, or momentum adjustment \u2014 must live in `MolecularDynamics` in `ase/md/md.py` rather than being duplicated in each subclass.",
+      "Temperature assertions in MD tests must use tight quantitative bounds justified by a controlled RNG seed (e.g., `|avg_temp - 300| < 10 K`). Loose sanity-check ranges such as `T > 50 and T < 1000` are not meaningful.",
+      "New functionality for `ase/atoms.py` that extends existing behavior (e.g., moving atoms to a specific center-of-mass position) should be expressed as a new keyword argument on an existing method such as `atoms.center()`, not as a new standalone method.",
+      "When adding test assertions to a test file whose name or primary focus is unrelated to those assertions, include an inline comment explaining why the assertion belongs there (e.g., a reference to the bug/issue it guards against)."
+    ],
+    "Performance Issue": [
+      "Bond calculation in ase-gui must be gated behind the 'show bonds' toggle (i.e., only executed when `self.showing_bonds()` returns True). Do not invoke bond-finding unconditionally on display update, since bond computation is expensive for large systems.",
+      "Bond-finding in ase-gui must use `NeighborList` from `ase.neighborlist` (or an equivalent sub-quadratic spatial algorithm) rather than a naive O(N\u00b2) pairwise loop.",
+      "In numerical methods within MD classes, use numpy array math instead of Python loops \u2014 e.g., generate all random velocities with a single vectorized call and apply conditional velocity replacement with boolean array indexing.",
+      "When a test condition can be verified in one or a few MD steps (e.g., demonstrating that a thermostat with probability/friction set to zero reproduces `VelocityVerlet`), use the minimum number of steps required; do not run a long trajectory to check what a single step can verify."
+    ],
+    "Code Style": [
+      "When adding new CLI options, define only the long option name (e.g., `--nimages`, `--share-x`) by default; add a short alias (e.g., `-n`) only if the option is used frequently enough that the shortcut is genuinely valuable.",
+      "For programmatic trajectory access, prefer Python slice notation (e.g., `traj[start:end]`) over the `index=` keyword argument or the `@`-suffix syntax; avoid adding new code that extends `@`-syntax support.",
+      "New entries in `doc/releasenotes.rst` must be placed under the correct section heading (e.g., optimizer changes under 'Algorithms', not under 'I/O').",
+      "When adding a temperature parameter to any new MD dynamics class in `ase/md/`, name it `temperature_K` to stay consistent with the convention used by `Langevin`, `VelocityVerlet`, `NVTBerendsen`, and `NPTBerendsen`.",
+      "Don't use the `if param is None: param = default` pattern for new parameters that have no backward-compatibility requirement; declare them as normal required positional arguments.",
+      "Name the center-of-mass fixing attribute `fix_com` (not `fixcm`) in MD classes, following the prior art in `ase/atoms.py`.",
+      "In MD `step()` method signatures and bodies, name the forces variable `forces` rather than `f` so it is greppable across the codebase.",
+      "Don't add inline comments that merely restate what the adjacent docstring or the code itself already makes clear; reserve inline comments for non-obvious logic, side-effects, or project-specific invariants."
+    ]
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34078,
+  "title": "Test: Fix clearing mocks in Vitest",
+  "body": "Closes https://github.com/storybookjs/storybook/issues/34075\r\n\r\n## What I did\r\n\r\nFixed `clearAllMocks()`/`resetAllMocks()`/`restoreAllMocks()` not clearing spy mocks created by `sb.mock('...', { spy: true })` when called in `beforeEach`.\r\n\r\n**Root cause:** The module mocker (`__vitest_mocker__`) uses vitest's own `@vitest/spy` instance to create spies, while `clearAllMocks()` from `storybook/test` iterates over a *different* bundled `@vitest/spy` instance's `mocks` Set. Since the two Sets are separate, storybook's mock-clearing functions never find the module mock spies.\r\n\r\n**Fix:** Introduced a shared global registry (`globalThis.__STORYBOOK_MODULE_MOCK_SPIES__`) that bridges the gap:\r\n- **`automock.ts`** \u2014 The generated automock code now registers each spy function in the global registry after module mock creation.\r\n- **`spy.ts`** \u2014 `clearAllMocks`, `resetAllMocks`, and `restoreAllMocks` now also iterate over this registry to clear/reset module mock spies.\r\n\r\nThis means users can now use `clearAllMocks()` in `beforeEach` (at project, meta, or story level) and it will properly reset spy mocks between stories \u2014 no per-story workaround needed.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [x] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n1. Run `yarn vitest run ClearModuleMocks` from the `code/` directory\r\n2. Both `First` and `Second` stories should pass \u2014 previously `Second` failed with `expect(fetchData).toHaveBeenCalledTimes(1)` receiving 2\r\n\r\n### Documentation\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Added `onMockCall()` public API to register listeners for mock invocations.\n  * Enhanced mock lifecycle management: `clearAllMocks()`, `resetAllMocks()`, and `restoreAllMocks()` now properly handle module mocks created with spy option.\n\n* **Tests**\n  * Added test stories demonstrating mock clearing functionality and verification.\n\n* **Chores**\n  * Updated Storybook test infrastructure for module mock spy registration and cleanup.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "valentinpalkovic",
+  "merged_at": "2026-03-14T09:35:28Z",
+  "base_ref": "next",
+  "merge_commit_sha": "bdc1afd1fd0a1cfa8315c9a65a3d5eb5fe5e2410",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "0c0bfc7b782647226a18af2497ad97bdfe9beb97",
+    "5d3a1cbaae98a63a8a61f036cf5425fdd6aacaf3"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tMIA9",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Inconsistent mock options: missing `{ spy: true }`.**\n\nThis mock lacks `{ spy: true }` but `code/.storybook/preview.tsx` (line 40) mocks the same file with `{ spy: true }`. Since the PR's purpose is to verify that `clearAllMocks()` properly clears spy mocks, sandboxes should use consistent options to test this behavior.\n\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n-    \"sb.mock('../template-stories/core/test/ClearModuleMocks.api.ts');\",\n+    \"sb.mock('../template-stories/core/test/ClearModuleMocks.api.ts', { spy: true });\",\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    \"sb.mock('../template-stories/core/test/ClearModuleMocks.api.ts', { spy: true });\",\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@scripts/tasks/sandbox-parts.ts` at line 858, The sandbox mock call\n\"sb.mock('../template-stories/core/test/ClearModuleMocks.api.ts');\" is missing\nthe { spy: true } option and must match the mock in code/.storybook/preview.tsx\nto properly test clearAllMocks() on spy mocks; update the sb.mock invocation in\nscripts/tasks/sandbox-parts.ts to include the options object (e.g.,\nsb.mock('../template-stories/core/test/ClearModuleMocks.api.ts', { spy: true }))\nso the sandbox uses a spy mock.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 8bba443",
+          "file_path": "scripts/tasks/sandbox-parts.ts",
+          "line_number": 858,
+          "start_line": null,
+          "commit_sha": "07e199644879cad9b4413b24cfd4d664cb61d011",
+          "created_at": "2026-03-09T14:04:31Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The mock call is missing `{ spy: true }` option, causing the sandbox test to not properly test the intended behavior of clearAllMocks() on spy mocks \u2014 code behavior doesn't match intent."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding `{ spy: true }` to a mock call for consistency and correct test behavior."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tODwx",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**These `forEach` callbacks trip Biome's iterable-callback-return rule.**\n\nBiome is already flagging these new lines because the concise arrows return the mock instance expression. Use block bodies so the callbacks return `void`.\n\n<details>\n<summary>\ud83e\uddf9 Proposed fix</summary>\n\n```diff\n-  moduleMockSpies.forEach((spy) => spy.mockClear());\n+  moduleMockSpies.forEach((spy) => {\n+    spy.mockClear();\n+  });\n...\n-  moduleMockSpies.forEach((spy) => spy.mockReset());\n+  moduleMockSpies.forEach((spy) => {\n+    spy.mockReset();\n+  });\n...\n-  moduleMockSpies.forEach((spy) => spy.mockClear());\n+  moduleMockSpies.forEach((spy) => {\n+    spy.mockClear();\n+  });\n```\n</details>\n\n\nAlso applies to: 91-91, 104-104\n\n<details>\n<summary>\ud83e\uddf0 Tools</summary>\n\n<details>\n<summary>\ud83e\ude9b Biome (2.4.4)</summary>\n\n[error] 79-79: This callback passed to forEach() iterable method should not return a value.\n\n(lint/suspicious/useIterableCallbackReturn)\n\n</details>\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/test/spy.ts` at line 79, The arrow callbacks with concise\nbodies return the mock instance and trigger Biome's iterable-callback-return\nrule; update all usages of moduleMockSpies.forEach((spy) => spy.mockClear())\n(and the similar forEach calls around the same area) to use block-bodied arrow\ncallbacks that call spy.mockClear(); with no return (e.g.,\nmoduleMockSpies.forEach((spy) => { spy.mockClear(); })), ensuring the callback\nreturns void.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/test/spy.ts",
+          "line_number": 79,
+          "start_line": null,
+          "commit_sha": "5d3a1cbaae98a63a8a61f036cf5425fdd6aacaf3",
+          "created_at": "2026-03-09T15:22:53Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "high",
+          "label_reasoning": "The concise arrow callbacks in forEach return values, violating Biome's iterable-callback-return rule \u2014 a language/tooling-specific standard requiring void-returning callbacks."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a Biome lint error and requests changing concise arrow callbacks to block-bodied callbacks to avoid returning values."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tODw-",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udf10 Web query:\n\n`In Vitest/@vitest/spy, how does `mockRestore()` behave for spies created via `spyOn` or `vi.mock(..., { spy: true })`? Is there a supported way to restore the original implementation while preserving the same spy function reference?`\n\n\ud83d\udca1 Result:\n\n- **`vi.spyOn(obj, 'method')` spies:** `spy.mockRestore()` **restores the original property** on `obj` (original descriptor / function) and **clears spy state**. After that, **`obj.method` is no longer the spy** (the reference changes), so the old `spy` object is effectively \u201cdetached\u201d from future calls. ([vitest.dev](https://vitest.dev/api/mock))\n\n- **`vi.mock(path, { spy: true })` (\u201cspied modules\u201d):** Vitest replaces exports with **spy wrappers that still call the original implementation by default** (so you can assert calls/returns without changing behavior). ([vitest.dev](https://vitest.dev/api/vi))  \n  If you then override an export (e.g. `vi.mocked(mod.fn).mockReturnValue(...)`), calling `.mockRestore()` on that spy follows the same rule: it **restores the original implementation**, which implies **dropping the spy wrapper** rather than keeping the same spy function identity. (Vitest\u2019s \u201crestore\u201d concept is \u201cput the original back\u201d, not \u201ckeep spying but behave like original\u201d.) ([vitest.dev](https://vitest.dev/api/vi))\n\n- **Supported way to restore original implementation *while preserving the same spy function reference*?**  \n  **No.** \u201cRestore\u201d in Vitest means restoring the original method/export (descriptor), which necessarily **breaks identity with the spy reference**; Vitest explicitly notes that once mocks are restored, you can\u2019t keep using the old spy handle to affect the restored method\u2014you must spy again. ([vitest.dev](https://vitest.dev/api/vi))\n\n**Practical workaround (keeps the same spy reference, but does *not* truly restore):**\n- Capture the original implementation first, then make the spy call through to it:\n  - `const original = obj.method`\n  - `const spy = vi.spyOn(obj, 'method')`\n  - later: `spy.mockImplementation(original)` (optionally `spy.mockClear()` to drop history)  \nThis preserves the spy function reference and behavior, but it\u2019s not a \u201crestore\u201d (the property remains a spy). ([vitest.dev](https://vitest.dev/guide/mocking/modules.html))\n\nCitations:\n\n- 1: https://vitest.dev/api/mock\n- 2: https://vitest.dev/api/vi\n- 3: https://vitest.dev/api/vi\n- 4: https://vitest.dev/api/vi\n- 5: https://vitest.dev/guide/mocking/modules.html\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncd code/core/src && find . -name \"spy.ts\" -o -name \"spy.js\" | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 78\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/test/spy.ts | head -120\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 5438\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/test/spy.ts | sed -n '85,115p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1579\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncd code && rg '__STORYBOOK_MODULE_MOCK_SPIES__' --type ts --type js -B2 -A2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1189\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncd code && rg \"moduleMockSpies\" --type ts --type js -B2 -A2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1118\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncd code && rg \"vi\\.mock\\(\" --type ts --type js --max-count=10 | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1854\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncd code/core/src/mocking-utils && cat -n automock.ts | head -80\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3883\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncd code/core/src/mocking-utils && cat -n automock.ts | sed -n '100,180p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4023\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncd code/core/src/mocking-utils && cat -n automock.ts | sed -n '175,200p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1377\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncd code && rg \"mockImplementation\\|mockResolvedValue\" --type ts --type tsx -c | head -10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncd code && rg \"mockImplementation|mockResolvedValue\" --type ts -c | head -10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 593\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncd code && rg \"mockReset\" --type ts -A3 -B1 | head -40\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2448\n\n---\n\n\n\n</details>\n\n**`restoreAllMocks()` leaks overridden module-spy implementations between stories.**\n\nCalling `mockClear()` on module mock spies only clears call history but preserves any `mockImplementation` or `mockResolvedValue` overrides set during a story. This causes the previous story's mock implementation to persist into the next story, breaking story isolation.\n\nConsider using `mockReset()` instead for `moduleMockSpies` in `restoreAllMocks()`, since `mockReset()` clears state and resets implementations (whereas `mockRestore()` would incorrectly attempt to drop the spy wrapper entirely for automocked modules).\n\n<details>\n<summary>\ud83e\uddf0 Tools</summary>\n\n<details>\n<summary>\ud83e\ude9b Biome (2.4.4)</summary>\n\n[error] 99-99: This callback passed to forEach() iterable method should not return a value.\n\n(lint/suspicious/useIterableCallbackReturn)\n\n---\n\n[error] 104-104: This callback passed to forEach() iterable method should not return a value.\n\n(lint/suspicious/useIterableCallbackReturn)\n\n</details>\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/test/spy.ts` around lines 98 - 104, The restoreAllMocks()\nimplementation currently only calls mockClear() on moduleMockSpies which\npreserves any mockImplementation/mockResolvedValue between stories; change the\nmoduleMockSpies cleanup to call mockReset() (not mockRestore()) so each module\nspy's implementation and call state are fully reset between stories, while\nleaving the existing mocks.forEach((spy) => spy.mockRestore()) behavior for\nnon-module spies intact.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/test/spy.ts",
+          "line_number": 104,
+          "start_line": 98,
+          "commit_sha": "5d3a1cbaae98a63a8a61f036cf5425fdd6aacaf3",
+          "created_at": "2026-03-09T15:22:53Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Using mockClear() instead of mockReset() in restoreAllMocks() fails to clear mockImplementation/mockResolvedValue overrides, causing story isolation to break \u2014 an incorrect logic choice for the intended behavior."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tmKx4",
+          "author": "yannbf",
+          "body": "@valentinpalkovic can you verify?",
+          "file_path": "code/core/src/test/spy.ts",
+          "line_number": 104,
+          "start_line": 98,
+          "commit_sha": "5d3a1cbaae98a63a8a61f036cf5425fdd6aacaf3",
+          "created_at": "2026-03-10T15:09:09Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6utm11",
+          "author": "valentinpalkovic",
+          "body": "Mocks can only be set in the preview and are therefore either applied to all stories or to none of them. Therefore, the issue described by coderabbit is invalid.",
+          "file_path": "code/core/src/test/spy.ts",
+          "line_number": 104,
+          "start_line": 98,
+          "commit_sha": "5d3a1cbaae98a63a8a61f036cf5425fdd6aacaf3",
+          "created_at": "2026-03-13T13:25:39Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where mock implementations leak between stories and suggests changing `mockClear()` to `mockReset()` in `restoreAllMocks()`."
+    }
+  ],
+  "review_thread_count": 3,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 3,
+    "stage1_kept": 3,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

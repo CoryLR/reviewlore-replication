@@ -1,0 +1,106 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/index.ts",
+      "line_number": 54,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This early-return silently produces zero output when the framework is not `@storybook/react-vite`. Users running `storybook ai init` on any other supported framework (Angular, Vue, Svelte, etc.) will see nothing \u2014 no error, no warning, no explanation \u2014 and have no idea why the command did nothing. At minimum, add a `logger.error()` here explaining that only `@storybook/react-vite` is currently supported: `logger.error('The \\'storybook ai init\\' command currently only supports @storybook/react-vite. Support for additional frameworks is coming soon.')`. The PR description also does not mention this restriction.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/prompt.ts",
+      "line_number": 25,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`projectInfo.renderer` holds the full npm package name (e.g. `@storybook/react`), sourced from `getStorybookInfo`'s `rendererPackage` field. This value is later passed into `getCsfExample(renderer)`, where the template produces `import type { Meta, StoryObj } from '@storybook/@storybook/react'` \u2014 an invalid module path. An AI agent following these instructions would generate non-compilable story files. Either strip the `@storybook/` scope prefix before use (`renderer.replace(/^@storybook\\//, '')`) or use the full package name directly in the import template without the `@storybook/` prefix.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/prompt.ts",
+      "line_number": 144,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The code block is annotated as ` ```ts ` and the path is `preview.ts`, but the body contains JSX (`<ThemeProvider>`, `<MemoryRouter>`, `<Story />`). TypeScript rejects JSX in `.ts` files \u2014 only `.tsx` files (or files with `@jsxRuntime` pragmas) allow it. An AI agent following this example would create a `preview.ts` that fails to compile. Change both the code-fence language tag and the file path comment to `.tsx` (i.e. ` ```tsx ` and `// ${projectInfo.configDir}/preview.tsx`). The same issue exists in the non-CSF-factory branch of `getPreviewConfigExample` on the following `return dedent` block.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/initiate.ts",
+      "line_number": 118,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This dynamic import uses a deep relative path (`../../cli-storybook/src/ai`) that crosses package boundaries into `cli-storybook`'s source directory. There are two problems: (1) `code/lib/cli-storybook/package.json` has no `\"./ai\"` subpath in its `exports` field, so this import bypasses the package's API surface entirely. (2) In a published-package scenario the compiled output layout would not match this relative path, causing a runtime module-resolution failure. Either add an explicit `\"./ai\"` export to `cli-storybook/package.json` and add `cli-storybook` as a dependency of `create-storybook`, or move the shared `aiInit` logic into a package that both consumers can import properly.",
+      "index": 3
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/bin/run.ts",
+      "line_number": 14,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`std-env` is imported here but is not listed in `code/lib/create-storybook/package.json`'s `dependencies` or `devDependencies`. Relying on it as an undeclared transitive dependency is fragile \u2014 a package manager tree-shaking or hoisting change can break it without warning. Add `std-env` explicitly to `create-storybook/package.json`'s `dependencies`.",
+      "index": 4
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/commands/UserPreferencesCommand.ts",
+      "line_number": 188,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`promptAiSetup` returns `true` unconditionally when `skipPrompt` is `true`, which covers all non-interactive cases: CI environments, `--yes` flag, non-TTY stdout. This silently opts every automated `npx create-storybook` invocation into installing `@storybook/addon-mcp` and running AI initialization without the user's knowledge or consent. `skipPrompt` should default to `false` for the AI prompt, consistent with the principle that opting into optional tooling requires an explicit user choice. Consider returning `false` when `skipPrompt` is `true` unless the user has also explicitly passed `--features ai` or an equivalent flag.",
+      "index": 5
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/initiate.ts",
+      "line_number": 121,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `dedent` tag is applied to a template where the first line starts at column 0 (no leading whitespace) and the second line is indented by 8 spaces. `ts-dedent` strips the *minimum* common indentation, which is 0 here (from the first line), so the second line retains all 8 spaces of indentation in the output string. The rendered log message will have the second sentence visually indented. Fix by giving both lines equal leading indentation:\n```typescript\ndedent`\n  To finalize setting up with AI, paste this prompt to your AI agent:\n  Run \\`npx storybook ai init\\` and follow its instructions precisely.\n`\n```",
+      "index": 6
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/bin/run.ts",
+      "line_number": 14,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`std-env` is an external package import but it is placed after relative imports (`../generators/types`, `../initiate`). Per the project's ESLint import-order configuration, external package imports should be grouped before relative imports. Move this import up to join the other external package imports (alongside `commander`, etc.).",
+      "index": 7
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/bin/run.ts",
+      "line_number": 27,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`import { aiInit } from '../ai'` is placed after `'../sandbox'` (line 26) and before `'../upgrade'` (line 28), but `'../ai'` sorts before `'../migrate'` (line 25) alphabetically. Move this import above the `migrate` import to restore alphabetical ordering.",
+      "index": 8
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/commands/UserPreferencesCommand.test.ts",
+      "line_number": 96,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The comment `// Re-apply mocks after clearAllMocks (which clears call history but not implementations, however mockResolvedValueOnce queues may leak between tests, so reset prompt mocks)` is inaccurate: `vi.clearAllMocks()` *does* clear queued `mockResolvedValueOnce` values along with call history. The subsequent `vi.mocked(prompt.select).mockReset()` and `vi.mocked(prompt.confirm).mockReset()` calls are therefore redundant. Per the project's Vitest conventions, `vi.clearAllMocks()` in `beforeEach` is the correct and sufficient mechanism \u2014 remove the redundant `mockReset()` calls and correct the comment.",
+      "index": 9
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The checklist confirms no automated tests cover the new `code/lib/cli-storybook/src/ai/` module. Core functions including `getDocsUrl`, `parseMajorVersion`, `getSetupInstructions`, `getCsfExample`, `getCsfFactoryExample`, `generateMarkdownOutput`, and `generateJsonOutput` have zero test coverage. Given that these functions produce the AI prompts that agents will follow verbatim, correctness is critical. At minimum, add unit tests for `getDocsUrl` (version path formatting), `parseMajorVersion` (valid/invalid inputs), `getCsfExample` (verifying the import path is well-formed for a given renderer), and snapshot tests for the full markdown and JSON output shapes.",
+      "index": 10
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The `storybook ai init` command silently does nothing for all frameworks except `@storybook/react-vite`, but this constraint is not reflected anywhere users would look before running the command: not in the `--help` output (the description says 'Generate setup instructions to write stories for real components'), not in the command's `--format` option description, and not in the PR description's user-facing summary. Either broaden support before merging, or update the command description to state the limitation explicitly (e.g. 'Generate setup instructions for React + Vite projects') so users understand the scope without running the command first.",
+      "index": 11
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "In `code/lib/create-storybook/src/bin/run.ts`, `resolvedAgent` is computed identically in two separate places: once in the `preAction` hook (`const resolvedAgent = options.agent ?? isAgent`) and again at the top of the main action (`const resolvedAgent = options.agent ?? isAgent`). The result from `preAction` is never written back to `options`, so the second computation is necessary but the duplication is confusing. Consider writing the resolved value back to `options.agent` in `preAction` (i.e. `options.agent = options.agent ?? isAgent`) so the main action can simply read `options.agent` without re-evaluating the same expression.",
+      "index": 12
+    }
+  ],
+  "cost_usd": 0.8567954,
+  "duration_seconds": 595.8050720691681
+}

@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/renderers/react/src/componentManifest/utils.test.ts",
+      "line_number": 198,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `beforeEach` block is missing `vi.clearAllMocks()`. Without it, the `logger.warn` spy accumulates call records across tests. The tests named 'returns tsconfig.json when found', 'returns undefined when no tsconfig variant is found', and 'prefers tsconfig.json over fallback variants' all assert `expect(logger.warn).not.toHaveBeenCalled()`. If these run after the fallback tests (which DO trigger the warning), those assertions will spuriously fail because the spy still holds the prior call. Per project spy-mocking convention, add `vi.clearAllMocks()` as the first statement in this `beforeEach`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/utils.test.ts",
+      "line_number": 204,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Per the project spy-mocking convention, mock behavior (`.mockImplementation(...)`, `.mockReturnValue(...)`) should be configured inside `beforeEach` blocks within nested `describe` groups \u2014 never inside individual `test()` bodies, because inline setup can bleed between tests. Each distinct `find.up` scenario here should live in its own nested `describe` block with a dedicated `beforeEach`, e.g. `describe('when tsconfig.json exists', () => { beforeEach(() => { vi.mocked(find.up).mockImplementation(...) }); test(...) })`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/utils.test.ts",
+      "line_number": 230,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `'falls back to tsconfig.app.json...'` test only asserts that the warning contains `'tsconfig.app.json'`, but the sibling `'falls back to tsconfig.base.json...'` test also asserts `'No tsconfig.json found'`. For consistency and to fully verify the warning text, the `app.json` test should include both `expect.stringContaining('No tsconfig.json found')` and `expect.stringContaining('tsconfig.app.json')`.",
+      "index": 2
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/reactDocgenTypescript.ts",
+      "line_number": 211,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The warning message hardcodes the specific filenames `tsconfig.base.json / tsconfig.app.json`. If `TSCONFIG_CANDIDATES` in `utils.ts` is ever extended (e.g., to include `tsconfig.vitest.json`), this string won't reflect the change and will silently go stale. Consider a more generic phrasing such as `'No tsconfig file found (tried tsconfig.json, tsconfig.base.json, tsconfig.app.json).'`, or\u2014if these files share a package boundary\u2014derive the list from the exported `TSCONFIG_CANDIDATES` constant directly.",
+      "index": 3
+    },
+    {
+      "file_path": "code/frameworks/react-vite/src/plugins/react-docgen.ts",
+      "line_number": 49,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The fallback chain is duplicated inline here without the `logger.warn` call that `findTsconfigPath` emits when a non-primary tsconfig is used. Users relying on the Vite path-alias resolution path (`TsconfigPaths.loadConfig`) will silently fall back to `tsconfig.base.json` or `tsconfig.app.json` with no indication, while users going through the component manifest path in `reactDocgenTypescript.ts` do get a warning. Adding a `logger.debug` or `logger.warn` when a fallback is picked would make the behavior consistent across both code paths.",
+      "index": 4
+    },
+    {
+      "file_path": "code/presets/react-webpack/src/loaders/react-docgen-loader.ts",
+      "line_number": 87,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Same silent-fallback issue as in `react-docgen.ts`. The inline chain has no warning when `tsconfig.base.json` or `tsconfig.app.json` is used instead of `tsconfig.json`. Webpack loader users get no feedback about the fallback, unlike users of the manifest code path. Additionally, as a separate package from `utils.ts`, any future change to the candidate list or priority order must be manually replicated here, `react-docgen.ts`, and `utils.ts`.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The fallback candidate order (`tsconfig.json` \u2192 `tsconfig.base.json` \u2192 `tsconfig.app.json`) is now defined in three separate places: `TSCONFIG_CANDIDATES` in `utils.ts`, inline in `react-docgen.ts`, and inline in `react-docgen-loader.ts`. Because the Vite plugin and Webpack loader live in different packages from `utils.ts`, sharing the constant is non-trivial, but the duplication means future changes to the priority order require coordinated updates across all three files. A comment in each inline copy cross-referencing `TSCONFIG_CANDIDATES` would at least make the intentional duplication explicit and help reviewers keep them in sync.",
+      "index": 6
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The warning emitted in `utils.ts` (`'No tsconfig.json found. Using \"${candidate}\" instead...'`) and the warning in `reactDocgenTypescript.ts` (`'No tsconfig.json (or tsconfig.base.json / tsconfig.app.json) found...'`) cover two distinct scenarios: fallback file used vs. no file at all. However, a user who has only `tsconfig.base.json` will see the fallback warning from `findTsconfigPath` (one warning) but not the 'no tsconfig' warning (which fires only when `configPath` is falsy). This behaviour is correct, but the two warning messages use slightly different phrasing for 'no primary tsconfig'. Aligning the introductory clause (e.g. both starting with `'No tsconfig.json found'`) would make it easier to grep logs and understand both warnings come from the same feature.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.66969265,
+  "duration_seconds": 386.6461019515991
+}

@@ -1,0 +1,52 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34483,
+  "title": "CI: Avoid shallow checkout for Chromatic job",
+  "body": "## What I did\r\n\r\nThis should fix an ongoing issue we've had with Chromatic history getting heavily polluted when rebasing branches. There was a regression in the switch to dynamically generated CI, where we stopped checking out the git history of the repo for the Chromatic job, and switched to a default shallow clone.\r\n\r\nThe PR reintroduces a deeper clone by letting us pass checkout options to the `restore*` helpers. It then passes `shallow: false` specifically for Chromatic.\r\n\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n> [!CAUTION]\r\n> THIS IS NOT COVERED BY TESTS \ud83d\udea8\r\n\r\n#### Manual testing\r\n\r\n> [!CAUTION]\r\n> I HAVE NOT TESTED THIS \ud83d\udea8\r\n\r\nI don't know how to test this other than merge and observe it.\r\n\r\n### Documentation\r\n\r\n\u00f8\r\n\r\n## Checklist for Maintainers\r\n\r\n- [x] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [x] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n\n## Summary by CodeRabbit\n\n* **Chores**\n  * Enhanced CI workflow helpers to support configurable Git checkout behavior, enabling flexible shallow clone options during build operations.\n\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "Sidnioulz",
+  "merged_at": "2026-04-07T13:36:09Z",
+  "base_ref": "next",
+  "merge_commit_sha": "ced690045fbcc61b65169615b5936476c884f6bf",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "b224befd6a2a43db6870d5df6e95abcec3622e43",
+    "dcf86964c3b876ae6c55fc36ab9c63c7027f3eda"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc61foqt",
+          "author": "copilot-pull-request-reviewer",
+          "body": "`workflow.restoreLinux({ shallow: false })` relies on `git.checkout({ shallow: false })`, which in this repo maps to `--depth 500` (still a shallow clone) rather than a full history checkout. If the Chromatic history pollution is caused by missing merge-base commits on long-lived/rebased branches, a depth-500 clone may still fail to find the correct base commit. Consider adding support for a true full-history checkout (no `--depth`, or an explicit `depth` option / `git fetch --unshallow` step) for the Chromatic job to make the fix robust.\n```suggestion\n        run: {\n          name: 'Ensure full git history for Chromatic',\n          command: `\n            if [ -f .git/shallow ]; then\n              git fetch --unshallow --tags || git fetch --tags --prune --force\n            else\n              git fetch --tags\n            fi\n          `,\n          working_directory: 'code',\n        },\n      },\n      {\n        run: {\n```",
+          "file_path": "scripts/ci/common-jobs.ts",
+          "line_number": 133,
+          "start_line": null,
+          "commit_sha": "dcf86964c3b876ae6c55fc36ab9c63c7027f3eda",
+          "created_at": "2026-04-07T12:28:58Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a potential issue with the shallow clone depth still being insufficient and explicitly suggests adding a true full-history checkout with a code suggestion included."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

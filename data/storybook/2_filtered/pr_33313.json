@@ -1,0 +1,256 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33313,
+  "title": "TypeScript: Improve globalTypes type-strictness",
+  "body": "- replaces #33267\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\n`globalTypes` was previously incorrectly typed as `Record<string, ArgType>`.\r\n\r\nThey share in common only `name` and `description`. Both also have `defaultValue`, though this is deprecated in `ArgType` but essential in `GlobalType`. Everything else in `ArgType` is irrelevant to `GlobalType`, and is missing typing for the `toolbar` prop.\r\n\r\nThis PR attempts to untangle this by retyping `globalTypes` as `Record<string, GlobalType>`. There were a number of unsafe casts that were removed as part of this, which also led to the discovery of a seemingly unused HOC.\r\n\r\n### Behavioural Changes:\r\n\r\nglobal types are no longer normalised. The only change here is that `name` _may_ now be undefined. However, name is only referenced twice:\r\n\r\nhttps://github.com/mrginglymus/storybook/blob/23326cfd31a16ae4f748c0c44cf33cd17e15b838/code/core/src/toolbar/components/ToolbarMenuSelect.tsx#L48-L50\r\n\r\nhttps://github.com/mrginglymus/storybook/blob/23326cfd31a16ae4f748c0c44cf33cd17e15b838/code/core/src/toolbar/components/ToolbarMenuSelect.tsx#L86\r\n\r\nso this is unlikely to be an issue\r\n\r\n### Type Changes\r\n\r\nThere are potentially breaking type changes. These are:\r\n\r\n1. removal of `[key: string]: any` type on global types. This means users passing in unexpected extra properties will receive an error. However, these extra properties were completely unused anyway. \r\n\r\n    This could be fixed by adding the `any` back in, but that will just lead to more type-rot\r\n2. acurate typing of `toolbar`. Anyone for whom this is an issue is likely to have experienced run-time errors too...\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\nTo test keyboard shortcuts:\r\n\r\n1. Run `yarn storybook:ui`\r\n2. Verify that `L` and `K` cycle up and down languages as expected\r\n\r\nTo test typing:\r\n\r\n1. Open [preview.ts](https://github.com/storybookjs/storybook/blob/next/code/core/template/stories/preview.ts)\r\n2. check that extra props added to values of `globalTypes` do not raise type errors, but are marked as deprecated\r\n3. check that all other defined properties are correctly typed\r\n\r\n-->\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Keyboard shortcuts for toolbar navigation (next/previous/reset)\n  * Dynamic icon and title for toolbar items; optional reset option\n\n* **Refactor**\n  * Simplified toolbar internals and reduced toolbar-type complexity\n  * Defaults for globals now derived from global-aware configuration; global types handling tightened\n\n* **Tests**\n  * Updated tests and payload expectations to match the refined globals shape\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "mrginglymus",
+  "merged_at": "2026-01-20T09:04:07Z",
+  "base_ref": "next",
+  "merge_commit_sha": "3ec963c9a260128df13cd0bfd33b156f76b955f9",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "84d8272cccc49d06546f5844ca82549b6a1fc424",
+    "f22879a580abb31353f8c628b0366ea1316868c4"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dmA4w",
+          "author": "ndelangen",
+          "body": "```suggestion\r\nexport const getValuesFromGlobalTypes = (globalTypes: GlobalTypes = {}): Globals =>\r\n  Object.entries(globalTypes).reduce<Globals>((acc, [arg, { defaultValue }]) => {\r\n    if (typeof defaultValue !== 'undefined') {\r\n      acc[arg] = defaultValue;\r\n    }\r\n    return acc;\r\n  }, {});\r\n```",
+          "file_path": "code/core/src/preview-api/modules/store/csf/getValuesFromGlobalTypes.ts",
+          "line_number": 9,
+          "start_line": null,
+          "commit_sha": "251f9e8c2a8ec0ef00bc6f157207c35cf995b615",
+          "created_at": "2025-12-23T18:35:18Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "This is a direct code suggestion providing a concrete replacement implementation for the function."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dmE_Y",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Critical: Missing closing brace causes incorrect logic.**\n\nThe `if` block for reset item handling is missing a closing brace, causing `item.value = undefined` to execute for all items, not just reset items with icons.\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n         // Cater for the special type \"reset\" which will reset value and also icon\n         // of toolbar button if any icon was present on toolbar to begin with\n         if (item.type === 'reset' && toolbar.icon) {\n           item.icon = toolbar.icon;\n           item.hideIcon = true;\n-        item.value = undefined;\n-      }\n+          item.value = undefined;\n+        }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n        // Cater for the special type \"reset\" which will reset value and also icon\n        // of toolbar button if any icon was present on toolbar to begin with\n        if (item.type === 'reset' && toolbar.icon) {\n          item.icon = toolbar.icon;\n          item.hideIcon = true;\n          item.value = undefined;\n        }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/toolbar/utils/normalize-toolbar-arg-type.ts around lines 25 to\n31, the if block handling item.type === 'reset' is missing a closing brace so\nthat item.value = undefined runs for all items; fix by adding the missing\nclosing brace after setting item.hideIcon (so the sequence item.icon =\ntoolbar.icon; item.hideIcon = true; item.value = undefined; is all enclosed in\nthe if block), ensure proper indentation and formatting so only reset items with\ntoolbar.icon get their icon set, hideIcon enabled and value cleared.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits a3b9d85 to f22879a",
+          "file_path": "code/core/src/toolbar/utils/normalize-toolbar-arg-type.ts",
+          "line_number": 31,
+          "start_line": null,
+          "commit_sha": "14888428b4a1d7fd76bbdd75ddd783948e21ae54",
+          "created_at": "2025-12-23T18:42:56Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "This flags a critical bug (missing closing brace causing incorrect logic) and provides a specific diff/fix to resolve it."
+    }
+  ],
+  "review_thread_count": 8,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6bGjnQ",
+            "author": "mrginglymus",
+            "body": "This would be a lovely opportunity to allow passing in a storybook icon instance as well as an icon name.",
+            "file_path": "code/core/src/toolbar/components/ToolbarMenuSelect.tsx",
+            "line_number": 134,
+            "start_line": null,
+            "commit_sha": "f22879a580abb31353f8c628b0366ea1316868c4",
+            "created_at": "2025-12-09T11:10:53Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6bXRT8",
+            "author": "Sidnioulz",
+            "body": "Yes please! If you manage to pull that off, we would be able to deprecate the use of `Icons` in SB 11 and to remove it entirely in SB 12. IIRC it only remains for this one use case.",
+            "file_path": "code/core/src/toolbar/components/ToolbarMenuSelect.tsx",
+            "line_number": 134,
+            "start_line": null,
+            "commit_sha": "f22879a580abb31353f8c628b0366ea1316868c4",
+            "created_at": "2025-12-10T12:58:07Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6bjWS6",
+            "author": "mrginglymus",
+            "body": "I think I'll do that in another PR, probably a bit much to fix it in this one ",
+            "file_path": "code/core/src/toolbar/components/ToolbarMenuSelect.tsx",
+            "line_number": 134,
+            "start_line": null,
+            "commit_sha": "f22879a580abb31353f8c628b0366ea1316868c4",
+            "created_at": "2025-12-11T08:57:18Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_collapsed": false,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6bGkCT",
+            "author": "mrginglymus",
+            "body": "Loosened this to allow for a mix",
+            "file_path": "code/core/src/toolbar/types.ts",
+            "line_number": 46,
+            "start_line": null,
+            "commit_sha": "f22879a580abb31353f8c628b0366ea1316868c4",
+            "created_at": "2025-12-09T11:11:15Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_collapsed": false,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6bGy0i",
+            "author": "mrginglymus",
+            "body": "Honestly, lots of other ways of acheiving type safety here, this was just the quickest.",
+            "file_path": "code/core/src/toolbar/components/ToolbarManager.tsx",
+            "line_number": 14,
+            "start_line": null,
+            "commit_sha": "f22879a580abb31353f8c628b0366ea1316868c4",
+            "created_at": "2025-12-09T11:29:48Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6bL4i0",
+            "author": "mrginglymus",
+            "body": "Chatting with @Sidnioulz and I may have misunderstood the point of this bit of functionality - will take another look.",
+            "file_path": "code/core/src/toolbar/hoc/withKeyboardCycle.tsx",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "3276cef28be1db7c8e4ff1020df39bc2e4fcc510",
+            "created_at": "2025-12-09T17:18:43Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6bOaMO",
+            "author": "mrginglymus",
+            "body": "reinstated, in a slightly more compact way",
+            "file_path": "code/core/src/toolbar/hoc/withKeyboardCycle.tsx",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "3276cef28be1db7c8e4ff1020df39bc2e4fcc510",
+            "created_at": "2025-12-09T20:29:21Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6bXR5E",
+            "author": "Sidnioulz",
+            "body": "Could you please point out where the replacement is? I'm not finding it \ud83d\ude2c ",
+            "file_path": "code/core/src/toolbar/hoc/withKeyboardCycle.tsx",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "3276cef28be1db7c8e4ff1020df39bc2e4fcc510",
+            "created_at": "2025-12-10T12:58:55Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6bXb6e",
+            "author": "mrginglymus",
+            "body": "https://github.com/storybookjs/storybook/pull/33313/files#diff-9f2151f4963b3d0116935c70d45be8336dec1c23592ffa8d4763420f9371e513R90-R118",
+            "file_path": "code/core/src/toolbar/hoc/withKeyboardCycle.tsx",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "3276cef28be1db7c8e4ff1020df39bc2e4fcc510",
+            "created_at": "2025-12-10T13:11:47Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_collapsed": false,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6bL45y",
+            "author": "mrginglymus",
+            "body": "It's safe to say that `cycleValues` is discarded though",
+            "file_path": "code/core/src/toolbar/hoc/withKeyboardCycle.tsx",
+            "line_number": 66,
+            "start_line": null,
+            "commit_sha": "f22879a580abb31353f8c628b0366ea1316868c4",
+            "created_at": "2025-12-09T17:19:03Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6gJDgi",
+            "author": "mrginglymus",
+            "body": "```suggestion\n  [name: string]: any;\n};\n```\n\nfor looseness? add a deprecation comment...",
+            "file_path": "code/core/src/toolbar/types.ts",
+            "line_number": 59,
+            "start_line": null,
+            "commit_sha": "f22879a580abb31353f8c628b0366ea1316868c4",
+            "created_at": "2026-01-13T14:41:31Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 8,
+    "stage1_kept": 2,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 6,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

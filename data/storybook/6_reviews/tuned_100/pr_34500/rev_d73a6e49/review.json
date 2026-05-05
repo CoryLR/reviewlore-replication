@@ -1,0 +1,46 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "MIGRATION.md",
+      "line_number": 1327,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The text says 'In Storybook 9, on-device addons \u2026 must be listed under the `deviceAddons` key' but this section lives in the *From version 9.x to 10.0.0* migration chapter and `deviceAddons` is introduced as part of this very fix. Saying 'In Storybook 9' implies the requirement pre-existed in SB9 and users have been doing it wrong all along, which contradicts this being a new automigration. Change to 'Starting with Storybook 10' (or 'As of Storybook 10') to accurately reflect that this is a breaking change being introduced in the 10 upgrade.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 146,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The description 'handles the case where @storybook/react-native is in dependencies (not devDependencies)' implies a distinct code path, but `getAllDependencies()` already merges `dependencies`, `devDependencies`, and `peerDependencies` into a single flat object. This test exercises exactly the same branch as the 'returns the ondevice addons when string addons with \"ondevice\" are present' test above it. Either rename the test to describe the unique aspect it actually covers (e.g., a single-addon array) or remove it to avoid duplication.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 28,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`.includes('ondevice')` is a plain substring match. Any third-party addon whose package name happens to contain the word 'ondevice' (e.g., `@acme/my-ondevice-logger`) would be silently moved out of `addons` and into `deviceAddons`. All official packages follow the `@storybook/addon-ondevice-` prefix, so anchoring the check (e.g., `getAddonName(addon).includes('@storybook/addon-ondevice-') || getAddonName(addon).startsWith('addon-ondevice-')`) would prevent false positives on unrelated third-party addons.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 47,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`removeEntryFromArray` throws `Error: Could not find '${value}' in array at 'addons'` if the named entry is absent (confirmed in `ConfigFile.ts` line 649). If the user edits the config file between the `check` and `run` phases \u2014 or if another migration step already removed the addon \u2014 this error will propagate uncaught, giving users a confusing internal stack trace instead of a friendly message. Consider wrapping in a `try/catch` and emitting a `logger.warn` when the entry is already absent rather than hard-failing.",
+      "index": 3
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test suite covers string-only and object-only addon arrays in isolation, but not a mixed array containing both string and object-form entries simultaneously (e.g., `['@storybook/addon-ondevice-controls', { name: '@storybook/addon-ondevice-actions', options: {} }, '@storybook/addon-docs']`). Adding one such test would confirm the per-addon loop handles both forms correctly in a single config and prevents a regression if the looping or `getAddonName` logic is later refactored.",
+      "index": 4
+    }
+  ],
+  "cost_usd": 0.643054,
+  "duration_seconds": 388.08865308761597
+}

@@ -1,0 +1,120 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33496,
+  "title": "UI: Allow direct kb/mouse actions on zoom tool button",
+  "body": "## What I did\r\n\r\nSupports https://github.com/storybookjs/storybook/pull/33375.\r\n\r\nI allowed for more direct keyboard and scroll operation, directly on the button. This helps keyboard users who expect ArrowDown to do something on other toolbar tools with a popup, and provides a more direct shortcut for mouse users (scroll the zoom button) that is commonly found in graphics apps with a canvas and zoom controls.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [x] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n1. Focus Zoom button\r\n2. Smash your keeb!\r\n3. Scroll like a hamster!\r\n\r\n### Documentation\r\n\r\n\r\n## Checklist for Maintainers\r\n\r\n- [x] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [x] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Keyboard support for zoom (Arrow Up/Down, Page Up/Down, Home, End) to change zoom levels.\n  * Mouse wheel support for zoom adjustments with appropriate event handling.\n  * New relative zoom API (zoomBy) allowing programmatic incremental adjustments with a minimum clamp.\n\n* **Tests**\n  * Added interactive stories/tests exercising key and wheel interactions, asserting resulting displayed zoom levels.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "Sidnioulz",
+  "merged_at": "2026-03-03T16:17:17Z",
+  "base_ref": "next",
+  "merge_commit_sha": "9cd5156a4cd902aa5909c1a4ddde0be92267d156",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "7284b33476dd792b3da85ed0cc6ea271af848f9e",
+    "498b9135b52b7fb2deedb48207f3b6d9a9a3a433"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fhN7M",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Home/End key mapping is reversed from accessibility standards.**\n\nPer WAI-ARIA slider patterns, `Home` should move to the minimum value and `End` should move to the maximum value. The current implementation does the opposite.\n\n\n<details>\n<summary>\ud83d\udd27 Proposed fix to align with accessibility standards</summary>\n\n```diff\n-          } else if (e.key === 'Home') {\n-            zoomTo(ZOOM_LEVELS[ZOOM_LEVELS.length - 1]);\n-            e.preventDefault();\n-          } else if (e.key === 'End') {\n-            zoomTo(ZOOM_LEVELS[0]);\n+          } else if (e.key === 'Home') {\n+            zoomTo(ZOOM_LEVELS[0]);\n+            e.preventDefault();\n+          } else if (e.key === 'End') {\n+            zoomTo(ZOOM_LEVELS[ZOOM_LEVELS.length - 1]);\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n          } else if (e.key === 'Home') {\n            zoomTo(ZOOM_LEVELS[0]);\n            e.preventDefault();\n          } else if (e.key === 'End') {\n            zoomTo(ZOOM_LEVELS[ZOOM_LEVELS.length - 1]);\n            e.preventDefault();\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/manager/components/preview/tools/zoom.tsx around lines 163 -\n168, The Home/End handling is reversed: in the keydown handler where it checks\ne.key for 'Home' and 'End' (calling zoomTo with ZOOM_LEVELS indices), swap the\ntargets so Home calls zoomTo(ZOOM_LEVELS[0]) and End calls\nzoomTo(ZOOM_LEVELS[ZOOM_LEVELS.length - 1]); keep e.preventDefault() in both\nbranches and update the branches around the zoomTo calls in the same keydown\nhandler to maintain accessibility per WAI-ARIA.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/preview/tools/zoom.tsx",
+          "line_number": 171,
+          "start_line": 166,
+          "commit_sha": "498b9135b52b7fb2deedb48207f3b6d9a9a3a433",
+          "created_at": "2026-01-09T13:56:32Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fhN7W",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Missing upper bound on `zoomBy`.**\n\nThe function clamps the minimum to `0.01` but allows the value to exceed `ZOOM_LEVELS.at(-1)` (400%). This is inconsistent with `zoomIn`/`zoomOut` which are bounded by `ZOOM_LEVELS`, and allows users to zoom past 400% by repeatedly pressing ArrowUp.\n\n\n<details>\n<summary>\ud83d\udd27 Proposed fix to add upper bound</summary>\n\n```diff\n  const zoomBy = useCallback(\n    (delta: number) => {\n-      set(Math.max(0.01, value + delta));\n+      const min = ZOOM_LEVELS[0];\n+      const max = ZOOM_LEVELS[ZOOM_LEVELS.length - 1];\n+      set(Math.max(min, Math.min(max, value + delta)));\n    },\n    [set, value]\n  );\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/manager/components/preview/tools/zoom.tsx around lines 206 -\n211, zoomBy currently clamps only the minimum and can exceed the maximum zoom;\nupdate the zoomBy callback to clamp the new value between 0.01 and the max zoom\nlevel (use ZOOM_LEVELS.at(-1) or the equivalent MAX_ZOOM) before calling set, so\nit matches the bounds enforced by zoomIn/zoomOut (refer to the zoomBy function,\nset, value, and ZOOM_LEVELS symbols).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/preview/tools/zoom.tsx",
+          "line_number": 216,
+          "start_line": 209,
+          "commit_sha": "498b9135b52b7fb2deedb48207f3b6d9a9a3a433",
+          "created_at": "2026-01-09T13:56:32Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fionN",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udf10 Web query:\n\n`@testing-library user-event wheel scroll event support`\n\n\ud83d\udca1 Result:\n\nShort answer: @testing-library/user-event does not expose a dedicated wheel/scroll helper. Use DOM fireEvent / createEvent to dispatch a WheelEvent (or construct new WheelEvent) and trigger scroll handlers. See the Testing Library fireEvent docs and the WheelEvent spec for event properties. [1][2]\n\nReferences\n- fireEvent / createEvent (DOM Testing Library). [1]\n- WheelEvent (MDN). [2]\n\n---\n\n\ud83c\udf10 Web query:\n\n`Storybook userEvent API wheel events documentation`\n\n\ud83d\udca1 Result:\n\nShort answer: Storybook re-exports Testing Library\u2019s userEvent for play() functions, but there\u2019s no documented userEvent.wheel helper \u2014 use fireEvent.wheel or synthesize a WheelEvent instead.\n\nExample:\n- using fireEvent:\n  await fireEvent.wheel(element, { deltaY: 100 });  // simulate vertical wheel\n- or native:\n  element.dispatchEvent(new WheelEvent('wheel', { deltaY: 100 }));\n\nSources:\n[1] Storybook \u2014 Interaction tests / userEvent docs.  \n[2] Testing Library \u2014 user-event intro (v14).  \n[3] Testing Library \u2014 fireEvent / firing events docs.  \n[4] MDN \u2014 WheelEvent (constructor & deltaY).\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/manager/components/preview/tools/zoom.stories.tsx | head -30\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1107\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat code/core/src/manager/components/preview/tools/zoom.stories.tsx | grep -n \"Simulate\\.\" || echo \"No Simulate usage found\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 159\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nwc -l code/core/src/manager/components/preview/tools/zoom.stories.tsx && tail -50 code/core/src/manager/components/preview/tools/zoom.stories.tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1804\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg \"fireEvent\" code/core/src/manager/components/preview/tools/ --type tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg -A 5 \"from 'storybook/test'\" code/core/src/manager/components/preview/tools/zoom.stories.tsx | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 294\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg \"fireEvent\" code/core/src --type ts -A 2 | head -30\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2533\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nfd \"test-utils\" code/core/src/manager/components/preview/tools/ --type f\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg \"Simulate.wheel|fireEvent.wheel\" code/ -A 2 -B 2 | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1267\n\n---\n\n\n\n</details>\n\n**Replace `Simulate.wheel` with `fireEvent.wheel` for modern wheel event testing.**\n\nThe code uses `Simulate.wheel` from the deprecated `react-dom/test-utils`. While wheel events aren't supported by `userEvent`, `fireEvent.wheel` is available from `storybook/test` and provides the same functionality without relying on deprecated APIs. Remove the `Simulate` import from line 5 and add `fireEvent` to the import on line 6, then replace both `Simulate.wheel` calls (lines 150, 161) with `fireEvent.wheel`.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/manager/components/preview/tools/zoom.stories.tsx around lines\n5 - 6, Remove the deprecated Simulate import and replace its usage with\nfireEvent: delete the \"Simulate\" import from the top import statement and add\n\"fireEvent\" to the existing import that currently has \"expect, fn, screen,\nwaitFor, within\"; then replace all calls to Simulate.wheel inside the file (the\ntwo occurrences) with fireEvent.wheel so the wheel events use the modern test\nutility.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 47420f1 to 3bec845",
+          "file_path": "code/core/src/manager/components/preview/tools/zoom.stories.tsx",
+          "line_number": 6,
+          "start_line": null,
+          "commit_sha": "27c6350ef762a12059bcfa4ec6179c34edc6662f",
+          "created_at": "2026-01-09T15:39:08Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fionU",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Reverse Home/End key semantics to match UI conventions.**\n\nThe Home key typically navigates to the start/minimum value, while End navigates to the end/maximum. Currently, Home zooms to maximum (400%) and End zooms to minimum (25%), which is backwards.\n\n\n<details>\n<summary>\ud83d\udd04 Proposed fix to swap Home and End behavior</summary>\n\n```diff\n          } else if (e.key === 'Home') {\n-            zoomTo(ZOOM_LEVELS[ZOOM_LEVELS.length - 1]);\n+            zoomTo(ZOOM_LEVELS[0]);\n            e.preventDefault();\n          } else if (e.key === 'End') {\n-            zoomTo(ZOOM_LEVELS[0]);\n+            zoomTo(ZOOM_LEVELS[ZOOM_LEVELS.length - 1]);\n            e.preventDefault();\n          }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n        onKeyDown={(e) => {\n          if (e.key === 'ArrowDown') {\n            zoomBy(-0.01);\n            e.preventDefault();\n          } else if (e.key === 'ArrowUp') {\n            zoomBy(0.01);\n            e.preventDefault();\n          } else if (e.key === 'PageDown') {\n            zoomOut();\n            e.preventDefault();\n          } else if (e.key === 'PageUp') {\n            zoomIn();\n            e.preventDefault();\n          } else if (e.key === 'Home') {\n            zoomTo(ZOOM_LEVELS[0]);\n            e.preventDefault();\n          } else if (e.key === 'End') {\n            zoomTo(ZOOM_LEVELS[ZOOM_LEVELS.length - 1]);\n            e.preventDefault();\n          }\n        }}\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/manager/components/preview/tools/zoom.tsx around lines 153 -\n173, The Home/End key handling in the onKeyDown handler of the zoom control is\nreversed: change the Home branch (currently calling\nzoomTo(ZOOM_LEVELS[ZOOM_LEVELS.length - 1])) to call zoomTo(ZOOM_LEVELS[0]) so\nHome goes to minimum zoom, and change the End branch (currently calling\nzoomTo(ZOOM_LEVELS[0])) to call zoomTo(ZOOM_LEVELS[ZOOM_LEVELS.length - 1]) so\nEnd goes to maximum zoom; update the two else-if branches in the onKeyDown\nanonymous function accordingly and keep the e.preventDefault() calls.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/preview/tools/zoom.tsx",
+          "line_number": 173,
+          "start_line": 153,
+          "commit_sha": "498b9135b52b7fb2deedb48207f3b6d9a9a3a433",
+          "created_at": "2026-01-09T15:39:08Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6rPOC2",
+          "author": "Sidnioulz",
+          "body": "I'm ok with that. Home is next to PgUp and End next to PgDown. I want all the stuff that goes up on the kb and mouse to zoom in the same direction.",
+          "file_path": "code/core/src/manager/components/preview/tools/zoom.tsx",
+          "line_number": 173,
+          "start_line": 153,
+          "commit_sha": "498b9135b52b7fb2deedb48207f3b6d9a9a3a433",
+          "created_at": "2026-03-02T14:54:09Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rIxpZ",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Use the zoom control\u2019s actual role consistently in these play functions.**\n\nThese stories query `\"button\"` for `\"Change zoom level\"`, while this file\u2019s own helper (`openDialog`) targets it as `\"switch\"`. This can break interaction lookup/assertions.\n\n\n\n<details>\n<summary>\ud83d\udd27 Proposed fix pattern (apply to all new keyboard/wheel stories)</summary>\n\n```diff\n-const zoom = await canvas.findByRole('button', { name: 'Change zoom level' });\n+const zoom = await canvas.findByRole('switch', { name: 'Change zoom level' });\n\n-expect(screen.getByRole('button', { name: 'Change zoom level' })).toHaveTextContent('101%');\n+expect(canvas.getByRole('switch', { name: 'Change zoom level' })).toHaveTextContent('101%');\n```\n\n```diff\n-await waitFor(() =>\n-  expect(screen.getByRole('button', { name: 'Change zoom level' })).toHaveTextContent('150%')\n-);\n+await waitFor(() =>\n+  expect(canvas.getByRole('switch', { name: 'Change zoom level' })).toHaveTextContent('150%')\n+);\n```\n</details>\n\n\nAlso applies to: 99-103, 109-113, 119-123, 129-133, 139-143, 149-153, 160-164\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager/components/preview/tools/zoom.stories.tsx` around lines\n89 - 93, The tests use findByRole('button', { name: 'Change zoom level' }) but\nthe component's helper openDialog and the actual control use role 'switch',\ncausing lookup failures; update the play functions that query the zoom control\n(e.g., where you assign const zoom = await canvas.findByRole(...)) to use\nfindByRole('switch', { name: 'Change zoom level' }) consistently (same change\nfor all occurrences noted around the zoom keyboard/wheel stories), keep the\nsubsequent zoom.focus(), userEvent.keyboard/wheel calls and assertions unchanged\nother than the role string so the interactions target the real control.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/preview/tools/zoom.stories.tsx",
+          "line_number": 93,
+          "start_line": null,
+          "commit_sha": "3bec84516c943870cfe31c8428d643c284106ae0",
+          "created_at": "2026-03-02T08:48:59Z",
+          "is_outdated": true
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 5
+}

@@ -1,0 +1,316 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33819,
+  "title": "Builder-Vite: Centralize Vite plugins for builder-vite and addon-vitest",
+  "body": "Closes https://github.com/storybookjs/storybook/issues/33813\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\nThis PR refactors the @storybook/builder-vite plugin architecture to move core logic into a more modular, plugin-based structure.\r\n\r\n### Key Changes\r\n**1. Modularization of Vite Plugins**\r\nPreviously, much of the Vite configuration (resolve conditions, environment variables, fs-allow rules) was hardcoded within the builder's vite-config.ts. These have been extracted into self-contained plugins:\r\n\r\n- `storybookConfigPlugin`: Handles resolve conditions (storybook, stories, test), envPrefix (VITE_, STORYBOOK_), and filesystem access.\r\n- `storybookProjectAnnotationsPlugin`: Manages the virtual module for composed project annotations (getProjectAnnotations).\r\n- `storybookRuntimePlugin`: Handles external globals and environment variable injection.\r\n\r\n**2. Introduction of viteCorePlugins Preset**\r\nA new `viteCorePlugins` preset has been added to builder-vite/src/preset.ts. (We don't want to use `viteFinal` to be able to clearly distinguish what is a shareable core plugin and what is config contributed by other addons/frameworks/user config - This was requested by Jeppe). This serves as the single source of truth for the Vite setup required to run Storybook code, and it can now be applied by both the standard builder and the addon-vitest.\r\n\r\n**3. Refined Virtual Module Handling**\r\nThe project annotations logic has been moved out of the monolithic `codeGeneratorPlugin` into a dedicated virtual `module: virtual:/@storybook/builder-vite/project-annotations.js`. This allows tests and external tools to access composed annotations. The project annotations will be re-used in `@storybook/addon-vitest` in SB 11, since it is considered a breaking change because it might conflict with the user's existing `.storybook/vitest.setup.ts` file.\r\n\r\n**4. Cleanups and Optimization**\r\n- Removed sanitizeEnvVars in favor of the new storybookRuntimePlugin, which handles define injection via the standard Vite plugin config hook.\r\n- Dependency Optimization: Simplified getOptimizeDeps logic and moved it into a plugin-driven approach.\r\n\r\n**Impact on @storybook/addon-vitest**\r\nBy leveraging the new `viteCorePlugins` preset, addon-vitest can now automatically stay in sync with the builder's configuration for resolve conditions, globals, and docgen, reducing the maintenance burden and preventing configuration drift.\r\n\r\n\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\nManual testing should cover:\r\n- HMR of preview files\r\n- addon-vitest general functionality\r\n- proper setting of optimize deps for both, Storybook and Story Tests powered by Vitest\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\nThis pull request has been released as version `0.0.0-pr-33819-sha-40177d0f`. Try it out in a new sandbox by running `npx storybook@0.0.0-pr-33819-sha-40177d0f sandbox` or in an existing project with `npx storybook@0.0.0-pr-33819-sha-40177d0f upgrade`.\n<details>\n<summary>More information</summary>\n\n| | |\n| --- | --- |\n| **Published version** | [`0.0.0-pr-33819-sha-40177d0f`](https://npmjs.com/package/storybook/v/0.0.0-pr-33819-sha-40177d0f) |\n| **Triggered by** | @valentinpalkovic |\n| **Repository** | [storybookjs/storybook](https://github.com/storybookjs/storybook) |\n| **Branch** | [`valentin/encapsulate-vite-plugins`](https://github.com/storybookjs/storybook/tree/valentin/encapsulate-vite-plugins) |\n| **Commit** | [`40177d0f`](https://github.com/storybookjs/storybook/commit/40177d0f5feaeb537f984145081ec2c9a3692ae2) |\n| **Datetime** | Thu Feb 19 13:56:41 UTC 2026 (`1771509401`) |\n| **Workflow run** | [22184698620](https://github.com/storybookjs/storybook/actions/runs/22184698620) |\n\nTo request a new release of this pull request, mention the `@storybookjs/core` team.\n\n_core team members can create a new canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=33819`_\n</details>\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\r\n## Summary by CodeRabbit\r\n\r\n* **New Features**\r\n  * Modular Vite plugins for Storybook (config, runtime, entry, optimize-deps, project annotations) and virtual module for project annotations.\r\n  * Unified codegen for modern iframe to import project annotations.\r\n\r\n* **Refactor**\r\n  * Simplified Vite config assembly and optimize-deps flow; moved builder-specific settings into dedicated plugin.\r\n  * Explicit plugin exports and tighter type assertions.\r\n\r\n* **Chores**\r\n  * Removed unused imports and cleaned up exports.\r\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "valentinpalkovic",
+  "merged_at": "2026-02-19T15:11:39Z",
+  "base_ref": "next",
+  "merge_commit_sha": "c84a20787f177465ffe0d95c422c9244f557b151",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "ecc7fa889a1fedb789175e63bb3466b706571f02",
+    "40177d0f5feaeb537f984145081ec2c9a3692ae2"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6moGgu",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Weak hash function can produce collisions.**\n\nThis hash function sums character codes, so permutations of the same characters produce identical hashes (e.g., `\"abc\"` and `\"cba\"` both hash to 294). While the filename prefix provides some disambiguation, consider a more robust approach if uniqueness is important.\n\n<details>\n<summary>\ud83d\udd27 Suggested improvement using a simple string hash</summary>\n\n```diff\n function hash(value: string) {\n-  return value.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);\n+  // Simple djb2-style hash for better distribution\n+  return value.split('').reduce((acc, char) => ((acc << 5) - acc + char.charCodeAt(0)) | 0, 5381) >>> 0;\n }\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/builders/builder-vite/src/codegen-project-annotations.ts` around lines\n95 - 97, The current hash function (hash) in codegen-project-annotations.ts is\nweak (sums char codes) and can collide for permutations; replace it with a\nrobust deterministic string hash (e.g., FNV-1a or a cryptographic hash like\nSHA-1/SHA-256 via crypto.createHash) so returned values are hex digests rather\nthan simple integers, and update any callers expecting the old numeric value to\naccept the new string digest; ensure the implementation remains deterministic\nand performant for filenames and adjust tests if they assert the previous\nnumeric output.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/builders/builder-vite/src/codegen-project-annotations.ts",
+          "line_number": 110,
+          "start_line": 108,
+          "commit_sha": "40177d0f5feaeb537f984145081ec2c9a3692ae2",
+          "created_at": "2026-02-11T21:06:10Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests replacing the weak hash function with a more robust alternative to avoid collisions."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6moGgy",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Fix envPrefix merging to avoid dropping user prefixes.**  \nThe code currently replaces any user-defined envPrefix with just `STORYBOOK_`, which conflicts with the comment and can disable user env vars. Please append `STORYBOOK_` instead.\n\n\n\n<details>\n<summary>\u2705 Proposed fix</summary>\n\n```diff\n     {\n       name: 'storybook:config-plugin',\n       enforce: 'pre',\n       async config(config) {\n         const { defaultClientConditions = [] } = await import('vite');\n+        const existingEnvPrefix = config.envPrefix;\n+        const mergedEnvPrefix = existingEnvPrefix\n+          ? Array.from(\n+              new Set([\n+                ...(Array.isArray(existingEnvPrefix) ? existingEnvPrefix : [existingEnvPrefix]),\n+                'STORYBOOK_',\n+              ])\n+            )\n+          : ['VITE_', 'STORYBOOK_'];\n\n         return {\n           ...(options.cacheKey\n             ? { cacheDir: resolvePathInStorybookCache('sb-vite', options.cacheKey) }\n             : {}),\n           ...(options.setRoot !== false ? { root: projectRoot } : {}),\n           ...(options.base !== undefined ? { base: options.base } : {}),\n           resolve: {\n             conditions: ['storybook', 'stories', 'test', ...defaultClientConditions],\n             preserveSymlinks: isPreservingSymlinks(),\n           },\n           // If an envPrefix is specified in the user's vite config, add STORYBOOK_ to it.\n           // Otherwise, add both VITE_ and STORYBOOK_ so that Vite doesn't lose its default.\n-          envPrefix: config.envPrefix ? ['STORYBOOK_'] : ['VITE_', 'STORYBOOK_'],\n+          envPrefix: mergedEnvPrefix,\n         };\n       },\n     },\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n      async config(config) {\n        const { defaultClientConditions = [] } = await import('vite');\n        const existingEnvPrefix = config.envPrefix;\n        const mergedEnvPrefix = existingEnvPrefix\n          ? Array.from(\n              new Set([\n                ...(Array.isArray(existingEnvPrefix) ? existingEnvPrefix : [existingEnvPrefix]),\n                'STORYBOOK_',\n              ])\n            )\n          : ['VITE_', 'STORYBOOK_'];\n\n        return {\n          ...(options.cacheKey\n            ? { cacheDir: resolvePathInStorybookCache('sb-vite', options.cacheKey) }\n            : {}),\n          ...(options.setRoot !== false ? { root: projectRoot } : {}),\n          ...(options.base !== undefined ? { base: options.base } : {}),\n          resolve: {\n            conditions: ['storybook', 'stories', 'test', ...defaultClientConditions],\n            preserveSymlinks: isPreservingSymlinks(),\n          },\n          // If an envPrefix is specified in the user's vite config, add STORYBOOK_ to it.\n          // Otherwise, add both VITE_ and STORYBOOK_ so that Vite doesn't lose its default.\n          envPrefix: mergedEnvPrefix,\n        };\n      },\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/builders/builder-vite/src/plugins/storybook-config-plugin.ts` around\nlines 53 - 69, The envPrefix logic in async config(config) of\nstorybook-config-plugin.ts currently discards user-defined config.envPrefix;\nchange it to merge and deduplicate user prefixes with 'STORYBOOK_' instead of\nreplacing them: if config.envPrefix exists, produce an array that includes all\nentries from config.envPrefix plus 'STORYBOOK_' (only add 'STORYBOOK_' if not\nalready present), otherwise keep the fallback ['VITE_', 'STORYBOOK_']; ensure\nthe final value is assigned to envPrefix in the returned config object.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits b3e8ea8 to 5826751",
+          "file_path": "code/builders/builder-vite/src/plugins/storybook-config-plugin.ts",
+          "line_number": 45,
+          "start_line": 24,
+          "commit_sha": "40177d0f5feaeb537f984145081ec2c9a3692ae2",
+          "created_at": "2026-02-11T21:06:10Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where user-defined envPrefix values are dropped and provides a specific fix to merge them."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6moGg-",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# First, let's find the Presets class/interface definition\necho \"=== Finding Presets definition ===\"\nrg -n \"class Presets|interface Presets|type Presets\" --type ts --type tsx -g '**/*preset*.ts' -g '**/*preset*.tsx'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 144\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Let's search for the apply method definition within Presets\necho \"=== Searching for apply method definition ===\"\nrg -n \"apply<|apply\\(\" --type ts --type tsx -A 3 -g '**/presets*' | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 155\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Look for other usages of presets.apply to see the pattern\necho \"=== Finding other presets.apply usages ===\"\nrg -n \"presets\\.apply<\" --type ts --type tsx | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 152\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check the specific file to see context around line 57-66\necho \"=== Context around line 57-66 in the file ===\"\nsed -n '50,75p' code/builders/builder-vite/src/plugins/storybook-runtime-plugin.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 950\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Find where env preset is defined and how it's typed\necho \"=== Searching for env preset definition ===\"\nrg -n \"\\.apply.*env|'env'.*apply\" --type ts --type tsx | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 153\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for Presets class/interface definition\necho \"=== Finding Presets definition ===\"\nrg -n \"class Presets|interface Presets\" | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 172\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for the apply method signature\necho \"=== Finding apply method ===\"\nrg -n \"apply\\s*<\" | head -30\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3954\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for other presets.apply usages with env\necho \"=== Finding other presets.apply usages ===\"\nrg -n \"presets\\.apply\\s*<\" | head -30\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3938\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Look for Builder_EnvsRaw type definition\necho \"=== Finding Builder_EnvsRaw type ===\"\nrg -n \"Builder_EnvsRaw|type.*Env\" | grep -i builder | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1399\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search in preset-related files specifically\necho \"=== Searching in preset files ===\"\nfind . -name \"*preset*\" -type f | grep -E \"\\.(ts|js)$\" | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1046\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Get full Presets interface with apply method definitions\nsed -n '70,130p' code/core/src/types/modules/core-common.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2134\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Double-check how other code uses env preset - especially lines around those calls\necho \"=== env usage in common-preset.ts line 145 ===\"\nsed -n '140,160p' code/core/src/core-server/presets/common-preset.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 870\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check webpack5 env usage\necho \"=== env usage in webpack5 line 65 ===\"\nsed -n '60,70p' code/builders/builder-webpack5/src/preview/iframe-webpack.config.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 459\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Verify the Object.keys usage on envs in the target file\necho \"=== Full function context ===\"\nsed -n '57,75p' code/builders/builder-vite/src/plugins/storybook-runtime-plugin.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 637\n\n---\n\n\n\n</details>\n\n**Remove the `Promise` wrapper from the generic parameter in `presets.apply`.**\n\nThe code currently uses `presets.apply<Promise<Builder_EnvsRaw>>('env')`, which causes double-Promise typing. Since `apply<T>` returns `Promise<T>`, this results in `Promise<Promise<Builder_EnvsRaw>>`. After awaiting, `envs` remains a Promise instead of the object, causing `Object.keys(envs)` and `stringifyProcessEnvs(envs, ...)` to fail at runtime.\n\nOther usages in the codebase correctly apply the pattern with `presets.apply<Record<string, string>>('env')` (see `common-preset.ts` lines 145, 155 and `builder-webpack5` line 65).\n\n<details>\n<summary>Correct usage</summary>\n\n```diff\n-  const envs = await options.presets.apply<Promise<Builder_EnvsRaw>>('env');\n+  const envs = await options.presets.apply<Builder_EnvsRaw>('env');\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/builders/builder-vite/src/plugins/storybook-runtime-plugin.ts` around\nlines 57 - 66, In storybookRuntimePlugin, presets.apply is incorrectly typed as\npresets.apply<Promise<Builder_EnvsRaw>>('env') causing a double Promise so\nawaited envs is still a Promise; change the generic to the raw type (e.g.,\npresets.apply<Builder_EnvsRaw>('env') or\npresets.apply<Record<string,string>>('env')) so await returns the actual env\nobject, then stringifyProcessEnvs(envs, config.envPrefix) and Object.keys(envs)\nwill operate on the real object; update the call site in storybookRuntimePlugin\nand ensure the envs variable usage (stringifyProcessEnvs, Object.keys) assumes\nthe non-Promise shape.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits b3e8ea8 to 5826751",
+          "file_path": "code/builders/builder-vite/src/plugins/storybook-runtime-plugin.ts",
+          "line_number": 66,
+          "start_line": null,
+          "commit_sha": "4f0fbef1d9626a6bd6184b2c76871954d445e90a",
+          "created_at": "2026-02-11T21:06:10Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a double-Promise typing bug and requests a specific code fix to remove the Promise wrapper from the generic parameter."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6moGhD",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Documentation lists plugins not included in the implementation.**\n\nThe JSDoc comment mentions:\n- \"Docgen plugin: CSF processing and component metadata extraction\" (line 23)\n- \"Runtime plugin: External globals transformation for pre-bundled Storybook modules\" (line 24)\n\nHowever, neither plugin is included in the returned array at lines 44-58. Either update the documentation to match the actual implementation, or add the missing plugins.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/builders/builder-vite/src/preset.ts` around lines 13 - 30, The JSDoc\nlists \"Docgen plugin\" and \"Runtime plugin\" but the preset's returned plugins\narray in preset.ts does not include implementations for those; either remove or\nupdate those entries in the comment to match reality, or add the corresponding\nplugin instances to the returned array (e.g. the docgen plugin and the runtime\ntransformation plugin) and ensure their factory names match existing exports\n(use the actual plugin factory names used elsewhere in the repo, e.g.\ndocgenPlugin / runtimePlugin or the equivalent functions), updating the comment\ntext if you choose to implement them so the docs and the returned plugins remain\nconsistent.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit a81220a",
+          "file_path": "code/builders/builder-vite/src/preset.ts",
+          "line_number": 16,
+          "start_line": 13,
+          "commit_sha": "40177d0f5feaeb537f984145081ec2c9a3692ae2",
+          "created_at": "2026-02-11T21:06:10Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a mismatch between JSDoc documentation and implementation, requesting either the docs be updated or the missing plugins be added."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6moGhH",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, read the full preset.ts file to understand the context\ncat -n code/builders/builder-vite/src/preset.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2919\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for runtime plugin and externals usage patterns\nrg -n 'storybookRuntimePlugin|externals' code/builders/builder-vite/src/ -A 2 -B 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 6798\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there are any runtime plugins in the codebase that handle externals\nrg -n 'runtimePlugin' code/builders/builder-vite/ -A 3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for how other presets handle externals or similar configurations\nfd -t f 'preset.ts' code/builders/ -x grep -l 'externals' {}\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 105\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Read the storybook-runtime-plugin.ts to understand how it's meant to be used\ncat -n code/builders/builder-vite/src/plugins/storybook-runtime-plugin.ts | head -80\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3190\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check vite-config.ts to see how storybookRuntimePlugin and corePlugins are called\ncat -n code/builders/builder-vite/src/vite-config.ts | sed -n '70,85p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 729\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if externals parameter should be passed to storybookRuntimePlugin\nrg -A 10 'function storybookRuntimePlugin' code/builders/builder-vite/src/plugins/storybook-runtime-plugin.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 554\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if disableBlocks is used elsewhere and what it's supposed to do\nrg -n 'disableBlocks' code/builders/builder-vite/ -B 2 -A 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 902\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the StorybookRuntimePluginOptions interface more carefully\ncat -n code/builders/builder-vite/src/plugins/storybook-runtime-plugin.ts | sed -n '16,41p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1179\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check how externalGlobalsPlugin uses the externals parameter\ncat -n code/builders/builder-vite/src/plugins/external-globals-plugin.ts | sed -n '35,70p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1797\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Final confirmation: check all callers of storybookRuntimePlugin\nrg -n 'storybookRuntimePlugin(' code/builders/builder-vite/ --type ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 161\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Verify the signature hasn't been updated elsewhere\ngrep -r 'export.*function storybookRuntimePlugin' code/builders/builder-vite/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 215\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if StorybookRuntimePluginOptions interface is used anywhere\nrg -n 'StorybookRuntimePluginOptions' code/builders/builder-vite/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 183\n\n---\n\n\n\n</details>\n\n**`externals` is computed but never used\u2014this prevents the `disableBlocks` override from being applied.**\n\nThe `externals` object is built from `globalsNameReferenceMap` with a conditional override for `@storybook/addon-docs/blocks` when tests disable blocks, but it's never passed to the runtime plugin. The `storybookRuntimePlugin()` function is hardcoded to use `globalsNameReferenceMap` directly (line 58 of storybook-runtime-plugin.ts), with no way to accept the computed `externals` including the blocks override. Update the `storybookRuntimePlugin` signature to accept `externals` as a parameter and pass the computed value from preset.ts.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/builders/builder-vite/src/preset.ts` around lines 37 - 42, The computed\nexternals object in preset.ts (built from globalsNameReferenceMap and\nconditionally adding '@storybook/addon-docs/blocks' when\nbuild?.test?.disableBlocks is true) is never used; update storybookRuntimePlugin\nto accept an externals parameter (change its signature in\nstorybook-runtime-plugin.ts to accept externals: Record<string,string>), modify\nits internal references to use that externals argument instead of directly\nreading globalsNameReferenceMap, and then pass the computed externals from\npreset.ts into the call to storybookRuntimePlugin so the disableBlocks override\nis applied.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/builders/builder-vite/src/preset.ts",
+          "line_number": 42,
+          "start_line": null,
+          "commit_sha": "4f0fbef1d9626a6bd6184b2c76871954d445e90a",
+          "created_at": "2026-02-11T21:06:10Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies that a computed `externals` object is never passed to the runtime plugin, meaning the `disableBlocks` override is silently ignored. Requests a specific signature change and wiring fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6mygOt",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Find the viteCorePlugins function and examine its full implementation\ncat -n code/builders/builder-vite/src/preset.ts | head -60\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2512\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check how other preset functions handle the existing parameter\nrg -n 'export.*function.*\\(existing' code/builders/builder-vite/src/ -A 15 -B 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for other preset patterns across the codebase\nrg -n 'function.*existing.*PluginOption' code/builders/builder-vite/src/ -A 10 -B 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for preset functions in other builders to understand the pattern\nrg -n 'export.*function.*\\(existing' code/builders/ -A 10 | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check specifically for other preset files in builder-vite\nfd preset code/builders/builder-vite/src/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 105\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Look at the entire presets directory to understand the convention\nfind code -name \"preset.ts\" -o -name \"presets.ts\" | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 872\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check the vitest addon preset since it likely uses viteCorePlugins\ncat -n code/addons/vitest/src/preset.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 9082\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check how other presets handle existing - look at a few examples\nhead -60 code/frameworks/react-vite/src/preset.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1730\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for functions that have existing parameter across all presets\nrg -n 'export.*function.*existing' code/ --type ts -A 8 | head -150\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for calls to viteCorePlugins to understand how it's used\nrg -n 'viteCorePlugins' code/ --type ts -B 2 -A 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2044\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check the preset system to understand parameter conventions\nrg -n 'PresetPropertyFn' code/core/src/common/presets.ts -A 5 -B 2 | head -60\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Look at how viteCorePlugins is exported and used, especially in addons\nrg -n 'viteCorePlugins' code/addons/vitest/src/ -B 3 -A 5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1021\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check how viteCorePlugins is called in vite-config.ts\ncat -n code/builders/builder-vite/src/vite-config.ts | sed -n '1,150p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4438\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for the usage of corePlugins in vite-config.ts\nrg -n 'corePlugins' code/builders/builder-vite/src/vite-config.ts -B 3 -A 3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 790\n\n---\n\n\n\n</details>\n\n**Unused `existing` parameter and misleading JSDoc about included plugins.**\n\nThe `existing` parameter is declared but never used. Both call sites pass an empty array (`[]`), and the function doesn't reference it anywhere in the body. Additionally, the JSDoc (lines 22-23) mentions \"Docgen plugin\" and \"Runtime plugin\" as included features, but they are not returned by this function\u2014they are added separately in `vite-config.ts` (lines 77-78) and `vitest-plugin/index.ts`. The JSDoc should be corrected to accurately describe only what `viteCorePlugins` actually returns, and the unused parameter should either be removed or used as intended.\n\n<details>\n<summary>\ud83d\udc1b Proposed fix to remove unused parameter</summary>\n\n```diff\n export async function viteCorePlugins(\n-  existing: PluginOption[],\n   options: Options\n ): Promise<PluginOption[]> {\n```\n\nAnd update the JSDoc to remove references to Docgen and Runtime plugins:\n```diff\n /**\n  * Preset that provides the core Storybook Vite plugins shared between `@storybook/builder-vite` and\n  * `@storybook/addon-vitest`.\n  *\n  * Includes:\n  *\n  * - **Config plugin**: Resolve conditions (`storybook`, `stories`, `test`), environment variable\n  *   prefixes (`VITE_`, `STORYBOOK_`), symlink preservation, and `fs.allow` for the config\n  *   directory\n  * - **Project annotations plugin**: Virtual module serving `getProjectAnnotations`\n- * - **Docgen plugin**: CSF processing and component metadata extraction\n- * - **Runtime plugin**: External globals transformation for pre-bundled Storybook modules\n  * - **Mocking plugins**: Injects the mocker runtime script into the HTML and sets up rules to swap\n  *   modules based on sb.mock() calls.\n```\n\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nexport async function viteCorePlugins(\n  options: Options\n): Promise<PluginOption[]> {\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/builders/builder-vite/src/preset.ts` around lines 30 - 33, Remove the\nunused existing parameter from the viteCorePlugins signature and all call sites\n(they currently pass []), and update the JSDoc for viteCorePlugins to remove\nreferences to \"Docgen plugin\" and \"Runtime plugin\" and instead accurately\ndescribe only the plugins actually returned by the function; locate the function\nnamed viteCorePlugins and its callers to change the signature and calls, and\nedit the comment block above viteCorePlugins to list the correct returned\nplugins.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/builders/builder-vite/src/preset.ts",
+          "line_number": 20,
+          "start_line": 17,
+          "commit_sha": "40177d0f5feaeb537f984145081ec2c9a3692ae2",
+          "created_at": "2026-02-12T11:09:39Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags an unused `existing` parameter and inaccurate JSDoc, requesting removal of the parameter and correction of the documentation."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6myyJJ",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/builders/builder-vite/src/plugins/storybook-optimize-deps-plugin.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1644\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for usages of optimizeDeps in the file and understand the context\nrg -A 5 -B 5 \"optimizeDeps\" code/builders/builder-vite/src/plugins/storybook-optimize-deps-plugin.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1013\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check how the plugin is used and what config is passed to it\nrg \"storybook-optimize-deps-plugin\" code/builders/builder-vite/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 321\n\n---\n\n\ud83c\udf10 Web query:\n\n`Vite optimizeDeps.entries behavior and best practices when plugin modifies it`\n\n\ud83d\udca1 Result:\n\n### What `optimizeDeps.entries` does (and why plugins should be careful)\n\n- **Default behavior (when `optimizeDeps.entries` is _unset_)**: Vite scans/crawls your project\u2019s entry HTML files to discover imports that should be pre-bundled (or uses `build.rollupOptions.input` if set). [1]\n- **When `optimizeDeps.entries` is explicitly set**: it **overwrites default entry inference**\u2014Vite will scan only the provided glob(s) (relative to project root). [1]\n- **Ignore semantics change when you set it**: with explicit `entries`, by default only `node_modules` and `build.outDir` are ignored; other ignores must be expressed via `!` patterns. Also, `node_modules` is **not ignored** if your pattern explicitly includes `node_modules`. [1]\n- **Best practice implied by Vite docs**: if dependency discovery works without forcing entries, it\u2019s generally better **not** to set/force extra scanning knobs, to avoid unnecessary work and let the browser handle more requests in parallel. [2]\n\n### How config merging affects plugins that \u201cadd entries\u201d\n\nIn a plugin\u2019s `config` hook, returning a partial config is **deep-merged**, and direct mutation is supported when merge behavior isn\u2019t what you need. [3] Vite\u2019s config merging utilities generally **concatenate arrays** for many fields, which can make \u201cI\u2019ll just append my entry\u201d behave differently than expected (e.g., turning a string into an array or producing unexpected unions). [4]\n\n### Practical best practices for plugins\n\n1. **Prefer not touching `optimizeDeps.entries` at all** unless you have a concrete failure mode that requires it (e.g., you generate \u201cvirtual\u201d entry-like files that Vite can\u2019t discover otherwise). This avoids overriding user intent and changing ignore semantics. [1]\n2. **Never blindly set `optimizeDeps.entries`** (because it disables default inference). If you must, **only do so when the user hasn\u2019t set it**.\n3. **If you need additive behavior, compute it explicitly** instead of relying on deep-merge array concatenation:\n   - read existing `config.optimizeDeps?.entries`\n   - normalize to an array\n   - add your patterns if missing\n   - assign back (mutation is acceptable here). [3]\n4. **Document the tradeoffs**: setting entries changes what gets crawled and how ignores work, so users should know why your plugin is doing it and how to override/disable it. [1]\n\n### Safe pattern (plugin skeleton)\n\n```ts\nexport default function myPlugin() {\n  return {\n    name: 'my-plugin',\n    config(config) {\n      const od = (config.optimizeDeps ??= {})\n\n      // Respect user config: only provide entries if user did not set them.\n      if (od.entries == null) {\n        od.entries = ['index.html'] // or your specific glob(s)\n        return\n      }\n\n      // If you truly need to add entries, do it explicitly (avoid merge surprises).\n      const existing = Array.isArray(od.entries) ? od.entries : [od.entries]\n      const extra = 'path/to/generated/**/*.html'\n      if (!existing.includes(extra)) od.entries = [...existing, extra]\n    },\n  }\n}\n```\n\n---\n\n**Sources**:  \n[1] Vite docs: `optimizeDeps.entries` behavior, overwrite semantics, ignore patterns details.  \n[2] Vite docs (dep optimizer guidance): avoid extra optimizer knobs when not needed for better parallelism.  \n[3] Vite Plugin API: `config` hook is deep-merged; mutation is allowed when merging can\u2019t express desired result.  \n[4] Vite config/merge behavior overview (array concatenation noted).\n\n---\n\n\n\n</details>\n\n**Merge user-provided `optimizeDeps.entries` instead of overwriting them.**\n\nLines 25\u201332 unconditionally replace any user-provided entries with only Storybook's story file paths. This disables Vite's default entry inference and drops explicit pre-bundling hints, potentially causing missing dependencies during dev. The `include` field correctly merges with user config (line 31), but `entries` should follow the same pattern.\n\n<details>\n<summary>\u2705 Suggested fix</summary>\n\n```diff\n+      const existingEntries = config.optimizeDeps?.entries\n+        ? Array.isArray(config.optimizeDeps.entries)\n+          ? config.optimizeDeps.entries\n+          : [config.optimizeDeps.entries]\n+        : [];\n+\n       return {\n         optimizeDeps: {\n           // Story file paths as entry points for the optimizer\n-          entries: getUniqueImportPaths(index),\n+          entries: Array.from(new Set([...existingEntries, ...getUniqueImportPaths(index)])),\n           // Known CJS dependencies that need to be pre-compiled to ESM,\n           // plus any extra deps from Storybook presets.\n           include: [...extraOptimizeDeps, ...(config.optimizeDeps?.include || [])],\n         },\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/builders/builder-vite/src/plugins/storybook-optimize-deps-plugin.ts`\naround lines 25 - 32, The plugin currently overwrites optimizeDeps.entries with\nonly Storybook entries; instead merge Storybook entries with any user-provided\nentries so existing Vite inference or explicit hints aren't lost. Update the\nobject returned in the function that builds optimizeDeps to combine\ngetUniqueImportPaths(index) with config.optimizeDeps?.entries (e.g., concat or\ndedupe) and set optimizeDeps.entries to that merged array, while leaving the\ninclude merge logic (extraOptimizeDeps + config.optimizeDeps?.include)\nunchanged.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/builders/builder-vite/src/plugins/storybook-optimize-deps-plugin.ts",
+          "line_number": 37,
+          "start_line": 25,
+          "commit_sha": "40177d0f5feaeb537f984145081ec2c9a3692ae2",
+          "created_at": "2026-02-12T11:24:52Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies that user-provided `optimizeDeps.entries` are unconditionally overwritten and suggests merging them instead."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6m1JUH",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, examine the plugin file to understand RESOLVED_VIRTUAL_ID and VIRTUAL_ID\ncat -n code/builders/builder-vite/src/plugins/storybook-project-annotations-plugin.ts | head -120\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1991\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Also check the codegen file to see context around line 7 and lines 63-64\ncat -n code/builders/builder-vite/src/codegen-modern-iframe-script.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3247\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for all VIRTUAL_ID definitions and usage in the builder-vite directory\nrg -n \"VIRTUAL_ID|getResolvedVirtualModuleId\" code/builders/builder-vite/src/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2194\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check what getResolvedVirtualModuleId does - this is key to understanding if RESOLVED_VIRTUAL_ID is \\0-prefixed\ncat -n code/builders/builder-vite/src/virtual-file-names.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 734\n\n---\n\n\n\n</details>\n\n**Use the public virtual ID in the generated import statement, not the resolved one.**\n\nLine 63 generates an import using `RESOLVED_VIRTUAL_ID`, which contains a `\\0` prefix (e.g., `\\0virtual:/@storybook/builder-vite/project-annotations.js`). The `\\0` prefix is internal to Vite's plugin system and should only be used in plugin hooks (`resolveId`, `load`). Generated source code must use the public virtual ID without the `\\0` prefix. Import `VIRTUAL_ID` from the plugin instead and use that, or use `getOriginalVirtualModuleId(RESOLVED_VIRTUAL_ID)` to strip the prefix. See lines 56 and 38 for correct patterns using `SB_VIRTUAL_FILES.*` (public IDs).\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/builders/builder-vite/src/codegen-modern-iframe-script.ts` at line 7,\nThe generated import uses RESOLVED_VIRTUAL_ID (which contains the internal '\\0'\nprefix) instead of the public virtual ID; update the code that builds the import\nstring to use the public ID by either importing and using VIRTUAL_ID from the\nplugin or by calling getOriginalVirtualModuleId(RESOLVED_VIRTUAL_ID) to strip\nthe prefix, similar to how SB_VIRTUAL_FILES.* is used elsewhere, and replace\noccurrences of RESOLVED_VIRTUAL_ID in the generated source with that public ID.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/builders/builder-vite/src/codegen-modern-iframe-script.ts",
+          "line_number": 7,
+          "start_line": null,
+          "commit_sha": "606bdac2b526cb3009d92c40a3ad3357fa20b050",
+          "created_at": "2026-02-12T13:37:45Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where an internal Vite `\\0`-prefixed resolved virtual ID is used in generated import statements instead of the public virtual ID."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6oQEdr",
+          "author": "yannbf",
+          "body": "take an extra look about this on vitest integration",
+          "file_path": "code/builders/builder-vite/src/plugins/storybook-runtime-plugin.ts",
+          "line_number": 22,
+          "start_line": null,
+          "commit_sha": "40177d0f5feaeb537f984145081ec2c9a3692ae2",
+          "created_at": "2026-02-18T15:01:01Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests the author take an extra look at the vitest integration for this code, implying a potential issue needs to be investigated and possibly fixed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6oQFPr",
+          "author": "yannbf",
+          "body": "the env sanitization is missing",
+          "file_path": "code/addons/vitest/src/vitest-plugin/index.ts",
+          "line_number": 233,
+          "start_line": null,
+          "commit_sha": "40177d0f5feaeb537f984145081ec2c9a3692ae2",
+          "created_at": "2026-02-18T15:01:40Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a missing env sanitization step, implying code needs to be added."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6oQM5Q",
+          "author": "yannbf",
+          "body": "This has to be changed to account for the original use case:\n```ts\n import.meta.hot.accept(${JSON.stringify(options.isCsf4 ? [previewFileURL] : previewAnnotationURLs)}, (previewAnnotationModules) => {\n  // getProjectAnnotations has changed so we need to patch the new one in\n  window.__STORYBOOK_PREVIEW__.onGetProjectAnnotationsChanged({ getProjectAnnotations: () => getProjectAnnotations(previewAnnotationModules) });\n});\n```",
+          "file_path": "code/builders/builder-vite/src/codegen-project-annotations.ts",
+          "line_number": 73,
+          "start_line": null,
+          "commit_sha": "aa9a68823db3976fee37520ff7185aa2674c479b",
+          "created_at": "2026-02-18T15:08:13Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests a specific code change with a provided code snippet to restore original HMR behavior."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6oQOTK",
+          "author": "yannbf",
+          "body": "composeConfigs can be removed",
+          "file_path": "code/builders/builder-vite/src/codegen-modern-iframe-script.ts",
+          "line_number": 60,
+          "start_line": null,
+          "commit_sha": "aa9a68823db3976fee37520ff7185aa2674c479b",
+          "created_at": "2026-02-18T15:09:25Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removal of the `composeConfigs` import/usage."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6oQTTZ",
+          "author": "yannbf",
+          "body": "does it matter that injectExportOrderPlugin will then be executed before csfPlugin?",
+          "file_path": "code/builders/builder-vite/src/vite-config.ts",
+          "line_number": 100,
+          "start_line": null,
+          "commit_sha": "40177d0f5feaeb537f984145081ec2c9a3692ae2",
+          "created_at": "2026-02-18T15:14:20Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions whether plugin execution order matters, implying a potential ordering issue that may need to be addressed."
+    }
+  ],
+  "review_thread_count": 13,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 13,
+    "stage1_kept": 13,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

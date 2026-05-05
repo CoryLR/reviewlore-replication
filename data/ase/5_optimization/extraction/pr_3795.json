@@ -1,0 +1,14 @@
+{
+  "pr_number": 3795,
+  "source_mr_date": "2025-08-21T21:24:28.097Z",
+  "candidates": [
+    "When reviewing any ASE I/O writer that handles a collection of images, flag every use of `images[0]` or other positional subscripting of the `images` argument. These patterns raise a `TypeError` when `images` is a generator or any other non-subscriptable iterable. The correct fix is to use the loop variable (e.g. `atoms`) for per-image data. If first-image data truly must be reused across all iterations (e.g. for file-header metadata), capture it before the loop with `image_0 = next(iter(images))` and document why. The same subscripting issue exists in: `ase/io/dmol.py`, `ase/io/findsym.py`, `ase/io/proteindatabank.py`, `ase/io/xsd.py`, `ase/io/xsf.py`, and `ase/io/xtd.py`.",
+    "Inside a `for atoms in images` loop in an ASE I/O writer, question every use of `images[0].X` even when `images` is subscriptable. Using the first image's attribute (e.g. constraints) for all loop iterations is almost certainly a logic bug; the current image's attribute (`atoms.X`) should be used instead. If always reading from the first image is intentional, add an explicit comment explaining the design rationale.",
+    "When an ASE I/O writer is updated to accept `Iterable[Atoms]` inputs (beyond the currently documented `Sequence[Atoms]`), update the type annotation for `write()` in `ase/io/formats.py` accordingly. The current annotation is `Union[Atoms, Sequence[Atoms]]`; widening it to `Union[Atoms, Iterable[Atoms]]` (or equivalent) keeps the public API contract honest and avoids misleading callers.",
+    "When inserting a standalone note line into the body of an existing function docstring, do not add extraneous blank lines around it beyond standard RST paragraph-separation rules. Match the blank-line convention of the surrounding docstring text.",
+    "In `changelog.d/` scriv RST fragments, do not leave a trailing blank line at the end of a bullet item. The bullet text should end immediately with the RST merge-request reference (e.g. `(:mr:\\`XXXX\\`)`) and no blank line should follow within that bullet."
+  ],
+  "analysis": [],
+  "cost_usd": 0.1123745,
+  "duration_seconds": 91.81134796142578
+}

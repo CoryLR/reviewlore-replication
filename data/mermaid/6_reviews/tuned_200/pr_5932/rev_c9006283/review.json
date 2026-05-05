@@ -1,0 +1,146 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/schemas/config.schema.yaml",
+      "line_number": 58,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The diff replaces `- radar` with `- venn` in the `required` list instead of adding `- venn` alongside the existing entry. As a result, `radar` is no longer in the `required` list, which silently breaks schema validation for the radar diagram config. Both entries must appear: keep `- radar` and add `- venn` as a separate line.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/vennRenderer.ts",
+      "line_number": 30,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`customFontColorMap` (line 30) and `customBackgroundColorMap` (line 33) use `string[]` arrays as Map keys. JavaScript `Map` uses reference equality for object keys, so `map.get(someData.sets)` at lines 95, 98, and 99 will always return `undefined` \u2014 the array stored as the key is a different object reference from the one used for lookup. Custom circle colors and backgrounds will therefore never be applied. Fix by keying on a string: `stableSetsKey([...s.sets].sort())` when building the maps and the same expression when looking up.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/vennRenderer.ts",
+      "line_number": 41,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`svg.attr('viewBox', ...)` relies on d3's `.attr()`, which lowercases attribute names in some environments, silently writing `viewbox` instead of `viewBox`. SVG's `viewBox` attribute is case-sensitive; a lowercased version is ignored by browsers and SVG renderers. Use the native DOM API instead: `svg.node()!.setAttribute('viewBox', \\`0 0 ${svgWidth} ${svgHeight}\\`)`.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/vennRenderer.ts",
+      "line_number": 109,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`configureSvgSize` is called at the very end, after `svg.attr('viewBox', ...)` at line 41. The established project pattern (see `pieRenderer.ts`) requires `configureSvgSize` to be called *before* setting `viewBox` so that element sizing and viewBox configuration happen in the correct order. Move the `configureSvgSize` call before the `svg.attr('viewBox', ...)` line.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/parser/venn.jison",
+      "line_number": 7,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Lines 7\u20138 include lexer rules to skip `%%{...}%%` directives and `%%` comments inside the diagram grammar. Per project conventions, directives are pre-processed by the framework before any diagram-specific grammar runs, making these rules redundant and potentially conflicting with that pre-processing step. Remove both patterns from the venn lexer.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/styles.ts",
+      "line_number": 32,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`getStyles` lacks the `DiagramStylesProvider` type annotation required of every diagram's `styles.ts` (compare with `radar/styles.ts`, which annotates its export as `const styles: DiagramStylesProvider`). Without this annotation TypeScript cannot structurally verify that the function satisfies the expected interface. Add: `const getStyles: DiagramStylesProvider = (options: VennChartStyleOptions) => \\`...\\``.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/styles.ts",
+      "line_number": 21,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`// @ts-ignore` should be replaced with `// @ts-expect-error: incorrect types from khroma`. `@ts-ignore` silently suppresses any type error on the next line; `@ts-expect-error` causes the build to fail if the error disappears, preventing stale suppressions. The same applies to the second `@ts-ignore` at line 28.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/vennDiagram.ts",
+      "line_number": 5,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The venn styles module is imported under the name `flowStyles` \u2014 a copy-paste artifact from the flowchart diagram. Rename it to `vennStyles` so the identifier matches what the module actually represents. The `// @ts-ignore` on line 2 should also be changed to `// @ts-expect-error: jison doesn't export types`.",
+      "index": 7
+    },
+    {
+      "file_path": "demos/venn.html",
+      "line_number": 59,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The demo uses the deprecated `%%{init: {...}}%%` directive syntax. New diagram examples should use the YAML frontmatter block instead (e.g., `---\\nvenn:\\n  theme: dark\\n---`), which is the current project convention for configuring diagrams inline.",
+      "index": 8
+    },
+    {
+      "file_path": "demos/venn.html",
+      "line_number": 148,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `<style>` block at the bottom of the file contains only commented-out rules (`/*width: 45vw;*/`, `/*padding: 2em;*/`). This is dead code left over from development. Remove the entire empty block before merging.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/vennRenderer.ts",
+      "line_number": 14,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `draw` function has no `log.debug(...)` entry-point call. Every other diagram renderer in the project starts with a debug log (e.g., `log.debug('Rendering venn diagram')`) that serves as a diagnostic breadcrumb when rendering fails silently. Add one at the top of the function body.",
+      "index": 10
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/parser/venn.spec.ts",
+      "line_number": 1,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`// @ts-ignore: jison doesn't export types` should be `// @ts-expect-error: jison doesn't export types`. `@ts-expect-error` causes the build to fail if the suppressed error is ever resolved upstream, while `@ts-ignore` silently does nothing. The `import { expect } from 'vitest'` on line 4 is also redundant \u2014 vitest auto-imports `expect` in test files.",
+      "index": 11
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/parser/venn.jison",
+      "line_number": 2,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`%options case-insensitive` makes the lexer accept uppercase keywords (`SET`, `UNION`, `TEXT`, etc.), but the detector regex `/^\\s*venn-beta/` is case-sensitive. This inconsistency means a user who writes `VENN-BETA` would be accepted by the grammar rules yet the detector would never fire, so the diagram would never load. All other diagram parsers in the project are case-sensitive. Consider removing this option.",
+      "index": 12
+    },
+    {
+      "file_path": "packages/examples/src/examples/venn.ts",
+      "line_number": 11,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The example's `title` field is `'Sales Revenue'`, but the diagram code shows overlapping generic sets labelled A, B, and C with no connection to sales data. The title should reflect the actual diagram content \u2014 for instance, `'Three overlapping sets'` (which also matches the `title` line inside the diagram code itself).",
+      "index": 13
+    },
+    {
+      "file_path": "packages/mermaid/src/defaultConfig.ts",
+      "line_number": 278,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The venn config block spreads from `defaultConfigJson.venn` but does not explicitly declare `useMaxWidth: true`. Every other diagram config entry in `defaultConfig.ts` sets this flag explicitly (gitGraph is the only documented exception). Add it explicitly so the intent is clear and the value is not silently dependent on schema inheritance: `venn: { useMaxWidth: true, ...defaultConfigJson.venn }`.",
+      "index": 14
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "`styles.ts` is a near-verbatim copy of the flowchart stylesheet. `VennChartStyleOptions` declares `arrowheadColor`, `clusterBkg`, `edgeLabelBackground`, `lineColor`, `nodeBorder`, and the CSS body defines `.arrowheadPath`, `.edgePath`, `.flowchart-link`, `.flowchart-label`, and `.cluster` rules \u2014 none of which apply to a Venn diagram. The actual venn visual styling is done entirely through inline D3 `style()` calls in the renderer, so almost all of `styles.ts` is dead CSS. Additionally, `//`-style comments within the template literal are not valid CSS and may break the stylus-based CSS processing pipeline. The file should be rewritten from scratch to contain only Venn-relevant styles, trimming `VennChartStyleOptions` to only the properties that are actually consumed.",
+      "index": 15
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The DB exposes `setAccTitle`, `getAccTitle`, `setAccDescription`, and `getAccDescription`, but the jison grammar has no rules for `accTitle` or `accDescr` keywords. Users have no syntax to declare accessibility metadata on a Venn diagram, which is inconsistent with all other diagram types and breaks screen-reader support. Add grammar rules for both tokens and wire them to the corresponding DB calls, following the pattern from any other diagram's `.jison` file.",
+      "index": 16
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`vennDB.ts` uses bare module-level `let`/`const` mutable variables (`subsets`, `textNodes`, `knownSets`, `currentSets`, `indentMode`). For new diagram types, the project prefers a class-based DB architecture where all mutable state is held as class instance properties and reset via `clear()`. At minimum, if the functional-export style is retained, group all mutable state into the project's `ImperativeState` container so that `clear()` has a single, auditable reset point and the module is consistent with the established pattern for functional DB modules.",
+      "index": 17
+    }
+  ],
+  "cost_usd": 0.84830855,
+  "duration_seconds": 573.0440771579742
+}

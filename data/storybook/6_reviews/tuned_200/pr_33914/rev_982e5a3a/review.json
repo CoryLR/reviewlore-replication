@@ -1,0 +1,98 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 288,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Null-pointer dereference when `experimentalReactComponentMeta` is true and `findMatchingComponent` returns `undefined`. The early-return guard is `if (!experimentalReactComponentMeta && !hasDocgen)`, so when the feature flag is on it does **not** fire even when `component` is `undefined`. The very next line, `const docgenResult = component.reactDocgen`, will throw a `TypeError` at runtime.\n\nFix: add an explicit guard that applies regardless of the feature flag, for example:\n```typescript\nif (!component) {\n  return { manifest: { ...base, error: { name: 'No component found', message: '...' } } };\n}\n```\nor add the `!component` condition to the existing early-return check.",
+      "index": 0
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 429,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`debug: componentMetaDebug` is written into the `meta` object but `ComponentsManifest.meta` (in `core/src/types/modules/core-common.ts`) does not declare a `debug` field \u2014 only `docgen`, `durationMs`, and `timings`. TypeScript's excess-property check on the returned object literal will flag this as a compile error.\n\nEither add `debug?: Record<string, unknown>` to the `ComponentsManifest.meta` type, or remove the field and expose timing diagnostics through the existing `timings` property.",
+      "index": 1
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 52,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Empty `catch {}` block in the SIGINT/SIGTERM signal handler silently swallows any error thrown by `manager.dispose()`. The project rule explicitly prohibits empty catch blocks: even best-effort cleanup paths must at minimum log the caught error (e.g. `logger.debug('[reactComponentMeta] dispose failed: ' + err)`) so failures are visible during debugging.\n\nNote: `process.kill(process.pid, signal)` runs unconditionally after the try/catch, so re-raising the signal is not affected \u2014 only the lack of visibility on dispose failures.",
+      "index": 2
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/reactDocgenTypescript.test.ts",
+      "line_number": 1210,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Five previously-passing RDT test cases (DtsComponent, ForwardRef, RenamedExport, DisplayNameOverride, Barrel) are deleted and replaced with the comment 'RDT returns [] for all of these.' The original tests asserted concrete, correct output (e.g. `ForwardRef` extracted `label`, `onChange`, `placeholder`, `ref` props with detailed inline snapshots). If those tests genuinely started failing, the root cause must be identified and fixed \u2014 the `_props` parameter-rename in the fixtures should not affect RDT because it relies on TypeScript type annotations, not parameter names. Silently removing passing tests without demonstrating that RDT's behaviour changed, and without a regression fix, means coverage gaps are introduced without any diagnostic trail.",
+      "index": 3
+    },
+    {
+      "file_path": "code/.eslintrc.js",
+      "line_number": 134,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Disabling `@typescript-eslint/no-unused-vars` for the entire `componentManifest/**/*` glob is overly broad. It covers ~30 existing files (fixtures, generator, reactDocgen, reactDocgenTypescript, etc.) that were never excluded before, and it will mask real unused-variable bugs in all future additions to the directory. The specific cases that triggered this (e.g. `{ meta: _meta, ...components }` destructuring in tests) are already handled with inline `// eslint-disable-next-line` comments. Use the underscore-prefix convention (`_props`) or targeted comments for individual suppressions rather than a directory-wide override.",
+      "index": 4
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+      "line_number": 15,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`import { type FSWatcher, existsSync, watch } from 'fs'` should use the `node:` prefix (`'node:fs'`) for consistency with the project's import convention. The same applies to `import * as path from 'path'` on the following line \u2014 use `'node:path'`.",
+      "index": 5
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 25,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`import * as path from 'path'` should use the `node:` prefix (`'node:path'`) for consistency with the rest of the codebase.",
+      "index": 6
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 210,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`this.commandLine.fileNames.includes(fileName)` inside a `for` loop over `fileNames` is O(n) per call, making `ensureFiles` O(n\u00b2) overall. This method is called from `extractPropsFromStories` with every story batch; in a large design system (e.g. Mantine with 133 components) the quadratic scan could become noticeable.\n\nUse a `Set` for the existence check:\n```typescript\nconst existing = new Set(this.commandLine.fileNames);\nfor (const fileName of fileNames) {\n  if (!existing.has(fileName)) {\n    this.commandLine.fileNames.push(fileName);\n    existing.add(fileName);\n    added = true;\n  }\n}\n```",
+      "index": 7
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/getComponentImports.ts",
+      "line_number": 59,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`docgenTimings` is a mutable module-level object exported by reference. Any test that imports `getComponents` without calling `resetDocgenTimings()` first will accumulate timings across test cases, causing flaky assertions and cross-test state leakage. The project's Vitest conventions require that shared mutable state is reset in `beforeEach`. Consider either resetting it inside `resetDocgenTimings()` (already exists) and documenting that callers are responsible for calling it, or returning a fresh timings object from each `getComponents` call rather than accumulating into a shared singleton.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `managerPromise` singleton in `generator.ts` is created once and never cleared. Because `invalidateCache()` and `invalidateParser()` are called at the start of every manifest pass, the parser state is fresh \u2014 but the `ComponentMetaManager` (and the TS programs inside it) is not. This is intentional for incremental HMR performance, but it means that changes to `typescriptOptions` or to the set of tsconfigs that happen between Storybook restarts are not reflected unless the process is restarted. A brief inline comment documenting this lifecycle assumption would help future maintainers reason about when the manager must be torn down.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`componentMetaExtractor.checker.test.ts` is a 2,276-line file with a single shared `ComponentMetaProject` created in `beforeAll` and used by every test in the file. The test-file strings are written to a temp directory on disk, and the project is reused across `describe` blocks. Any test that writes a story file (e.g. the `docs()` helper writes per-export `.__story_X__.tsx` files) mutates shared project state. Cleanup of those temp story files is not performed between tests. Consider grouping tests that need file-mutation isolation into their own `beforeEach`/`afterEach` lifecycle, or at minimum document that the helper files are intentionally long-lived.",
+      "index": 10
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "In `ComponentMetaManager.watchDirectory`, the watcher is created with `{ recursive: true }`. Node.js recursive watching on Linux was only stabilised in v18.13 / v19.1 (via inotify). On earlier Linux Node versions the call throws and falls into the `catch` branch, silently disabling all file watching. The error is logged at `debug` level, which is invisible in normal usage. If Storybook still supports Node 16 or early Node 18, HMR for the new extraction engine will silently not work on Linux. Add a runtime Node version check before using `recursive: true`, or document the minimum supported Node version in a comment near this call.",
+      "index": 11
+    }
+  ],
+  "cost_usd": 1.3511411500000001,
+  "duration_seconds": 680.645005941391
+}

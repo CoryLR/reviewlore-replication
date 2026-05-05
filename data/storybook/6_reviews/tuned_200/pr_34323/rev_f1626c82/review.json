@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 51,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`importers: Set<object>` and `importedModules: Set<object>` cause a TypeScript type error at the recursive call sites. When iterating these sets (lines 85\u201395), each element has type `object`, which is not assignable to the structured parameter type `{ file: string | null; type: ...; importers: Set<object>; importedModules: Set<object>; }`. TypeScript's structural typing cannot narrow `object` to a specific shape, so `getOrCreateModuleNode(importer)` and `getOrCreateModuleNode(importedModule)` will produce compile errors.\n\nNote that the test file already defines the correct fix \u2014 a self-referential `ViteModuleNodeLike` type:\n```typescript\ntype ViteModuleNodeLike = {\n  file: string | null;\n  type: ModuleNode['type'];\n  importers: Set<ViteModuleNodeLike>;\n  importedModules: Set<ViteModuleNodeLike>;\n};\n```\nDefine this same type locally inside `buildModuleGraph` (or at module scope) and use it as the parameter type for `getOrCreateModuleNode`, and as the generic for the `WeakMap` on line 45.",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 126,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`listeners.clear()` silently drops all subscriptions on every call to `bail()`. Because `bail()` is part of the normal server-restart cycle (not just catastrophic shutdown), any consumer that registered with `onModuleGraphChange(cb)` before the restart loses their subscription with no indication that this happened. They would need to re-subscribe after every restart, which is undocumented and easy to miss.\n\nConsider one of:\n1. **Preferred**: Don't clear `listeners` in `bail()`; only tear down the watcher handler and timers. Subscriptions survive restarts, and the next `start()` re-wires the watcher.\n2. If the clearing is intentional, document it explicitly in JSDoc on `onModuleGraphChange` and add a test that verifies the caller must re-subscribe post-restart.",
+      "index": 1
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 158,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `setInterval` callback is `async`, but `setInterval` does not handle the returned Promise. If `server.waitForRequestsIdle()` on line 162 throws, the error becomes an unhandled promise rejection that crashes the Node process. The 1-second polling loop is effectively a fire-and-forget. Wrap the body in a `try/catch`:\n```typescript\nwaitForModuleGraph = setInterval(() => {\n  void (async () => {\n    try {\n      if (server.moduleGraph.fileToModulesMap.size > 0) {\n        clearInterval(waitForModuleGraph);\n        waitForModuleGraph = undefined;\n        await server.waitForRequestsIdle();\n        watcherChangeHandler?.();\n      }\n    } catch (e) {\n      logger.warn('[builder-vite] waitForRequestsIdle failed:', e);\n    }\n  })();\n}, 1000);\n```",
+      "index": 2
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 41,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`buildModuleGraph` is an internal conversion utility, but exporting it makes it part of the package's public API surface. If it's only exported to enable unit testing, consider either:\n- Testing it indirectly through the `onModuleGraphChange` callback's payload (the existing tests already do this for the happy path), or\n- Moving it to a separate internal module (e.g., `module-graph.ts`) that can be imported directly in tests without polluting `index.ts`'s exports.",
+      "index": 3
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 7,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Per project coding guidelines, all `vi.mock()` calls must include the `{ spy: true }` option:\n```typescript\nvi.mock('./vite-server', { spy: true });\n```\nThe factory function form (passing a second argument that isn't an options object with `spy: true`) does not satisfy this rule.",
+      "index": 4
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 302,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test titled `'removes the all-event watcher during bail to avoid leaks across restarts'` ends with `expect(cb).not.toHaveBeenCalled()`, but `cb` is not called because `bail()` cleared the `listeners` set \u2014 not specifically because the watcher handler was properly removed. A bug where the watcher cleanup was missing (but `listeners.clear()` still ran) would still pass this assertion. The test's existing `expect(fakeViteServer.watcher.listenerCount('all')).toBe(0)` assertion after `bail()` is the real watcher-cleanup check; the final `expect(cb).not.toHaveBeenCalled()` is redundant and misleading. Consider removing it or replacing it with an assertion that directly validates the `watcher.off` call occurred with the correct arguments.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/types/modules/core-common.ts",
+      "line_number": 283,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The JSDoc says `\"Modeled after Vite's module graph\"` on a type that is supposed to be builder-agnostic (it lives in core types and is used by the `Builder` interface). Coupling the documentation to a specific builder leaks implementation details and may mislead future webpack or other-builder implementors. Prefer describing the semantics without naming the source:\n```\n * Builder-agnostic module graph for dependency tracking.\n * A file can appear with multiple module identities (e.g., the same path\n * imported under different query strings or in different module contexts),\n * hence the value is a Set<ModuleNode>.\n```",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/types/modules/core-common.ts",
+      "line_number": 291,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Vite's `ModuleNode.type` field is typed as `'js' | 'css'` \u2014 there is no `'asset'` variant in Vite's module graph. Including `'asset'` in the Storybook union means it can never be produced by the Vite builder's `buildModuleGraph` (which copies `viteModuleNode.type` directly), and its semantics are undefined for any other builder. This will confuse implementors of other builders who might try to emit `'asset'` nodes expecting Storybook to handle them.\n\nEither remove `'asset'` to match Vite's actual type, or add a JSDoc comment explaining what `'asset'` is intended to represent and which builder would produce it.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "All five module-level variables (`server`, `listeners`, `debounce`, `watcherChangeHandler`, `waitForModuleGraph`) are shared singleton state across the entire process. This makes it impossible to run multiple builder instances simultaneously (e.g., parallel test workers, multiple Storybook processes in a monorepo) without interference. The tests compensate by calling `bail()` in `afterEach`, but test isolation is fragile \u2014 a test that doesn't call `bail()` cleanly will corrupt subsequent tests.\n\nThe `server` variable is also never reset to `undefined` after `bail()`, meaning a stale closed-server reference lingers until the next `start()`. While not a memory leak in practice (the server is closed), it's a minor inconsistency in the cleanup contract. Consider setting `server = undefined!` (or using a `let server: ViteDevServer | undefined`) after `close()` to make the teardown explicit.",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `onModuleGraphChange` API has an unusual lifetime contract: subscriptions survive `unsubscribe()` being called and individual file-change cycles, but are silently destroyed on every `bail()` call. This differs from most subscription APIs, where the unsubscribe handle is the only way to cancel a subscription. The public JSDoc on `onModuleGraphChange` should document the subscription lifetime explicitly \u2014 e.g., \"The subscription is automatically removed when `bail()` is called; callers must re-subscribe after each server restart.\" \u2014 so consumers are not surprised when their callbacks stop firing after a hot reload.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.8746354999999997,
+  "duration_seconds": 601.4893269538879
+}

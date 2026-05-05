@@ -1,0 +1,387 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 4016,
+  "title": "Add `thermalize_momenta` to supersede `MaxwellBoltzmannDistribution`",
+  "body": "# Summary\n\nThis MR suggests adding ~`init_momenta`~ `thermalize_momenta` to supersede `MaxwellBoltzmannDistribution` for coding convenience.\n\n(EDIT (2026-04-10): `init_momenta` is changed to `thermalize_momenta` based on the suggestions.)\n\n# Details\n\nIt is a very common pre-process for MD to set initial velocities / momenta.\nIn the present ASE, the `MaxwellBoltzmannDistribution` *function* (which has been since 2008-09-03 https://gitlab.com/ase/ase/-/commit/b6714667f2c2a24c8277109b81eb108a780fd88e) in `ase.md.velocitydistribution` deals with it.\nHowever, this function has a few inconveniences.\n\n- This *function* does not follow [the PEP8 naming convention](https://peps.python.org/pep-0008/#function-and-variable-names); function names should be lowercase.\n\n- This requires a long import statement as:\n\n```python\nfrom ase.md.velocitydistribution import MaxwellBoltzmannDistribution\n```\n\n- The temperature in K (ASE standard) must be specified as a keyword-only argument due to backward-compatibility (https://gitlab.com/ase/ase/-/merge_requests/2065).\n\nThe present MR addresses these by:\n\n1. Making a new function `init_momenta` with the PEP8-compliant name\n2. Modifying `MaxwellBoltzmannDistribution` as a thin wapper of `init_momenta`\n3. Exposing `init_momenta` at `ase.md` so that we can import as `from ase.md import init_momenta`\n4. Supporting only temperature in K both as positional and keyword arguments in `init_momenta` so that we can write `init_momenta(atoms, 300.0)`\n\nI would also suggest deprecating `MaxwellBoltzmannDistribution`. So far I set not `FutureWarning` but `DeprecationWarning` because the function itself is functionality-wise fully OK.\nIt would also be OK to remove the deprecated `temp` (temperature in eV) now.\n\n@schiotz May I ask your review when convenient? @askhl @ajjackson for your notice.\n\n# Notes\n\nWe can also think of e.g. the `Stationary` *function*, which also has a non-Pythonic name.\nHere I note that, there is a corresponding constraint `FixCom`, and when we assign it beforehand `init_momenta`, the function can teke the constraint into account at `set_momenta`:\n```python\natoms.set_constraint(FixCom())\ninit_momenta(atoms, 300.0)\n```\nWhile I need a further survey, this looks to me more the modern ASE-nic approach.\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [~] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [~] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [x] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [~] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "yuzie007",
+  "merged_at": "2026-04-13T11:38:47.621Z",
+  "base_ref": "master",
+  "merge_commit_sha": "234995e9024785b2bb1c1d23aed925ff28cf7af8",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3160980999",
+          "author": "schiotz",
+          "body": "I have no strong feeling on this, so my slight resistance should not be blocking this.\n\nFirst, I agree about the unfortunate capitalization of the names, as a minimum that should be fixed.  Second, these functions should indeed be exposed directly in ``ase.md`` as you suggest.\n\nAs for renaming ``MaxwellBoltzmannDistribution`` to ``init_momenta``, I feel that the new name is rather indescriptive.  On the other hand, no other velocity distributions have been implemented, nor can I think of any I think is missing.  I would still like a slightly more descriptive name.\n\nThe functions ``Stationary`` and ``ZeroRotation`` remove center-of-mass momentum and angular momentum.  Both can be useful in situations where a constraint is not natural, for example before running a long VelocityVerlet simulation on a system where you do not want the analysis to be muddied by the nanoparticle drifting away or rotating.  Of course the same effect could be obtained by adding a constraint, calling ``init_momenta`` (or whatever we call it) and then removing the constraint again.  I think these functions should be preserved, but renamed to respect PEP-8 and exposed from ``ase.md``.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-15T19:48:42.464Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3160998061",
+          "author": "yuzie007",
+          "body": "Thank you so much @schiotz for your feedback!\n\n> I feel that the new name is rather indescriptive. ... no other velocity distributions have been implemented\n\nI agree that we can think of a more descriptive function name, and I am fully open for discussion. Based on AI suggestions e.g.\n\n- `set_maxwell_boltzmann_momenta` (longer than `MaxwellBoltzmannDistribution` but may be clear)\n- `init_mb_momenta`\n- `distribute_momenta`\n- `thermalize_momenta`\n\nRegarding other distributions, a possible idea may be to add the `dist` (or `mode`) argument with default `'Maxwell-Boltzmann'` or shortly `'gaussian'` ([inspired by LAMMPS](https://docs.lammps.org/velocity.html)) when we feel it necessary.\n\nThank you also for sharing the thoughts on `Stationary` and `ZeroRotation`. I agree their functionalities should be kept independently of ASE constraint mechanism to allow users do what they would like to do, which is fully OK. We can rename them to be PEP8-compliant in another MR (particularly if other users feel it reasonable as well...)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-15T20:16:02.870Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3162444920",
+          "author": "schiotz",
+          "body": "My preference here is ``\u00ecnit_mb_momenta``, it is not overly long and it contains enough of a hint of what it does to trigger reading the docstring (unlike ``init_momenta`` which one might think initialize them to zero).  The other suggestions are also fine, except ``distribute_momenta`` which I think is unnatural, and hints at distributing momenta across something (like distributing stuff between MPI tasks).\n\nAs for adding a keyword supporting other distributions: that should be done when and if somebody finds a need to introduce another distribution.  That will probably never happen, so we should not complicate the interface now.\n\nAs for updating the ``Stationary`` and ``ZeroRotation`` function names, we can easily do that in a future MR and just keep the old names as aliases.  Then the old names can be deprecated later.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-16T11:24:14.015Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3204567619",
+          "author": "andrew_peterson",
+          "body": "Thanks for doing this! Those things you mentioned were always a bit annoying. What about just `set_momenta` for the function name? As @schiotz mentions, if someone ever adds something besides M-B we can add a 'dist' keyword later if/when it becomes relevant.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-30T20:13:26.099Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3208191400",
+          "author": "ajjackson",
+          "body": "I quite like `thermalize_momenta`; `init_momenta` sounds like it will set them to zero and `set_momenta` sounds like it will apply a user-supplied array of momenta. `thermalize_momenta` could also plausibly take a kwarg to select other distributions.\n\n(But really the other sensible distribution is a Bose-Einstein distribution from phonon modes, and this is done by another function that requires additional inputs.)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-31T08:38:45.671Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3238555143",
+          "author": "yuzie007",
+          "body": "Thank you @schiotz, @andrew_peterson, @ajjackson for the suggestions! Let me then once take `thermalize_momenta`; I can also feel some physics with this name.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-04-10T02:13:47.716Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests fixing capitalization/naming conventions, exposing functions from ase.md, preserving but renaming Stationary and ZeroRotation to respect PEP-8 \u2014 multiple concrete code changes implied."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3162444931",
+          "author": "schiotz",
+          "body": "I think we should either duplicate the docstring, or have the full documentation here and the reference in the soon-to-be-deprecated function.",
+          "file_path": "ase/md/velocitydistribution.py",
+          "line_number": 180,
+          "commit_sha": "23f50611a39c51c668eb79709f8e34930482e1b2",
+          "base_sha": "59678a6e220915f4d3e97f9e5a29f39c0faa32e1",
+          "created_at": "2026-03-16T11:24:14.392Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3238555128",
+          "author": "yuzie007",
+          "body": "I agree and added the docstring in the revised commit.",
+          "file_path": "ase/md/velocitydistribution.py",
+          "line_number": 180,
+          "commit_sha": "23f50611a39c51c668eb79709f8e34930482e1b2",
+          "base_sha": "59678a6e220915f4d3e97f9e5a29f39c0faa32e1",
+          "created_at": "2026-04-10T02:13:47.234Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests either duplicating the docstring or moving the full documentation to the new function and putting a reference in the deprecated one."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3204612883",
+          "author": "andrew_peterson",
+          "body": "I'm not always up on the latest python styles, but do we need the \"lone star\" still? My impression is that it was there to prevent someone from accidentally specifying the temperature twice, but we don't have that issue any more.",
+          "file_path": "ase/md/velocitydistribution.py",
+          "line_number": 172,
+          "commit_sha": "23f50611a39c51c668eb79709f8e34930482e1b2",
+          "base_sha": "59678a6e220915f4d3e97f9e5a29f39c0faa32e1",
+          "created_at": "2026-03-30T20:22:19.024Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3208165461",
+          "author": "ajjackson",
+          "body": "It prevents users from relying on the remaining arguments being in a particular order; in turn that allows non-breaking updates to insert new arguments in the order that makes sense for documentation. So it's quite good practice to use it for all but the most fundamental/\"obvious\" function arguments to a public function or method.",
+          "file_path": "ase/md/velocitydistribution.py",
+          "line_number": 172,
+          "commit_sha": "23f50611a39c51c668eb79709f8e34930482e1b2",
+          "base_sha": "59678a6e220915f4d3e97f9e5a29f39c0faa32e1",
+          "created_at": "2026-03-31T08:30:23.467Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions whether the lone-star parameter separator is still needed, implying it could/should be removed."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3213052439",
+          "author": "andrew_peterson",
+          "body": "I suggest changing `force_temp` to `exact_temperature`, to make it more obvious what it does and less likely to be interpreted as temporary forces. ;) (I added this keyword many years ago -- it's needed for minima hopping and scales the random velocities by a constant factor in order to hit a precise temperature.)",
+          "file_path": "ase/md/velocitydistribution.py",
+          "line_number": 177,
+          "commit_sha": "c6f0dd8474b0fe6f45d6fa56096128b356bfd238",
+          "base_sha": "92a5cc88fcbb59e76a6c511fb19dba673256e666",
+          "created_at": "2026-04-01T12:23:17.935Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3238555138",
+          "author": "yuzie007",
+          "body": "OK, in the revised commit I change the name following your suggestion.",
+          "file_path": "ase/md/velocitydistribution.py",
+          "line_number": 177,
+          "commit_sha": "c6f0dd8474b0fe6f45d6fa56096128b356bfd238",
+          "base_sha": "92a5cc88fcbb59e76a6c511fb19dba673256e666",
+          "created_at": "2026-04-10T02:13:47.549Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly suggests renaming the `force_temp` parameter to `exact_temperature`."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3239203977",
+          "author": "ajjackson",
+          "body": "Python will take care of this validation/error for us automatically if we replace `..., *, temperature_K: float | None = None, ...` with `..., *, temperature_K: float, ...` in the function signature.\n\n(i.e. this is now a mandatory kwarg so we can type it as such.)",
+          "file_path": "ase/md/velocitydistribution.py",
+          "line_number": 162,
+          "commit_sha": "80c4983b21e4607fda06496f87e320fb46b046b2",
+          "base_sha": "59678a6e220915f4d3e97f9e5a29f39c0faa32e1",
+          "created_at": "2026-04-10T08:26:45.202Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3239417665",
+          "author": "yuzie007",
+          "body": "Oh, that's right! Thank you for finding this, and I have revised accordingly.",
+          "file_path": "ase/md/velocitydistribution.py",
+          "line_number": 162,
+          "commit_sha": "80c4983b21e4607fda06496f87e320fb46b046b2",
+          "base_sha": "59678a6e220915f4d3e97f9e5a29f39c0faa32e1",
+          "created_at": "2026-04-10T09:19:56.228Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a concrete change to the function signature \u2014 replacing `temperature_K: float | None = None` with `temperature_K: float` to make it a mandatory kwarg and remove manual validation."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3239214076",
+          "author": "ajjackson",
+          "body": "It's good that the unit tests are modernised, but did you make sure to leave at least _one_ test using the deprecated `MaxwellBoltzmannDistribution`? It would be good to be sure it wasn't somehow broken.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-04-10T08:30:06.788Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential gap \u2014 ensuring at least one test still exercises the deprecated `MaxwellBoltzmannDistribution` \u2014 implying a test should be added or preserved."
+    }
+  ],
+  "review_thread_count": 11,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3238555150",
+            "author": "yuzie007",
+            "body": "Thank you @schiotz, @andrew_peterson, @ajjackson for the feedback! Based on them, I revised the MR.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-04-10T02:13:48.081Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3239417693",
+            "author": "yuzie007",
+            "body": "Thank you @ajjackson for further suggestions! I agree that we should still test `MaxwellBoltzmannDistribution`. In `ase/test/md/test_maxwellboltzmann.py`, I have added a test to compare the result of `MaxwellBoltzmannDistribution` with that of `thermalize_momenta`.\n\nI also reverted the changes in the tutorial to still use `MaxwellBoltzmannDistribution`; the new function will be available only in a new release with this MR merged and is not available yet by normal users.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-04-10T09:19:56.633Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": true,
+        "comments": [
+          {
+            "id": "3162444946",
+            "author": "schiotz",
+            "body": "Good catch, this is actually important!",
+            "file_path": "ase/md/velocitydistribution.py",
+            "line_number": 190,
+            "commit_sha": "c6f0dd8474b0fe6f45d6fa56096128b356bfd238",
+            "base_sha": "92a5cc88fcbb59e76a6c511fb19dba673256e666",
+            "created_at": "2026-03-16T11:24:14.701Z",
+            "is_outdated": false
+          },
+          {
+            "id": "3238555123",
+            "author": "yuzie007",
+            "body": "Thank you @schiotz for the comment! Let me note that `apply_constraint=True` is already the default for `atoms.set_momenta`, no changes are there practically. I just wanted to make it explicit.",
+            "file_path": "ase/md/velocitydistribution.py",
+            "line_number": 190,
+            "commit_sha": "c6f0dd8474b0fe6f45d6fa56096128b356bfd238",
+            "base_sha": "92a5cc88fcbb59e76a6c511fb19dba673256e666",
+            "created_at": "2026-04-10T02:13:46.710Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment ('Good catch, this is actually important!') with no suggestion or requested change."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3239450438",
+            "author": "ajjackson",
+            "body": "Good point! Such things will be easier to manage when we have proper dual docs set up for stable and dev versions.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-04-10T09:27:17.857Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "A general agreement about future documentation tooling with no concrete change requested on the current PR."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3244686881",
+            "author": "askhl",
+            "body": "Thanks everyone for the change and the lively discussion.  Very nice.  I'll just merge.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-04-13T11:38:41.604Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure meta/process comment about merging the PR; no code change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 11,
+    "stage1_kept": 9,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 2,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 3,
+    "stage3_cost_usd": 0.010759
+  }
+}

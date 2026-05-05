@@ -1,0 +1,185 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4724,
+  "title": "convert `diagrams/common/svgDrawCommon.js` to ts",
+  "body": "## :bookmark_tabs: Summary\r\n\r\n- Fix `svgDrawCommon` imports file extension (add `.js` postfix).\r\n- Convert `packages/mermaid/src/diagrams/common/common.spec.js` to TS\r\n- Convert `packages/mermaid/src/diagrams/common/svgDrawCommon.js` to TS\r\n- Create types for `svgDrawCommon`.\r\n- Fix `textData.class` check `undefined` if statement.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "Yokozuna59",
+  "merged_at": "2023-08-15T16:45:36Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "99978da55b5a3c383272343c4c92bb1d42cc8cbf",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "085e8f78b3964d2d3e5689bfc94eca9671aeba4b",
+    "50eb3cf1c909b214ae7cd05b5c6f38d125e1dc90"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NAuR-",
+          "author": "sidharthv96",
+          "body": "You sure every parameter is optional here?",
+          "file_path": "packages/mermaid/src/diagrams/common/commonTypes.ts",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "50eb3cf1c909b214ae7cd05b5c6f38d125e1dc90",
+          "created_at": "2023-08-12T03:44:49Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "medium",
+          "label_reasoning": "The reviewer questions whether all parameters are truly optional, suggesting a potential logic/design error where required parameters may have been incorrectly marked as optional."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NBQVv",
+          "author": "Yokozuna59",
+          "body": "It was weird while working on this type, it was throw errors every so I sat everything to optional :)\r\nAfter rethinking, Only some should:\r\n\r\n- rx\r\n- ry\r\n- class\r\n- anchor\r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/541ee1eade6ff4835ea27b2aaccb0e07888212db/packages/mermaid/src/diagrams/common/svgDrawCommon.ts#L47-L55\r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/541ee1eade6ff4835ea27b2aaccb0e07888212db/packages/mermaid/src/diagrams/common/svgDrawCommon.ts#L100-L111\r\n",
+          "file_path": "packages/mermaid/src/diagrams/common/commonTypes.ts",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "50eb3cf1c909b214ae7cd05b5c6f38d125e1dc90",
+          "created_at": "2023-08-12T09:14:03Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NB1Sk",
+          "author": "sidharthv96",
+          "body": "Yup, can merge if you make the changes. ",
+          "file_path": "packages/mermaid/src/diagrams/common/commonTypes.ts",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "50eb3cf1c909b214ae7cd05b5c6f38d125e1dc90",
+          "created_at": "2023-08-12T14:16:51Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NCGum",
+          "author": "Yokozuna59",
+          "body": "Fixed 99c175849, but I fixed more stuff so I'd recommend re-reviewing it.",
+          "file_path": "packages/mermaid/src/diagrams/common/commonTypes.ts",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "50eb3cf1c909b214ae7cd05b5c6f38d125e1dc90",
+          "created_at": "2023-08-12T17:26:51Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "The question implies that not all parameters should be optional and suggests a code change to remove some optional markers."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NDyUc",
+          "author": "aloisklink",
+          "body": "Does changing `rectData.class !== 'undefined'` to `rectData.class !== undefined` do anything?\r\n\r\nTo me, it seems like this actually fixes a bug (if so, this should be in the PR description, so we can say something like \"TypeScript caught some bad `undefined` handling, so this should now be fixed\", then we can consider this PR to be both a bug fix, and a refactoring PR).\r\n\r\n~Have we done `e2e` tests to see if something has changed?~ _Edit_: I've tested locally, and the E2E tests don't seem to show any differences, so this should be good!\r\n\r\nE.g. something like:\r\n\r\n```bash\r\ngit clean -fxd cypress/ # warning, will delete old unsaved files in this folder\r\ngit switch develop\r\n# run e2e tests on develop, then switch to PR and run e2e tests, comparing with develop snapshots\r\npnpm install && pnpm run test && pnpm run e2e \\\r\n  && git switch Yokozuna59/chore/convert-svgDrawCommon-to-ts \\\r\n  && pnpm install && pnpm run test && pnpm run e2e\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/common/svgDrawCommon.ts",
+          "line_number": 32,
+          "start_line": null,
+          "commit_sha": "50eb3cf1c909b214ae7cd05b5c6f38d125e1dc90",
+          "created_at": "2023-08-13T18:39:32Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The reviewer identifies a bug fix where comparing against the string 'undefined' vs the actual undefined value is incorrect logic that TypeScript conversion helped catch."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85ND5JU",
+          "author": "Yokozuna59",
+          "body": "> Does changing `rectData.class !== 'undefined'` to `rectData.class !== undefined` do anything?\r\n> \r\n> To me, it seems like this actually fixes a bug (if so, this should be in the PR description, so we can say something like \"TypeScript caught some bad `undefined` handling, so this should now be fixed\", then we can consider this PR to be both a bug fix, and a refactoring PR).\r\n\r\nAs far as I know, when using `typeof` before it would make it working as expected, but without it's comparing string, which means it has no value.\r\n",
+          "file_path": "packages/mermaid/src/diagrams/common/svgDrawCommon.ts",
+          "line_number": 32,
+          "start_line": null,
+          "commit_sha": "50eb3cf1c909b214ae7cd05b5c6f38d125e1dc90",
+          "created_at": "2023-08-13T22:28:09Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NLXJh",
+          "author": "aloisklink",
+          "body": "Awesome :)\r\n\r\nTo be honest, we could even rename this PR to something like \"Fix `undefined` handling in `svgDrawCommon`\" if you want to have this as a bug-fix PR, instead of a refactoring PR!",
+          "file_path": "packages/mermaid/src/diagrams/common/svgDrawCommon.ts",
+          "line_number": 32,
+          "start_line": null,
+          "commit_sha": "50eb3cf1c909b214ae7cd05b5c6f38d125e1dc90",
+          "created_at": "2023-08-15T16:07:19Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NLfBQ",
+          "author": "Yokozuna59",
+          "body": "I would recommend leaving it as refactoring since the majority of the work is that; one line of change for a bug fix isn't showing the work done here. And that but fix it's has been highlighted in PR discerption.\r\n ",
+          "file_path": "packages/mermaid/src/diagrams/common/svgDrawCommon.ts",
+          "line_number": 32,
+          "start_line": null,
+          "commit_sha": "50eb3cf1c909b214ae7cd05b5c6f38d125e1dc90",
+          "created_at": "2023-08-15T16:35:46Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential bug fix (string 'undefined' vs actual undefined) and requests it be documented in the PR description, implying concrete changes to both code description and possibly the fix itself."
+    }
+  ],
+  "review_thread_count": 3,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85NDyCi",
+            "author": "aloisklink",
+            "body": ":+1: These are great! I've always struggled to gets these working properly, so it's super awesome to see you've managed to get these working.",
+            "file_path": "packages/mermaid/src/diagrams/common/commonTypes.ts",
+            "line_number": 58,
+            "start_line": 50,
+            "commit_sha": "50eb3cf1c909b214ae7cd05b5c6f38d125e1dc90",
+            "created_at": "2023-08-13T18:30:28Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85ND4-l",
+            "author": "Yokozuna59",
+            "body": "Thanks! While I was working on convert `journey` files types were inferred just after using `SVG` and `Group` types.\r\n",
+            "file_path": "packages/mermaid/src/diagrams/common/commonTypes.ts",
+            "line_number": 58,
+            "start_line": 50,
+            "commit_sha": "50eb3cf1c909b214ae7cd05b5c6f38d125e1dc90",
+            "created_at": "2023-08-13T22:22:25Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure positive acknowledgment/praise with no suggestion for code change."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 3,
+    "stage1_kept": 3,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1
+  }
+}

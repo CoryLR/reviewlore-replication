@@ -1,0 +1,92 @@
+{
+  "inline_comments": [
+    {
+      "file_path": ".github/workflows/fork-checks.yml",
+      "line_number": 43,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This step (`cd code && yarn lint:fmt`) references `lint:fmt`, which is being deleted from `code/package.json` in this very PR. Once merged, this CI step will fail with 'Unknown script: lint:fmt'. It should be updated to run `yarn fmt:check` from the repo root, e.g.: `run: yarn fmt:check`. This file is not included in the diff, making it an easy miss.",
+      "index": 0
+    },
+    {
+      "file_path": "scripts/project.json",
+      "line_number": 10,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The NX `inputs` cache key for `pretty-docs` still only watches `{workspaceRoot}/docs/**/*`, but the command was changed from a docs-only check (`yarn docs:fmt:check`) to `yarn fmt:check`, which runs `oxfmt --check .` over the **entire repo**. This is a cache invalidation mismatch: if a TypeScript or JSON file outside `docs/` acquires a formatting violation, NX will serve the previously-cached passing result and silently skip the check. Either restore the inputs to `[\"default\"]` so any changed file invalidates the cache, or revert the command to scope the check to only the files covered by the inputs.",
+      "index": 1
+    },
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 43,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `overrides` entry targeting `[\"*.md\", \"*.mdx\"]` is unreachable dead configuration. Both `\"*.md\"` and `\"*.mdx\"` already appear in `ignorePatterns`, so oxfmt will never process these files and this override block can never apply. The same is true for the `**/frameworks/angular/template/**/*.ts` portion of the angular override on line 56, since `code/frameworks/angular/template/**` is also in `ignorePatterns`. Remove the dead entries to avoid misleading future contributors about what configuration is actually active.",
+      "index": 2
+    },
+    {
+      "file_path": "package.json",
+      "line_number": 46,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The lint-staged entries for `code/**/*.{js,jsx,mjs,ts,tsx}` and `code/**/*.{html,json}` now use `oxfmt --check` instead of the plain `oxfmt` that was in the old `code/package.json` config. This is a meaningful DX regression: the previous behaviour auto-formatted staged files before the commit, so developers got a clean commit automatically. The new behaviour **fails the commit** if a file isn't already formatted, requiring developers to run the formatter manually and re-stage. If this change is intentional, it should be called out explicitly in the PR description and in team documentation, since it will cause confusing commit rejections until all contributors adjust their workflow.",
+      "index": 3
+    },
+    {
+      "file_path": "package.json",
+      "line_number": 59,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The glob `\"**/package.json\"` matches every `package.json` file in the monorepo\u2014including every package under `code/addons/*`, `code/frameworks/*`, `code/renderers/*`, etc.\u2014and runs `yarn --cwd scripts lint:package` on all of them. Previously, each workspace only validated its own `package.json`. Widening to `**/package.json` is probably intentional for consistency, but it means any commit that touches, say, `code/addons/docs/package.json` will now also run the scripts-workspace package lint against it. Confirm this is desired and that `lint:package` behaves correctly when given an arbitrary monorepo package path rather than just the `code/` or `scripts/` package.",
+      "index": 4
+    },
+    {
+      "file_path": "code/package.json",
+      "line_number": 27,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`\"lint\": \"yarn lint:js && cd .. && yarn fmt:check\"` uses a bare `cd ..` inside a chained script. While this works in a POSIX shell subshell, it is unconventional and fragile: the meaning depends entirely on where the script is invoked from, and it silently breaks if the working directory ever changes. Prefer the explicit `--cwd` form so the intent is self-documenting and position-independent: `\"yarn lint:js && yarn --cwd .. fmt:check\"`.",
+      "index": 5
+    },
+    {
+      "file_path": ".vscode/extensions.json",
+      "line_number": 9,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The file is missing a trailing newline (`\\ No newline at end of file`). POSIX requires text files to end with a newline, and its absence can produce noisy diffs. Please add a newline after the closing `}`.",
+      "index": 6
+    },
+    {
+      "file_path": ".vscode/settings.json",
+      "line_number": 75,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Same as `extensions.json`: the file is missing a trailing newline. Please add one after the closing `}`.",
+      "index": 7
+    },
+    {
+      "file_path": "scripts/ci/common-jobs.ts",
+      "line_number": 74,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `prettyDocs` job was originally a narrow docs-only check (`yarn docs:fmt:check` scoped to `docs/_snippets`). It now runs `yarn fmt:check`, which invokes `oxfmt --check .` over the entire repository. This duplicates the format-check step that the `lint` CI job also runs (further down in the same file). Consider whether the `prettyDocs` job should be retained at all, absorbed into `lint`, or scoped back to docs-only work; its current state runs redundant full-project format validation under a misleading name.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`.github/workflows/fork-checks.yml` is not included in this diff but still contains `cd code && yarn lint:fmt` (step named 'oxfmt'). Because `lint:fmt` is deleted from `code/package.json` in this PR, that CI job will fail on every fork PR after merge. The fix belongs in this PR: update the step to `yarn fmt:check` at the repo root, matching the pattern used in `scripts/ci/common-jobs.ts`.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `scripts/package.json` `fmt:check` script previously included a fallback error message (`|| echo 'Please run \"docs:fmt:write\"...'`) that guided developers toward the fix when the check failed. The new script silently exits with a non-zero code. While acceptable for CI, consider restoring a short hint message for local development ergonomics, especially since the command name (`fmt:check`) and the workflow of running it from the `scripts` subdirectory are not yet widely known.",
+      "index": 10
+    }
+  ],
+  "cost_usd": 0.68559845,
+  "duration_seconds": 451.57079911231995
+}

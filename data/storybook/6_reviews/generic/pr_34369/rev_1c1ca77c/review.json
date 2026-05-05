@@ -1,0 +1,100 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 122,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`startChangeDetection(options)` is deliberately fire-and-forget, but the function is `async` and internally does `await Promise.all(Object.values(storyIndex.entries).map((entry) => server.warmupRequest(entry.importPath)))`. If any `warmupRequest` call rejects (e.g. Vite server error), the returned promise is rejected with no attached catch handler, producing an `UnhandledPromiseRejection`. The fix is to add a top-level `.catch` inside `startChangeDetection` or wrap the body in `try/catch` so errors are handled gracefully (e.g. logged and the polling simply never starts).",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 264,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test previously verified that after `bail()` + `start()` the watcher listener was re-attached (`listenerCount === 1`). It now asserts `listenerCount === 0` (no re-attachment), which tests a failure/idle path. There is no longer any test that verifies the success path: that when the module graph becomes non-empty during the polling interval after a restart, the `'all'` watcher IS re-attached. Consider adding a dedicated test that populates `fileToModulesMap` during the polling window and asserts `listenerCount === 1`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 43,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Commented-out debug statement should be removed before merging: `// logger.info(\\`Story ${entry.id} absolute path: ${absolutePath}\\`);`",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 138,
+      "dimension": "Performance Issue",
+      "importance": "major",
+      "comment": "`getGitDiffProvider()` creates a `new GitDiffProvider(...)` on every invocation, which means a fresh instance (with no cached `repoRoot`) is created on every call to `buildStatuses()` (i.e. every scan). The `repoRoot` caching inside `GitDiffProvider` is therefore ineffective across scans, and `git rev-parse --show-toplevel` is executed on every scan. Fix: store the `GitDiffProvider` instance as a private field and initialise it once (lazily or in the constructor).",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 194,
+      "dimension": "Performance Issue",
+      "importance": "major",
+      "comment": "`gitDiffProvider.getChangedFiles()` and `gitDiffProvider.getRepoRoot()` are started concurrently in `Promise.all`. However, `getChangedFiles()` internally awaits `getRepoRoot()` as its first step. Because `getRepoRoot()` caches the result on the instance value (not as a shared Promise), both concurrent callers find `this.repoRoot === undefined` simultaneously and each spawns a separate `execa('git', ['rev-parse', ...])` child process. The result is two identical git subprocesses per scan. Fix either by caching the Promise in `getRepoRoot()` (`this.repoRootPromise = this.repoRootPromise ?? execa(...)`) so concurrent callers share the same in-flight request, or by sequencing the calls so the explicit `getRepoRoot()` is called after `getChangedFiles()` resolves.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 129,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`dispose()` clears the debounce timer and unsubscribes the module-graph listener, but it does not guard against a `scan()` that is currently awaiting `buildStatuses()`. If a scan is in flight at the time `dispose()` is called, it will complete and call `this.applyPatch(nextStatuses)` and `this.resolveReadiness(...)`, mutating the status store and module-level readiness state after the service is considered disposed. Consider adding an `isDisposed` flag checked at the start of `scan()` (and after each await in `scan()`) so that late completions are silently dropped.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/git-diff-provider.test.ts",
+      "line_number": 16,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`vi.clearAllMocks()` is called in both `beforeEach` and `afterEach`. One of the two is redundant; `beforeEach` alone is sufficient to ensure a clean state before each test.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/core-server/index.ts",
+      "line_number": 32,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`ChangeDetectionService` is exported without an `experimental_` or `internal_` prefix, while the neighbouring `getChangeDetectionReadiness` is exported as `experimental_getChangeDetectionReadiness`. The inconsistency makes the API stability contract ambiguous. If `ChangeDetectionService` is intended for builder authors as a stable public API, that is fine, but it should be documented. If it is still experimental, it should be prefixed consistently.",
+      "index": 7
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/trace-changed.ts",
+      "line_number": 27,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`queue.shift()` is O(n) for a plain array, so the BFS degrades to O(n\u00b2) for deep or wide module graphs. For most Storybook projects this is fine, but consider replacing the array queue with a simple linked-list or index-pointer approach (`let head = 0; queue[head++]`) to keep dequeue at O(1) amortised.",
+      "index": 8
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/readiness.ts",
+      "line_number": 22,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`readinessDeferred` and `readinessState` are module-level singletons, and `ChangeDetectionService`'s constructor calls `resetChangeDetectionReadiness()` to reset them. This means constructing a second `ChangeDetectionService` instance (even in tests, unless `internal_resetChangeDetectionReadiness` is called manually) resets state that a first instance may have already resolved. The coupling is currently managed by tests calling `internal_resetChangeDetectionReadiness` in `beforeEach`/`afterEach`, but it is a fragile global-state design. Consider accepting an explicit readiness object (or a factory) as a constructor parameter to avoid the hidden global side-effect.",
+      "index": 9
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `mergeStatusValues` function assigns `'status-value:modified'` to the story file(s) with the shortest graph distance from a changed file, and `'status-value:affected'` to those that are further away. This is a meaningful and well-tested distinction. However, there is no test in `service.test.ts` that explicitly exercises the case where two different changed files reach the same story with different distances and one path gives `'modified'` while the other gives `'affected'`, requiring `mergeStatusValues` to pick `'modified'`. The existing 'prefers modified over affected' test has both changed files individually resolve to `'modified'` (each is the shortest path to the only story). Adding a case where one path is closest and the other is not would make the coverage complete.",
+      "index": 10
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `git-diff-provider.test.ts` does not cover the `ENOENT` branch (`execaError.code === 'ENOENT'`, git binary not found) in `toGitError`. Since this is explicitly handled as a `ChangeDetectionUnavailableError` with a different message from the 'not a git repository' branch, a dedicated test would help guard against future regressions.",
+      "index": 11
+    }
+  ],
+  "cost_usd": 0.77581125,
+  "duration_seconds": 584.6397669315338
+}

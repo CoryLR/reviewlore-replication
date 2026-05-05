@@ -1,0 +1,56 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34321,
+  "title": "Build: Don't check format of version JSON files",
+  "body": "Closes #\n\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\n\n<!--\n\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\n\n-->\n\n## What I did\n\nThese files are written by our release scripts, and their formatting doesn't matter, but they are now failing, which is blocking our release.\n\n<!-- Briefly describe what your PR does -->\n\n## Checklist for Contributors\n\n### Testing\n\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\n\n#### The changes in this PR are covered in the following automated tests:\n\n- [ ] stories\n- [ ] unit tests\n- [ ] integration tests\n- [ ] end-to-end tests\n\n#### Manual testing\n\n> [!CAUTION]\n> This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!\n\n<!-- Please include the steps to test your changes here. For example:\n\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\n2. Open Storybook in your browser\n3. Access X story\n\n-->\n\n### Documentation\n\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\n\n- [ ] Add or update documentation reflecting your changes\n- [ ] If you are deprecating/removing a feature, make sure to update\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\n\n## Checklist for Maintainers\n\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\n- [ ] Make sure this PR contains **one** of the labels below:\n   <details>\n     <summary>Available labels</summary>\n\n  - `bug`: Internal changes that fixes incorrect behavior.\n  - `maintenance`: User-facing maintenance tasks.\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\n  - `feature request`: Introducing a new feature.\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\n  - `other`: Changes that don't fit in the above categories.\n\n   </details>\n\n### \ud83e\udd8b Canary release\n\n<!-- CANARY_RELEASE_SECTION -->\n\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\n\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\n\n<!-- CANARY_RELEASE_SECTION -->\n\n<!-- BENCHMARK_SECTION -->\n<!-- BENCHMARK_SECTION -->\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Chores**\n  * Updated formatter configuration to also ignore docs/versions/*.json while preserving existing exclusion of docs/_snippets/**\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "JReinhold",
+  "merged_at": "2026-03-26T13:13:24Z",
+  "base_ref": "next",
+  "merge_commit_sha": "f6a6ba700347a9b69ddf7b6c1fb2bae6b460899c",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "d19270e3b5ba8c384efff62ebd81f8af85575a05",
+    "1a90d3b074210946c3cc16b39142a43d66e28ebc"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6yIrPW",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udf10 Web query:\n\n`In oxfmt configuration, does a leading `!` in `ignorePatterns` negate an ignore rule (i.e., re-include files), similar to .gitignore/.prettierignore semantics?`\n\n\ud83d\udca1 Result:\n\nNo, a leading ! in ignorePatterns does not negate an ignore rule to re-include files in oxfmt configuration. The official documentation states that ignorePatterns uses \".gitignore syntax\" and consists of \"glob patterns to exclude from formatting\" (sources 1,2,5 from first search). Examples show only positive exclusion patterns like \"dist/\", \"*.min.js\" with no mention of negation via ! (source 1). While .gitignore and .prettierignore (which oxfmt also supports) use ! for negation, the ignorePatterns array treats patterns as simple exclusions without multi-pattern negation semantics. For inclusion after broad exclusion, use overrides with files and excludeFiles instead (source 2). CLI positional arguments support ! for exclusion (source 10 second search), but not config ignorePatterns.\n\nCitations:\n\n- 1: https://oxc.rs/docs/guide/usage/formatter/ignore-files\n- 2: https://oxc.rs/docs/guide/usage/formatter/config\n- 3: https://oxc.rs/docs/guide/usage/formatter/config-file-reference\n- 4: https://oxc.rs/docs/guide/usage/formatter/cli\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n .oxfmtrc.json | sed -n '35,45p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 332\n\n---\n\n\n\n</details>\n\n**Remove the `!` prefix\u2014`ignorePatterns` doesn't support negation syntax**\n\nLine 40 uses `!docs/versions/*.json`, but oxfmt's `ignorePatterns` does not support `!` as a negation operator (unlike .gitignore or .prettierignore). The leading `!` makes this a malformed pattern that won't match the intended files, leaving them unexcluded from formatting checks.\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n-    \"!docs/versions/*.json\"\n+    \"docs/versions/*.json\"\n```\n</details>\n\nNote: Line 39 has the same issue with `!docs/_snippets/**`.\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    \"docs/versions/*.json\"\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn @.oxfmtrc.json at line 40, In the ignorePatterns array remove the unsupported\nnegation prefix by changing entries like \"!docs/versions/*.json\" (and the\nsimilar \"!docs/_snippets/**\") to \"docs/versions/*.json\" and \"docs/_snippets/**\"\nrespectively so the patterns correctly exclude those files; update the\nignorePatterns key accordingly.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:triton:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": ".oxfmtrc.json",
+          "line_number": 40,
+          "start_line": null,
+          "commit_sha": "1a90d3b074210946c3cc16b39142a43d66e28ebc",
+          "created_at": "2026-03-25T14:26:58Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The `!` prefix in `ignorePatterns` is not supported by oxfmt, causing the pattern to behave differently than intended \u2014 the files are not actually excluded from formatting, which deviates from the developer's intent."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a specific bug (unsupported `!` negation prefix in `ignorePatterns`) and provides a concrete fix: remove the `!` prefix from the pattern. It includes a diff and committable suggestion."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

@@ -1,0 +1,182 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33511,
+  "title": "Build: Add stories for `Main` component",
+  "body": "Contributes to https://github.com/storybookjs/storybook/issues/33245\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\nI've added stories for the `Main` UI component, which is at the root of the Manager UI. This is a first step towards running Storybook's UI inside of Storybook itself.\r\n\r\nRight now it avoids rendering the preview iframe, because I have not yet been able to have it render a specific story (setting `global.PREVIEW_URL` to `iframe.html` makes it render the ESBuild Metafiles story, because that happens to be the first story in the outer Storybook, whilst not setting it at all causes an infinitely nested Storybook, crashing the browser).\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [x] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n> [!CAUTION]\r\n> This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!\r\n\r\n<!-- Please include the steps to test your changes here. For example:\r\n\r\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Open Storybook in your browser\r\n3. Access X story\r\n\r\n-->\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Exposed a memory-based router for in-app navigation scenarios.\n\n* **New Stories / Tests**\n  * Added a comprehensive manager story suite demonstrating sidebar/toolbar/panel toggles, right-panel and full-screen layouts, share menu, connection-loss/time-out flows, About/Guide/Shortcuts pages, and interactive play scenarios.\n\n* **Chores**\n  * Made the main manager component publicly accessible.\n  * Updated Storybook/Chromatic configuration and bumped an internal dependency.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ghengeveld",
+  "merged_at": "2026-01-29T15:11:08Z",
+  "base_ref": "next",
+  "merge_commit_sha": "e90d7c1913444dfb61764cd88f7c4c3f3887be6b",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "306ba8672aade985f9af83f809ecfce038ff58e2",
+    "8dc4fe74052ab3686a68ec2868ecaa6031067d0c"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f2fGw",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Potential null reference in querySelector assertion.**\n\nIf the `#storybook-panel-root` element doesn't exist when the play function runs, `querySelector` returns `null`, and `within(null as HTMLElement)` will cause a runtime error with a confusing message.\n\nConsider using a safer approach:\n\n<details>\n<summary>\ud83d\udc1b Suggested fix</summary>\n\n```diff\n export const RightPanel = meta.story({\n   play: async ({ canvasElement, userEvent }) => {\n-    const panel = within(canvasElement.querySelector('#storybook-panel-root') as HTMLElement);\n+    const panelRoot = canvasElement.querySelector('#storybook-panel-root');\n+    if (!panelRoot) {\n+      throw new Error('Panel root element not found');\n+    }\n+    const panel = within(panelRoot as HTMLElement);\n     await userEvent.click(await panel.findByLabelText('Move addon panel to right'));\n   },\n });\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  play: async ({ canvasElement, userEvent }) => {\n    const panelRoot = canvasElement.querySelector('#storybook-panel-root');\n    if (!panelRoot) {\n      throw new Error('Panel root element not found');\n    }\n    const panel = within(panelRoot as HTMLElement);\n    await userEvent.click(await panel.findByLabelText('Move addon panel to right'));\n  },\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/manager/index.stories.tsx around lines 156 - 159, The play\nfunction uses within(canvasElement.querySelector('#storybook-panel-root') as\nHTMLElement) which will throw a confusing runtime error if querySelector returns\nnull; change it to first assign const panelRoot =\ncanvasElement.querySelector('#storybook-panel-root'); then guard it (if\n(!panelRoot) throw new Error('storybook panel root (#storybook-panel-root) not\nfound in play()')); finally call within(panelRoot) and proceed with await\nuserEvent.click(await panel.findByLabelText('Move addon panel to right')); this\nensures a clear error or safe execution when the element is missing.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/index.stories.tsx",
+          "line_number": 163,
+          "start_line": 160,
+          "commit_sha": "8dc4fe74052ab3686a68ec2868ecaa6031067d0c",
+          "created_at": "2026-01-12T11:23:36Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Null Pointer",
+          "label_confidence": "high",
+          "label_reasoning": "querySelector can return null and casting it directly to HTMLElement without a null check will cause a runtime null dereference error."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential null reference bug and suggests a specific code fix with a guard check."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6gDrGm",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**`global.PREVIEW_URL` is not restored in `afterEach`.**\n\nThe `beforeEach` hook sets `global.PREVIEW_URL = 'about:blank'` but `afterEach` doesn't restore the original value, which could leak state to other tests.\n\n<details>\n<summary>\ud83d\udd27 Suggested fix</summary>\n\n```diff\n+const originalPreviewUrl = global.PREVIEW_URL;\n+\n const meta = preview.meta({\n   // ...\n   beforeEach: () => {\n     global.PREVIEW_URL = 'about:blank';\n\n     Storage.prototype.getItem = () => null;\n     Storage.prototype.setItem = () => {};\n     Storage.prototype.clear = () => {};\n   },\n   afterEach: () => {\n+    global.PREVIEW_URL = originalPreviewUrl;\n     Storage.prototype.getItem = originalGetItem;\n     Storage.prototype.setItem = originalSetItem;\n     Storage.prototype.clear = originalClear;\n   },\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  const originalGetItem = Storage.prototype.getItem;\n  const originalSetItem = Storage.prototype.setItem;\n  const originalClear = Storage.prototype.clear;\n  const originalPreviewUrl = global.PREVIEW_URL;\n\n  const meta = preview.meta({\n    // ... other configuration\n    beforeEach: () => {\n      global.PREVIEW_URL = 'about:blank';\n\n      Storage.prototype.getItem = () => null;\n      Storage.prototype.setItem = () => {};\n      Storage.prototype.clear = () => {};\n    },\n    afterEach: () => {\n      global.PREVIEW_URL = originalPreviewUrl;\n      Storage.prototype.getItem = originalGetItem;\n      Storage.prototype.setItem = originalSetItem;\n      Storage.prototype.clear = originalClear;\n    },\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/manager/index.stories.tsx around lines 108 - 119, Store the\noriginal global.PREVIEW_URL before mutating it in the beforeEach (e.g., const\noriginalPreviewUrl = global.PREVIEW_URL) and then restore it in afterEach by\nassigning global.PREVIEW_URL = originalPreviewUrl; update the\nbeforeEach/afterEach blocks around the existing Storage.prototype mocks so the\ntest suite doesn't leak the preview URL state.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/index.stories.tsx",
+          "line_number": 122,
+          "start_line": 111,
+          "commit_sha": "8dc4fe74052ab3686a68ec2868ecaa6031067d0c",
+          "created_at": "2026-01-13T08:11:44Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The global.PREVIEW_URL is mutated in beforeEach but not restored in afterEach, leaking state to subsequent tests \u2014 a test lifecycle/state management logic error."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a state leak issue and requests restoring global.PREVIEW_URL in afterEach with a specific code fix."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6gDrGr",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Add null check for `querySelector` result.**\n\n`querySelector` can return `null` if the element doesn't exist. The direct cast to `HTMLElement` masks this, leading to confusing errors downstream.\n\n<details>\n<summary>\ud83d\udd27 Suggested fix</summary>\n\n```diff\n export const RightPanel = meta.story({\n   play: async ({ canvasElement, userEvent }) => {\n-    const panel = within(canvasElement.querySelector('#storybook-panel-root') as HTMLElement);\n+    const panelRoot = canvasElement.querySelector('#storybook-panel-root');\n+    if (!panelRoot) {\n+      throw new Error('Panel root element not found');\n+    }\n+    const panel = within(panelRoot as HTMLElement);\n     await userEvent.click(await panel.findByLabelText('Move addon panel to right'));\n   },\n });\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nexport const RightPanel = meta.story({\n  play: async ({ canvasElement, userEvent }) => {\n    const panelRoot = canvasElement.querySelector('#storybook-panel-root');\n    if (!panelRoot) {\n      throw new Error('Panel root element not found');\n    }\n    const panel = within(panelRoot as HTMLElement);\n    await userEvent.click(await panel.findByLabelText('Move addon panel to right'));\n  },\n});\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/manager/index.stories.tsx around lines 156 - 161, The play\nfunction in RightPanel calls\ncanvasElement.querySelector('#storybook-panel-root') and force-casts to\nHTMLElement which can be null; update the play implementation to first capture\nthe result into a variable, check for null (e.g., if (!panelRoot) return or\nthrow a clear error), only then cast to HTMLElement and call within(panelRoot);\nensure subsequent calls (panel.findByLabelText) are only invoked when panelRoot\nexists so you avoid downstream null dereferences in meta.story's play.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/index.stories.tsx",
+          "line_number": 164,
+          "start_line": 159,
+          "commit_sha": "8dc4fe74052ab3686a68ec2868ecaa6031067d0c",
+          "created_at": "2026-01-13T08:11:45Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Null Pointer",
+          "label_confidence": "high",
+          "label_reasoning": "Same issue as index 0 \u2014 querySelector result is force-cast to HTMLElement without a null check, risking null dereference at runtime."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Same null check issue as index 0, requests adding a null guard with a concrete code suggestion."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6gJ5mW",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udf10 Web query:\n\n`@chromatic-com/storybook v5.0.0 breaking changes migration`\n\n\ud83d\udca1 Result:\n\nShort summary \u2014 what changed and how to migrate from @chromatic-com/storybook \u2192 v5.x:\n\n1. There\u2019s a breaking-release series around v5.0.0 (published as pre/next tags). Check the release notes/changelog for exact breaking items before upgrading. [1][2]\n\n2. Common breaking/migration actions Chromatic documents that are likely relevant when moving to v5:\n   - Replace legacy CLI/package names (storybook-chromatic \u2192 chromatic) and use the new chromatic CLI where applicable. [3]\n   - Remove deprecated Storybook-related Chromatic packages (e.g., chromatic-cypress, chromatic-playwright, @chromaui/archive-storybook, @chromaui/test-archiver) if present; follow the E2E upgrade guide. [4]\n   - Stop using the deprecated --preserve-missing flag (it\u2019s being removed in the v5 capture infra); migrate to TurboSnap or use onlyStoryFiles/onlyStoryNames/onlyChanged options. [5]\n   - Verify Storybook versions / peer-deps and update Storybook itself if required by the new adapter. Run a local build (npm run build-storybook) and ensure stories extract correctly before CI. [4]\n\n3. Practical upgrade steps\n   - Read the v5.x release notes/changelog for @chromatic-com/storybook and chromatic to catch any package-specific breakages. [1][2]\n   - Remove deprecated packages and flags listed above. [4][5]\n   - npm/yarn remove storybook-chromatic (if present) and npm/yarn add chromatic@latest (or the exact 5.x tag you need). [3]\n   - Run build-storybook locally; fix any story extraction or add-on incompatibilities; update Storybook peer deps if necessary. [4]\n   - Enable TurboSnap or configure onlyStoryFiles/onlyStoryNames/onlyChanged to replace preserve-missing behaviour. [5]\n   - Re-run Chromatic in CI; consult Chromatic docs / changelog for any CI-specific inputs that changed. [4][5]\n\nIf you want, I can:\n- fetch the exact v5.0.0 release notes/changelog entries and list the line-by-line breaking changes, or\n- inspect your repository\u2019s package.json and Chromatic config and give step-by-step commands to migrate. Which would you prefer?\n\nSources:\n[1] Release listing for @chromatic-com/storybook (v5.0.0-next.0).  \n[2] Chromatic blog / Storybook 5.0 overview and Chromatic changelog.  \n[3] chromatic (CLI) npm package notes about migrating from storybook-chromatic.  \n[4] Chromatic docs \u2014 Quickstart / Storybook integration and E2E Visual Tests upgrade guide.  \n[5] Chromatic docs \u2014 Sunsetting --preserve-missing and migration to TurboSnap.\n\n---\n\n\ud83c\udf10 Web query:\n\n`@chromatic-com/storybook v5 release notes changelog`\n\n\ud83d\udca1 Result:\n\nSummary \u2014 @chromatic-com/storybook v5 (pre-release)\n- A v5 pre-release exists as 5.0.0-next.0 (marked as pushed to the `next` channel). Noted items: breaking-change label, merges from main/3.2.7, and an update to the GraphQL schema to handle ComparisonResult.SKIPPED. [1][2]\n\nSources:\n- NewReleases entry for @chromatic-com/storybook v5.0.0-next.0. [1]\n- Package changelog / Yarn/npm package page showing recent changelog entries for @chromatic-com/storybook. [2]\n- Storybook integrations page for the @chromatic-com/storybook addon (context about the package). [3]\n\nWould you like links to the full release entry or the GitHub/ npm package pages?\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Verify package exists on npm and check available versions\nnpm view @chromatic-com/storybook@5.0.0 version 2>/dev/null || echo \"Package v5.0.0 not found\"\nnpm view @chromatic-com/storybook dist-tags 2>/dev/null\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 232\n\n---\n\n\n\n</details>\n\n**Verify compatibility with `@chromatic-com/storybook` v5.0.0 breaking changes.**\n\nThis major version upgrade (v4 \u2192 v5) includes breaking changes. Before merging, confirm:\n- CLI package renamed: `storybook-chromatic` \u2192 `chromatic` (remove old package if present)\n- Deprecated packages removed: `chromatic-cypress`, `chromatic-playwright`, `@chromaui/archive-storybook`, `@chromaui/test-archiver`\n- `--preserve-missing` flag no longer supported; migrate to TurboSnap or `onlyChanged`/`onlyStoryFiles`/`onlyStoryNames` options\n- Verify `chromatic.config.json` changes align with v5 configuration expectations\n- Run `yarn build-storybook` locally and verify story extraction works before CI\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/package.json at line 77, The package.json entry for\n\"@chromatic-com/storybook\" upgrades to v5 which has breaking changes; update\npackage.json to replace the old CLI package name \"storybook-chromatic\" with\n\"chromatic\" (remove any residual \"storybook-chromatic\"), remove deprecated\npackages (\"chromatic-cypress\", \"chromatic-playwright\",\n\"@chromaui/archive-storybook\", \"@chromaui/test-archiver\") from\ndependencies/devDependencies, search for and remove usage of the deprecated\n--preserve-missing flag in scripts or CI and migrate those invocations to\nTurboSnap or use \"onlyChanged\"/\"onlyStoryFiles\"/\"onlyStoryNames\" options, update\nchromatic.config.json to match v5 configuration schema, and locally run yarn\nbuild-storybook and a full Chromatic story extraction to verify stories are\nextracted correctly before merging.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/package.json",
+          "line_number": 77,
+          "start_line": null,
+          "commit_sha": "7726c7efdd395497cd86f08bcd273deb562ce85b",
+          "created_at": "2026-01-13T15:36:14Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "medium",
+          "label_reasoning": "Upgrading to a major version with breaking changes without addressing deprecated packages, renamed CLI tools, and removed flags constitutes incorrect/incompatible use of the library/framework API."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags potential breaking changes from a major version upgrade and requests specific migration steps before merging."
+    }
+  ],
+  "review_thread_count": 5,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6jE60N",
+            "author": "Sidnioulz",
+            "body": "I'm surprised to see this because when I tested, the nested Storybook instance loaded the index of the host Storybook instance in its sidebar. Is this also something you noticed?",
+            "file_path": "code/core/src/manager/index.stories.tsx",
+            "line_number": 31,
+            "start_line": null,
+            "commit_sha": "8dc4fe74052ab3686a68ec2868ecaa6031067d0c",
+            "created_at": "2026-01-28T10:28:51Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6jFvKf",
+            "author": "ghengeveld",
+            "body": "Yes, the nested instance reuses the index from the host instance rather than the mock. I haven't yet found a way to prevent that.",
+            "file_path": "code/core/src/manager/index.stories.tsx",
+            "line_number": 31,
+            "start_line": null,
+            "commit_sha": "8dc4fe74052ab3686a68ec2868ecaa6031067d0c",
+            "created_at": "2026-01-28T11:24:47Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6jGgwg",
+            "author": "Sidnioulz",
+            "body": "Thanks for confirming! Just wanted to make sure my local setup wasn't messed up :) ",
+            "file_path": "code/core/src/manager/index.stories.tsx",
+            "line_number": 31,
+            "start_line": null,
+            "commit_sha": "8dc4fe74052ab3686a68ec2868ecaa6031067d0c",
+            "created_at": "2026-01-28T12:22:30Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure question seeking to understand observed behavior with no implied code change suggestion."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 5,
+    "stage1_kept": 5,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1
+  }
+}

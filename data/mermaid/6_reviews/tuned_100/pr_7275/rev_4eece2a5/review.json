@@ -1,0 +1,92 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/clusters.js",
+      "line_number": 489,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`getClusterTitleWidth` is a synchronous function, but `createLabel` is `async` and returns a Promise. Without `await`, `label` is a Promise object \u2014 `elem.node().appendChild(label)` will throw a TypeError ('parameter 1 is not of type Node'), and `label.getBBox()` will throw because Promises have no `getBBox` method. The function must be declared `async` and the call must use `await`:\n\n```js\nexport const getClusterTitleWidth = async (elem, node) => {\n  const label = await createLabel(node.label, node.labelStyle, undefined, true, false, node.width);\n  ...\n};\n```",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/edges.js",
+      "line_number": 99,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`useHtmlLabels` is passed as the fifth argument to `createLabel`, which maps to the `addBackground` parameter (signature: `createLabel(_vertexText, style, isTitle, isNode, addBackground = false, width)`). These are semantically unrelated: `addBackground` controls whether the `labelBkg` CSS class is added to the label container. When HTML labels are enabled (`useHtmlLabels = true`), all four edge terminal labels (`startLabelLeft`, `startLabelRight`, `endLabelLeft`, `endLabelRight`) will incorrectly receive that background class, causing an unintended visual change. Each call site should pass `false` here:\n\n```js\nawait createLabel(\n  edge.startLabelLeft,\n  getLabelStyles(edge.labelStyle),\n  undefined,\n  false,\n  false,   // addBackground, not useHtmlLabels\n  width\n);\n```\nAll four call sites in this file have the same bug.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/labelImageUtils.ts",
+      "line_number": 34,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`getConfig()` is called twice in `setupImage` \u2014 once to check whether `fontSize` is set, and again to read it. `setupImage` is invoked for every image in a label (potentially inside `Promise.all` over many images). Cache the result before the conditional:\n\n```ts\nconst config = getConfig();\nconst bodyFontSize = config.fontSize ?? window.getComputedStyle(document.body).fontSize;\n```\nThis also lets you replace the `? :` ternary with a cleaner `??` fallback, since the only falsy value worth guarding is `undefined`/`null`.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/dagre-wrapper/createLabel.js",
+      "line_number": 97,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The original code used `log.debug('vertexText' + vertexText)` but this was changed to `log.info(...)`. The project convention for rendering code is `log.debug()` or `log.trace()` for diagnostic output; `log.info` is intended for higher-signal, user-visible messages. Please revert to `log.debug`. Additionally, prefer a template literal: `` log.debug(`vertexText ${vertexText}`) ``.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/dagre-wrapper/createLabel.js",
+      "line_number": 100,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The previous implementation called `await replaceIconSubstring(decodeEntities(vertexText))`, which resolves icons via `mermaid.registerIconPacks()` and renders them as inline SVG. The replacement is a simple synchronous regex that only produces `<i class='...'>` HTML tags, which rely on FontAwesome CSS being present and do not support custom registered icon packs at all. This is a functional regression: any diagram using this code path (dagre-wrapper) with custom icon packs will silently render plain class-based `<i>` tags instead of SVG icons. If the intent is to unify behavior with `rendering-util/rendering-elements/createLabel.js` (which also uses the inline regex), this trade-off should be explicitly documented and a follow-up ticket opened to bring proper icon-pack support to both paths.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/createLabel.js",
+      "line_number": 13,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`DEFAULT_WRAPPING_WIDTH = 200` and the `getWrappingWidth()` helper (lines ~16\u201319) are now duplicated verbatim in `packages/mermaid/src/dagre-wrapper/createLabel.js`. The PR's stated goal is to reduce duplication, but this introduces new duplication. Both constants and helpers should be extracted to a single shared utility (e.g., `rendering-util/labelUtils.js`) and imported by both `createLabel` files.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/createLabel.js",
+      "line_number": 55,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `padding-right: 1px` style that existed in the previous `addHtmlLabel` implementation was silently removed. The accompanying comment ('Fix for firefox') suggests it was a workaround for a layout bug in Firefox. If the fix is no longer needed, explain why in a comment. If it was accidentally dropped, restore it. Silent removal of browser-workaround styles makes future debugging much harder.",
+      "index": 6
+    },
+    {
+      "file_path": ".changeset/vast-masks-say.md",
+      "line_number": 2,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The changeset is marked `patch`, but this PR adds new user-visible features to labels that previously lacked them: KaTeX rendering, icon-pack support, text wrapping, and changed line-height/text-alignment. Per project conventions, new additive capabilities are a `minor` bump. A `patch` entry is appropriate only for pure bug fixes with no observable behavior change.",
+      "index": 7
+    },
+    {
+      "file_path": "docs/config/setup/config/functions/evaluate.md",
+      "line_number": 24,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "This file lives under `docs/`, which is auto-generated from the source tree by the docs-build pipeline. Project rules require that all documentation changes be made exclusively in the source; the generated `docs/` output must not be edited directly. The corresponding source change in `packages/mermaid/src/config.ts` is correct \u2014 remove this direct edit to `docs/` and let the pipeline regenerate it.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The `addHtmlLabel` function is now nearly identical in both `packages/mermaid/src/rendering-util/rendering-elements/createLabel.js` and `packages/mermaid/src/dagre-wrapper/createLabel.js` \u2014 same parameters, same KaTeX/sanitize logic, same temp-SVG measurement pattern, same wrapping check. The PR's stated goal is to reduce duplication, but it introduces a new, substantial duplicate instead. Since `dagre-wrapper/createLabel.js` is already marked `@deprecated`, the most practical fix is to have it import and re-export the implementation from `rendering-util/rendering-elements/createLabel.js` rather than maintaining a parallel copy.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The changeset description reads \"fix: Refactor shared label rendering logic across diagrams, with no markdown-specific changes.\" This is inaccurate on two counts: (1) the PR does introduce behavior changes (KaTeX support, icon rendering, wrapping, line-height, text-align) that go beyond a pure refactor; and (2) \"with no markdown-specific changes\" is misleading given that the HTML-label path now processes KaTeX and icon patterns. The description should accurately state what observable behavior changes users can expect.",
+      "index": 10
+    }
+  ],
+  "cost_usd": 0.9619434999999998,
+  "duration_seconds": 453.5316438674927
+}

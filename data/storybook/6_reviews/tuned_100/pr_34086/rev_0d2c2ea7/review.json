@@ -1,0 +1,60 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/docs/src/blocks/blocks/Canvas.tsx",
+      "line_number": 5,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The PR description states it 'Uses `FORCE_REMOUNT` event, matching the existing Story canvas reload behavior', and the manual test step says 'Verify the story remounts from scratch.' However, `RESET_STORY_ARGS` is imported and used here instead. These events have fundamentally different behavior: `RESET_STORY_ARGS` (comment in core-events: 'Reset either a single arg of a story all args of a story') only resets arg values back to their initial state without remounting the component. `FORCE_REMOUNT` (comment: 'Force the current story to re-render from scratch, with its initial args') actually unmounts and remounts the component, resetting all React state and lifecycle hooks. If the intent is to 'remount from scratch' as the PR claims, `FORCE_REMOUNT` must be used. As written, the button will reset story args but will NOT remount the component, which means stateful components (e.g., with `useState`, context subscriptions, or third-party integrations) will not be fully reset.",
+      "index": 0
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/blocks/Canvas.tsx",
+      "line_number": 85,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The default value of `false` directly contradicts the PR description, which states 'The button is shown by default for all inline stories \u2014 no configuration needed.' With `?? false`, users must explicitly set `parameters.docs.canvas.resetButton = true` to see the button, making this an opt-in feature \u2014 the opposite of what is described. If the intent is opt-in behavior, the PR description needs to be corrected. If the intent is opt-out behavior, the default should be `true` (and the condition on line 100 should simply be `inline ? handleResetStory : undefined`).",
+      "index": 1
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/blocks/Canvas.tsx",
+      "line_number": 88,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Emitting `RESET_STORY_ARGS` with only `{ storyId: story.id }` and no `argNames` will reset all args to their initial values, but it does not trigger a component remount. The handler is called `handleResetStory`, the button is labeled 'Reset story', and the PR describes it as a way to 're-render stories from scratch.' All of this implies a full remount. For a full remount, this should emit `FORCE_REMOUNT` (which carries the same payload shape: `{ storyId: story.id }`). Note that the existing codebase already has a separate `handleReloadStory`/`FORCE_REMOUNT` mechanism for the toolbar \u2014 this PR should clarify the intended distinction between the two features.",
+      "index": 2
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/components/Preview.tsx",
+      "line_number": 9,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`UndoIcon` semantically communicates 'undo the last action' (time-reversal), which doesn't accurately represent 'reset to initial state'. The existing reload/remount button elsewhere in the codebase uses `SyncIcon`. Since this button resets args (or remounts, depending on the corrected event), an icon like `SyncIcon` or `ResetIcon` would better communicate the action to users. Using a misleading icon creates a discoverability and accessibility issue.",
+      "index": 3
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/components/Preview.tsx",
+      "line_number": 267,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The button label is 'Reset story' while the PR title says 'Reload story button.' These are different concepts (resetting args vs. reloading/remounting), and the label should match the actual behavior of the event being emitted. Additionally, the existing codebase already exposes a 'Reload story' button (via `onReloadStory` / `FORCE_REMOUNT`) in the toolbar. Using the name 'Reset story' here could help distinguish the two, but only if the events are actually different \u2014 which requires clarifying whether the intent is arg-reset or full remount.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The new `resetButton` parameter accessed via `story.parameters.docs?.canvas?.resetButton` is not added to the `CanvasBlockParameters` type in `code/addons/docs/src/types.ts` (lines 66\u201399). That type is the authoritative definition for `parameters.docs.canvas` \u2014 all other canvas parameters (`additionalActions`, `layout`, `sourceState`, `withToolbar`, etc.) are declared there. Without adding `resetButton?: boolean` to `CanvasBlockParameters`, TypeScript will not type-check usages, IDEs will not offer autocomplete, and users who set `parameters.docs.canvas.resetButton = true` will get no compiler feedback if they misspell the key.",
+      "index": 5
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "No automated tests of any kind are included (all checkboxes unchecked). There are no stories in `Preview.stories.tsx` or `Canvas.stories.tsx` demonstrating the reset button, no unit tests for the new `onResetStory` prop logic in `Preview`, and no integration/e2e tests verifying the channel event is dispatched. At minimum, a story should be added to `Preview.stories.tsx` (following the pattern of the existing `WithAdditionalActions` story) that renders the component with `onResetStory` provided so the button appears in snapshots and can be visually verified.",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.6408229500000001,
+  "duration_seconds": 334.9204361438751
+}

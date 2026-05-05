@@ -1,0 +1,60 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/package.json",
+      "line_number": 319,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`extend-to-be-announced` is declared as a devDependency but is never imported or used anywhere in the codebase. The PR description says it would be registered via `import 'extend-to-be-announced/vitest'`, but the actual implementation uses the custom `toHaveLiveRegion` matcher instead. This is dead code. Either remove the unused dependency, or wire it in and use its `toBeAnnounced()` assertion (which captures announcements via MutationObserver at the moment they happen \u2014 more faithful to screen-reader semantics than inspecting the DOM after the fact).",
+      "index": 0
+    },
+    {
+      "file_path": "code/.storybook/storybook.setup.ts",
+      "line_number": 7,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This side-effect import is a no-op. `toHaveLiveRegion.ts` only exports functions and has no self-registration side effects \u2014 importing it without a named binding does nothing. The matcher is registered in `preview.tsx` via an explicit `expect.extend()`, so this line provides no value and misleads readers into thinking the import triggers auto-registration. Remove it.",
+      "index": 1
+    },
+    {
+      "file_path": "code/vitest-setup.ts",
+      "line_number": 6,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The bare `import './core/src/shared/utils/toHaveLiveRegion'` on this line is redundant \u2014 the named import on the very next line already loads the same module. Since the module has no side effects, this line evaluates to nothing beyond what the named import already does. Remove it and keep only the named import.",
+      "index": 2
+    },
+    {
+      "file_path": "code/addons/vitest/src/custom-matchers.d.ts",
+      "line_number": 7,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`toHaveLiveRegion` is declared as returning `Promise<void>`, but the matcher is synchronous \u2014 it returns `{ pass: boolean; message: () => string }`, and vitest matchers expose the fluent assertion chain (typed as `R`, the generic parameter). The `Promise<void>` return type is incorrect and inconsistent with the vitest.d.ts declaration in `code/core/vitest.d.ts` which correctly uses `R`. This mismatch can confuse TypeScript consumers of `storybook/test` who try to chain further expectations. Match the `vitest.d.ts` pattern: `toHaveLiveRegion(options: LiveRegionMatcherOptions): R;`.",
+      "index": 3
+    },
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.stories.tsx",
+      "line_number": 339,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `100` ms delay passed to `setTimeout` is a magic number repeated across all three new `Announces*` stories (lines ~339, ~373, ~408). Per project conventions, timing values in tests should be derived from named constants rather than hard-coded literals. Since the transition only needs to occur on the next event loop tick, even `0` would work. At minimum, extract to a shared constant (e.g., `const STATE_TRANSITION_DELAY_MS = 100`) at the top of the file and reference it in each story.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "All three new `Announces*` play functions assert only that the expected announcement IS present, but never assert that incorrect announcements are NOT present. For example, `AnnouncesTestRunStart` should also verify that `'Test run crashed.'` and `'Test run finished.'` are not in any live region. Per project guidelines, play functions should combine positive and negative assertions to prevent false positives where an unintended element accidentally satisfies the positive check alone. Add `.not.toHaveLiveRegion(...)` assertions alongside the existing positive ones.",
+      "index": 5
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description states '`extend-to-be-announced` [is] Registered in `code/.storybook/storybook.setup.ts` via `import \\'extend-to-be-announced/vitest\\'`', but this is factually wrong \u2014 the actual import is of `../core/src/shared/utils/toHaveLiveRegion.ts`. The description also says both libraries are added as devDependencies, but `@react-aria/live-announcer` is correctly placed in runtime `dependencies` (not devDependencies). Inaccurate PR descriptions make it harder to review intent vs. implementation and should be corrected before merge.",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.6670872,
+  "duration_seconds": 440.6340627670288
+}

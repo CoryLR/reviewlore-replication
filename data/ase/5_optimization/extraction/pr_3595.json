@@ -1,0 +1,14 @@
+{
+  "pr_number": 3595,
+  "source_mr_date": "2025-07-17T12:56:27.866Z",
+  "candidates": [
+    "Verify that every parameter accepted in a class's `__init__` is actually used within the class body. Parameters that are stored (e.g. `self._masses = masses`) but never read anywhere in the class should be removed from both the constructor signature and the call sites.",
+    "In MD integration methods that call `get_forces()` or `get_stress()`, place that call at the very top of the method, before computing any derived quantities (eigenvectors, projected momenta, etc.) that depend on atom-array shapes. In parallel calculators like Asap, the force/stress evaluation may trigger atom migration between MPI tasks, invalidating arrays computed before the call.",
+    "When the total number of atoms is needed in an integration formula (e.g. the `kappas` expression in `_integrate_p` or the kinetic-energy correction term), use `self._num_atoms_global` rather than `len(self.atoms)`. In MPI/parallel contexts `len(self.atoms)` returns only the local task's atoms, not the global count.",
+    "In `get_conserved_energy()` (and any analogous conserved-quantity method) compute the energy as `atoms.get_potential_energy(force_consistent=True)` plus kinetic energy calculated from momenta, rather than `atoms.get_total_energy()`. Using `get_total_energy()` can produce inconsistent energies for certain calculators, breaking apparent conservation.",
+    "When writing MD integration tests (reversibility tests, conserved-quantity tests), include an explicit assertion that state variables (positions, cell, thermostat/barostat coordinates) actually *changed* during forward propagation \u2014 for example with `assert not np.allclose(state_after, state_before)`. Without this, a test can pass trivially even if the propagation step is a no-op."
+  ],
+  "analysis": [],
+  "cost_usd": 0.0893395,
+  "duration_seconds": 47.80209302902222
+}

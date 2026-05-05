@@ -1,0 +1,98 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/clusters.js",
+      "line_number": 486,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`getClusterTitleWidth` is declared as a plain (non-async) function, but `createLabel` is now async and returns a `Promise`. As written, `label` holds a `Promise` object, so `label.getBBox()` will throw `TypeError: label.getBBox is not a function` at runtime.\n\nThe author's own TODO comment on the preceding line confirms the concern. Fix:\n```js\nexport const getClusterTitleWidth = async (elem, node) => {\n  const label = await createLabel(elem, node.label, node.labelStyle, undefined, true);\n  const width = label.getBBox().width;\n  elem.node().removeChild(label);\n  return width;\n};\n```\nNote that the equivalent function in `dagre-wrapper/clusters.js` was correctly made `async`.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/edges.js",
+      "line_number": 120,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "In the `startLabelRight` block, `createLabel` is called with `startEdgeLabelRight` as the parent element, but the element is immediately re-parented to `inner` on the very next line via `inner.node().appendChild(startLabelElement)`. Every other terminal label block (`startLabelLeft`, `endLabelLeft`, `endLabelRight`) passes `inner` directly to `createLabel`, making the subsequent `appendChild` unnecessary. The correct fix is:\n```js\nconst startLabelElement = await createLabel(\n  inner,  // <-- pass inner directly\n  edge.startLabelRight,\n  getLabelStyles(edge.labelStyle)\n);\n// remove the redundant: inner.node().appendChild(startLabelElement);\n```\nThe same issue appears in `dagre-wrapper/edges.js`.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/dagre-wrapper/edges.js",
+      "line_number": 90,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Same inconsistency as in `rendering-util/rendering-elements/edges.js`: `createLabel` is called with `startEdgeLabelRight` as the parent, but the element is immediately moved to `inner`. Pass `inner` directly and remove the redundant `inner.node().appendChild(startLabelElement)` call to match the pattern used by the other three terminal label blocks.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/edges.js",
+      "line_number": 165,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "In the `endLabelLeft` block, `createLabel(inner, ...)` appends the element to `inner`, then `inner.attr('transform', ...)` is set to center the element, but the very next line `endEdgeLabelLeft.node().appendChild(endLabelElement)` moves the element *out of* `inner` into `endEdgeLabelLeft`. Since the label is no longer a descendant of `inner`, the centering transform on `inner` has no effect on its position.\n\nThis is a pre-existing bug carried forward by this PR, and it affects both `endLabelLeft` and `endLabelRight` in both `edges.js` files. `startLabelLeft` is the only terminal label block that correctly leaves the element inside `inner`. The spurious `appendChild` calls should be removed, or the transform should be applied to `endEdgeLabelLeft` instead. Since this PR already touches all four blocks, it is the right moment to fix the pre-existing cases.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/labelImageUtils.ts",
+      "line_number": 34,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`getConfig()` is called twice inside the `setupImage` closure, which runs once per image element (i.e., inside a loop). Per project convention, `getConfig()` should be called at most once per function and the result reused.\n\nFix: hoist the call to the top of `configureLabelImages`:\n```typescript\nexport async function configureLabelImages(container, labelText) {\n  const config = getConfig();\n  // ...\n  const bodyFontSize = config.fontSize\n    ? config.fontSize\n    : window.getComputedStyle(document.body).fontSize;\n}\n```",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/createText.ts",
+      "line_number": 58,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "When `width === Number.POSITIVE_INFINITY` (as passed by the new `createLabel`), `max-width` and `text-align: center` are no longer applied to the HTML label `<div>`. Previously, `createLabel`'s HTML path always produced a centered label. With `display: table-cell` and no explicit `text-align`, text defaults to `start` (left-aligned), which will visually change existing diagrams that used `createLabel` with HTML labels.\n\nIf the intent is \"no width constraint but still center the text\", consider applying `text-align: center` unconditionally and only gating `max-width`.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/handle-markdown-text.ts",
+      "line_number": 26,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The JSDoc comment says *\"splits on spaces for words\"* but the implementation uses `\\s` (all Unicode whitespace, including tabs, non-breaking spaces, etc.), not just literal space characters. Update the comment to say *\"splits on whitespace\"* for accuracy.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/clusters.js",
+      "line_number": 485,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The TODO comment `// TODO: Doesn't this need an \\`await\\`?` is left in production code and identifies a real runtime bug (see the separate defect comment on the `createLabel` call). TODO comments that flag known defects should be resolved before merging, not committed.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/dagre-wrapper/clusters.js",
+      "line_number": 28,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The new comment `// TODO: the createText function returns a \\`Promise\\`, so I'm guessing it never runs?` is left unresolved. If `createText` is not awaited in the markdown branch, the Promise is silently discarded and the label never renders \u2014 this should be verified and fixed (add `await`) rather than left as a speculative TODO.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The changeset in `.changeset/olive-mails-joke.md` is marked `patch`, but this PR adds net-new capabilities to labels (KaTeX rendering and FontAwesome icon-pack support) that previously did not exist in the `createLabel` code path. Per project conventions, additive features should use a `minor` bump, not `patch`.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The image-loading logic in `configureLabelImages` was extracted from two nearly identical copies in `shapes/util.ts` and `dagre-wrapper/shapes/util.js` \u2014 good deduplication. However, the `.js` version in `dagre-wrapper/shapes/util.js` was updated to call the new utility via an import from `rendering-util/rendering-elements/shapes/labelImageUtils.ts`. Consider whether importing across the `dagre-wrapper` \u2194 `rendering-util` boundary is the right layering, or whether the utility should live at a path accessible to both (e.g., `packages/mermaid/src/utils.ts`).",
+      "index": 10
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "In `nonMarkdownToLines`, splitting each line on `\\s` produces an empty-string token (`{ content: '', type: 'normal' }`) for each run of whitespace, including leading whitespace. `updateTextContentAndStyles` renders the first token without a leading space and subsequent tokens with one prepended space, so consecutive whitespace and leading spaces in a label are not faithfully preserved. The old `createLabel` SVG path used `row.trim()` to normalize this, so behavior is broadly equivalent, but it may be worth documenting the normalization assumption or applying `.filter(Boolean)` to the word array to drop empty tokens and avoid generating no-op tspans.",
+      "index": 11
+    }
+  ],
+  "cost_usd": 0.8435016,
+  "duration_seconds": 526.9350290298462
+}

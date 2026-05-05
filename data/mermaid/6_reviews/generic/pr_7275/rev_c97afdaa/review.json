@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/clusters.js",
+      "line_number": 488,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`createLabel` is `async` and returns a `Promise`, but `getClusterTitleWidth` is a plain synchronous function that neither `await`s the call nor declares itself `async`. As a result, `label` is a `Promise` object, and `label.getBBox()` on the next line throws `TypeError: label.getBBox is not a function` at runtime. This was also broken in the pre-existing code (the old `createLabel` was async too), but the PR modifies this function and adds a TODO comment rather than fixing it. The fix is straightforward: mark the function `async` and `await` the `createLabel` call, mirroring the correctly-written counterpart in `dagre-wrapper/clusters.js`.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/dagre-wrapper/edges.js",
+      "line_number": 92,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "For `startLabelRight`, `startEdgeLabelRight` (the outer group) is passed as the parent to `createLabel`, so the label element is first inserted into the outer group, and then immediately moved to `inner` by the existing `inner.node().appendChild(startLabelElement)` a few lines later. All other terminal labels (`startLabelLeft`, `endLabelLeft`, `endLabelRight`) pass `inner` directly and need no subsequent move. Since the new `createLabel` signature makes the parent argument semantically load-bearing, this inconsistency is now more prominent. Passing `inner` here and removing the redundant `appendChild` would align `startLabelRight` with every other terminal label in this function.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/edges.js",
+      "line_number": 121,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Same inconsistency as in `dagre-wrapper/edges.js`: `startLabelRight` passes `startEdgeLabelRight` (the outer group) as the parent to `createLabel` while every other terminal label passes `inner` directly. The label is temporarily inserted into the outer group and then relocated to `inner` by the retained `inner.node().appendChild(startLabelElement)`. Passing `inner` directly would eliminate the superfluous intermediate insertion and make the four terminal-label blocks structurally identical.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/labelImageUtils.ts",
+      "line_number": 18,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`HTMLElement.getElementsByTagName` always returns an `HTMLCollectionOf<HTMLImageElement>` and never returns `null` or `undefined`, so `!images` is permanently `false` and is dead code. The guard should be simplified to `if (images.length === 0)` to remove the misleading null check.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/labelImageUtils.ts",
+      "line_number": 33,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`getConfig()` is called twice inside the same ternary expression (`getConfig().fontSize ? getConfig().fontSize : ...`). This redundant call runs inside a `Promise.all` callback that fires once per image element. Cache the result before the conditional: `const { fontSize } = getConfig(); const bodyFontSize = fontSize ?? window.getComputedStyle(document.body).fontSize;`. Using nullish coalescing also makes the intent clearer than the truthy check (which would skip a configured `0` font size).",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/handle-markdown-text.ts",
+      "line_number": 35,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Splitting each line on `/\\s/g` without filtering empty strings produces `{ content: '', type: 'normal' }` tokens wherever consecutive whitespace characters appear\u2014e.g., `'hello  world'` yields `['hello', '', 'world']`. These empty-content words are passed as `MarkdownWord` tokens to `createFormattedText`, which may render them as extra blank spans or introduce unexpected spacing. Consider filtering after the split: `.split(/\\s+/g).filter(Boolean).map(...)` (splitting on one-or-more whitespace) or `.split(/\\s/g).filter(w => w !== '').map(...)`. This also changes behaviour compared to the old `createLabel`, which passed whole rows as `tspan.textContent`, preserving multiple spaces.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/createText.ts",
+      "line_number": 324,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `title-row` and `row` CSS classes are now applied to the `<text>` SVG element rather than to individual `<tspan>` elements as the old `createLabel` did. Any external stylesheet or user-supplied theme targeting `tspan.title-row` or `tspan.row` will silently stop matching. The author's inline comment notes these classes appear unused internally, but they are part of the rendered SVG output and could be used by downstream consumers. The changeset description (\"some small changes in formatting\") understates this structural difference; if the class placement change is intentional, it should be explicitly called out there.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/createText.ts",
+      "line_number": 26,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The comment explains *what* the constant caps but not *why* 16384 specifically. The value is 2^14, which is the maximum SVG/canvas element dimension that certain browsers (notably older Safari versions) can render without silently clipping or ignoring content. Making this explicit\u2014e.g., `// 2^14 px: maximum safe SVG element dimension across browsers (e.g., Safari)`\u2014would help future maintainers understand the constraint and evaluate whether the limit should be revisited as browser limits change.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Two TODO comments are added in this PR without associated issue numbers or owners: one about `createText` possibly needing `await` in the markdown path of `dagre-wrapper/edges.js`, and one about `getClusterTitleWidth` in `rendering-util/rendering-elements/clusters.js` not awaiting `createLabel`. Untracked TODOs in rendering code tend to persist indefinitely. Linking each to a GitHub issue (or fixing them in this PR, since the surrounding code is already being touched) would prevent these known bugs from being silently carried forward.",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The new `@example` block in the `createLabel` JSDoc documents a post-creation pattern callers must follow when HTML labels are in use (reading `getBoundingClientRect()` from the inner `div` and writing the dimensions back onto the `foreignObject`). However, the call sites are inconsistent: `edges.js` (both dagre-wrapper and rendering-elements) implements this pattern for all four terminal labels, but `nodes.js`, `clusters.js`, and `rectWithTitle.ts` do not include the `useHtmlLabels` branch after their `createLabel` calls, relying on the initial oversized `foreignObject` dimensions. If those code paths are intentionally exempt (e.g., they reset dimensions elsewhere), a brief comment explaining why would reduce confusion. Otherwise, the missing resets may produce incorrect bounding boxes for HTML labels in those renderers.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.9530739499999997,
+  "duration_seconds": 615.8590939044952
+}

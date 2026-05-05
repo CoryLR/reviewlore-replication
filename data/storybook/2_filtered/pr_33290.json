@@ -1,0 +1,492 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33290,
+  "title": "Core: Redesign and refactor Viewports tool",
+  "body": "Contributes to https://github.com/storybookjs/storybook/issues/33245\r\n\r\n## What I did\r\n\r\n- Refactored viewports handling into a hook\r\n- Move dimension inputs from toolbar to canvas to reduce clutter\r\n- Updated toolbar Select component to use ActionList components for visual consistency\r\n- Added drag handles to resize the viewport, along with realtime size indicators\r\n- Persist custom size to the URL for sharing\r\n\r\nhttps://github.com/user-attachments/assets/02ea3391-5b29-48bc-8425-53f1155686d6\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [x] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n- Use the Viewports tool in the toolbar to switch between viewport presets.\r\n- Try using up/down/enter/esc keys to navigate the menu.\r\n- Try changing the width and height values through the inputs above the iframe.\r\n- Try changing width, height, and both together through the drag handles.\r\n- Try switching orientation through the \"swap\" button.\r\n- Try resetting the custom size back to the preset through the \"undo\" button.\r\n- Verify that refreshing the browser will keep the selected viewport.\r\n- Check the other toolbar menus to see if they look okay.\r\n\r\n<!-- Please include the steps to test your changes here. For example:\r\n\r\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Open Storybook in your browser\r\n3. Access X story\r\n\r\n-->\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Right-side \"aside\" content for select options; new SizeInput control; resizable Viewport with drag-to-resize, numeric inputs, rotate and restore actions; added Viewport stories and watch device icon.\n\n* **Refactor**\n  * Viewport tool rebuilt on a centralized hook/state; Select options now render via ActionList; ActionList gains listbox-friendly layouts and two-line title/description items.\n\n* **Style**\n  * Improved visuals, focus, hover and active/disabled interaction styling across controls.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ghengeveld",
+  "merged_at": "2026-01-09T13:24:48Z",
+  "base_ref": "next",
+  "merge_commit_sha": "17efa74f75b24dbeaf9e99da73fefa0297203142",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "83120e5c4ff3f1c3971d23c3a577465198b2c6fb",
+    "ccbcc9a0c9edae5e7ad62d570edcc9d2b7553373"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fBSlH",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Potential memory leak: window event listeners not cleaned up on unmount during drag.**\n\nIf the component unmounts while a drag is in progress, the `mousemove` and `mouseup` listeners attached to `window` won't be removed. The cleanup function only removes `mousedown` handlers from the drag handles.\n\n\n\n<details>\n<summary>\ud83d\udc1b Suggested fix to track and clean up window listeners</summary>\n\n```diff\n+  const windowListenersRef = useRef<{ cleanup: () => void } | null>(null);\n+\n   useEffect(() => {\n     const onDrag = (e: MouseEvent) => {\n       if (dragSide.current === 'both' || dragSide.current === 'right') {\n         targetRef.current!.style.width = `${dragStart.current![0] + e.clientX}px`;\n       }\n       if (dragSide.current === 'both' || dragSide.current === 'bottom') {\n         targetRef.current!.style.height = `${dragStart.current![1] + e.clientY}px`;\n       }\n     };\n\n     const onEnd = () => {\n       window.removeEventListener('mouseup', onEnd);\n       window.removeEventListener('mousemove', onDrag);\n+      windowListenersRef.current = null;\n       setDragging('none');\n       resize(`${targetRef.current!.clientWidth}px`, `${targetRef.current!.clientHeight}px`);\n       dragStart.current = undefined;\n     };\n\n     const onStart = (e: MouseEvent) => {\n       e.preventDefault();\n       window.addEventListener('mouseup', onEnd);\n       window.addEventListener('mousemove', onDrag);\n+      windowListenersRef.current = {\n+        cleanup: () => {\n+          window.removeEventListener('mouseup', onEnd);\n+          window.removeEventListener('mousemove', onDrag);\n+        },\n+      };\n       dragSide.current = (e.currentTarget as HTMLElement).dataset.side as DragSide;\n       dragStart.current = [\n         (targetRef.current?.clientWidth ?? 0) - e.clientX,\n         (targetRef.current?.clientHeight ?? 0) - e.clientY,\n       ];\n       setDragging(dragSide.current);\n     };\n\n     const handles = [dragRefX.current, dragRefY.current, dragRefXY.current];\n     handles.forEach((el) => el?.addEventListener('mousedown', onStart));\n-    return () => handles.forEach((el) => el?.removeEventListener('mousedown', onStart));\n+    return () => {\n+      handles.forEach((el) => el?.removeEventListener('mousedown', onStart));\n+      windowListenersRef.current?.cleanup();\n+    };\n   }, [resize]);\n```\n\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  const windowListenersRef = useRef<{ cleanup: () => void } | null>(null);\n\n  useEffect(() => {\n    const onDrag = (e: MouseEvent) => {\n      if (dragSide.current === 'both' || dragSide.current === 'right') {\n        targetRef.current!.style.width = `${dragStart.current![0] + e.clientX}px`;\n      }\n      if (dragSide.current === 'both' || dragSide.current === 'bottom') {\n        targetRef.current!.style.height = `${dragStart.current![1] + e.clientY}px`;\n      }\n    };\n\n    const onEnd = () => {\n      window.removeEventListener('mouseup', onEnd);\n      window.removeEventListener('mousemove', onDrag);\n      windowListenersRef.current = null;\n      setDragging('none');\n      resize(`${targetRef.current!.clientWidth}px`, `${targetRef.current!.clientHeight}px`);\n      dragStart.current = undefined;\n    };\n\n    const onStart = (e: MouseEvent) => {\n      e.preventDefault();\n      window.addEventListener('mouseup', onEnd);\n      window.addEventListener('mousemove', onDrag);\n      windowListenersRef.current = {\n        cleanup: () => {\n          window.removeEventListener('mouseup', onEnd);\n          window.removeEventListener('mousemove', onDrag);\n        },\n      };\n      dragSide.current = (e.currentTarget as HTMLElement).dataset.side as DragSide;\n      dragStart.current = [\n        (targetRef.current?.clientWidth ?? 0) - e.clientX,\n        (targetRef.current?.clientHeight ?? 0) - e.clientY,\n      ];\n      setDragging(dragSide.current);\n    };\n\n    const handles = [dragRefX.current, dragRefY.current, dragRefXY.current];\n    handles.forEach((el) => el?.addEventListener('mousedown', onStart));\n    return () => {\n      handles.forEach((el) => el?.removeEventListener('mousedown', onStart));\n      windowListenersRef.current?.cleanup();\n    };\n  }, [resize]);\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/manager/components/preview/Viewport.tsx around lines 164 -\n197, The useEffect that attaches mousedown handlers (via handles =\n[dragRefX.current, dragRefY.current, dragRefXY.current]) registers window\nmousemove/mouseup listeners inside onStart but only removes them inside onEnd,\nso if the component unmounts mid-drag those window listeners remain; update the\neffect cleanup to also remove any window listeners\n(window.removeEventListener('mousemove', onDrag) and\nwindow.removeEventListener('mouseup', onEnd)) and ensure drag state is cleared\n(call setDragging('none') and reset dragStart.current) so on unmount you clean\nup the listeners added in onStart and prevent a memory leak involving\nonDrag/onEnd.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/preview/Viewport.tsx",
+          "line_number": 252,
+          "start_line": 217,
+          "commit_sha": "ccbcc9a0c9edae5e7ad62d570edcc9d2b7553373",
+          "created_at": "2026-01-07T10:37:46Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a potential memory leak and provides a specific code fix to clean up window event listeners on unmount during drag."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fBSlk",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Handle empty viewports map edge case.**\n\nIf `viewports` is an empty object, `keys.length` is 0, and accessing `keys[0]` or `keys[keys.length - 1]` returns `undefined`, but the return type is `string`. While callers may guard against this, the function could silently produce an invalid result.\n\n\n<details>\n<summary>\ud83d\udee1\ufe0f Suggested defensive check</summary>\n\n```diff\n const cycle = (\n   viewports: ViewportMap,\n   current: string | undefined,\n   direction: 1 | -1 = 1\n ): string => {\n   const keys = Object.keys(viewports);\n+  if (keys.length === 0) {\n+    return '';\n+  }\n   const currentIndex = current ? keys.indexOf(current) : -1;\n   const nextIndex = currentIndex + direction;\n   return nextIndex < 0\n     ? keys[keys.length - 1]\n     : nextIndex >= keys.length\n       ? keys[0]\n       : keys[nextIndex];\n };\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/viewport/useViewport.ts around lines 23 - 36, The cycle\nfunction can return undefined when viewports is empty; add a defensive check at\nthe top of cycle (the function named cycle in useViewport.ts that accepts\nviewports: ViewportMap, current, direction) to handle an empty keys array and\nreturn a safe string (e.g., an empty string '') or throw a clear error;\nspecifically, compute const keys = Object.keys(viewports); if (keys.length ===\n0) return ''; then proceed with existing logic to compute currentIndex/nextIndex\nso callers always receive a string.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/viewport/useViewport.ts",
+          "line_number": 36,
+          "start_line": 23,
+          "commit_sha": "ccbcc9a0c9edae5e7ad62d570edcc9d2b7553373",
+          "created_at": "2026-01-07T10:37:46Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags an edge case where empty viewports map causes undefined return and suggests a defensive check with specific code."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fBSlr",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n**Use defined constants instead of magic numbers.**\n\nLine 152 hardcodes `40` for minimum dimension validation, but `VIEWPORT_MIN_WIDTH` and `VIEWPORT_MIN_HEIGHT` constants are already defined on lines 20-21. Using the constants ensures consistency if the minimum values change.\n\n\n<details>\n<summary>\u267b\ufe0f Proposed fix</summary>\n\n```diff\n       // Don't update to pixel values less than 40\n-      if (match && (ux || Number(vx) >= 40) && (uy || Number(vy) >= 40)) {\n+      if (match && (ux || Number(vx) >= VIEWPORT_MIN_WIDTH) && (uy || Number(vy) >= VIEWPORT_MIN_HEIGHT)) {\n         update({ value: match, isRotated });\n       }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  const resize = useCallback(\n    (width: string, height: string) => {\n      const w = width.replace(/px$/, '').replace(/%$/, 'pct');\n      const h = height.replace(/px$/, '').replace(/%$/, 'pct');\n      const value = isRotated ? `${h}-${w}` : `${w}-${h}`;\n      const [match, vx, ux, vy, uy] = value.match(URL_VALUE_PATTERN) || [];\n\n      // Don't update to pixel values less than 40\n      if (match && (ux || Number(vx) >= VIEWPORT_MIN_WIDTH) && (uy || Number(vy) >= VIEWPORT_MIN_HEIGHT)) {\n        update({ value: match, isRotated });\n      }\n    },\n    [update, isRotated]\n  );\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/viewport/useViewport.ts around lines 144 - 157, The resize\ncallback uses a hardcoded minimum dimension 40; replace that magic number with\nthe defined constants VIEWPORT_MIN_WIDTH and VIEWPORT_MIN_HEIGHT. Inside the\nresize function (which builds value, matches URL_VALUE_PATTERN, and calls\nupdate), change the checks that use Number(vx) >= 40 and Number(vy) >= 40 to use\nVIEWPORT_MIN_WIDTH and VIEWPORT_MIN_HEIGHT respectively, keeping existing logic\nfor percentage units (ux/uy) and the isRotated/update flow unchanged.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/viewport/useViewport.ts",
+          "line_number": 183,
+          "start_line": 170,
+          "commit_sha": "ccbcc9a0c9edae5e7ad62d570edcc9d2b7553373",
+          "created_at": "2026-01-07T10:37:46Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags use of magic number 40 instead of defined constants VIEWPORT_MIN_WIDTH/VIEWPORT_MIN_HEIGHT, requests replacement with constants."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fDl85",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, let's find the Tool.tsx file and understand its context\nhead -50 code/core/src/viewport/components/Tool.tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 186\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find the useViewport hook definition\nrg -nP --type=ts 'useViewport|export.*useViewport' -A 10 code/core/src/viewport\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2829\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for viewport type definitions across the codebase\nrg -nP --type=ts 'interface.*Viewport|type.*Viewport\\s*=|viewport.*type' code/core/src/viewport --max-count=20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 405\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for where viewport values are created or validated\nrg -nP --type=ts 'viewportMap|viewports.*=|viewport.*:' code/core/src/viewport -B2 -A2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2019\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Get the full Viewport interface definition\ncat -n code/core/src/viewport/types.ts | head -65\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2248\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Get the ViewportMap type definition\nrg -nP --type=ts 'ViewportMap|type ViewportMap' code/core/src/viewport -B2 -A5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3210\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the parseGlobals function to see how value.type is set\nrg -nP --type=ts 'parseGlobals' code/core/src/viewport -B2 -A30\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 5242\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's any validation or default type assignment for custom viewports\nrg -nP --type=ts 'type.*=' code/core/src/viewport/useViewport.ts -B3 -A3 | grep -A 10 -B 10 'type.*||'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the iconsMap to understand what happens with undefined type\nrg -nP --type=ts 'iconsMap' code/core/src/viewport -B2 -A10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2621\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the parseGlobals return value more carefully - does it ensure type is defined?\nsed -n '43,120p' code/core/src/viewport/useViewport.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2513\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check for any viewport creation or merging logic that might add defaults\nrg -nP --type=ts 'type.*:.*other|type.*=.*other' code/core/src/viewport -B2 -A2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1084\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the useViewport hook return type for the options/viewportMap\nsed -n '128,200p' code/core/src/viewport/useViewport.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2788\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check what useViewport returns for the options property\nsed -n '198,240p' code/core/src/viewport/useViewport.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 771\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check MINIMAL_VIEWPORTS to see if all viewports have type defined\nrg -nP --type=ts 'MINIMAL_VIEWPORTS' code/core/src/viewport -B2 -A20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4879\n\n---\n\n\n\n</details>\n\n**Remove unsafe non-null assertion on `value.type`.**\n\nThe `value.type!` assertion is unsafe because the `Viewport` interface defines `type` as optional (`type?: ViewportType`). User-provided viewport configurations can omit this property entirely. Without validation, accessing `iconsMap[undefined]` would fail at runtime. Either validate that type exists before rendering, or provide a default type for viewports missing this property.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/viewport/components/Tool.tsx at line 30, The code uses an\nunsafe non-null assertion on value.type when looking up iconsMap (icon:\niconsMap[value.type!]); update the Tool component to handle a missing type by\neither validating value.type before use or falling back to a default\nViewportType (e.g., a DEFAULT_VIEWPORT_TYPE or 'default') and use that for the\niconsMap lookup; ensure references to value.type, iconsMap, and the Tool\nrendering logic are updated so no non-null assertion is used and a safe icon is\nalways selected.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/viewport/components/Tool.tsx",
+          "line_number": 30,
+          "start_line": null,
+          "commit_sha": "ccbcc9a0c9edae5e7ad62d570edcc9d2b7553373",
+          "created_at": "2026-01-07T13:44:31Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies unsafe non-null assertion on optional property value.type and requests either validation or a fallback default."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fDl88",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, find and read the Tool.tsx file\nfind . -name \"Tool.tsx\" -path \"*/viewport/components/*\" | head -1\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 109\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for viewport definitions to understand how viewports are configured\nrg -n \"INITIAL_VIEWPORTS|DEFAULT_VIEWPORT\" --type=ts --type=tsx -B 2 -A 5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for viewport configuration files\nfd -e ts -e tsx -e js viewport | grep -i config\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Read the Tool.tsx file\ncat -n ./code/core/src/viewport/components/Tool.tsx | head -60\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2221\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for viewport configuration/definitions with corrected syntax\nrg -n \"INITIAL_VIEWPORTS|DEFAULT_VIEWPORT|styles.*width|viewport.*px\" --type=ts -B 2 -A 5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 17111\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find viewport-related TypeScript files\nfd -e ts viewport | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 245\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check viewport types definition\ncat -n code/core/src/viewport/types.ts | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2333\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check useViewport.ts to see if there's validation\ncat -n code/core/src/viewport/useViewport.ts | head -150\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 5899\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for custom viewport examples or tests\nrg -n \"custom.*viewport|styles.*width|styles.*height\" code/core/src/viewport --type=ts -B 2 -A 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1047\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there are any examples of non-px viewport units in tests or configuration\nrg -n \"styles.*:.*\\{\" code/core/src/viewport --type=ts -A 3 | head -40\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1858\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check viewport documentation or examples\nfd viewport -e md | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 327\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for viewport customization examples in tests\nrg -n \"Viewport\\|viewport\" code/core/src/viewport/__tests__ --type=ts -B 2 -A 2 2>/dev/null | head -60\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check documentation examples for viewport configuration\ncat code/docs/_snippets/addon-viewport-add-viewport-in-preview.md\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 158\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat code/docs/_snippets/addon-viewport-options-in-preview.md\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 153\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the entire defaults.ts to see all viewport definitions\ncat code/core/src/viewport/defaults.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4566\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if responsive viewport is displayed correctly\nrg -n \"responsive\" code/core/src/viewport/responsiveViewport.tsx -B 3 -A 3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 222\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for tests that verify Tool.tsx rendering\nfd -e test.ts -e test.tsx viewport | xargs grep -l \"Tool\\|Dimensions\" 2>/dev/null\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 49\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check what viewports are used in the UI tool\nrg -n \"responsiveViewport\\|responsive\" code/core/src/viewport --type=ts -B 2 -A 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if responsiveViewport is included in viewport options\nrg -n \"responsiveViewport\" code/core/src/viewport -A 5 -B 5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 877\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Verify what value object contains in Tool.tsx context\nrg -n \"viewportMap\\|options.*map\" code/core/src/viewport/useViewport.ts -B 3 -A 3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check where responsiveViewport is used and if it's added to the viewport options\nrg -n \"responsiveViewport\" code/core/src --type=ts -B 3 -A 3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 757\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the useViewport hook to see what's in viewportMap\ncat -n code/core/src/viewport/useViewport.ts | sed -n '128,250p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4191\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if responsiveViewport is added to the viewport options shown in Tool\nrg -n \"options\\|viewportMap\\|MINIMAL_VIEWPORTS\\|INITIAL_VIEWPORTS\" code/core/src/viewport/manager.tsx -B 5 -A 5 2>/dev/null || echo \"No manager file found\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 86\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for how viewports are initialized/added to options\nfd -e tsx -e ts viewport | xargs grep -l \"MINIMAL_VIEWPORTS\\|options.*=\" | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 152\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the preset or manager addon initialization\nrg -n \"MINIMAL_VIEWPORTS\\|responsiveViewport\" code/core/src/viewport --type=ts -B 3 -A 3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if responsiveViewport with % units is included in the viewport options\nrg -n \"options.*=\" code/core/src/viewport --type=ts -B 5 -A 10 | grep -A 15 \"responsiveViewport\\|options.*=\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3394\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look at the entire responsiveViewport and see if it's part of the default viewports\ncat -n code/core/src/viewport/responsiveViewport.tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 326\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if Tool.tsx is actually rendering the responsive viewport\nrg -n \"Reset viewport\\|100%\" code/core/src/viewport --type=tsx --type=ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Verify if responsive viewport is actually used in the toolbar by searching for where it's added to options\nrg -n \"responsiveViewport\\|options.*responsive\" code/core/src --type=ts -B 3 -A 3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check viewport parameter types to confirm non-px units are allowed\ncat -n code/core/src/viewport/types.ts | sed -n '16,22p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 434\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Confirm custom viewport parsing supports non-px units\ncat -n code/core/src/viewport/useViewport.ts | sed -n '17,20p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 274\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if responsiveViewport is merged into the viewport options or kept separate\nrg -n \"responsiveViewport\" code/core/src/viewport --type=ts -B 5 -A 5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 877\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check what the Tool.tsx actually displays - is responsiveViewport in viewportMap?\nrg -n \"viewportMap\\|options\" code/core/src/viewport/components/Tool.tsx -B 3 -A 3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Final check - see if responsiveViewport is added to MINIMAL_VIEWPORTS or used elsewhere\ngit grep -n \"responsiveViewport\" -- code/core/src/viewport/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 230\n\n---\n\n\n\n</details>\n\n**Fix the viewport dimension parsing to handle non-pixel units.**\n\nThe `.replace('px', '')` calls on lines 33 and 35 assume viewport `width` and `height` are always in pixels. However, the `responsiveViewport` (exported from this module) uses `'100%'` for both dimensions, and the viewport system supports custom dimensions with various units (%, em, rem, vw, vh) as documented in the GlobalState type (types.ts line 20).\n\nIf the responsive viewport or any custom viewport with non-px units is displayed, these values would render incorrectly (e.g., \"100%\" instead of a numeric value, or \"50em\" instead of \"50\").\n\nUse a more robust unit-stripping approach that handles multiple unit types:\n\n```javascript\nconst stripUnit = (value: string) => value.replace(/[a-z%]+$/i, '');\n// Or conditionally: parseFloat(value).toString()\n```\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/viewport/components/Tool.tsx around lines 31 - 37, The\ndimension display in Tool.tsx currently uses value.styles.width.replace('px','')\nand value.styles.height.replace('px','') which fails for non-pixel units (e.g.,\n'100%', '2em'); update the rendering to strip any trailing CSS unit instead (use\na unit-stripping helper such as a regex that removes trailing letters/percent or\nuse parseFloat) when rendering inside the Dimensions component so\nresponsiveViewport and other unit types show the numeric value correctly; update\nreferences to value.styles.width and value.styles.height and add/inline the\nstripUnit helper (or use parseFloat) where those spans are produced.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/viewport/components/Tool.tsx",
+          "line_number": 37,
+          "start_line": 31,
+          "commit_sha": "ccbcc9a0c9edae5e7ad62d570edcc9d2b7553373",
+          "created_at": "2026-01-07T13:44:31Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where .replace('px', '') fails for non-pixel units and suggests a more robust unit-stripping approach."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fKn_R",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n**Remove unused imports.**\n\nThe `darken` and `transparentize` functions from `polished` are imported but not used in this file. These appear to be remnants from the previous implementation before refactoring to ActionList components.\n\n\n<details>\n<summary>\u267b\ufe0f Suggested fix</summary>\n\n```diff\n import React from 'react';\n \n-import { darken, transparentize } from 'polished';\n import { styled } from 'storybook/theming';\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nimport { styled } from 'storybook/theming';\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/components/components/Select/SelectOption.tsx around lines 3 -\n4, The file imports unused symbols darken and transparentize from 'polished' in\nSelectOption.tsx; remove those two imports and keep only the used styled import\n(i.e., delete \"darken, transparentize\" from the import statement) so the module\nno longer contains unused imports and ESLint/compiler warnings are resolved.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/components/components/Select/SelectOption.tsx",
+          "line_number": 4,
+          "start_line": null,
+          "commit_sha": "4a584797f6de4324201771e72b135de6ad3ee331",
+          "created_at": "2026-01-07T23:13:43Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags unused imports (darken, transparentize) that should be removed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fKn_S",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n**`styled` import is also unused.**\n\nAfter the refactoring to use ActionList components, the `styled` import from `storybook/theming` is no longer used in this file.\n\n\n<details>\n<summary>\u267b\ufe0f Combined cleanup</summary>\n\n```diff\n import React from 'react';\n \n-import { darken, transparentize } from 'polished';\n-import { styled } from 'storybook/theming';\n \n import { ActionList } from '../..';\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nimport React from 'react';\n\nimport { ActionList } from '../..';\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/components/components/Select/SelectOption.tsx at line 4, The\nimport of styled from 'storybook/theming' in SelectOption.tsx is unused after\nrefactoring; remove the unused import (the symbol styled) from the file and run\na quick lint or TS check to ensure no other references remain (adjust imports in\nthe SelectOption component if necessary).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit e83efbf",
+          "file_path": "code/core/src/components/components/Select/SelectOption.tsx",
+          "line_number": 4,
+          "start_line": null,
+          "commit_sha": "4a584797f6de4324201771e72b135de6ad3ee331",
+          "created_at": "2026-01-07T23:13:43Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags another unused import (styled) that should be removed. Marked as already addressed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fOVVV",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Unused `muted` prop in ActionListText.**\n\nThe `muted?: boolean` prop is declared in the type definition but is never used in the component's styling logic. If this prop is intended to control muted text appearance, the styling should conditionally apply based on it. Otherwise, if the `& small` selector is sufficient for muted text styling, consider removing the unused prop to avoid API confusion.\n\n\n\n<details>\n<summary>\ud83d\udd27 Proposed fix if muted styling is intended</summary>\n\n```diff\n-const ActionListText = styled.div<{ muted?: boolean }>(({ theme }) => ({\n+const ActionListText = styled.div<{ muted?: boolean }>(({ theme, muted }) => ({\n   display: 'flex',\n   flexDirection: 'column',\n   justifyContent: 'center',\n   flexGrow: 1,\n   minWidth: 0,\n   padding: '8px 0',\n   lineHeight: '16px',\n+  color: muted ? 'var(--listbox-item-muted-color)' : 'inherit',\n```\n\nOr remove the unused prop:\n\n```diff\n-const ActionListText = styled.div<{ muted?: boolean }>(({ theme }) => ({\n+const ActionListText = styled.div(({ theme }) => ({\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nconst ActionListText = styled.div<{ muted?: boolean }>(({ theme, muted }) => ({\n  display: 'flex',\n  flexDirection: 'column',\n  justifyContent: 'center',\n  flexGrow: 1,\n  minWidth: 0,\n  padding: '8px 0',\n  lineHeight: '16px',\n  color: muted ? 'var(--listbox-item-muted-color)' : 'inherit',\n\n  '& > *': {\n    margin: 0,\n    whiteSpace: 'normal',\n  },\n  '& > span': {\n    overflow: 'hidden',\n    textOverflow: 'ellipsis',\n    whiteSpace: 'nowrap',\n  },\n  '& small': {\n    fontSize: 'inherit',\n    color: theme.textMutedColor,\n  },\n  '&:first-child': {\n    paddingLeft: 8,\n  },\n  '&:last-child': {\n    paddingRight: 8,\n  },\n  'button > &:first-child, [role=\"option\"] > &:first-child': {\n    paddingLeft: 0,\n  },\n  'button > &:last-child, [role=\"option\"] > &:last-child': {\n    paddingRight: 0,\n  },\n}));\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/components/components/ActionList/ActionList.tsx around lines\n176 - 210, ActionListText declares a muted?: boolean prop but never uses it;\neither remove the unused prop from the styled component signature or wire it\ninto the styling so consumers can toggle muted appearance. To fix, update the\nstyled definition for ActionListText to accept ({ theme, muted }) and\nconditionally apply the muted color (e.g., set color: theme.textMutedColor or\nadjust '& small' when muted is true), or simply drop the muted?: boolean type\nfrom ActionListText and remove any external usages that expect it.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits fd0ccae to e84ab86",
+          "file_path": "code/core/src/components/components/ActionList/ActionList.tsx",
+          "line_number": 210,
+          "start_line": null,
+          "commit_sha": "72b4543f9e0fd1311a7ebc3affbdd68edf5a0908",
+          "created_at": "2026-01-08T08:07:19Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags an unused muted prop in ActionListText and suggests either wiring it into the styling or removing it. Marked as already addressed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fP4E7",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Description: Verify all references to the old and new iframe selectors\n\n# Search for any remaining references to the old wrapper selector\necho \"=== Searching for references to storybook-preview-wrapper ===\"\nrg -n \"storybook-preview-wrapper\" --type=ts --type=tsx --type=js --type=jsx\n\n# Search for all references to the new iframe selector to ensure consistency\necho -e \"\\n=== Searching for references to storybook-preview-iframe ===\"\nrg -n \"storybook-preview-iframe\" --type=ts --type=tsx --type=js --type=jsx\n\n# Find where the iframe element is created/rendered with this ID\necho -e \"\\n=== Searching for iframe element with this ID ===\"\nrg -n 'id=[\"'\"'\"']storybook-preview-iframe[\"'\"'\"']' --type=ts --type=tsx --type=js --type=jsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 340\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Description: Verify all references to the old and new iframe selectors\n\n# Search for any remaining references to the old wrapper selector\necho \"=== Searching for references to storybook-preview-wrapper ===\"\nrg \"storybook-preview-wrapper\" -n\n\n# Search for all references to the new iframe selector to ensure consistency\necho -e \"\\n=== Searching for references to storybook-preview-iframe ===\"\nrg \"storybook-preview-iframe\" -n\n\n# Find where the iframe element is created/rendered with this ID\necho -e \"\\n=== Searching for iframe element creation with id attribute ===\"\nrg 'id.*storybook-preview-iframe' -n\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2557\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/manager/components/preview/Wrappers.tsx | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1204\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nfind . -name \"components.tsx\" -path \"*/preview/utils/*\" -exec cat -n {} \\;\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg \"IframeWrapper\" -l --type-list\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 454\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg \"IframeWrapper\" -l\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 232\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/manager/components/preview/utils/components.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2162\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/manager/components/preview/FramesRenderer.tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3927\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/manager/components/preview/Viewport.tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 11917\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/manager/components/preview/Iframe.tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1727\n\n---\n\n\n\n</details>\n\n**Selector change is incomplete and breaks skip links**\n\nThe change to target `#storybook-preview-iframe` in useDragging.ts is premature. While a new iframe with this ID exists (created by Viewport component), the old DOM structure is still in place:\n\n- Wrappers.tsx still renders a div with id=\"storybook-preview-wrapper\"\n- Skip links in Tree.tsx, Sidebar.tsx, and Heading.stories.tsx still point to `#storybook-preview-wrapper`\n- This creates a mismatch between what useDragging.ts expects and what the DOM provides\n\nComplete the migration by either:\n1. Updating Wrappers.tsx to use the new iframe ID and remove the wrapper element, then update all skip links accordingly, or\n2. Reverting the useDragging.ts change to target the wrapper until the full viewport redesign is complete\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/manager/components/layout/useDragging.ts at line 37, The\nselector in useDragging.ts now queries '#storybook-preview-iframe' but the app\nstill renders '#storybook-preview-wrapper' and skip links in Tree.tsx,\nSidebar.tsx, and Heading.stories.tsx point to the old id; either revert\nuseDragging.ts to query '#storybook-preview-wrapper' (restore the previous\nselector in the const previewIframe declaration) until the viewport redesign is\nfinished, or complete migration by updating Wrappers.tsx to stop rendering the\nwrapper and instead render the iframe with id='storybook-preview-iframe' and\nthen update all skip link targets in Tree.tsx, Sidebar.tsx, and\nHeading.stories.tsx to use '#storybook-preview-iframe'.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/layout/useDragging.ts",
+          "line_number": 37,
+          "start_line": null,
+          "commit_sha": "ccbcc9a0c9edae5e7ad62d570edcc9d2b7553373",
+          "created_at": "2026-01-08T10:11:39Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies an incomplete selector migration that breaks skip links and provides two specific remediation paths."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fe1Kp",
+          "author": "Sidnioulz",
+          "body": "We have a small regression on focus outline offsets, it appears further away from the edge than it did with the old Select. I'm okay with it being consistent with e.g. menus, just flagging to @MichaelArestad to check how big the offset should be.\n\n<img width=\"196\" height=\"176\" alt=\"Image\" src=\"https://github.com/user-attachments/assets/67512eb3-8a0f-4bc3-8a4d-c04a945df82a\" />\n\n<img width=\"233\" height=\"214\" alt=\"Image\" src=\"https://github.com/user-attachments/assets/cbcd3b94-4dfa-419e-9d47-5937925e1b69\" />\n\n\n\n",
+          "file_path": "code/core/src/components/components/Select/SelectOption.tsx",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "ccbcc9a0c9edae5e7ad62d570edcc9d2b7553373",
+          "created_at": "2026-01-09T10:29:37Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6ffu4L",
+          "author": "ghengeveld",
+          "body": "Yeah the offset is intentionally -2 on these, so that they are compatible with collapsible containers (which hide overflow). I kept that consistent.",
+          "file_path": "code/core/src/components/components/Select/SelectOption.tsx",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "ccbcc9a0c9edae5e7ad62d570edcc9d2b7553373",
+          "created_at": "2026-01-09T11:50:00Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a regression in focus outline offsets and requests review/adjustment of the offset size, implying a code change may be needed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fe3LS",
+          "author": "Sidnioulz",
+          "body": "Can you please make this an actual label and use react-aria's `useId` to link it to the input? Unnamed inputs are WCAG violations and will show up in Chromatic.",
+          "file_path": "code/core/src/manager/components/preview/SizeInput.tsx",
+          "line_number": 91,
+          "start_line": null,
+          "commit_sha": "e84ab861f9d15c57f2f88187ba8e8ef36efe5db3",
+          "created_at": "2026-01-09T10:32:08Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6fe5e8",
+          "author": "Sidnioulz",
+          "body": "I also think we could add a tooltip stating stating \"Accepts any CSS dimension\" so users discover they can input `rem`, etc. The Tooltip component will duplicate the same info as an `aria-describedby` for SR users.",
+          "file_path": "code/core/src/manager/components/preview/SizeInput.tsx",
+          "line_number": 91,
+          "start_line": null,
+          "commit_sha": "e84ab861f9d15c57f2f88187ba8e8ef36efe5db3",
+          "created_at": "2026-01-09T10:35:26Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6ff0rn",
+          "author": "ghengeveld",
+          "body": "Agreed on the label+id. I think the tooltip is unnecessary given the use case is very slim (most folks will be using px). Not _everything_ needs to be explicitly spelled out in the UI.",
+          "file_path": "code/core/src/manager/components/preview/SizeInput.tsx",
+          "line_number": 91,
+          "start_line": null,
+          "commit_sha": "e84ab861f9d15c57f2f88187ba8e8ef36efe5db3",
+          "created_at": "2026-01-09T11:55:23Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests a specific change: convert to an actual label and use useId to link it to the input for WCAG compliance."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fe_Rc",
+          "author": "Sidnioulz",
+          "body": "itty bitty nitty nit: I'd prefer to inject \":\" as CSS `content` since it's decorative. These do show up in braille readers for instance even though they don't provide value.",
+          "file_path": "code/core/src/manager/components/preview/Viewport.tsx",
+          "line_number": 261,
+          "start_line": null,
+          "commit_sha": "e84ab861f9d15c57f2f88187ba8e8ef36efe5db3",
+          "created_at": "2026-01-09T10:42:33Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6ff2xA",
+          "author": "ghengeveld",
+          "body": "I've just removed the colon, it's not displayed anyway.",
+          "file_path": "code/core/src/manager/components/preview/Viewport.tsx",
+          "line_number": 261,
+          "start_line": null,
+          "commit_sha": "e84ab861f9d15c57f2f88187ba8e8ef36efe5db3",
+          "created_at": "2026-01-09T11:57:24Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests injecting \":\" as CSS content instead of in markup, as it's decorative and affects braille readers \u2014 implies a code change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6ffFzZ",
+          "author": "Sidnioulz",
+          "body": "If I go to http://localhost:6006/?path=/story/manager-components-preview-viewport--rotated, a bunch of odd things happen:\n\n1. The URL immediately gets `&globals=viewport.isRotated:!undefined` added and stays in the URL\n2. The rotate button in the story is not disabled, but does nothing at all\n3. The SizeInputs are not disabled, accept input and visually update their value, but do nothing\n\n----\n* [x] 1.\n\nThis polluted URL bit will stay when you navigate to another page. Compare to http://localhost:6006/?path=/story/addons-docs-blocks-examples-buttonsomeautodocs--forced-bg-light&globals=backgrounds.value:dark.\n\nThat forced background story enforces its own value, without resetting the one globally set in the URL. When you navigate to the next story, the globally set dark background is honoured again.\n\nI see the code pattern you used in the story, and I believe it's what's causing the side effect. I'm not sure why you can't set `globals.viewport` on the story like we do elsewhere, but if it's not possible for you, then it won't be possible for our users so we should investigate that.\n\n----\n\n* [x] 2. and 3.\n\nMy preference is to behave like the tools in toolbar and disable with a tooltip stating \"Viewport set by story, cannot be customized\", similarly to how http://localhost:6006/?path=/story/addons-docs-blocks-examples-buttonsomeautodocs--forced-bg-light&globals=backgrounds.value:dark behaves.\n\nIf you did want to keep the inputs non-disabled, interacting with them should have an effect on the story rather than do nothing.",
+          "file_path": "code/core/src/manager/components/preview/Viewport.tsx",
+          "line_number": 272,
+          "start_line": 266,
+          "commit_sha": "ccbcc9a0c9edae5e7ad62d570edcc9d2b7553373",
+          "created_at": "2026-01-09T10:51:18Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6fgF3q",
+          "author": "ghengeveld",
+          "body": "Fixed. There was an issue with `isRotated` getting coerced to `undefined` rather than `false` which is the initial value and therefore will get stripped from the URL as it should be.",
+          "file_path": "code/core/src/manager/components/preview/Viewport.tsx",
+          "line_number": 272,
+          "start_line": 266,
+          "commit_sha": "ccbcc9a0c9edae5e7ad62d570edcc9d2b7553373",
+          "created_at": "2026-01-09T12:19:18Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6fgLL3",
+          "author": "Sidnioulz",
+          "body": "Nice! Does it also fix the issue with `isRotated` persisting to the next story when set on an individual story?",
+          "file_path": "code/core/src/manager/components/preview/Viewport.tsx",
+          "line_number": 272,
+          "start_line": 266,
+          "commit_sha": "ccbcc9a0c9edae5e7ad62d570edcc9d2b7553373",
+          "created_at": "2026-01-09T12:27:06Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Reports multiple bugs (polluted URL, disabled button doing nothing, inputs having no effect) and requests specific behavioral fixes including disabling with tooltip."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6ffHI_",
+          "author": "Sidnioulz",
+          "body": "If I change these inputs' values on a normal story (causing w/h to change), but then open the Select, my changes get instantly reset even without clicking to select a value.\n\nI think we should address that by creating a \"Custom\" entry in the select, and making it the selected value whenever users interact with inputs or rotate the viewport. This would shield users from accidental config loss.",
+          "file_path": "code/core/src/manager/components/preview/Viewport.tsx",
+          "line_number": 281,
+          "start_line": 275,
+          "commit_sha": "ccbcc9a0c9edae5e7ad62d570edcc9d2b7553373",
+          "created_at": "2026-01-09T10:53:09Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Reports a bug where input values get reset when opening the Select, and specifically suggests adding a 'Custom' entry to prevent accidental config loss."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6ffH_0",
+          "author": "Sidnioulz",
+          "body": "The viewport stays on in docs mode even though docs pages aren't supported to have a viewport tool.\n\n<img width=\"802\" height=\"650\" alt=\"Image\" src=\"https://github.com/user-attachments/assets/ee52acda-a2a9-4ad1-a1bc-733d4a44d632\" />",
+          "file_path": "code/core/src/manager/components/preview/Viewport.tsx",
+          "line_number": 255,
+          "start_line": null,
+          "commit_sha": "ccbcc9a0c9edae5e7ad62d570edcc9d2b7553373",
+          "created_at": "2026-01-09T10:54:19Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6ffkYD",
+          "author": "ghengeveld",
+          "body": "Good catch \ud83d\udc4d ",
+          "file_path": "code/core/src/manager/components/preview/Viewport.tsx",
+          "line_number": 255,
+          "start_line": null,
+          "commit_sha": "ccbcc9a0c9edae5e7ad62d570edcc9d2b7553373",
+          "created_at": "2026-01-09T11:34:29Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Reports a regression where the viewport tool incorrectly remains visible in docs mode, implying it should be hidden."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6ffJbe",
+          "author": "Sidnioulz",
+          "body": "nit, feel free to ignore this: I have a mild preference for `extra` or `secondary` or `aside`, over prop names that mirror visual layout, because layouts can change but underlying data models shouldn't.",
+          "file_path": "code/core/src/components/components/Select/helpers.tsx",
+          "line_number": 17,
+          "start_line": null,
+          "commit_sha": "c115feff20277ccbdf7a1899e155422fd1d7e18a",
+          "created_at": "2026-01-09T10:56:14Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6fgHmv",
+          "author": "ghengeveld",
+          "body": "Renamed to `aside`.",
+          "file_path": "code/core/src/components/components/Select/helpers.tsx",
+          "line_number": 17,
+          "start_line": null,
+          "commit_sha": "c115feff20277ccbdf7a1899e155422fd1d7e18a",
+          "created_at": "2026-01-09T12:21:53Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests renaming a prop from a visually-descriptive name to a semantically better alternative (extra/secondary/aside), though explicitly marked as optional."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fgH1o",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Add null checks for ref access in drag handlers.**\n\nThe drag handlers use non-null assertions (`!`) when accessing `targetRef.current`, `dragRefX.current`, and `dragRefY.current`. While these refs should be populated during normal drag operations, there's a potential race condition if the component unmounts or re-renders during a drag, which could cause runtime errors.\n\n\n\n<details>\n<summary>\ud83d\udee1\ufe0f Recommended fix to add null guards</summary>\n\n```diff\n  const onDrag = (e: MouseEvent) => {\n+   if (!targetRef.current || !dragStart.current) return;\n+   \n    if (dragSide.current === 'both' || dragSide.current === 'right') {\n-     targetRef.current!.style.width = `${dragStart.current![0] + e.clientX}px`;\n-     dragRefX.current!.dataset.value = `${dragStart.current![0] + e.clientX}`;\n+     targetRef.current.style.width = `${dragStart.current[0] + e.clientX}px`;\n+     if (dragRefX.current) {\n+       dragRefX.current.dataset.value = `${dragStart.current[0] + e.clientX}`;\n+     }\n    }\n    if (dragSide.current === 'both' || dragSide.current === 'bottom') {\n-     targetRef.current!.style.height = `${dragStart.current![1] + e.clientY}px`;\n-     dragRefY.current!.dataset.value = `${dragStart.current![1] + e.clientY}`;\n+     targetRef.current.style.height = `${dragStart.current[1] + e.clientY}px`;\n+     if (dragRefY.current) {\n+       dragRefY.current.dataset.value = `${dragStart.current[1] + e.clientY}`;\n+     }\n    }\n  };\n\n  const onEnd = () => {\n    window.removeEventListener('mouseup', onEnd);\n    window.removeEventListener('mousemove', onDrag);\n    setDragging('none');\n-   resize(`${targetRef.current!.clientWidth}px`, `${targetRef.current!.clientHeight}px`);\n+   if (targetRef.current) {\n+     resize(`${targetRef.current.clientWidth}px`, `${targetRef.current.clientHeight}px`);\n+   }\n    dragStart.current = undefined;\n  };\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/manager/components/preview/Viewport.tsx around lines 217 -\n235, The drag handlers onDrag and onEnd currently use non-null assertions for\ntargetRef.current, dragRefX.current, dragRefY.current and dragStart.current; add\ndefensive null checks at the start of onDrag and onEnd to bail out if any\nrequired ref is missing (e.g., if !dragStart.current || !targetRef.current\nreturn), and when reading clientWidth/clientHeight or setting dataset/value use\noptional chaining or guarded access and provide sensible fallbacks when calling\nresize; update references to targetRef, dragRefX, dragRefY, dragStart, onDrag,\nonEnd, setDragging, and resize accordingly so no runtime errors occur if refs\nare null during unmount/re-render.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/preview/Viewport.tsx",
+          "line_number": 235,
+          "start_line": 217,
+          "commit_sha": "ccbcc9a0c9edae5e7ad62d570edcc9d2b7553373",
+          "created_at": "2026-01-09T12:22:13Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags unsafe non-null assertions in drag handlers that could cause runtime errors and provides specific null-check guards to add."
+    }
+  ],
+  "review_thread_count": 17,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 17,
+    "stage1_kept": 17,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

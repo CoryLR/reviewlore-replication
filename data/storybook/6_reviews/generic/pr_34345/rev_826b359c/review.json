@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/index.ts",
+      "line_number": 51,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "When the framework is not `@storybook/react-vite`, the function silently returns with no output \u2014 no error, no warning. From a user's perspective, running `storybook ai prepare` on an Angular or Vue project produces nothing at all, which is deeply confusing. At minimum, log a message explaining the limitation: e.g. `logger.warn('storybook ai prepare currently only supports @storybook/react-vite projects.')`. Alternatively, surface this restriction in the command's `--help` description.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/initiate.ts",
+      "line_number": 118,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This is a cross-package relative import that pierces the monorepo's package boundary: `await import('../../cli-storybook/src/ai')`. `create-storybook` and `cli-storybook` are separate packages, and importing directly from one's `src/` breaks the published-package contract, bypasses any build artifacts, and makes refactors in `cli-storybook` silently break `create-storybook`. The correct approach is to re-export `aiPrepare` from `cli-storybook`'s public package entry point and import it by package name (e.g. `@storybook/cli-storybook`), or move the shared logic into an internal common package.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/commands/UserPreferencesCommand.ts",
+      "line_number": 190,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`promptAiSetup` returns `true` unconditionally when `skipPrompt` is true, which covers all non-interactive environments: CI pipelines, `--yes` flag, any headless runner. This means `@storybook/addon-mcp` is silently installed in every automated Storybook init without the user ever being asked. Opting into an additional addon by default in non-interactive mode is a significant UX surprise, especially for users with automated setup scripts. Consider defaulting to `false` here and only opting in automatically when the explicit `--agent` flag is set, which is the scenario where AI assistance is explicitly requested.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/commands/UserPreferencesCommand.ts",
+      "line_number": 221,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The comment `// If user has asked for AI setup, we provide the MCP addon` is inaccurate at this location. This code only adds `Feature.AI` to the features set; the addon itself (`@storybook/addon-mcp`) is added separately in `AddonService.getAddonsForFeatures`. The comment overstates what this line does and could mislead someone debugging the addon installation. A more accurate comment would be something like `// Mark AI feature as selected; AddonService will map this to @storybook/addon-mcp`.",
+      "index": 3
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/bin/run.ts",
+      "line_number": 95,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`resolvedAgent` is computed independently in both the `preAction` hook (line 95) and the `action` handler (line 129) using the same expression `options.agent ?? isAgent`. Because Commander passes fresh `options` objects to each hook, the `preAction` hook cannot mutate `options.agent` for the `action` handler. But the duplicated expression means the detection logic can silently drift if one copy is updated and the other isn't. A cleaner approach would be to assign `options.agent` in `preAction` so the `action` handler can read a single authoritative value.",
+      "index": 4
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/bin/run.ts",
+      "line_number": 12,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `std-env` import is placed after a relative import (`'../initiate'`), which inverts the standard TypeScript/ESLint import ordering convention (external packages before relative paths). It should be moved up with the other external package imports.",
+      "index": 5
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/prompt.ts",
+      "line_number": 149,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The code examples in `getPreviewConfigExample` show JSX syntax (e.g. `<ThemeProvider>`, `<MemoryRouter>`, `<Story />`) inside files labeled `// preview.ts`. JSX is not valid in `.ts` files \u2014 it requires a `.tsx` extension (or a `.jsx` extension for JS). Users following these generated instructions will get a syntax error from TypeScript. The example comment should use `preview.tsx`, or the example should use `React.createElement(...)` to remain valid in a `.ts` file.",
+      "index": 6
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/types.ts",
+      "line_number": 23,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`AiPrompt.name` and `AiPrompt.description` are defined here and populated in `getPrompts`, but `generateMarkdownOutput` only ever accesses `.instructions` \u2014 `name` and `description` are never read anywhere. If these are intended as a forward-looking API, a comment to that effect would help; otherwise they are dead properties that add noise to the type and its construction.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The `aiPrepare` feature is gated exclusively to `@storybook/react-vite` (in `ai/index.ts`), but this constraint is invisible at the public CLI level \u2014 neither the `storybook ai prepare` help text nor the `storybook init` AI prompt mention it. Users of Angular, Vue, Svelte, or other frameworks will opt into the AI flow (and have `@storybook/addon-mcp` installed) only to find the `prepare` command produces no output. The scope limitation should be documented in the command description and the user-facing opt-in prompt.",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `AiPrompt` abstraction in `prompt.ts` (the array returned by `getPrompts`, iterated in `generateMarkdownOutput`) adds indirection with no current benefit: there is always exactly one prompt, and only the `.instructions` field is consumed. The `name`, `description`, and array structure all exist for hypothetical future multi-prompt support. Until that use case materialises, the simpler design would be for `generateMarkdownOutput` to call `getSetupInstructions` directly, making the data flow easier to trace.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.6838776,
+  "duration_seconds": 488.6005642414093
+}

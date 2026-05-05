@@ -1,0 +1,189 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3597,
+  "title": "Add velocity reading and writing for vasp format",
+  "body": "* Reading: After reading positions, if next line starts with 'c' or 'k' (cartesian) read in velocities similarly to positions (see definition of POSCAR file for MD: https://www.vasp.at/wiki/index.php/POSCAR)\n* Writing: If velocities are not None write velocities in POSCAR format. Format string uses .format() convention.\n* Added test for the functionality with a round trip of reading and writing velocities",
+  "author": "SianK",
+  "merged_at": "2025-02-18T09:35:05.121Z",
+  "base_ref": "master",
+  "merge_commit_sha": "26f17b1246dc61c09cd27d600c5c7679ae977256",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2342670263",
+          "author": "askhl",
+          "body": "The case of None never happens:\n\n```\n>>> from ase.build import bulk\n>>> atoms = bulk('Si')\n>>> atoms.get_velocities()\narray([[0., 0., 0.],\n       [0., 0., 0.]])\n```\n\nI am afraid we will need `atoms.has('momenta')` which checks for the presence of the underlying array (which is *not* named velocities).",
+          "file_path": "ase/io/vasp.py",
+          "line_number": 872,
+          "commit_sha": "fbc203c5ab7216c0eb90676bf8807d1338b93ebc",
+          "base_sha": "b9c12e9150f1e2d10653a31777bd9fbf8ce5650f",
+          "created_at": "2025-02-11T17:18:27.698Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2342726470",
+          "author": "SianK",
+          "body": "Changed to has('momenta').",
+          "file_path": "ase/io/vasp.py",
+          "line_number": 872,
+          "commit_sha": "fbc203c5ab7216c0eb90676bf8807d1338b93ebc",
+          "base_sha": "b9c12e9150f1e2d10653a31777bd9fbf8ce5650f",
+          "created_at": "2025-02-11T17:47:06.022Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2342670316",
+          "author": "askhl",
+          "body": "Could you confirm if we can write it directly without unit conversion?  The ASE time unit is a little bit unusual.",
+          "file_path": "ase/io/vasp.py",
+          "line_number": 876,
+          "commit_sha": "88648c519c1e73b5ea3b459a9e41749d51c7295c",
+          "base_sha": "b9c12e9150f1e2d10653a31777bd9fbf8ce5650f",
+          "created_at": "2025-02-11T17:18:28.794Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2342725836",
+          "author": "SianK",
+          "body": "I corrected the velocity units. Please check.",
+          "file_path": "ase/io/vasp.py",
+          "line_number": 876,
+          "commit_sha": "88648c519c1e73b5ea3b459a9e41749d51c7295c",
+          "base_sha": "b9c12e9150f1e2d10653a31777bd9fbf8ce5650f",
+          "created_at": "2025-02-11T17:46:42.538Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2344050267",
+          "author": "askhl",
+          "body": "Yes (provided that Vasp's format uses \u00c5/fs)",
+          "file_path": "ase/io/vasp.py",
+          "line_number": 876,
+          "commit_sha": "88648c519c1e73b5ea3b459a9e41749d51c7295c",
+          "base_sha": "b9c12e9150f1e2d10653a31777bd9fbf8ce5650f",
+          "created_at": "2025-02-12T11:45:28.598Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2344050302",
+          "author": "askhl",
+          "body": "If it's possible to avoid the seek() then that would be best, since not all streams are seekable (e.g. reading from a pipe).\n\nDo I understand from the comment that we *actually* call this function on an open file handle and then call *another* reader on the still-open filehandle with a different reader?",
+          "file_path": "ase/io/vasp.py",
+          "line_number": 269,
+          "commit_sha": "0b7175b66e8550eb3725235bfed3a0f53defeb6e",
+          "base_sha": "b9c12e9150f1e2d10653a31777bd9fbf8ce5650f",
+          "created_at": "2025-02-12T11:45:29.650Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2344140316",
+          "author": "SianK",
+          "body": "No, the reading is on the same file which is properly closed afterwards.\nWe are testing to read another line in the expectation that it might start with 'c' or 'k' (Cartesian), which would indicate that velocities follow (=trial). \nWhen however reading CHGCAR files the position information is followed by the charge density.\nTo make sure it is properly read (starting at the beginning), we need to reset the file pointer to the state before our trial.",
+          "file_path": "ase/io/vasp.py",
+          "line_number": 269,
+          "commit_sha": "0b7175b66e8550eb3725235bfed3a0f53defeb6e",
+          "base_sha": "b9c12e9150f1e2d10653a31777bd9fbf8ce5650f",
+          "created_at": "2025-02-12T12:31:59.567Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2346139170",
+          "author": "askhl",
+          "body": "I looked up in the code that the caller (of which there is only one: ase/calculators/vasp/vasp_auxiliary.py L90) indeed *reads more from the still-open filehandle*.\n\nHowever the first thing it does is `fd.readline()` to discard a line.\n\nSo let's drop the readline() in vasp_auxiliary L95, and then we don't need to go \"undo\" the reading of the ac_type line anymore.  That lets us get rid of the tell()/seek() allowing the reader to still work on memory streams.\n\nOverall this is quite brittle, but no more so than before.",
+          "file_path": "ase/io/vasp.py",
+          "line_number": 269,
+          "commit_sha": "0b7175b66e8550eb3725235bfed3a0f53defeb6e",
+          "base_sha": "b9c12e9150f1e2d10653a31777bd9fbf8ce5650f",
+          "created_at": "2025-02-13T10:49:02.949Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2346141253",
+          "author": "askhl",
+          "body": "After this I have no more comments :sweat_smile:",
+          "file_path": "ase/io/vasp.py",
+          "line_number": 269,
+          "commit_sha": "0b7175b66e8550eb3725235bfed3a0f53defeb6e",
+          "base_sha": "b9c12e9150f1e2d10653a31777bd9fbf8ce5650f",
+          "created_at": "2025-02-13T10:49:59.778Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2344050314",
+          "author": "askhl",
+          "body": "Maybe we should set more than one number, e.g. `vel = np.linspace(-1, 1, 3 * len(graphene_atoms)).reshape(-1, 3)`?",
+          "file_path": "ase/test/fio/test_vasp_structure.py",
+          "line_number": 164,
+          "commit_sha": "461e216ba0f17166df69c607aca542d4759a345b",
+          "base_sha": "b9c12e9150f1e2d10653a31777bd9fbf8ce5650f",
+          "created_at": "2025-02-12T11:45:29.906Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2344050344",
+          "author": "askhl",
+          "body": "For CI you need to order the imports as part of codestyle.  You can install ruff and do `ruff check --fix` to do so automatically.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-02-12T11:45:30.399Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2353170752",
+          "author": "askhl",
+          "body": "I took the liberty of changing the comment and removing the commented readline call (there is no reason to leave commented code around).\n\nThank you very much @SianK!",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-02-18T09:29:51.159Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 6
+}

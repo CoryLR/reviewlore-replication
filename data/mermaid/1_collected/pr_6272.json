@@ -1,0 +1,160 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 6272,
+  "title": "Refactor: Change SequenceDB to class based architecture.",
+  "body": "## :bookmark_tabs: Summary\r\n\r\n- Refactors the existing sequenceDb implementation from a functional approach to a class-based architecture to improve code organization, maintainability, and extensibility.\r\n- Return a new DB object when `diagramObject.db` is called.\r\n- Introduces new SequenceDB class to encapsulate database operations and state\r\n- Migrates existing functions to class methods\r\n- Maintains existing API interface for backwards compatibility\r\n- Following functions still uses common DB:\r\n  - apply\r\n  - parseMessage\r\n  - parseBoxData\r\n  - LINETYPE\r\n  - PLACEMENT\r\n  - setDiagramTitle\r\n  - setAccTitle\r\n  - setAccDescription\r\n- Reason why above functions still uses common DB: https://github.com/mermaid-js/mermaid/pull/6161#discussion_r1913261481\r\n- Added unique IDs for messages during parsing. Previously, IDs were assigned during rendering, which caused issues for diagrams since message operations relied on IDs.\r\n- Updated unit tests to support unique DB instances instead of shared DB. \r\n\r\nResolves #<your issue id here>\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\n- The sequenceDb module previously relied on functions and global variables. Consequently, each call to mermaid.parse or mermaid.render resulted in changes to global variables.\r\n- This behavior caused issues when rendering multiple diagrams using the same Mermaid API, as the database object (DB) for the diagrams would get mixed up.\r\n- To address this, sequenceDb was refactored into a class-based structure. This change ensures that each diagramObject.db call creates a new instance of the database (DB), preventing conflicts between diagrams.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [X] :book: have read the [contribution guidelines](https://mermaid.js.org/community/contributing.html)\r\n- [X] :computer: have added necessary unit/e2e tests.\r\n- [ ] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://mermaid.js.org/community/contributing.html#update-documentation) is used for all new features.\r\n- [X] :butterfly: If your PR makes a change that should be noted in one or more packages' changelogs, generate a changeset by running `pnpm changeset` and following the prompts. Changesets that add features should be `minor` and those that fix bugs should be `patch`. Please prefix changeset messages with `feat:`, `fix:`, or `chore:`.\r\n",
+  "author": "saurabhg772244",
+  "merged_at": "2025-02-20T07:30:47Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "ad2f17205aecb0730e1472f35142931086026411",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "98fe7a6e03db53587b0104a52af1b89eaf4fd0ab",
+    "5857953d518134e271284f224d7b1cff629fe719"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J850X-4z",
+          "author": "github-advanced-security",
+          "body": "## Double escaping or unescaping\n\nThis replacement may produce '&' characters that are double-unescaped [here](1).\n\n[Show more details](https://github.com/mermaid-js/mermaid/security/code-scanning/186)",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDb.ts",
+          "line_number": 438,
+          "start_line": null,
+          "commit_sha": "5857953d518134e271284f224d7b1cff629fe719",
+          "created_at": "2025-02-12T11:09:33Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J850X-42",
+          "author": "github-advanced-security",
+          "body": "## Double escaping or unescaping\n\nThis replacement may produce '&' characters that are double-unescaped [here](1).\n\n[Show more details](https://github.com/mermaid-js/mermaid/security/code-scanning/187)",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDb.ts",
+          "line_number": 455,
+          "start_line": null,
+          "commit_sha": "5857953d518134e271284f224d7b1cff629fe719",
+          "created_at": "2025-02-12T11:09:33Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J850gfNu",
+          "author": "aloisklink",
+          "body": "**suggestion(super non-blocking)**: I wonder if it's easier to just delete the `let diagram` at https://github.com/mermaid-js/mermaid/blob/f454865b9773ce3843e42f3da929a0a907bfa1af/packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js#L94-L96\r\n\r\nBecause then the test would be:\r\n\r\n```ts\r\n    const diagram = await Diagram.fromText(str);\r\n    await diagram.renderer.draw(str, 'tst', '1.2.3', diagram); // needs to be rendered for the correct value of visibility auto numbers\r\n    expect(diagram.db.showSequenceNumbers()).toBe(true);\r\n```\r\n\r\nSo you'll be changing much less lines of code in this PR.",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+          "line_number": 233,
+          "start_line": null,
+          "commit_sha": "5857953d518134e271284f224d7b1cff629fe719",
+          "created_at": "2025-02-13T15:01:00Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J850ggjx",
+          "author": "aloisklink",
+          "body": "**todo**: There's a couple of `mermaidAPI.parse` calls you can delete from these unit tests, since they don't do anything.\r\n\r\n```suggestion\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+          "line_number": 1841,
+          "start_line": null,
+          "commit_sha": "5857953d518134e271284f224d7b1cff629fe719",
+          "created_at": "2025-02-13T15:02:51Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J850zH8E",
+          "author": "saurabhg772244",
+          "body": "completely removing mermaidAPI.parse will not be possible as we are using mermaidAPI.getConfig() will give wrong values if its removed",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+          "line_number": 1841,
+          "start_line": null,
+          "commit_sha": "5857953d518134e271284f224d7b1cff629fe719",
+          "created_at": "2025-02-18T11:30:55Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J850gpbJ",
+          "author": "aloisklink",
+          "body": "Hmmmm, this is from https://github.com/mermaid-js/mermaid/blob/5d3d1047a4e733409befb30e551ffe54cd4b085c/packages/mermaid/src/diagrams/sequence/sequenceDiagram.ts#L20-L22 ?\r\n\r\nI don't think this will do anything. Since we call `this.clear()` later in the constructor, and in https://github.com/mermaid-js/mermaid/blob/13bba48e9225447aa37b504a06d00dfa424a8e90/packages/mermaid/src/Diagram.ts#L38, it seems like `this.state.records.wrapEnabled` will be set to `undefined`.",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDb.ts",
+          "line_number": 53,
+          "start_line": null,
+          "commit_sha": "5857953d518134e271284f224d7b1cff629fe719",
+          "created_at": "2025-02-13T15:18:51Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J850mOlk",
+          "author": "saurabhg772244",
+          "body": "Fixed in https://github.com/mermaid-js/mermaid/pull/6272/commits/0a1a11260597d07161298ce2f09620d06bbac4b5",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDb.ts",
+          "line_number": 53,
+          "start_line": null,
+          "commit_sha": "5857953d518134e271284f224d7b1cff629fe719",
+          "created_at": "2025-02-14T13:48:23Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J850grxt",
+          "author": "aloisklink",
+          "body": "Since this used to be `export const` not `export let`, it's probably worth adding a `readonly` here (and for `ARROWTYPE` and `PLACEMENT`).\r\n\r\n```suggestion\r\n  public readonly LINETYPE: {\r\n```\r\n\r\nBut, I wonder if it's instead better to do something like the following to reduce code duplication:\r\n\r\n```diff\r\ndiff --git a/packages/mermaid/src/diagrams/sequence/sequenceDb.ts b/packages/mermaid/src/diagrams/sequence/sequenceDb.ts\r\nindex ba5d464c5..eafd17f91 100644\r\n--- a/packages/mermaid/src/diagrams/sequence/sequenceDb.ts\r\n+++ b/packages/mermaid/src/diagrams/sequence/sequenceDb.ts\r\n@@ -29,6 +29,41 @@ interface SequenceState {\r\n   lastDestroyed?: Actor;\r\n }\r\n\r\n+const LINETYPE = {\r\n+  SOLID: 0,\r\n+  DOTTED: 1,\r\n+  NOTE: 2,\r\n+  SOLID_CROSS: 3,\r\n+  DOTTED_CROSS: 4,\r\n+  SOLID_OPEN: 5,\r\n+  DOTTED_OPEN: 6,\r\n+  LOOP_START: 10,\r\n+  LOOP_END: 11,\r\n+  ALT_START: 12,\r\n+  ALT_ELSE: 13,\r\n+  ALT_END: 14,\r\n+  OPT_START: 15,\r\n+  OPT_END: 16,\r\n+  ACTIVE_START: 17,\r\n+  ACTIVE_END: 18,\r\n+  PAR_START: 19,\r\n+  PAR_AND: 20,\r\n+  PAR_END: 21,\r\n+  RECT_START: 22,\r\n+  RECT_END: 23,\r\n+  SOLID_POINT: 24,\r\n+  DOTTED_POINT: 25,\r\n+  AUTONUMBER: 26,\r\n+  CRITICAL_START: 27,\r\n+  CRITICAL_OPTION: 28,\r\n+  CRITICAL_END: 29,\r\n+  BREAK_START: 30,\r\n+  BREAK_END: 31,\r\n+  PAR_OVER_START: 32,\r\n+  BIDIRECTIONAL_SOLID: 33,\r\n+  BIDIRECTIONAL_DOTTED: 34,\r\n+} as const;\r\n+\r\n export class SequenceDB implements DiagramDB {\r\n   private readonly state = new ImperativeState<SequenceState>(() => ({\r\n     prevActor: undefined,\r\n@@ -54,40 +89,7 @@ export class SequenceDB implements DiagramDB {\r\n\r\n     this.clear();\r\n\r\n-    this.LINETYPE = {\r\n-      SOLID: 0,\r\n-      DOTTED: 1,\r\n-      NOTE: 2,\r\n-      SOLID_CROSS: 3,\r\n-      DOTTED_CROSS: 4,\r\n-      SOLID_OPEN: 5,\r\n-      DOTTED_OPEN: 6,\r\n-      LOOP_START: 10,\r\n-      LOOP_END: 11,\r\n-      ALT_START: 12,\r\n-      ALT_ELSE: 13,\r\n-      ALT_END: 14,\r\n-      OPT_START: 15,\r\n-      OPT_END: 16,\r\n-      ACTIVE_START: 17,\r\n-      ACTIVE_END: 18,\r\n-      PAR_START: 19,\r\n-      PAR_AND: 20,\r\n-      PAR_END: 21,\r\n-      RECT_START: 22,\r\n-      RECT_END: 23,\r\n-      SOLID_POINT: 24,\r\n-      DOTTED_POINT: 25,\r\n-      AUTONUMBER: 26,\r\n-      CRITICAL_START: 27,\r\n-      CRITICAL_OPTION: 28,\r\n-      CRITICAL_END: 29,\r\n-      BREAK_START: 30,\r\n-      BREAK_END: 31,\r\n-      PAR_OVER_START: 32,\r\n-      BIDIRECTIONAL_SOLID: 33,\r\n-      BIDIRECTIONAL_DOTTED: 34,\r\n-    };\r\n+    this.LINETYPE = LINETYPE;\r\n\r\n     this.ARROWTYPE = {\r\n       FILLED: 0,\r\n@@ -356,40 +358,7 @@ export class SequenceDB implements DiagramDB {\r\n     };\r\n   }\r\n\r\n-  public LINETYPE: {\r\n-    SOLID: 0;\r\n-    DOTTED: 1;\r\n-    NOTE: 2;\r\n-    SOLID_CROSS: 3;\r\n-    DOTTED_CROSS: 4;\r\n-    SOLID_OPEN: 5;\r\n-    DOTTED_OPEN: 6;\r\n-    LOOP_START: 10;\r\n-    LOOP_END: 11;\r\n-    ALT_START: 12;\r\n-    ALT_ELSE: 13;\r\n-    ALT_END: 14;\r\n-    OPT_START: 15;\r\n-    OPT_END: 16;\r\n-    ACTIVE_START: 17;\r\n-    ACTIVE_END: 18;\r\n-    PAR_START: 19;\r\n-    PAR_AND: 20;\r\n-    PAR_END: 21;\r\n-    RECT_START: 22;\r\n-    RECT_END: 23;\r\n-    SOLID_POINT: 24;\r\n-    DOTTED_POINT: 25;\r\n-    AUTONUMBER: 26;\r\n-    CRITICAL_START: 27;\r\n-    CRITICAL_OPTION: 28;\r\n-    CRITICAL_END: 29;\r\n-    BREAK_START: 30;\r\n-    BREAK_END: 31;\r\n-    PAR_OVER_START: 32;\r\n-    BIDIRECTIONAL_SOLID: 33;\r\n-    BIDIRECTIONAL_DOTTED: 34;\r\n-  };\r\n+  public readonly LINETYPE: typeof LINETYPE;\r\n\r\n   public ARROWTYPE: {\r\n     FILLED: 0;\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDb.ts",
+          "line_number": 359,
+          "start_line": null,
+          "commit_sha": "5857953d518134e271284f224d7b1cff629fe719",
+          "created_at": "2025-02-13T15:24:03Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J850mOaY",
+          "author": "saurabhg772244",
+          "body": "Updated in https://github.com/mermaid-js/mermaid/pull/6272/commits/451c886f506056420a2851311df149a003427d20",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDb.ts",
+          "line_number": 359,
+          "start_line": null,
+          "commit_sha": "5857953d518134e271284f224d7b1cff629fe719",
+          "created_at": "2025-02-14T13:47:55Z",
+          "is_outdated": true
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 6
+}

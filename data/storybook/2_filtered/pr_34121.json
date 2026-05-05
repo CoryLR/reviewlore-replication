@@ -1,0 +1,261 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34121,
+  "title": "Addon-Vitest: Make Playwright `--with-deps` platform-aware to avoid `sudo` prompt on Linux",
+  "body": "#### Manual testing\r\n\r\nCreate a sandbox on Linux. There should be no sudo prompt.\r\n\r\n----\r\nDuring `storybook init`, the addon-vitest postinstall was running `npx playwright install chromium --with-deps`, which triggers system-level package installation (apt/pacman/etc.) requiring `sudo` on Linux \u2014 prompting users for a root password mid-init with no clear context.\r\n\r\n## Changes\r\n\r\n- **`AddonVitestService.ts`**: Use `--with-deps` only when running in CI (`process.env.CI`) or on macOS/Windows (`os.platform() === 'darwin' | 'win32'`) \u2014 officially supported platforms where it works reliably. Omit it on other platforms (Linux) to avoid the `sudo` prompt. After a successful install without `--with-deps`, a formatted warning is printed informing users they may need to install additional OS libraries for Playwright to work correctly, directing them to run Storybook Test in the Storybook UI to identify missing dependencies, and showing the manual `--with-deps` command. Updated JSDoc to reflect the conditional behavior.\r\n- **`postinstall.ts`**: Update the skipped-install warning to be platform-aware: shows `npx playwright install chromium --with-deps` on macOS/Windows, and `npx playwright install chromium` with an appended note pointing Debian/Ubuntu users to add `--with-deps` on other Linux platforms.\r\n- **`AddonVitestService.test.ts`**: Update assertions to cover all code paths: CI (with `--with-deps`), Linux non-CI (without `--with-deps`), macOS/Windows (with `--with-deps`), and the post-install warning on Linux.\r\n\r\n```diff\r\n- const playwrightCommand = ['playwright', 'install', 'chromium', '--with-deps'];\r\n+ const platform = os.platform();\r\n+ const useWithDeps = !!process.env.CI || platform === 'darwin' || platform === 'win32';\r\n+ const playwrightCommand = useWithDeps\r\n+   ? ['playwright', 'install', 'chromium', '--with-deps']\r\n+   : ['playwright', 'install', 'chromium'];\r\n```\r\n\r\nWithout `--with-deps` on Linux local installs, Playwright downloads the Chromium binary only, skipping OS-level dependency installation. Browser dependencies are typically already present on Linux systems via the distro package manager. On macOS, Windows, and in CI environments, `--with-deps` is retained to ensure all required system dependencies are installed. On Linux, users are shown a post-install warning with guidance on how to check for and install any missing dependencies.\r\n\r\n<!-- START COPILOT ORIGINAL PROMPT -->\r\n\r\n\r\n\r\n<details>\r\n\r\n<summary>Original prompt</summary>\r\n\r\n\r\n----\r\n\r\n*This section details on the original issue you should resolve*\r\n\r\n<issue_title>[Bug]: Storybook init can require `sudo` because of Playwright install</issue_title>\r\n<issue_description>### Describe the bug\r\n\r\nWhen initting Storybook and getting addon-vitest, the addon's postinstall installs Playwright _with dependencies_: \r\n\r\nhttps://github.com/storybookjs/storybook/blob/bd03a61573cbb1fc79bda8663ccdbc443ca22eda/code/addons/vitest/src/postinstall.ts#L294-L297\r\n\r\nThis can lead to the terminal require `sudo`, because that can be necessary to install the browser dependencies. This requirement can scare some users off, because they are not just giving `sudo` to the playwright install, but _to the whole init process_, which is opaque to the user and less secure.\r\n\r\n### Additional context\r\n\r\nOriginally reported by @dominikg. I have not myself been able to reproduce this, it seems like Playwright refuses to install browsers on my machine, relying on some cached installs that I can't remove.\r\n\r\nThis the log shown:\r\n\r\n```\r\n\u203a Configuring Playwright with Chromium (this might take some time):\r\n  npx playwright install chromium --with-deps\r\n[sudo] password for USER: \r\n```\r\n\r\nIf we don't add `--with-deps` it just downloads the binaries without using `sudo`. The deps are usually present from the system installed chromium and managed by the packaging system of the linux distro. It can lead to issues if the system installed chromium has deps that are incompatible from the one playwright wants to use, but that might not be an issue in practice.</issue_description>\r\n\r\n## Comments on the Issue (you are @copilot in this section)\r\n\r\n<comments>\r\n<comment_new><author>@Sidnioulz</author><body>\r\nI want to add to this that some commands, like `yarn start` in the monorepo, run install commands in quiet mode, so users don't even know it's Playwright asking for a password.\r\n\r\nBesides, Playwright fails install on many Linux distros, and it tries for those distros to serve a 5 year old APT package for Ubuntu, which of course fails (all the package's dependencies have had multiple updates since then).\r\n\r\nhttps://github.com/microsoft/playwright/issues/26482#issuecomment-2536547104 provides a command which apparently installs browsers without triggering this whole package download and sudo request. We might want to look into adding that `--shell-only` command if it has no relevant side effects for us.</body></comment_new>\r\n<comment_new><author>@Sidnioulz</author><body>\r\n> it's `--only-shell` https://playwright.dev/docs/test-cli#install-browsers\r\n> \r\n> i think you can only run headless tests then. might work for repo internal ci scripts but not user facing scripts as users might want to execute with browser ui showing\r\n\r\nThanks @dominikg! I suspect this might be enough for Addon Vitest, as it runs in CLI and outputs results in the UI and/or CLI. Let's see if the team believe --headed must be available by default.</body></comment_new>\r\n<comment_new><author>@Sidnioulz</author><body>\r\nJust tested rewriting addon-vitest's postinstall and `sudo` will keep being triggered until `--with-deps` is removed. Now, on my Arch system I can install with `--only-shell` and without `--with-deps`, and the addon runs fine because I already have playwright locally installed.\r\n\r\nObviously this means users without playwright will run into trouble.\r\n\r\nOne thing we could possibly do is use `execa` to run `playwright --version` and check if it's already installed; in which case `--with-deps` is redundant on Linux.\r\n\r\nWe could also try and detect distros. Playwright only supports Debian/Ubuntu so that shouldn't be too much of a stretch. [Plenty of options](https://unix.stackexchange.com/questions/35183/how-do-i-identify-which-linux-distro-is-running) to detect distros.\r\n\r\nANd if we figure out that users do need to install Playwright themselves, provide a big fat visible warning for them so they know they have to do it.</body></comment_new>\r\n<comment_new><author>@Sidnioulz</author><body>\r\n> even though theg claim it only works w debian/ubuntu i haven't run into native issues with it on arch (manjaro) for years\r\n\r\nAgreed, it's the NPM install DX that's broken. They don't know how to install it so they prompt you into typing a password and start downloading an Ubuntu 20 package, then they cry wolf because the package is using different dependency versions from the ones locally installed.\r\n\r\nMeanwhile, not installing Playwright via NPM results in a functional experience for me on Arch.</body></comment_new>\r\n<comment_new><author>@Sidnioulz</author><body>\r\nUnfortunately it's not exactly the last step. It still does one or two things with Vitest config files afterwards.\r\n\r\n@JReinhold, do you reckon it's doable to put the playwright install step at the very end of the process?\r\n\r\n> I just installed Storybook and I really didn't like that it asked for a root password, because I don't know how it will affect my system. Does it install something using `pacman`? Does it install something in `/usr/bin`? I just pressed `Ctrl+C` and ...\r\n\r\n</details>\r\n\r\n\r\n\r\n<!-- START COPILOT CODING AGENT SUFFIX -->\r\n\r\n- Fixes storybookjs/storybook#32043\r\n\r\n<!-- START COPILOT CODING AGENT TIPS -->\r\n---\r\n\r\n\ud83d\udcac Send tasks to Copilot coding agent from [Slack](https://gh.io/cca-slack-docs) and [Teams](https://gh.io/cca-teams-docs) to turn conversations into code. Copilot posts an update in your thread when it's finished.\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\r\n## Summary by CodeRabbit\r\n\r\n* **Bug Fixes**\r\n  * Playwright install guidance now avoids forcing extra system-dependency flags on unsupported platforms in local runs, reducing unnecessary install steps.\r\n* **New Features**\r\n  * Installer messages are platform-aware and show the recommended command for your OS; when dependencies are omitted, a clear note explains how to install them if needed.\r\n* **Tests**\r\n  * Expanded cross-platform and CI/non\u2011CI test coverage for install behavior.\r\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "copilot-swe-agent",
+  "merged_at": "2026-03-13T13:15:08Z",
+  "base_ref": "next",
+  "merge_commit_sha": "e448aeccc7046cd5f077bf77526b358fd41f93b5",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "a61002df20c906ca4c000e0e178ed78b39c831ad",
+    "bfb242e4faed215ee29046a68efb07b18684a6a3"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uoooP",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Move spinner mock implementations out of test cases and into `beforeEach`.**\n\n`prompt.executeTaskWithSpinner` is mocked inline in both tests; that breaks the repo\u2019s Vitest mocking rules for centralized setup.\n\n<details>\n<summary>\u267b\ufe0f Suggested refactor</summary>\n\n```diff\n describe('installPlaywright', () => {\n+  type ChildProcessFactory = (signal?: AbortSignal) => ResultPromise;\n+\n   beforeEach(() => {\n     // Mock the logger methods used in installPlaywright\n     vi.mocked(logger.log).mockImplementation(() => {});\n     vi.mocked(logger.warn).mockImplementation(() => {});\n     // Mock getPackageCommand to return a string\n     vi.mocked(mockPackageManager.getPackageCommand).mockReturnValue(\n       'npx playwright install chromium'\n     );\n+    vi.mocked(prompt.executeTaskWithSpinner).mockImplementation(\n+      async (factory: ChildProcessFactory | ChildProcessFactory[]) => {\n+        const commandFactory = Array.isArray(factory) ? factory[0] : factory;\n+        commandFactory();\n+        return undefined;\n+      }\n+    );\n   });\n\n   it('should execute playwright install command', async () => {\n     const originalCI = process.env.CI;\n     delete process.env.CI;\n     try {\n-      type ChildProcessFactory = (signal?: AbortSignal) => ResultPromise;\n-      let commandFactory: ChildProcessFactory | ChildProcessFactory[];\n       vi.mocked(prompt.confirm).mockResolvedValue(true);\n-      vi.mocked(prompt.executeTaskWithSpinner).mockImplementation(\n-        async (factory: ChildProcessFactory | ChildProcessFactory[]) => {\n-          commandFactory = Array.isArray(factory) ? factory[0] : factory;\n-          // Simulate the child process completion\n-          commandFactory();\n-        }\n-      );\n\n       await service.installPlaywright();\n\n       expect(mockPackageManager.runPackageCommand).toHaveBeenCalledWith({\n         args: ['playwright', 'install', 'chromium'],\n@@\n   it('should execute playwright install command with --with-deps in CI', async () => {\n     const originalCI = process.env.CI;\n     process.env.CI = 'true';\n     try {\n-      type ChildProcessFactory = (signal?: AbortSignal) => ResultPromise;\n-      let commandFactory: ChildProcessFactory | ChildProcessFactory[];\n       vi.mocked(prompt.confirm).mockResolvedValue(true);\n-      vi.mocked(prompt.executeTaskWithSpinner).mockImplementation(\n-        async (factory: ChildProcessFactory | ChildProcessFactory[]) => {\n-          commandFactory = Array.isArray(factory) ? factory[0] : factory;\n-          commandFactory();\n-        }\n-      );\n\n       await service.installPlaywright();\n\n       expect(mockPackageManager.runPackageCommand).toHaveBeenCalledWith({\n```\n</details>\n\n\nAs per coding guidelines \u201cAvoid inline mock implementations within test cases in Vitest tests\u201d and \u201cImplement mock behaviors in `beforeEach` blocks in Vitest tests\u201d.\n\n\nAlso applies to: 454-459\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/cli/AddonVitestService.test.ts` around lines 425 - 431, Move\nthe inline vi.mocked(prompt.executeTaskWithSpinner) implementations into the\ntest suite's beforeEach: create a beforeEach that sets\nvi.mocked(prompt.executeTaskWithSpinner).mockImplementation(async (factory:\nChildProcessFactory | ChildProcessFactory[]) => { commandFactory =\nArray.isArray(factory) ? factory[0] : factory; commandFactory(); }); also reset\ncommandFactory to undefined (or a known initial state) at the start of\nbeforeEach so each test gets a clean setup, and remove the duplicate inline\nmocks found in the two test cases (including the other occurrence around the\nsecond test). Ensure both tests rely on the shared behavior provided by the\nbeforeEach mock rather than defining their own mock implementations.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/cli/AddonVitestService.test.ts",
+          "line_number": 434,
+          "start_line": 428,
+          "commit_sha": "bfb242e4faed215ee29046a68efb07b18684a6a3",
+          "created_at": "2026-03-13T08:53:19Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests moving inline mock implementations into beforeEach blocks, with a concrete code diff showing the refactor."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6up4mI",
+          "author": "Sidnioulz",
+          "body": "@copilot Here I would suggest also enabling --with-deps for os.platform darwin and win32 as they are officially supported.",
+          "file_path": "code/core/src/cli/AddonVitestService.ts",
+          "line_number": 127,
+          "start_line": null,
+          "commit_sha": "590dffbc6e666174e4a2fa9468041eba36e9fccb",
+          "created_at": "2026-03-13T10:02:41Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6uqC8b",
+          "author": "copilot-swe-agent",
+          "body": "Done in 8de539a. `--with-deps` is now enabled for `darwin` and `win32` (in addition to CI).",
+          "file_path": "code/core/src/cli/AddonVitestService.ts",
+          "line_number": 127,
+          "start_line": null,
+          "commit_sha": "590dffbc6e666174e4a2fa9468041eba36e9fccb",
+          "created_at": "2026-03-13T10:11:22Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests enabling --with-deps for darwin and win32 platforms, implying a code change to the platform check logic."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6up6Fh",
+          "author": "Sidnioulz",
+          "body": "@copilot here I would use os.platform to print the --with-deps command for darwin and win32 users, and for other users:\n\n```ts\n ${CLI_COLORS.cta('npx playwright install chromium')} (add --with-deps if using Debian or Ubuntu)\n```",
+          "file_path": "code/addons/vitest/src/postinstall.ts",
+          "line_number": 170,
+          "start_line": null,
+          "commit_sha": "590dffbc6e666174e4a2fa9468041eba36e9fccb",
+          "created_at": "2026-03-13T10:03:59Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6uqC_-",
+          "author": "copilot-swe-agent",
+          "body": "Done in 8de539a. On macOS/Windows the warning shows `npx playwright install chromium --with-deps`; on other platforms it shows `npx playwright install chromium` with an appended note: `Note: add --with-deps to the command above if you are on Debian or Ubuntu.`",
+          "file_path": "code/addons/vitest/src/postinstall.ts",
+          "line_number": 170,
+          "start_line": null,
+          "commit_sha": "590dffbc6e666174e4a2fa9468041eba36e9fccb",
+          "created_at": "2026-03-13T10:11:24Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests using os.platform to conditionally print different --with-deps command messages for darwin/win32 vs other users, with specific suggested text."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uqQUd",
+          "author": "Sidnioulz",
+          "body": "Nice! @copilot now, when not using `useWithDeps`, I want you to print a nice formatted warning to users after the playwright install, if it succeeded, to tell them that they may need to install additional libraries on their operating system for Playwright to function properly. They can run Storybook Test in the Storybook UI to get a list of missing dependencies.",
+          "file_path": "code/core/src/cli/AddonVitestService.ts",
+          "line_number": 132,
+          "start_line": null,
+          "commit_sha": "bfb242e4faed215ee29046a68efb07b18684a6a3",
+          "created_at": "2026-03-13T10:22:47Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6uqU3P",
+          "author": "copilot-swe-agent",
+          "body": "Done in c9f38b0. After a successful install without `--with-deps`, users on Linux now see:\n\n```\n\u26a0 Playwright was installed without system dependencies. Depending on your operating system, you may need to install additional libraries for Playwright to work correctly.\n  To check for missing dependencies, run Storybook Test from the Storybook UI \u2014 it will report any libraries that need to be installed.\n  If needed, you can install system dependencies manually by running:\n  npx playwright install chromium --with-deps\n```",
+          "file_path": "code/core/src/cli/AddonVitestService.ts",
+          "line_number": 132,
+          "start_line": null,
+          "commit_sha": "bfb242e4faed215ee29046a68efb07b18684a6a3",
+          "created_at": "2026-03-13T10:26:44Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding a formatted warning message after successful playwright install when not using useWithDeps."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6urM5_",
+          "author": "valentinpalkovic",
+          "body": "cc @Sidnioulz:  Isn't `win32` a check for Windows? Do they need to run the command with `--with-deps`?",
+          "file_path": "code/addons/vitest/src/postinstall.ts",
+          "line_number": 170,
+          "start_line": null,
+          "commit_sha": "bfb242e4faed215ee29046a68efb07b18684a6a3",
+          "created_at": "2026-03-13T11:16:35Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6urnlc",
+          "author": "Sidnioulz",
+          "body": "@valentinpalkovic we know that the --with-deps command has worked well so far for MacOS and Windows users, so there is no reason to risk degrading their experience. We know all other OSes are partially or totally unsupported though.",
+          "file_path": "code/addons/vitest/src/postinstall.ts",
+          "line_number": 170,
+          "start_line": null,
+          "commit_sha": "bfb242e4faed215ee29046a68efb07b18684a6a3",
+          "created_at": "2026-03-13T11:40:51Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6usBOQ",
+          "author": "valentinpalkovic",
+          "body": "I understand your thinking now. I've seen it as an opportunity to fasten up the init step by a bit. But fair enough. Let's go the safe route first.",
+          "file_path": "code/addons/vitest/src/postinstall.ts",
+          "line_number": 170,
+          "start_line": null,
+          "commit_sha": "bfb242e4faed215ee29046a68efb07b18684a6a3",
+          "created_at": "2026-03-13T12:02:09Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions whether win32 should use --with-deps, implying the platform check for win32 may need to be reconsidered or removed."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6urpNm",
+          "author": "Sidnioulz",
+          "body": "@valentinpalkovic WDYT of this?\n\nI would only change \"If needed\" with \"On MacOS, Windows, Debian and Ubuntu,\"",
+          "file_path": "code/core/src/cli/AddonVitestService.ts",
+          "line_number": 184,
+          "start_line": 181,
+          "commit_sha": "bfb242e4faed215ee29046a68efb07b18684a6a3",
+          "created_at": "2026-03-13T11:42:28Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests changing the wording of a message from 'If needed' to 'On MacOS, Windows, Debian and Ubuntu,' \u2014 a concrete text change request."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uss7f",
+          "author": "Sidnioulz",
+          "body": "```suggestion\n              On MacOS, Windows, Debian and Ubuntu, you can install system dependencies manually by running:\n```",
+          "file_path": "code/core/src/cli/AddonVitestService.ts",
+          "line_number": 183,
+          "start_line": null,
+          "commit_sha": "c9f38b031faffe7109396e0382036fd00a58462b",
+          "created_at": "2026-03-13T12:38:20Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "A direct code suggestion (inline suggestion block) to change a specific line of text in the source file."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6usxGB",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Environment variable restoration logic differs across tests.**\n\nThe `finally` blocks have inconsistent logic for restoring `process.env.CI`:\n- Lines 443-447: Only restores if `originalCI !== undefined`\n- Lines 502-508: Deletes if `originalCI === undefined`, else restores\n- Lines 535-539: Only restores if `originalCI !== undefined`\n\nLines 443-447 and 535-539 may leave `process.env.CI` set if it was originally `undefined` but the test set it to a value. The pattern in lines 502-508 is correct.\n\n\n<details>\n<summary>\ud83d\udee0\ufe0f Suggested fix for consistent cleanup</summary>\n\n```diff\n       } finally {\n-        if (originalCI !== undefined) {\n-          process.env.CI = originalCI;\n+        if (originalCI === undefined) {\n+          delete process.env.CI;\n+        } else {\n+          process.env.CI = originalCI;\n         }\n       }\n```\n\nApply this pattern to all three locations for consistency.\n</details>\n\n\nAlso applies to: 502-508, 535-539\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/cli/AddonVitestService.test.ts` around lines 443 - 447, The\nfinally blocks currently restore process.env.CI inconsistently (some only\nrestore when originalCI !== undefined), which can leave CI set when it was\noriginally undefined; update all finally blocks in AddonVitestService.test.ts\nthat use originalCI/process.env.CI so they follow the correct pattern: if\noriginalCI === undefined then delete process.env.CI, else set process.env.CI =\noriginalCI. Locate uses of originalCI and the finally blocks around the tests\n(the three spots shown around lines with the finally blocks) and apply this\nconsistent cleanup logic.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/cli/AddonVitestService.test.ts",
+          "line_number": 447,
+          "start_line": 443,
+          "commit_sha": "bfb242e4faed215ee29046a68efb07b18684a6a3",
+          "created_at": "2026-03-13T12:41:58Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug in environment variable restoration logic across multiple tests and provides a concrete fix to apply consistently."
+    }
+  ],
+  "review_thread_count": 8,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 8,
+    "stage1_kept": 8,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

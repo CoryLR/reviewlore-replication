@@ -1,0 +1,129 @@
+# ReviewLore configuration
+# Central config for both relo (tuning tool) and relox (experiment harness)
+
+output_dir: "data/"
+
+backend:
+  name: "replay"
+  claude_code:
+    dangerously_skip_permissions: true
+    output_format: "json"
+    # OAuth token file for headless auth in SSH / non-interactive shells.
+    # OPT-IN: leave unset / commented out to use ambient auth (the default).
+    # When set, the backend reads the token, strips ANTHROPIC_API_KEY and
+    # ANTHROPIC_AUTH_TOKEN from the subprocess env, and exports
+    # CLAUDE_CODE_OAUTH_TOKEN, mirroring the shell-side ``claudessh`` wrapper.
+    # Per-session override is also available via the
+    # REVIEWLORE_OAUTH_TOKEN_FILE env var (takes precedence over this yaml
+    # entry), which is the recommended path for one-off SSH sessions.
+    # oauth_token_file: "~/.secrets/claude-code-oauth-token"
+  replay:
+    # Strict replay: raise ReplayMissingError on cache miss instead of returning
+    # an empty result. Recommended for the replication artifact so the reader
+    # sees a loud, actionable error if a saved raw.json is missing rather than
+    # a silent zero-output run. Set to false for permissive mode.
+    strict: true
+
+models:
+  optimizer_extract: "claude-sonnet-4-6[1m]"
+  optimizer_consolidate: "claude-opus-4-6[1m]"
+  reviewer: "claude-sonnet-4-6[1m]"
+  judge: "claude-opus-4-6[1m]"
+
+budgets:  # USD per invocation
+  optimizer_extract: 25.0
+  optimizer_consolidate: 50.0
+  reviewer: 100.0
+  judge: 50.0
+
+prompts:
+  optimizer_extract:
+    path: "prompts/optimizer_extract.md"
+    version: 2
+  optimizer_consolidate:
+    path: "prompts/optimizer_consolidate.md"
+    version: 2
+  filter_actionability:
+    path: "prompts/filter_actionability.md"
+    version: 1
+  label_bitsai:
+    path: "prompts/label_bitsai.md"
+    version: 1
+  reviewer_generic:
+    path: "prompts/reviewer_system.md"
+    version: 3
+  judge:
+    path: "prompts/judge_system.md"
+    version: 3
+  categorize_rules:
+    path: "prompts/categorize_rules.md"
+    version: 1
+
+optimizer:
+  batch_size: 10
+  snapshot_interval: 25
+
+concurrency:
+  extraction_workers: 3
+  review_workers: 2
+  worker_stagger_delay: 30
+
+filter:
+  bot_usernames:
+    # Dependency bots and CI service accounts
+    - "dependabot"
+    - "renovate"
+    - "codecov"
+    - "github-actions"
+    - "storybook-bot"
+    # AI code-review bots that post inline review comments
+    - "copilot"
+    - "copilot-pull-request-reviewer"
+    - "sourcery-ai"
+    - "codiumai"
+  min_word_count: 3
+  exclude_patterns:
+    - "^LGTM"
+    - "^\\+1$"
+    - "^Approved"
+  actionability:
+    model: "claude-sonnet-4-6"
+    budget: 50.0
+
+label:
+  model: "claude-sonnet-4-6"
+  budget: 50.0
+
+collection:
+  rate_limit_delay: 1.0
+  retry_max: 3
+  retry_base_delay: 2.0
+  min_review_threads: 1
+  target_mrs: 250
+
+split:
+  tuning_ratio: 0.8
+
+conditions:
+  - generic
+  - tuned_100
+  - tuned_200
+
+projects:
+  storybook:
+    platform: "github"
+    repo: "storybookjs/storybook"
+    language: "typescript"
+    subject_repo: "./subject-repos/storybook"
+
+  mermaid:
+    platform: "github"
+    repo: "mermaid-js/mermaid"
+    language: "typescript"
+    subject_repo: "./subject-repos/mermaid"
+
+  ase:
+    platform: "gitlab"
+    repo: "ase/ase"
+    language: "python"
+    subject_repo: "./subject-repos/ase"

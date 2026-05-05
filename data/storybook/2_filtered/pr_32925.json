@@ -1,0 +1,1078 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 32925,
+  "title": "CircleCI: Dynamic config setup",
+  "body": "## What I did\r\n\r\nRelated: https://github.com/storybookjs/storybook/pull/19476\r\nTracking: https://github.com/storybookjs/storybook/issues/32936\r\n\r\nI'm overhauling the CI config.\r\n\r\nIn this PR I introduce the `scripts/ci` folder, in which a CircleCI config is dynamically generated.\r\n\r\nThis dynamic generation allows us to check the repo/PR/branch state and read dynamic config files (such as `sandboxes-templates.ts`) to determine what the optimum CI workflow would look like.\r\n\r\nHere's is an overview:\r\n<img width=\"1708\" height=\"1288\" alt=\"Screenshot 2025-12-29 at 13 50 56\" src=\"https://github.com/user-attachments/assets/8846c778-7680-43a9-a6a6-c9aa2346c162\" />\r\n\r\n<img width=\"957\" height=\"845\" alt=\"Screenshot 2025-12-29 at 13 51 47\" src=\"https://github.com/user-attachments/assets/a8fb9c8b-d772-4c80-8cc2-5e4079a5f308\" />\r\n\r\nThe hope is that in the future, we'll be able to do change detection, and instead of adding `ci:*`-labels to PRs, we automatically only run affected sandboxes.\r\n\r\n### Testing\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [x] stories\r\n- [x] unit tests\r\n- [x] integration tests\r\n- [x] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n- [x] We should run this PR with each `ci:*`-label at least once, checking if every runs as expected.\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Chores**\n  * Replaced many legacy CI workflows with a dynamic CI config generator and centralized CI tooling; removed numerous static CI jobs and an unstable sandbox template.\n* **Bug Fixes**\n  * Improved CLI logging resilience and added an environment guard to optionally skip Playwright installation.\n* **Documentation**\n  * Expanded CONTRIBUTING with local development and sandbox-filtering guidance.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ndelangen",
+  "merged_at": "2026-01-15T12:50:20Z",
+  "base_ref": "next",
+  "merge_commit_sha": "3ca47f1f5d6d5222ad4e50814d8476f176657ddc",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "30baaade98849536bc442f9b12c08b09eaae08ec",
+    "b9aa2add1509007b376a5bf340458c3ee443167b"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eYAkb",
+          "author": "valentinpalkovic",
+          "body": "My latest knowledge is that `inDevelopment` sandboxes are now also running on CI.\n\nWhat is the workflow to add a new sandbox and could you maybe document it somewhere (if not already documented)?\n\nSomething like:\n1. Add a new sandbox in `sandbox-templates`\n2. set `inDevelopment: true`\n3. Make the sandbox work on your branch locally as well as on CI\n4. Run `generate-sandboxes` GitHub action (just guessing the name here) to make sure the sandbox is published to `storybookjs/sandboxes`\n5. Remove the `inDevelopment: true` flag and as soon as CI passes, merge the PR.",
+          "file_path": "code/lib/cli-storybook/src/sandbox-templates.ts",
+          "line_number": 765,
+          "start_line": 752,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-02T08:59:19Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests documentation of the workflow for adding a new sandbox, with a suggested step-by-step process."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eYA9T",
+          "author": "valentinpalkovic",
+          "body": "Although not a written-down convention, I prefer to have type declarations at the top of the file. I think we usually define types at the top before function/variable declarations.",
+          "file_path": "code/lib/cli-storybook/src/sandbox-templates.ts",
+          "line_number": 1046,
+          "start_line": null,
+          "commit_sha": "e14b5ffe47e788383ed083d0a4e7c59ece71a459",
+          "created_at": "2026-01-02T09:00:48Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a convention violation and implies type declarations should be moved to the top of the file."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eYB21",
+          "author": "valentinpalkovic",
+          "body": "Shouldn't we define the roots for linux AND windows in this file and rename `ROOT_DIR` to `LINUX_ROOT_DIR`?",
+          "file_path": "scripts/ci/utils/constants.ts",
+          "line_number": 16,
+          "start_line": null,
+          "commit_sha": "e14b5ffe47e788383ed083d0a4e7c59ece71a459",
+          "created_at": "2026-01-02T09:03:15Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests defining roots for both linux and windows and renaming ROOT_DIR to LINUX_ROOT_DIR."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eYCsW",
+          "author": "valentinpalkovic",
+          "body": "Should we be crystal clear that these are `linux` executors, since we are referring to the linux root (ROOT_DIR)?",
+          "file_path": "scripts/ci/utils/executors.ts",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-02T09:04:13Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests renaming/clarifying executors to indicate they are linux executors."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eYDpR",
+          "author": "valentinpalkovic",
+          "body": "Should we move `C:\\\\Users\\\\circleci` as a const to `constants.ts`?",
+          "file_path": "scripts/ci/utils/helpers.ts",
+          "line_number": 177,
+          "start_line": null,
+          "commit_sha": "e14b5ffe47e788383ed083d0a4e7c59ece71a459",
+          "created_at": "2026-01-02T09:05:24Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests moving the hardcoded Windows path to a constant in constants.ts."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eYE7d",
+          "author": "valentinpalkovic",
+          "body": "Should we move the workflow array into `constants` and reference it everywhere where needed?",
+          "file_path": "scripts/ci/utils/parameters.ts",
+          "line_number": 16,
+          "start_line": null,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-02T09:06:46Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6eZhoR",
+          "author": "ndelangen",
+          "body": "I don't think we should, here's why:\r\n\r\nI infer a type from this data struct:\r\nhttps://github.com/storybookjs/storybook/blob/93c72eafce4dc54039b53ed72266adca3cd14348/scripts/ci/utils/types.ts#L107\r\n\r\nThis data structure is *exactly* what CircleCI config needs to have to accept parameters via API.\r\nSo to me it felt like the source of truth *is* here, in this definition;\r\nand the type (referenced in a few places) is the derived value.\r\n\r\nThe array value is never used anywhere else.\r\nThe enum values ARE, but It's all type-safe, no magic strings, you cannot pass non-existing values:\r\n<img width=\"1313\" height=\"246\" alt=\"Screenshot 2026-01-02 at 11 31 22\" src=\"https://github.com/user-attachments/assets/3ddfff01-6d6a-43b4-85c0-37056c36e588\" />",
+          "file_path": "scripts/ci/utils/parameters.ts",
+          "line_number": 16,
+          "start_line": null,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-02T10:40:23Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests moving the workflow array into constants and referencing it everywhere."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eYF1q",
+          "author": "valentinpalkovic",
+          "body": "Let's add a link in the JSDOC description above which points to the CircleCI documentation of steps",
+          "file_path": "scripts/ci/utils/types.ts",
+          "line_number": 52,
+          "start_line": null,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-02T09:07:33Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding a CircleCI documentation link to the JSDoc description."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eYdhF",
+          "author": "valentinpalkovic",
+          "body": "Do the knip and eslint jobs really need the resource class `xlarge`? Can you double-check?",
+          "file_path": "scripts/ci/code.ts",
+          "line_number": 221,
+          "start_line": null,
+          "commit_sha": "e14b5ffe47e788383ed083d0a4e7c59ece71a459",
+          "created_at": "2026-01-02T09:24:02Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6eZZTY",
+          "author": "ndelangen",
+          "body": "knip, no. \r\n\r\nlinting.. debatable.. `eslint` is not particularly fast. Getting the feedback earlier helps with dev flow. ",
+          "file_path": "scripts/ci/code.ts",
+          "line_number": 221,
+          "start_line": null,
+          "commit_sha": "e14b5ffe47e788383ed083d0a4e7c59ece71a459",
+          "created_at": "2026-01-02T10:20:06Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions whether xlarge resource class is necessary for knip/eslint jobs, implying it should be verified and potentially reduced."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eYe3-",
+          "author": "valentinpalkovic",
+          "body": "In general, would it make sense to go through all resource-class definitions and double check whether these higher resource classes are really necessary?",
+          "file_path": "scripts/ci/code.ts",
+          "line_number": 330,
+          "start_line": null,
+          "commit_sha": "e14b5ffe47e788383ed083d0a4e7c59ece71a459",
+          "created_at": "2026-01-02T09:24:53Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6eZaEi",
+          "author": "ndelangen",
+          "body": "Absolutely.",
+          "file_path": "scripts/ci/code.ts",
+          "line_number": 330,
+          "start_line": null,
+          "commit_sha": "e14b5ffe47e788383ed083d0a4e7c59ece71a459",
+          "created_at": "2026-01-02T10:22:07Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests reviewing all resource-class definitions to verify whether higher classes are necessary."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eYhY3",
+          "author": "valentinpalkovic",
+          "body": "Use a const instead for the windows working dir. Also, please check the other places.",
+          "file_path": "scripts/ci/init-empty.ts",
+          "line_number": 111,
+          "start_line": null,
+          "commit_sha": "e14b5ffe47e788383ed083d0a4e7c59ece71a459",
+          "created_at": "2026-01-02T09:26:23Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly requests using a const for the Windows working directory and checking other places."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eYmSd",
+          "author": "valentinpalkovic",
+          "body": "This inline comment is great! Let's also add something similar to our contributions guidelines, mentioning that for temporary, highly iteratative tasks the filter functionality might be benificial (time-wise and cost-wise). Additionally, some job id's are dynamic (especially the ones for the sandboxes and init scripts). It may help to document how the job id's are evaluated so that it is easy to filter for them",
+          "file_path": "scripts/ci/main.ts",
+          "line_number": 93,
+          "start_line": 76,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-02T09:29:29Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding documentation to contribution guidelines about filtering and job ID evaluation."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eYpJj",
+          "author": "valentinpalkovic",
+          "body": "Use `WINDOWS_ROOT_DIR` and `SANDBOX_DIR`",
+          "file_path": "scripts/ci/sandboxes.ts",
+          "line_number": 384,
+          "start_line": null,
+          "commit_sha": "e14b5ffe47e788383ed083d0a4e7c59ece71a459",
+          "created_at": "2026-01-02T09:31:24Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly requests using WINDOWS_ROOT_DIR and SANDBOX_DIR constants."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eZFi9",
+          "author": "valentinpalkovic",
+          "body": "The mocking feature is usually builder-dependent, and is renderer-agnostic. Even if a builder doesn't support mocking (e.g. rspack), the `sb.mock` calls in the preview don't harm, because the `mock` implementation is a `no-op` function at runtime. Can you elaborate why you were forced to add this check?",
+          "file_path": "scripts/tasks/sandbox-parts.ts",
+          "line_number": 894,
+          "start_line": null,
+          "commit_sha": "340119454a0b4d4514ed7f668a85bb4d7450e83d",
+          "created_at": "2026-01-02T09:49:53Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6eZlJP",
+          "author": "ndelangen",
+          "body": "Yeah, I'm sure you're right.\r\n\r\nI copied this technique from here:\r\nhttps://github.com/storybookjs/storybook/blob/08390fffe98737789722ca56595cfd11f353162e/scripts/tasks/sandbox-parts.ts#L645-L652\r\n\r\nAnd the reason I did so because if we do not, then we're adding references to files that do not exists!\r\n\r\nI'd suggest keeping the behavior as-is for now, it does seem to be working.\r\nAnd the code I pint to above has been as-is for a while.",
+          "file_path": "scripts/tasks/sandbox-parts.ts",
+          "line_number": 894,
+          "start_line": null,
+          "commit_sha": "340119454a0b4d4514ed7f668a85bb4d7450e83d",
+          "created_at": "2026-01-02T10:50:34Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6eZmDh",
+          "author": "ndelangen",
+          "body": "Perhaps I should change it to `isCoreFramework`?",
+          "file_path": "scripts/tasks/sandbox-parts.ts",
+          "line_number": 894,
+          "start_line": null,
+          "commit_sha": "340119454a0b4d4514ed7f668a85bb4d7450e83d",
+          "created_at": "2026-01-02T10:53:22Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6eaBsS",
+          "author": "ndelangen",
+          "body": "We had a talk about this, and decided that this is the correct way.\r\n\r\n`isCoreRenderer` is the correct check, because the files are only copied when this condition is true as well.\r\nAnd that's because those files are renderer-specific.",
+          "file_path": "scripts/tasks/sandbox-parts.ts",
+          "line_number": 894,
+          "start_line": null,
+          "commit_sha": "340119454a0b4d4514ed7f668a85bb4d7450e83d",
+          "created_at": "2026-01-02T12:18:36Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions why a check was added, implying the check may need to be removed or better justified."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eZHGs",
+          "author": "valentinpalkovic",
+          "body": "I think the `yarn.lock` changes can be reverted, since you haven't changed any dependencies",
+          "file_path": "yarn.lock",
+          "line_number": 10923,
+          "start_line": null,
+          "commit_sha": "48c58cad5731ecadfb8352272c5f79ada9dd06d4",
+          "created_at": "2026-01-02T09:51:10Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests reverting yarn.lock changes since no dependencies were changed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eoXe5",
+          "author": "JReinhold",
+          "body": "let's stick to camel case\n\n```suggestion\n  restoreLinux: () => [\n```\n\nDo't we have a lint rule for this? or maybe it doesn't target these files for some reason?",
+          "file_path": "scripts/ci/utils/helpers.ts",
+          "line_number": 171,
+          "start_line": null,
+          "commit_sha": "e4a931412a95525faaa29c2795e2f5f3d1d2d72e",
+          "created_at": "2026-01-05T12:46:47Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests renaming to camelCase with a concrete code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eoXlG",
+          "author": "JReinhold",
+          "body": "```suggestion\n  restoreWindows: (at = WINDOWS_ROOT_DIR) => [\n```",
+          "file_path": "scripts/ci/utils/helpers.ts",
+          "line_number": 177,
+          "start_line": null,
+          "commit_sha": "e4a931412a95525faaa29c2795e2f5f3d1d2d72e",
+          "created_at": "2026-01-05T12:46:55Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Provides a concrete code suggestion for renaming to camelCase."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eoZhM",
+          "author": "JReinhold",
+          "body": "could this not be imported from `executors.ts` instead?",
+          "file_path": "scripts/ci/common-jobs.ts",
+          "line_number": 28,
+          "start_line": 25,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-05T12:49:59Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6e1ha7",
+          "author": "ndelangen",
+          "body": "Yes, it could indeed, however:\nIt's currently type-safe, which felt like \"enough\" to me, to verify no mistakes are made.\n\nAs we discussed today, TS makes no difference between an inline string and an string imported \"enum\".\nSo there would be nothing preventing someone from writing the value inline later (it would be auto-suggested to inline the string by TS; so it's an easy thing to get wrong).",
+          "file_path": "scripts/ci/common-jobs.ts",
+          "line_number": 28,
+          "start_line": 25,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-06T12:52:11Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests importing from executors.ts instead of duplicating/hardcoding the value."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eobNb",
+          "author": "JReinhold",
+          "body": "is there any reason jobs like these (compile, publish) are not defined in `helpers` like eg. `git.X`? are they unique?",
+          "file_path": "scripts/ci/code.ts",
+          "line_number": 108,
+          "start_line": null,
+          "commit_sha": "e4a931412a95525faaa29c2795e2f5f3d1d2d72e",
+          "created_at": "2026-01-05T12:52:30Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6e1fK1",
+          "author": "ndelangen",
+          "body": "publish I missed, there's a helper for that, I am using it now, good eye!\n\nI didn't make a helper for `yarn task ...` steps, because it felt like the `yarn task...` is already an abstraction, and it since this is usually the key important part of any job, it being abstracted away would have made it less obvious.\n\nWhen looking at a job definition, I want your eye to land on the most important step of the job, and have the setup and cleanup be secondary.",
+          "file_path": "scripts/ci/code.ts",
+          "line_number": 108,
+          "start_line": null,
+          "commit_sha": "e4a931412a95525faaa29c2795e2f5f3d1d2d72e",
+          "created_at": "2026-01-06T12:48:47Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions whether jobs should be moved to helpers, implying a potential refactor."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6etFxf",
+          "author": "JReinhold",
+          "body": "probably a comment on _why_ here would be great.",
+          "file_path": "scripts/ci/sandboxes.ts",
+          "line_number": 195,
+          "start_line": 185,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-05T19:48:20Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding a comment explaining why something is done."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6etJLk",
+          "author": "JReinhold",
+          "body": "surely there must be a better name for this file than `code.ts`. What does this file contain? what is the commonality between all of the exported variables here? Is it `common-jobs.ts`?",
+          "file_path": "scripts/ci/common-jobs.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-05T19:53:51Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6e1kVC",
+          "author": "ndelangen",
+          "body": "If you look at the graph on CircleCI, you'll see a group of jobs under a hub called `code`.\n\nI interesting detail is that the graph is alphabetically sorted.\n\nI wanted to present the most information at a glance in the CircleCI graph, so the jobs like `lint`, `typecheck` etc, should be near each other at the top; hence I grouped them in a hub.\n\nI named the hub `code` because, well I needed something that was higher in the alphabet and `code` was descriptive enough; it hints at jobs related to the `./code` directory in our monorepo.\n\nI debated the naming a bit with @ghengeveld last week; but I do not have a personal preference, I'll rename the file and hub to `common-jobs`, as you suggest.",
+          "file_path": "scripts/ci/common-jobs.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-06T12:56:54Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests renaming the file to something more descriptive like common-jobs.ts."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e1qlX",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Log the caught error before falling back.**\n\nThe catch block silently discards all errors, making it impossible to debug issues beyond the mentioned \"Invalid count value\" error. Even if you don't want to throw, at minimum log the error to help diagnose problems.\n\n\n\n<details>\n<summary>\ud83d\udd0e Suggested fix to log the error</summary>\n\n```diff\n-  } catch {\n+  } catch (error) {\n     /**\n      * Clack.logBox can throw with \"Invalid count value\"-errors\n      *\n      * Possibly it may only happen on CI, but considering rendering a box is not critical, we will\n      * just log the message to the console and discard the error.\n      */\n+    // Log the actual error for debugging purposes\n+    console.error('[logBox fallback]', error);\n     clack.log.message(message);\n   }\n```\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/node-logger/logger/logger.ts around lines 169 - 189, The catch\nblock in the try around shouldLog/info and clack.box silently swallows\nexceptions; update it to log the caught error before falling back to\nclack.log.message so failures are observable. Specifically, inside the catch for\nthe block containing shouldLog, logTracker, isClackEnabled, clack.box (and\nconsole.log fallback) and then call clack.log.message(message); include the\ncaught error (e.g., err or e) in the log using the existing logging mechanism\n(process.stdout/console or logTracker) with a short contextual message like\n\"Clack box render failed:\" followed by the error details.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/node-logger/logger/logger.ts",
+          "line_number": 189,
+          "start_line": 169,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-06T13:06:51Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests logging the caught error before falling back, with a concrete code suggestion."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e1qlY",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Ensure consistent behavior in the catch path.**\n\nThe catch block bypasses both `shouldLog('info')` and `logTracker.addLog('info', message)`, creating inconsistent behavior compared to the success path. This means the fallback path could log even when the log level is set higher than 'info', and won't appear in the log tracker.\n\n\n\n<details>\n<summary>\ud83d\udd0e Suggested fix for consistency</summary>\n\n```diff\n   } catch (error) {\n     /**\n      * Clack.logBox can throw with \"Invalid count value\"-errors\n      *\n      * Possibly it may only happen on CI, but considering rendering a box is not critical, we will\n      * just log the message to the console and discard the error.\n      */\n+    // Log the actual error for debugging purposes\n+    console.error('[logBox fallback]', error);\n+    // Maintain consistency with the success path\n+    if (shouldLog('info')) {\n       clack.log.message(message);\n+    }\n   }\n```\n\n</details>\n\n\n\n> Committable suggestion skipped: line range outside the PR's diff.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/node-logger/logger/logger.ts around lines 181 - 189, The catch\nblock currently calls clack.log.message(message) directly, bypassing\nshouldLog('info') and logTracker.addLog('info', message); update the catch to\nmirror the success path by first checking shouldLog('info') and only then\ncalling logTracker.addLog('info', message) and clack.log.message(message) (i.e.,\nperform the same conditional log check and tracking as the success branch so the\nfallback respects log level and appears in the tracker).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/node-logger/logger/logger.ts",
+          "line_number": 189,
+          "start_line": 181,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-06T13:06:51Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags inconsistent behavior in the catch path and suggests adding shouldLog check and log tracking."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e1qlc",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Remove redundant phrase for clarity.**\n\nLine 214 uses \"Inside of here\" which is verbose. Simplify to \"Inside\" for a more concise, idiomatic tone.\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n- Inside of here you can edit the filter-function:\n+ Inside here you can edit the filter-function:\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nInside here you can edit the filter-function:\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\uddf0 Tools</summary>\n\n<details>\n<summary>\ud83e\ude9b LanguageTool</summary>\n\n[style] ~214-~214: This phrase is redundant. Consider using \u201cInside\u201d.\nContext: ...unning all. Here's the process of how:  Inside of here you can edit the filter-function: ...\n\n(OUTSIDE_OF)\n\n</details>\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @CONTRIBUTING.md at line 214, Replace the verbose phrase \"Inside of here\" on\nline 214 of CONTRIBUTING.md with the concise \"Inside\"; locate the sentence\ncontaining \"Inside of here\" and update the wording to \"Inside\" to improve\nclarity and tone without changing surrounding content.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:triton:mongoose -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "CONTRIBUTING.md",
+          "line_number": 214,
+          "start_line": null,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-06T13:06:52Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removing redundant phrase 'Inside of here' and simplifying to 'Inside'."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e1qlf",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Wrap bare URL in markdown link syntax.**\n\nLine 216 contains a bare URL which violates markdownlint rule MD034. Wrap it in markdown link syntax for proper formatting and accessibility.\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n- https://github.com/storybookjs/storybook/blob/3d49093954243d4d520774243866de840f298bf4/scripts/ci/main.ts#L70-L88\n+ [filter-function](https://github.com/storybookjs/storybook/blob/3d49093954243d4d520774243866de840f298bf4/scripts/ci/main.ts#L70-L88)\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n[filter-function](https://github.com/storybookjs/storybook/blob/3d49093954243d4d520774243866de840f298bf4/scripts/ci/main.ts#L70-L88)\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\uddf0 Tools</summary>\n\n<details>\n<summary>\ud83e\ude9b markdownlint-cli2 (0.18.1)</summary>\n\n216-216: Bare URL used\n\n(MD034, no-bare-urls)\n\n</details>\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @CONTRIBUTING.md at line 216, Replace the bare URL\n\"https://github.com/storybookjs/storybook/blob/3d49093954243d4d520774243866de840f298bf4/scripts/ci/main.ts#L70-L88\"\nin CONTRIBUTING.md with markdown link syntax (e.g., descriptive link text in\nsquare brackets followed by the URL in parentheses) so the URL is not bare and\ncomplies with MD034.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:triton:mongoose -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "CONTRIBUTING.md",
+          "line_number": 216,
+          "start_line": null,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-06T13:06:52Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests wrapping a bare URL in markdown link syntax to comply with markdownlint rules."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e1qli",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n**Replace hardcoded `/tmp` with `LINUX_ROOT_DIR` constant.**\n\nThe working directory paths use hardcoded `/tmp` instead of the `LINUX_ROOT_DIR` constant that's defined in `./utils/constants`. This creates an inconsistency with other files that use the constant.\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n+import { LINUX_ROOT_DIR, WINDOWS_ROOT_DIR } from './utils/constants';\n+\n         {\n           run: {\n             name: 'Storybook init from empty directory (Linux NPM)',\n-            working_directory: '/tmp',\n+            working_directory: LINUX_ROOT_DIR,\n             command: [\n-              `mkdir empty-${template}`,\n-              `cd empty-${template}`,\n+              `mkdir empty-${template}`,\n+              `cd empty-${template}`,\n               `npm set registry http://localhost:6001`,\n               `npx storybook init --yes --package-manager npm`,\n             ].join('\\n'),\n           },\n         },\n         {\n           run: {\n             name: 'Run storybook smoke test',\n-            working_directory: `/tmp/empty-${template}`,\n+            working_directory: `${LINUX_ROOT_DIR}/empty-${template}`,\n             command: 'npm run storybook -- --smoke-test',\n           },\n         },\n```\n\nApply similar changes to `defineEmptyInitFeatures` (lines 69, 86).\n</details>\n\n\n> Committable suggestion skipped: line range outside the PR's diff.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @scripts/ci/init-empty.ts around lines 24 - 47, Replace the hardcoded '/tmp'\nworking_directory values with the LINUX_ROOT_DIR constant imported from\n./utils/constants: update the working_directory in the Storybook init run and\nthe subsequent \"Run storybook smoke test\" run to use LINUX_ROOT_DIR (e.g.,\n`${LINUX_ROOT_DIR}/empty-${template}`), and apply the same replacement for the\nother occurrences inside defineEmptyInitFeatures (referenced by the function\nname defineEmptyInitFeatures) so all Linux paths use LINUX_ROOT_DIR\nconsistently; ensure you add the import for LINUX_ROOT_DIR if not already\npresent.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "scripts/ci/init-empty.ts",
+          "line_number": 47,
+          "start_line": 24,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-06T13:06:52Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests replacing hardcoded /tmp with LINUX_ROOT_DIR constant for consistency."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e1qll",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Add type validation for the workflow option.**\n\nThe `program.opts().workflow` value is passed directly to `generateConfig` without validation. An invalid workflow value would produce incorrect output silently.\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n+import { parameters } from './utils/parameters';\n+\n+const validWorkflows = parameters.workflow.enum;\n+\n program\n   .description('Generate CircleCI config')\n-  .requiredOption('-w, --workflow <string>', 'Workflow to generate config for')\n+  .requiredOption('-w, --workflow <string>', `Workflow to generate config for (${validWorkflows.join(', ')})`)\n+  .addOption(\n+    new Option('-w, --workflow <string>', 'Workflow to generate config for')\n+      .choices(validWorkflows)\n+      .makeOptionMandatory()\n+  )\n   .parse(process.argv);\n+\n+const workflow = program.opts().workflow as Workflow;\n```\n</details>\n\n\n> Committable suggestion skipped: line range outside the PR's diff.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @scripts/ci/main.ts around lines 141 - 152, The workflow option from\nprogram.opts().workflow is not validated before being passed into\ngenerateConfig, so add explicit validation: define the allowed workflow names\n(e.g., an allowedWorkflows array or enum), validate program.opts().workflow\nagainst that set, and if invalid log a clear error and exit (or throw) before\ncalling generateConfig; alternatively use commander\u2019s option validation/choices\non program.requiredOption to enforce acceptable values at parse time. Ensure the\nvalidation references program, program.opts().workflow and generateConfig so\ninvalid inputs fail fast with a descriptive message.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "scripts/ci/main.ts",
+          "line_number": 155,
+          "start_line": 144,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-06T13:06:52Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding validation for the workflow option to prevent silent failures."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e1qlp",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n**Avoid mutating the input array.**\n\nThe function uses `jobs.shift()` which mutates the input array, potentially surprising callers who don't expect their array to be emptied. Create a copy of the array first.\n\nAlso, the comment says \"recursive\" but the implementation is iterative with a queue.\n\n\n\n<details>\n<summary>\ud83d\udd0e Suggested fix to avoid mutation</summary>\n\n```diff\n /**\n- * We ensure that if (due to filtering for example) any required jobs are not present in the todos\n- * array, we add them back in. This is recursive, as a required job can have required jobs itself.\n+ * Ensures that all required jobs (and their transitive dependencies) are present in the jobs array.\n+ * Uses breadth-first traversal to collect all required jobs.\n  */\n export function ensureRequiredJobs(jobs: JobsOrHub[]): JobsOrHub[] {\n   const results: JobsOrHub[] = [];\n-  while (jobs.length > 0) {\n-    const job = jobs.shift();\n+  const queue = [...jobs]; // Create a copy to avoid mutating input\n+  while (queue.length > 0) {\n+    const job = queue.shift();\n     if (job) {\n       if (results.find((r) => r.id === job.id)) {\n         continue;\n       }\n       results.push(job);\n-      jobs.push(...job.requires);\n+      queue.push(...job.requires);\n     }\n   }\n   return results;\n }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n/**\n * Ensures that all required jobs (and their transitive dependencies) are present in the jobs array.\n * Uses breadth-first traversal to collect all required jobs.\n */\nexport function ensureRequiredJobs(jobs: JobsOrHub[]): JobsOrHub[] {\n  const results: JobsOrHub[] = [];\n  const queue = [...jobs]; // Create a copy to avoid mutating input\n  while (queue.length > 0) {\n    const job = queue.shift();\n    if (job) {\n      if (results.find((r) => r.id === job.id)) {\n        continue;\n      }\n      results.push(job);\n      queue.push(...job.requires);\n    }\n  }\n  return results;\n}\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @scripts/ci/utils/helpers.ts around lines 257 - 274, ensureRequiredJobs\ncurrently mutates its input by using jobs.shift(), which can unexpectedly empty\nthe caller's array; instead, copy the input (e.g., const queue = jobs.slice() or\n[...jobs]) and operate on that copy, replacing all uses of jobs with queue and\nusing queue.shift() to process without mutating the original. Also update the\ncomment above ensureRequiredJobs to reflect that the implementation is\niterative/queue-based rather than recursive (or implement true recursion if you\nprefer), and keep the behavior of deduplicating by id and enqueuing job.requires\nunchanged.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "scripts/ci/utils/helpers.ts",
+          "line_number": 281,
+          "start_line": 264,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-06T13:06:52Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags input array mutation via jobs.shift() and requests creating a copy first, also notes inaccurate comment."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e1qls",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, let's look at the pathExists function definition\nhead -30 scripts/tasks/sandbox.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 897\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the Task type definition\nrg -n \"type Task\" scripts/task.ts -A 10 --type ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1160\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for dependsOn property in Task type\nrg -n \"dependsOn\" scripts/task.ts --type ts -B 2 -A 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 709\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check other dependsOn implementations to see if any are async\nrg -n \"dependsOn:\" scripts/tasks --type ts -A 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2989\n\n---\n\n\n\n</details>\n\n**Critical: Missing `await` on async `pathExists` call causes logic error, but proposed fix is architecturally invalid.**\n\nThe `pathExists` function is async but it's not being awaited here. A Promise object is always truthy, so this condition will always evaluate to `true` when `inDevelopment` is set, incorrectly skipping the generation check.\n\nHowever, the suggested fix of making `dependsOn` async won't work: the `Task` type explicitly requires `dependsOn` to return `TaskKey[]` synchronously, not `Promise<TaskKey[]>`. The calling code (line 272 of task.ts) does not await the result.\n\nThe `dependsOn` function cannot be made async without violating the type system. The logic needs to be restructured\u2014either by removing the pathExists check from `dependsOn`, moving this async logic elsewhere, or finding a different approach that doesn't rely on async operations in this synchronous context.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @scripts/tasks/sandbox.ts around lines 24 - 31, The dependsOn callback for\nthe Task uses the async pathExists call incorrectly; since dependsOn must return\nTaskKey[] synchronously, remove the async pathExists check from dependsOn and\ninstead have dependsOn return the static dependency list for in-development\ntemplates (e.g., return ['run-registry', 'generate'] when\ntemplate.inDevelopment). Move the filesystem existence check into the generate\ntask's runtime (or a separate pre-run hook) where async I/O is allowed\u2014use\npathExists(join(SANDBOX_DIRECTORY, key)) inside the generate task or its\nrun/precondition to decide whether to skip generation\u2014ensuring dependsOn stays\nsynchronous and Task type constraints are preserved.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "scripts/tasks/sandbox.ts",
+          "line_number": 31,
+          "start_line": 24,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-06T13:06:52Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a critical bug where async pathExists is not awaited in a synchronous context, causing always-truthy evaluation."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e1wHk",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Add validation for the workflow option.**\n\nThe `program.opts().workflow` value is passed directly to `generateConfig` without validation against the allowed workflow enum values. Invalid workflow values would produce incorrect output silently.\n\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix using Commander's choices</summary>\n\n```diff\n+import { Option } from 'commander';\n+\n program\n   .description('Generate CircleCI config')\n-  .requiredOption('-w, --workflow <string>', 'Workflow to generate config for')\n+  .addOption(\n+    new Option('-w, --workflow <string>', 'Workflow to generate config for')\n+      .choices(parameters.workflow.enum as unknown as string[])\n+      .makeOptionMandatory()\n+  )\n   .parse(process.argv);\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nimport { Option } from 'commander';\n\nprogram\n  .description('Generate CircleCI config')\n  .addOption(\n    new Option('-w, --workflow <string>', 'Workflow to generate config for')\n      .choices(parameters.workflow.enum as unknown as string[])\n      .makeOptionMandatory()\n  )\n  .parse(process.argv);\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @scripts/ci/main.ts around lines 141 - 144, The CLI accepts\nprogram.opts().workflow and passes it to generateConfig without validating\nallowed values; add validation by restricting the option to the known workflows\nor checking after parse: update the call to program.requiredOption('-w,\n--workflow <string>', 'Workflow to generate config for') to include Commander\nchoices (e.g., .choices(ALLOWED_WORKFLOWS)) or after parse validate\nprogram.opts().workflow against the allowed workflow enum/array (e.g., WORKFLOWS\nor Workflow values) and if invalid print a clear error and exit\n(process.exit(1)) before calling generateConfig.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "scripts/ci/main.ts",
+          "line_number": 147,
+          "start_line": 144,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-06T13:15:37Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding validation for the workflow option using Commander's choices."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e1wHz",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Add guard for empty sandboxes array before accessing `sandboxes[0]`.**\n\nIf `getListOfSandboxes` returns an empty array (e.g., for an unrecognized workflow or when no sandboxes are configured for a workflow), accessing `sandboxes[0]` will be `undefined`, causing runtime errors in `defineWindowsSandboxBuild`, `defineWindowsSandboxDev`, and `defineSandboxTestRunner`.\n\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n   if (isWorkflowOrAbove(workflow, 'merged')) {\n+    if (sandboxes.length === 0) {\n+      return list;\n+    }\n     const windows_sandbox_build = defineWindowsSandboxBuild(sandboxes[0]);\n     const windows_sandbox_dev = defineWindowsSandboxDev(sandboxes[0]);\n     const testRunner = defineSandboxTestRunner(sandboxes[0]);\n\n     list.push(windows_sandbox_build, windows_sandbox_dev, testRunner);\n   }\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @scripts/ci/sandboxes.ts around lines 495 - 501, The code assumes\nsandboxes[0] exists before calling defineWindowsSandboxBuild,\ndefineWindowsSandboxDev, and defineSandboxTestRunner; add a guard that verifies\nthe sandboxes array is non-empty (e.g., if (!sandboxes || sandboxes.length ===\n0) return or skip) before accessing sandboxes[0] inside the\nisWorkflowOrAbove(workflow, 'merged') block, and only call\ndefineWindowsSandboxBuild, defineWindowsSandboxDev, and defineSandboxTestRunner\nwhen a sandbox is present so you avoid passing undefined to those functions.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "scripts/ci/sandboxes.ts",
+          "line_number": 501,
+          "start_line": null,
+          "commit_sha": "9e626e9b6f1481d127fb9dd5453ef653c4642042",
+          "created_at": "2026-01-06T13:15:38Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding a guard for empty sandboxes array before accessing sandboxes[0]."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e1wH1",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n**Avoid mutating the input array.**\n\nThe function uses `jobs.shift()` which mutates the input array, potentially surprising callers. Create a copy of the array first to avoid side effects.\n\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n export function ensureRequiredJobs(jobs: JobOrNoOpJob[]): JobOrNoOpJob[] {\n   const results: JobOrNoOpJob[] = [];\n-  while (jobs.length > 0) {\n-    const job = jobs.shift();\n+  const queue = [...jobs]; // Create a copy to avoid mutating input\n+  while (queue.length > 0) {\n+    const job = queue.shift();\n     if (job) {\n       if (results.find((r) => r.id === job.id)) {\n         continue;\n       }\n       results.push(job);\n-      jobs.push(...job.requires);\n+      queue.push(...job.requires);\n     }\n   }\n   return results;\n }\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @scripts/ci/utils/helpers.ts around lines 261 - 274, The function\nensureRequiredJobs currently mutates the input array by calling jobs.shift();\nmake a shallow copy of the input (e.g., const queue = [...jobs] or\nArray.from(jobs]) and operate on that copy instead, replacing all uses of jobs\nin the body with the new queue (shift/push on queue or use an index-based loop)\nso callers' arrays are not modified; keep the rest of the logic (dedup by id\nusing results.find, push results, and enqueue job.requires) unchanged.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "scripts/ci/utils/helpers.ts",
+          "line_number": 281,
+          "start_line": 268,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-06T13:15:38Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags input array mutation and requests creating a copy to avoid side effects."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e19ch",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Missing test results persistence for Windows build job.**\n\nThe E2E tests run at lines 463-468, but unlike `defineWindowsSandboxDev` (line 415), this function doesn't persist the test results. This means test results from Windows build jobs won't be collected by CircleCI.\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n         {\n           run: {\n             name: 'Running E2E Tests',\n             working_directory: 'code',\n             command: `yarn task e2e-tests --template ${sandbox.name} --no-link -s e2e-tests`,\n           },\n         },\n+        testResults.persist(`${WINDOWS_ROOT_DIR}\\\\${WORKING_DIR}\\\\test-results`),\n       ],\n     },\n     [sandbox.jobs[0]]\n   );\n }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n          run: {\n            name: 'Running E2E Tests',\n            working_directory: 'code',\n            command: `yarn task e2e-tests --template ${sandbox.name} --no-link -s e2e-tests`,\n          },\n        },\n        testResults.persist(`${WINDOWS_ROOT_DIR}\\\\${WORKING_DIR}\\\\test-results`),\n      ],\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @scripts/ci/sandboxes.ts around lines 463 - 469, The Windows build sandbox\n(defineWindowsSandboxBuild) runs E2E tests with the \"Running E2E Tests\" step but\ndoes not persist test results; add the same test-results persistence step used\nin defineWindowsSandboxDev immediately after that run step so CircleCI can\ncollect artifacts (mirror the exact persistence action/step used in\ndefineWindowsSandboxDev and place it after the run: { name: 'Running E2E Tests',\n... } entry).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit f166b06",
+          "file_path": "scripts/ci/sandboxes.ts",
+          "line_number": 464,
+          "start_line": 458,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-06T13:34:16Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags missing test results persistence for Windows build job and suggests adding it."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e2wae",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Critical: Add bounds check for `sandbox.jobs` array access.**\n\nThe function accesses `sandbox.jobs[2]` at line 370 and `sandbox.jobs[0]` at line 413 without validation. If the sandbox has fewer than 3 jobs, this will cause runtime errors.\n\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n export function defineWindowsSandboxDev(sandbox: ReturnType<typeof defineSandboxFlow>) {\n+  if (!sandbox.jobs[0] || !sandbox.jobs[2]) {\n+    throw new Error(`Cannot create Windows dev job: sandbox \"${sandbox.name}\" does not have required jobs (jobs[0] and jobs[2])`);\n+  }\n   return defineJob(\n     `${sandbox.jobs[2].id}-windows`,\n     {\n       executor: {\n         name: 'win/default',\n         size: 'xlarge',\n         shell: 'bash.exe',\n       },\n       steps: [\n         ...workflow.restoreWindows(),\n         verdaccio.start(),\n         server.wait([...verdaccio.ports]),\n         {\n           run: {\n             name: 'Run Install',\n             working_directory: `${WINDOWS_ROOT_DIR}\\\\${SANDBOX_DIR}\\\\${sandbox.path}`,\n             command: 'yarn install',\n           },\n         },\n         {\n           run: {\n             name: 'Install playwright',\n             command: 'yarn playwright install chromium --with-deps',\n           },\n         },\n         {\n           run: {\n             name: 'Run storybook',\n             background: true,\n             working_directory: `${WINDOWS_ROOT_DIR}\\\\${SANDBOX_DIR}\\\\${sandbox.path}`,\n             command: 'yarn storybook --port 8001',\n           },\n         },\n         server.wait(['8001']),\n         {\n           run: {\n             name: 'Running E2E Tests',\n             working_directory: 'code',\n             command: `yarn task e2e-tests-dev --template ${sandbox.name} --no-link -s e2e-tests-dev --junit`,\n           },\n         },\n         testResults.persist(`${WINDOWS_ROOT_DIR}\\\\${WORKING_DIR}\\\\test-results`),\n       ],\n     },\n     [sandbox.jobs[0]]\n   );\n }\n```\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "scripts/ci/sandboxes.ts",
+          "line_number": 415,
+          "start_line": 368,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-06T14:41:28Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding bounds checks for sandbox.jobs array accesses to prevent runtime errors."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e2wah",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Critical: Add bounds check for `sandbox.jobs` array access.**\n\nThe function accesses `sandbox.jobs[1]` at line 419 and `sandbox.jobs[0]` at line 466 without validation. If the sandbox has fewer than 2 jobs, this will cause runtime errors.\n\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n export function defineWindowsSandboxBuild(sandbox: ReturnType<typeof defineSandboxFlow>) {\n+  if (!sandbox.jobs[0] || !sandbox.jobs[1]) {\n+    throw new Error(`Cannot create Windows build job: sandbox \"${sandbox.name}\" does not have required jobs (jobs[0] and jobs[1])`);\n+  }\n   return defineJob(\n     `${sandbox.jobs[1].id}-windows`,\n     {\n       executor: {\n         name: 'win/default',\n         size: 'xlarge',\n         shell: 'bash.exe',\n       },\n       steps: [\n         ...workflow.restoreWindows(),\n         verdaccio.start(),\n         server.wait([...verdaccio.ports]),\n         {\n           run: {\n             name: 'Run Install',\n             working_directory: `${WINDOWS_ROOT_DIR}\\\\${SANDBOX_DIR}\\\\${sandbox.path}`,\n             command: 'yarn install',\n           },\n         },\n         {\n           run: {\n             name: 'Install playwright',\n             command: 'yarn playwright install chromium --with-deps',\n           },\n         },\n         {\n           run: {\n             name: 'Build storybook',\n             command: `yarn task build --template ${sandbox.name} --no-link -s build`,\n           },\n         },\n         {\n           run: {\n             name: 'Serve storybook',\n             background: true,\n             command: `yarn task serve --template ${sandbox.name} --no-link -s serve`,\n           },\n         },\n         server.wait(['8001']),\n         {\n           run: {\n             name: 'Running E2E Tests',\n             working_directory: 'code',\n             command: `yarn task e2e-tests --template ${sandbox.name} --no-link -s e2e-tests`,\n           },\n         },\n       ],\n     },\n     [sandbox.jobs[0]]\n   );\n }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nexport function defineWindowsSandboxBuild(sandbox: ReturnType<typeof defineSandboxFlow>) {\n  if (!sandbox.jobs[0] || !sandbox.jobs[1]) {\n    throw new Error(`Cannot create Windows build job: sandbox \"${sandbox.name}\" does not have required jobs (jobs[0] and jobs[1])`);\n  }\n  return defineJob(\n    `${sandbox.jobs[1].id}-windows`,\n    {\n      executor: {\n        name: 'win/default',\n        size: 'xlarge',\n        shell: 'bash.exe',\n      },\n      steps: [\n        ...workflow.restoreWindows(),\n        verdaccio.start(),\n        server.wait([...verdaccio.ports]),\n        {\n          run: {\n            name: 'Run Install',\n            working_directory: `${WINDOWS_ROOT_DIR}\\\\${SANDBOX_DIR}\\\\${sandbox.path}`,\n            command: 'yarn install',\n          },\n        },\n        {\n          run: {\n            name: 'Install playwright',\n            command: 'yarn playwright install chromium --with-deps',\n          },\n        },\n        {\n          run: {\n            name: 'Build storybook',\n            command: `yarn task build --template ${sandbox.name} --no-link -s build`,\n          },\n        },\n        {\n          run: {\n            name: 'Serve storybook',\n            background: true,\n            command: `yarn task serve --template ${sandbox.name} --no-link -s serve`,\n          },\n        },\n        server.wait(['8001']),\n        {\n          run: {\n            name: 'Running E2E Tests',\n            working_directory: 'code',\n            command: `yarn task e2e-tests --template ${sandbox.name} --no-link -s e2e-tests`,\n          },\n        },\n      ],\n    },\n    [sandbox.jobs[0]]\n  );\n}\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @scripts/ci/sandboxes.ts around lines 417 - 468, The function\ndefineWindowsSandboxBuild uses sandbox.jobs[1] and sandbox.jobs[0] without\nchecking array length; add an early bounds check at the top of\ndefineWindowsSandboxBuild to validate sandbox.jobs has at least 2 entries (or at\nminimum the indices you need) and throw a clear error or return early if not;\nupdate all references to sandbox.jobs[1] (the job id used for the job name) and\nsandbox.jobs[0] (the dependency passed as the last argument) to rely on the\nvalidated values so you never index out of bounds.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "scripts/ci/sandboxes.ts",
+          "line_number": 468,
+          "start_line": 417,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-06T14:41:28Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding bounds checks for sandbox.jobs array accesses to prevent runtime errors."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e2wao",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n**Replace `process.env.NEVER_TRUE` with a proper feature flag.**\n\nUsing `process.env.NEVER_TRUE` as a condition is a code smell that disables code in a non-obvious way. Based on the PR objectives mentioning Windows jobs' high cost, this appears to be intentionally disabled but should use a meaningful environment variable name.\n\nConsider using a descriptive feature flag like `ENABLE_WINDOWS_SANDBOXES` or `CI_SKIP_WINDOWS_JOBS` to make the intent clear and allow proper runtime control.\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed refactor</summary>\n\n```diff\n-  if (isWorkflowOrAbove(workflow, 'merged') && process.env.NEVER_TRUE) {\n+  if (isWorkflowOrAbove(workflow, 'merged') && process.env.ENABLE_WINDOWS_SANDBOXES === 'true') {\n+    if (sandboxes.length === 0) {\n+      return list;\n+    }\n     const windows_sandbox_build = defineWindowsSandboxBuild(sandboxes[0]);\n     const windows_sandbox_dev = defineWindowsSandboxDev(sandboxes[0]);\n     const testRunner = defineSandboxTestRunner(sandboxes[0]);\n\n     list.push(windows_sandbox_build, windows_sandbox_dev, testRunner);\n   }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  if (isWorkflowOrAbove(workflow, 'merged') && process.env.ENABLE_WINDOWS_SANDBOXES === 'true') {\n    if (sandboxes.length === 0) {\n      return list;\n    }\n    const windows_sandbox_build = defineWindowsSandboxBuild(sandboxes[0]);\n    const windows_sandbox_dev = defineWindowsSandboxDev(sandboxes[0]);\n    const testRunner = defineSandboxTestRunner(sandboxes[0]);\n\n    list.push(windows_sandbox_build, windows_sandbox_dev, testRunner);\n  }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @scripts/ci/sandboxes.ts around lines 490 - 496, The conditional currently\nuses the placeholder process.env.NEVER_TRUE which hides intent; replace it with\na clear, documented feature flag (e.g., process.env.ENABLE_WINDOWS_SANDBOXES)\nand update the condition in the isWorkflowOrAbove(...) block so the Windows jobs\n(defineWindowsSandboxBuild, defineWindowsSandboxDev, defineSandboxTestRunner)\nare only pushed to the list when the flag is truthy; also add a short comment\nexplaining the flag and ensure any CI config or README mentions the new\nenvironment variable so it can be toggled at runtime.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "scripts/ci/sandboxes.ts",
+          "line_number": 496,
+          "start_line": null,
+          "commit_sha": "f166b06501b0db171294973062740bb479df9655",
+          "created_at": "2026-01-06T14:41:29Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests replacing process.env.NEVER_TRUE with a meaningful feature flag name."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e2waw",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Critical: Add bounds check for `sandboxes[0]` access.**\n\nIf the feature flag is enabled and `getListOfSandboxes` returns an empty array (e.g., for an unrecognized workflow or when no sandboxes are configured), accessing `sandboxes[0]` will be undefined, causing runtime errors in the Windows sandbox and test-runner functions.\n\nNote: This issue is currently dormant since the code is unreachable, but will become critical if the `process.env.NEVER_TRUE` condition is replaced with a real feature flag.\n\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n   if (isWorkflowOrAbove(workflow, 'merged') && process.env.NEVER_TRUE) {\n+    if (sandboxes.length === 0) {\n+      return list;\n+    }\n     const windows_sandbox_build = defineWindowsSandboxBuild(sandboxes[0]);\n     const windows_sandbox_dev = defineWindowsSandboxDev(sandboxes[0]);\n     const testRunner = defineSandboxTestRunner(sandboxes[0]);\n\n     list.push(windows_sandbox_build, windows_sandbox_dev, testRunner);\n   }\n```\n</details>\n\n> Committable suggestion skipped: line range outside the PR's diff.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @scripts/ci/sandboxes.ts around lines 491 - 495, The code assumes\nsandboxes[0] exists when calling defineWindowsSandboxBuild,\ndefineWindowsSandboxDev, and defineSandboxTestRunner; add a bounds check before\nusing sandboxes[0] (e.g., verify sandboxes && sandboxes.length > 0) and either\nskip creating/pushing the three Windows/test-runner jobs or bail out with a\nclear error/log if no sandboxes are returned by getListOfSandboxes; update the\nblock that creates windows_sandbox_build, windows_sandbox_dev, and testRunner to\nonly run those calls when sandboxes[0] is defined.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "scripts/ci/sandboxes.ts",
+          "line_number": 495,
+          "start_line": 491,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-06T14:41:29Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding a bounds check for sandboxes[0] access to prevent runtime errors."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fQxYs",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Clarify the purpose of the test-runner job.**\n\nThe comment reveals uncertainty about whether this job validates the test-runner itself or the sandbox. This ambiguity suggests the team should document or reconsider this logic before it becomes harder to maintain.\n\n\n\nConsider either:\n1. Documenting the intent clearly if the current behavior is correct\n2. Simplifying the logic at lines 334-336 if the conditional inclusion is overly complex\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @scripts/ci/sandboxes.ts around lines 326 - 336, The conditional around\nincluding testRunnerJob is ambiguous about intent; decide whether test-runner\nvalidates the runner once or per-sandbox and then make the code and comment\nexplicit. If test-runner is intended to validate the test runner globally,\nsimplify to include testRunnerJob once (remove per-sandbox conditional) and add\na clarifying comment; if it must validate each sandbox, change the condition to\nrun testRunnerJob for every sandbox unless chromatic is running for that sandbox\n(or document that chromatic skips test-runner globally). Update the condition\nthat currently uses skipTasks, testRunnerJob, and chromatic to match the chosen\nintent and add a short comment explaining the rationale so future readers know\nwhy testRunnerJob is included or omitted.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "scripts/ci/sandboxes.ts",
+          "line_number": 336,
+          "start_line": 326,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-08T11:24:20Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags ambiguity in the test-runner job's purpose and requests documenting or simplifying the logic."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fQxYv",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Fragile array indexing: Replace hardcoded indices with named references.**\n\nLines 347 and 364 access `sandbox.jobs[1]` assuming it's the build job. If the job order in `defineSandboxFlow` changes (lines 318-337), this will break silently.\n\n\n\n<details>\n<summary>\ud83d\udd27 Suggested refactor for maintainability</summary>\n\nConsider restructuring `defineSandboxFlow` to return a named object:\n\n```typescript\n// In defineSandboxFlow, instead of returning:\nreturn {\n  name: key,\n  path,\n  jobs,\n};\n\n// Return:\nreturn {\n  name: key,\n  path,\n  jobs: {\n    create: createJob,\n    build: buildJob,\n    dev: devJob,\n    chromatic: chromaticJob,\n    vitest: vitestJob,\n    e2e: e2eJob,\n    testRunner: testRunnerJob,\n  },\n  allJobs: jobs, // flat array for backward compatibility\n};\n\n// Then in defineSandboxTestRunner:\n[sandbox.jobs.build] // instead of sandbox.jobs[1]\n```\n\nThis makes dependencies explicit and prevents silent breakage.\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @scripts/ci/sandboxes.ts around lines 345 - 366, The code uses fragile\nnumeric indexing (sandbox.jobs[1]) to reference the build job; refactor\ndefineSandboxFlow to return a jobs object with named properties (e.g., jobs: {\ncreate, build, dev, chromatic, vitest, e2e, testRunner } and keep the original\nflat array as allJobs for compatibility), then update defineSandboxTestRunner to\nuse the named reference (sandbox.jobs.build) for both the job id in the name and\nthe dependency list instead of sandbox.jobs[1]; ensure other callers still work\nby preserving the flat jobs array as allJobs.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "scripts/ci/sandboxes.ts",
+          "line_number": 366,
+          "start_line": 345,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-08T11:24:20Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags fragile hardcoded array indexing and suggests refactoring to named references."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fQxY0",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Fragile array indexing: Same issue with Windows sandbox jobs.**\n\nLines 370, 413, 419, and 466 use hardcoded array indices `[0]`, `[1]`, `[2]` to access create, build, and dev jobs. This is part of the same maintainability risk flagged in `defineSandboxTestRunner`.\n\n\n\nApply the same refactoring suggested in the previous comment to use named job references instead of array indices. This will make all sandbox-related functions more resilient to changes.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @scripts/ci/sandboxes.ts around lines 368 - 468, The Windows sandbox jobs use\nfragile numeric indices on sandbox.jobs; replace those with named variables by\ndestructuring or finding the roles at the top of each function (e.g., const\n[createJob, buildJob, devJob] = sandbox.jobs) and then use createJob, buildJob,\ndevJob (and their .id) in the defineJob name and the dependency arrays instead\nof sandbox.jobs[0], sandbox.jobs[1], and sandbox.jobs[2]; update references in\ndefineWindowsSandboxDev (where sandbox.jobs[2] and [sandbox.jobs[0]] are used)\nand defineWindowsSandboxBuild (where sandbox.jobs[1] and [sandbox.jobs[0]] are\nused).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "scripts/ci/sandboxes.ts",
+          "line_number": 468,
+          "start_line": 368,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-08T11:24:21Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags fragile hardcoded array indices in Windows sandbox jobs and suggests using named variables."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fQxY3",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Add `shell` property to the Windows executor type.**\n\nThe executor type definition is missing the `shell` property that's used in practice. For example, `scripts/ci/init-empty.ts` line 103 and `scripts/ci/common-jobs.ts` line 89 use `shell: 'bash.exe'`, but the type doesn't include this field.\n\n\n\n<details>\n<summary>\ud83d\udd27 Proposed fix to add shell property</summary>\n\n```diff\n     | {\n         name: 'win/default';\n         size: 'small' | 'medium' | 'medium+' | 'large' | 'xlarge';\n+        shell?: string;\n       };\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nexport type JobImplementationObj = {\n  executor:\n    | {\n        name: keyof typeof executors;\n        class: 'small' | 'medium' | 'medium+' | 'large' | 'xlarge';\n      }\n    | {\n        name: 'win/default';\n        size: 'small' | 'medium' | 'medium+' | 'large' | 'xlarge';\n        shell?: string;\n      };\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @scripts/ci/utils/types.ts around lines 20 - 29, The JobImplementationObj\nexecutor union is missing the shell property for the Windows executor variant;\nupdate the second union branch (the one with name: 'win/default') to include a\nshell field (e.g., shell: string or a constrained union of known shells like\n'bash.exe') so code that uses shell (e.g., scripts/ci/init-empty.ts and\nscripts/ci/common-jobs.ts) type-checks; keep the existing size field and only\nadd the shell property to the Windows-specific executor shape.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "scripts/ci/utils/types.ts",
+          "line_number": 29,
+          "start_line": 20,
+          "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+          "created_at": "2026-01-08T11:24:21Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags missing shell property in the Windows executor type definition and requests adding it."
+    }
+  ],
+  "review_thread_count": 42,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6ZYKec",
+            "author": "ndelangen",
+            "body": "TODO: figure out why this was needed",
+            "file_path": "code/core/src/node-logger/logger/logger.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "e14b5ffe47e788383ed083d0a4e7c59ece71a459",
+            "created_at": "2025-11-29T23:31:07Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6eX_Zn",
+            "author": "valentinpalkovic",
+            "body": "\u261d\ufe0f",
+            "file_path": "code/core/src/node-logger/logger/logger.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "e14b5ffe47e788383ed083d0a4e7c59ece71a459",
+            "created_at": "2026-01-02T08:55:18Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6eYBGH",
+            "author": "valentinpalkovic",
+            "body": "Can you elaborate?",
+            "file_path": "scripts/build/utils/generate-types.ts",
+            "line_number": 86,
+            "start_line": null,
+            "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+            "created_at": "2026-01-02T09:01:13Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6eZYkc",
+            "author": "ndelangen",
+            "body": "Yeah, NX is already logging the fact the task is being done.\r\n\r\nError in logs should be easy to access/find.\r\n\r\nCurrently when something fails, you have to scroll past many success messages, since the logs are long, it can be difficult to spot the errors in them.\r\nMaking the logs less noisy, and thus less long, will help in getting to the errors in the logs faster/easier.",
+            "file_path": "scripts/build/utils/generate-types.ts",
+            "line_number": 86,
+            "start_line": null,
+            "commit_sha": "b9aa2add1509007b376a5bf340458c3ee443167b",
+            "created_at": "2026-01-02T10:18:23Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": true,
+        "actionable": false,
+        "actionability_reasoning": "Pure question seeking clarification with no implied code change."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 42,
+    "stage1_kept": 41,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 1,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1
+  }
+}

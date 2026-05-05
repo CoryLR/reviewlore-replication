@@ -1,0 +1,165 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3635,
+  "title": "MAINT: Use `comm` in `MaxwellBoltzmannDistribution` instead of `communicator`",
+  "body": "This is a follow up of !3631.\n\nIn the present ASE, `comm` is used as\n```\n% git grep \"comm=\"\nase/build/attach.py:                                  comm=world):\nase/build/attach.py:        broadcast(joined, 0, comm=comm)\nase/calculators/dftd3.py:                 comm=world,\nase/calculators/dftd3.py:        dftd3 = PureDFTD3(label=label, command=command, comm=comm, **kwargs)\nase/calculators/dftd3.py:                 comm=world,\nase/calculators/dftd3.py:        dct = broadcast(dct, root=0, comm=self.comm)\nase/calculators/lammpslib.py:        comm=None)\nase/calculators/lammpslib.py:                              comm=self.parameters.comm)\nase/calculators/qmmm.py:                 vacuum=None, embedding=None, output=None, comm=world):\nase/calculators/qmmm.py:        self.output = self.openfile(file=output, comm=comm)\nase/calculators/socketio.py:                 unixsocket=None, timeout=None, log=None, comm=world):\nase/calculators/socketio.py:                 launch_client=None, comm=world):\nase/calculators/socketio.py:        self.log = self.openfile(file=log, comm=comm)\nase/calculators/vdwcorrection.py:                 txt=None, sR=None, comm=world):\nase/calculators/vdwcorrection.py:        self.txt = self.openfile(file=txt, comm=self.comm)\nase/dft/dos.py:    def __init__(self, calc, width=0.1, window=None, npts=401, comm=world):\nase/dft/dos.py:                                                 self.energies, comm=self.comm)\nase/dft/dos.py:                                   weights=None, comm=world):\nase/io/trajectory.py:               comm=world):\nase/io/trajectory.py:                            comm=comm)\nase/io/trajectory.py:                 master=None, comm=world):\nase/md/logger.py:        comm=world,\nase/md/logger.py:        self.logfile = self.openfile(file=logfile, mode=mode, comm=comm)\nase/mep/dimer.py:    def __init__(self, logfile='-', eigenmode_logfile=None, comm=world,\nase/mep/dimer.py:        self.initialize_logfiles(comm=comm, logfile=logfile,\nase/mep/dimer.py:        self.logfile = self.openfile(file=logfile, comm=comm)\nase/mep/dimer.py:                                               comm=comm)\nase/mep/dimer.py:                 random_seed=None, comm=world, **kwargs):\nase/mep/dimer.py:            self.control.initialize_logfiles(comm=comm, logfile=logfile,\nase/optimize/optimize.py:        comm=world,\nase/optimize/optimize.py:        self.logfile = self.openfile(file=logfile, comm=comm, mode='a')\nase/optimize/optimize.py:                    trajectory, mode=mode, master=master, comm=comm\nase/parallel.py:def paropen(name, mode='r', buffering=-1, encoding=None, comm=None):\nase/parallel.py:    def __init__(self, mpi4py_comm=None):\nase/parallel.py:def broadcast(obj, root=0, comm=world):\nase/phonons.py:                 delta=0.01, center_refcell=False, comm=None):\nase/test/factories.py:        lmp = lammps.lammps(name='', cmdargs=cmd_args, comm=None)\nase/utils/filecache.py:        return MultiFileJSONCache(directory, comm=comm)\nase/utils/filecache.py:        return MultiFileULMCache(directory, comm=comm)\nase/utils/filecache.py:    def __init__(self, directory, comm=world):\nase/utils/filecache.py:                                        comm=self.comm)\nase/utils/filecache.py:    def __init__(self, directory, dct, comm=world):\nase/utils/filecache.py:        self.backend.open_and_write(target, self._dct, comm=self.comm)\nase/utils/filecache.py:    def dump_cache(cls, path, dct, comm=world):\nase/utils/filecache.py:        cache = cls(path, dct, comm=comm)\nase/utils/filecache.py:        cache = cls(path, {}, comm=comm)\nase/utils/filecache.py:                                                    comm=self.comm)\nase/utils/filecache.py:def get_json_cache(directory, comm=world):\nase/utils/filecache.py:        return CombinedJSONCache.load(directory, comm=comm)\nase/utils/filecache.py:        return MultiFileJSONCache(directory, comm=comm)\nase/vibrations/raman.py:                 comm=world,\nase/vibrations/raman.py:        self.txt = self.openfile(file=txt, comm=comm)\nase/vibrations/raman.py:                 comm=world,\nase/vibrations/raman.py:        self.txt = self.openfile(file=txt, comm=comm)\nase/vibrations/raman.py:            log = io.openfile(file=log, mode='a', comm=self.comm)\nase/vibrations/resonant_raman.py:                 comm=world,\n```\nWhile `communicator` is used only in `velocitydistribution.py`.\n```\n% git grep \"communicator=\"\nase/md/velocitydistribution.py:def _maxwellboltzmanndistribution(masses, temp, communicator=None, rng=None):\nase/md/velocitydistribution.py:    communicator=None,\n```\nThis MR suggests using `comm` also in `velocitydistribution.py` for consistency in whole ASE.\n\nThis MR also suggests to deprecate `None` and `serial` in `MaxwellBoltzmannDistribution`; particularly the latter can be replaced with explicit `DummyMPI()`.\n\n@schiotz: May I again request your review, as this is also relevant to ASAP?\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://wiki.fysik.dtu.dk/ase/development/contribute.html)\n- [x] [**Doc strings** in code changed in this MR are up to date.](https://wiki.fysik.dtu.dk/ase/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [~] [**Unit tests** have been added for new or changed code.](https://wiki.fysik.dtu.dk/ase/development/tests.html)\n- [~] [**Changes** have been added in `changelog.d` using `scriv`.](https://wiki.fysik.dtu.dk/ase/development/writing_changelog.html)\n- [~] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "yuzie007",
+  "merged_at": "2025-07-29T22:31:02.993Z",
+  "base_ref": "master",
+  "merge_commit_sha": "32592d1a1fcf0f70cc41278c99f3199a8399842f",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2655838375",
+          "author": "schiotz",
+          "body": "Maybe we should take the opportunity and fix the spelling of 'Parameters' :-)",
+          "file_path": "ase/md/velocitydistribution.py",
+          "line_number": 70,
+          "commit_sha": "4e94d92156c46ec51eb4183ce694ad3916704d4f",
+          "base_sha": "ec970539664cd920c2570339edd197f7e8ca522f",
+          "created_at": "2025-07-29T08:51:20.886Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2657570265",
+          "author": "yuzie007",
+          "body": "Thank you for finding the typo! Fixed in the added commit.",
+          "file_path": "ase/md/velocitydistribution.py",
+          "line_number": 70,
+          "commit_sha": "4e94d92156c46ec51eb4183ce694ad3916704d4f",
+          "base_sha": "ec970539664cd920c2570339edd197f7e8ca522f",
+          "created_at": "2025-07-29T21:22:47.769Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests fixing a spelling error ('Parameters'), which implies a concrete code change."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2655838381",
+          "author": "schiotz",
+          "body": "I think we should increment both version numbers by one, since 3.25.0 has been released since this MR was made (mea culpa).",
+          "file_path": "ase/md/velocitydistribution.py",
+          "line_number": 147,
+          "commit_sha": "4e94d92156c46ec51eb4183ce694ad3916704d4f",
+          "base_sha": "ec970539664cd920c2570339edd197f7e8ca522f",
+          "created_at": "2025-07-29T08:51:21.161Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2657570273",
+          "author": "yuzie007",
+          "body": "Incremented the version numbers in the revised commit!",
+          "file_path": "ase/md/velocitydistribution.py",
+          "line_number": 147,
+          "commit_sha": "4e94d92156c46ec51eb4183ce694ad3916704d4f",
+          "base_sha": "ec970539664cd920c2570339edd197f7e8ca522f",
+          "created_at": "2025-07-29T21:22:48.181Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests incrementing version numbers, which is a specific code change."
+    }
+  ],
+  "review_thread_count": 5,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2657570279",
+            "author": "yuzie007",
+            "body": "Thank you so much @schiotz for the update on the ASAP side and also for the review on the present MR!\n\n@askhl: What's your view on this MR? Would you think it is OK-ish to merge? (cf. !3544 is also related to the ASAP update before.)",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-07-29T21:22:48.448Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2655843581",
+            "author": "schiotz",
+            "body": "I think this looks good.  I does indeed influence Asap, but a fix in Asap has just been committed (https://gitlab.com/asap/asap/-/commit/5f3ac7b30fc54ecb03acfc949db92fe324b150c6).  Sorry for the late reaction from my part.\n\nI added a few comments above (spelling and version numbers).",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-07-29T08:53:14.355Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "General approval comment summarizing the review; the actual feedback is contained in the inline comments (indices 0 and 1) referenced here. This comment itself does not suggest any new code change."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2657640093",
+            "author": "askhl",
+            "body": "It is great that the communicator keywords become more systematic.  Thanks a lot @yuzie007 and @schiotz!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-07-29T22:30:56.604Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment and appreciation comment with no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 5,
+    "stage1_kept": 4,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 1,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 2,
+    "stage3_cost_usd": 0.01472125
+  }
+}

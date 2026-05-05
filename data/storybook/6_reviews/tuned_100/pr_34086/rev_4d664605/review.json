@@ -1,0 +1,38 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/docs/src/blocks/blocks/Canvas.tsx",
+      "line_number": 99,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "There is no way to opt out of the reload button. `onReloadStory` is unconditionally set to `handleReloadStory` for every inline story, which causes `withToolbar || !!onReloadStory` in `Preview.tsx` to always be `true`. This silently overrides an explicit `withToolbar: false` set via `parameters.docs.canvas.withToolbar` or the `withToolbar` prop on `<Canvas>`. A user who deliberately suppressed the toolbar will see it reappear after this change.\n\nConsider gating the reload handler on the resolved `withToolbar` value, e.g.:\n```tsx\nonReloadStory={inline && withToolbar ? handleReloadStory : undefined}\n```\nOr introduce a separate opt-out escape hatch (e.g., `withReloadButton` prop or a `parameters.docs.canvas.withReloadButton` parameter) and document how to disable it.",
+      "index": 0
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/components/Toolbar.tsx",
+      "line_number": 79,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `key=\"reload\"` prop on this `Button` is unnecessary. React only uses `key` for reconciliation of elements in an array (e.g., returned from `.map()`). This element is inside a fragment, not an array, so the prop is silently ignored by React and misleads future readers into thinking it serves a purpose. Remove it. The pre-existing `<Wrapper key=\"left\">` in the parent is unrelated \u2014 that `key` is on the wrapper itself, not on its non-array children.",
+      "index": 1
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/components/Toolbar.tsx",
+      "line_number": 76,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The reload button provides no visual feedback after it is clicked. The manager's equivalent remount tool (`code/core/src/manager/components/preview/tools/remount.tsx`) listens for the `FORCE_REMOUNT` event on the channel and applies a CSS rotation animation to `SyncIcon` for the duration of the remount, giving the user clear confirmation the action registered. The docs button just fires `onClick` with no state change, so a user who clicks it cannot tell whether the click was received or the remount is in progress. Consider adding the same animation pattern (or a simpler `isRemounting` boolean state toggled on click and cleared on the next render) to match the established UX.",
+      "index": 2
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The PR adds new user-visible behaviour \u2014 a reload button, `FORCE_REMOUNT` emission, and conditional toolbar visibility \u2014 but the entire testing checklist is unchecked and no tests of any kind are included.\n\nAt minimum, the PR should add:\n1. **Unit test** \u2014 assert that clicking (or calling) the reload handler emits `FORCE_REMOUNT` with the correct `storyId` on the docs channel. A mock of `docsContext.channel.emit` makes this straightforward.\n2. **Story update** \u2014 add a variant to `Preview.stories.tsx` (or a new `Canvas.stories.tsx` entry) that passes `onReloadStory` and includes a `play` function verifying the reload `Button` is present in the DOM and fires the callback when clicked.\n3. **Negative case** \u2014 a test or story asserting the reload button is absent when `inline` is `false` (the iframe path), so the conditional at `Canvas.tsx:99` is explicitly covered.",
+      "index": 3
+    }
+  ],
+  "cost_usd": 0.5131256500000001,
+  "duration_seconds": 300.02525997161865
+}

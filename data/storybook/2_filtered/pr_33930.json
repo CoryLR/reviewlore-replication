@@ -1,0 +1,74 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33930,
+  "title": "HMR: Fix race conditions causing stale play functions to fire on re-rendered stories",
+  "body": "On every file save, up to three independent re-render triggers fired simultaneously \u2014 the HMR accept callback, the leading-edge `STORY_INDEX_INVALIDATED`, and the trailing-edge `STORY_INDEX_INVALIDATED`. Concurrently, `STORY_HOT_UPDATED` was emitted *after* `onStoriesChanged` had already started a new render, meaning it cancelled the *new* play function instead of the old one, causing user-event interactions to bleed into freshly-mounted components.\n\n## Changes\n\n- **`index-json.ts`** \u2014 Change `STORY_INDEX_INVALIDATED` debounce from `edges: ['leading', 'trailing']` to `edges: ['trailing']` only. Eliminates the redundant immediate-fire on every save; the trailing emit (100ms after last change) aligns with when the index is fully regenerated, and the `STORY_UNCHANGED` check in `renderSelection` skips the re-render when nothing structurally changed.\n\n- **`codegen-modern-iframe-script.ts` (Vite)** \u2014 Remove the `vite:afterUpdate` listener for `STORY_HOT_UPDATED` (fired for *all* updates, after accept callbacks) and emit it at the top of the `VIRTUAL_STORIES_FILE` accept callback, before `onStoriesChanged`:\n  ```ts\n  import.meta.hot.accept(VIRTUAL_STORIES_FILE, (newModule) => {\n    // Cancel any running play function before patching in the new importFn\n    window.__STORYBOOK_PREVIEW__.channel.emit('storyHotUpdated');\n    window.__STORYBOOK_PREVIEW__.onStoriesChanged({ importFn: newModule.importFn });\n  });\n  ```\n\n- **`codegen-project-annotations.ts` (Vite)** \u2014 Same fix applied to the project annotations accept callbacks.\n\n- **`virtualModuleModernEntry.js` (Webpack)** \u2014 Remove the `addStatusHandler`-based `STORY_HOT_UPDATED` emit (fired after all HMR is `idle`) and move it before `onStoriesChanged` / `onGetProjectAnnotationsChanged` in each accept callback.\n\nTogether these changes ensure: (1) at most one `STORY_INDEX_INVALIDATED` fires per save; (2) the old play function is always cancelled *before* the new render starts, not after.\n\n<!-- START COPILOT ORIGINAL PROMPT -->\n\n\n\n<details>\n\n<summary>Original prompt</summary>\n\n> \n> ----\n> \n> *This section details on the original issue you should resolve*\n> \n> <issue_title>[Bug]: Storybook events are incorrect on HMR and cause inconsistencies</issue_title>\n> <issue_description>### Describe the bug\n> \n> When a story has a play function (especially ones that relate to typing on inputs), and the user triggers HMR by saving the story file, things get into a broken state.\n> \n> ![Image](https://github.com/user-attachments/assets/9720b738-2447-46e9-8258-b12d8bc14481)\n> \n> ### A bit more context\n> Storybook has many different events which get emitted over the channel, and different story render phases which occur based on such events.\n> Normally, a story goes through these render phases in order:\n> `preparing,loading,rendering,playing,played,completing,completed,afterEach,finished`\n> \n> But upon HMR, there are special events which get emmitted such as `storyIndexInvalidated`, `storyHotUpdated` and `globalsUpdated`, all of which trigger a chain of other events, which cause stories to get prepared, loaded and rendered. However, given that multiple of these happen, some of these phases get aborted in the process, and it's quite possible that there are race conditions and one thing affects the other.\n> \n> ### Seeing this in practice\n> Here's a video with more details and explanation:\n> https://streamable.com/hwh72u\n> \n> \n> ### Reproduction link\n> \n> https://stackblitz.com/edit/github-grxyqq9r?file=src%2Fstories%2Fform.css,src%2Fstories%2FForm.stories.ts&preset=node\n> \n> ### Reproduction steps\n> \n> The reproduction shows the issue quite easily, although somehow the issue doesn't occur in Stackblitz IDE mode. It does occur if you eject the story and trigger HMR. Regardless, I'd recommend running the reproduction locally instead, which consistently gives the issue.\n> </issue_description>\n> \n> ## Comments on the Issue (you are @copilot in this section)\n> \n> <comments>\n> <comment_new><author>@ndelangen</author><body>\n> I'll investigate, but there's likely no easy for we can do prior to sb10</body></comment_new>\n> <comment_new><author>@yannbf</author><body>\n> Context after some investigation:\n> \n> - The preview gets invalidated both by builder HMR and by channel events (STORY_INDEX_INVALIDATED or similar). Both trigger re-renders, often back to back, which seems to cause race conditions.\n> \n> - The preview\u2019s state management is spread across a store, an index fetched from the server, and multiple special render flows (force remount, pending, etc), making it harder to reason about what causes what.\n> \n> - Cancelling/teardown logic isn\u2019t always airtight. Sometimes, a previous play function continues to run into a new render, so you get duplicate/interleaved effects or test failures.\n> \n> - File-watching + builder detection layers both emit change events (even after debouncing, a single save triggers several events). When saving rapidly, things can break unpredictably across preview, indexer and builder HMR logic.\n> \n> - Multiple layers try to debounce or guard against double-renders, but this adds complexity and can leave gaps.\n> \n> - These have been papered over by guard code for a while, but the underlying behavior is fragile and not consistently tested\u2014especially for fast succession updates.</body></comment_new>\n> </comments>\n> \n\n\n</details>\n\n\n\n<!-- START COPILOT CODING AGENT SUFFIX -->\n\n- Fixes storybookjs/storybook#32389\n\n<!-- START COPILOT CODING AGENT TIPS -->\n---\n\n\u2728 Let Copilot coding agent [set things up for you](https://github.com/storybookjs/storybook/issues/new?title=\u2728+Set+up+Copilot+instructions&body=Configure%20instructions%20for%20this%20repository%20as%20documented%20in%20%5BBest%20practices%20for%20Copilot%20coding%20agent%20in%20your%20repository%5D%28https://gh.io/copilot-coding-agent-tips%29%2E%0A%0A%3COnboard%20this%20repo%3E&assignees=copilot) \u2014 coding agent works faster and does higher quality work when set up for your repo.\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Bug Fixes**\n  * Ensure story index invalidation emits only once per file change.\n\n* **Improvements**\n  * Emit hot-update signals immediately when modules are accepted and cancel running play functions before applying updates for more reliable hot reloads.\n\n* **Tests**\n  * Added a test to verify single invalidation emission per file change.\n\n* **Chores**\n  * Added a lint-fix pre-commit instruction for touched files.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "copilot-swe-agent",
+  "merged_at": "2026-02-27T11:53:45Z",
+  "base_ref": "next",
+  "merge_commit_sha": "2b6c4da20192051b2d0f1c719a1eda841d2fd306",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "5a9c6ecd7559ee8c7adbe30fb4b0894e369d144b",
+    "a49d9e19931d79ebd932f57da3a192a4c7d383f0"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6qr08g",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# 1. Check the exact code at lines 663-691\necho \"=== Code at lines 663-691 ===\"\nsed -n '663,691p' code/core/src/core-server/utils/index-json.test.ts\n\necho -e \"\\n=== DEBOUNCE constant definition ===\"\nrg -n \"const DEBOUNCE\" code/core/src/core-server/utils/index-json.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1263\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# 2. Check for other mockImplementation calls in the test file\necho \"=== All mockImplementation calls ===\"\nrg -n \"mockImplementation\\(\" code/core/src/core-server/utils/index-json.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 267\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# 3. Check the structure of beforeEach blocks in the file\necho \"=== beforeEach blocks structure ===\"\nrg -n \"beforeEach\" code/core/src/core-server/utils/index-json.test.ts -A 5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 722\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for DEBOUNCE more broadly (could be imported)\necho \"=== Search for DEBOUNCE usage ===\"\nrg -n \"DEBOUNCE\" code/core/src/core-server/utils/index-json.test.ts\n\necho -e \"\\n=== Also check the main implementation file for debounce timing ===\"\nrg -n \"DEBOUNCE|debounce.*\\d+\" code/core/src/core-server/utils/index-json.ts | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 362\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check context at line 605 for mockImplementation\necho \"=== Context around line 605 ===\"\nsed -n '600,620p' code/core/src/core-server/utils/index-json.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 790\n\n---\n\n\n\n</details>\n\n**Move mock setup to beforeEach and derive debounce wait time from DEBOUNCE constant.**\n\nLines 664\u2013667 set mock behavior inside the test body, violating Vitest guidelines to implement mock behaviors in `beforeEach` blocks. Additionally, the hardcoded `200ms` sleep at line 690 is arbitrary; it should derive from the `DEBOUNCE` constant (100ms) to keep the test self-documenting and maintainable.\n\n<details>\n<summary>Suggested adjustment</summary>\n\n```diff\n-    it('only emits once per file change (no double-fire from leading+trailing edges)', async () => {\n-      vi.mocked(debounce).mockImplementation(\n-        (await vi.importActual<typeof import('es-toolkit/function')>('es-toolkit/function'))\n-          .debounce\n-      );\n+    describe('single-emission behavior', () => {\n+      beforeEach(async () => {\n+        vi.mocked(debounce).mockImplementation(\n+          (await vi.importActual<typeof import('es-toolkit/function')>('es-toolkit/function'))\n+            .debounce\n+        );\n+      });\n+\n+      it('only emits once per file change (no double-fire from leading+trailing edges)', async () => {\n         // ...\n-      await new Promise((resolve) => setTimeout(resolve, 200));\n+      await new Promise((resolve) => setTimeout(resolve, DEBOUNCE * 2));\n       expect(mockServerChannel.emit).toHaveBeenCalledTimes(1);\n+      });\n+    });\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/core-server/utils/index-json.test.ts` around lines 663 - 691,\nMove the debounce mock setup out of the test body into the test suite's\nbeforeEach so mocking rules run in setup (replace the inline\nvi.mocked(debounce).mockImplementation(...) currently in the test \"only emits\nonce per file change...\" with the same mock in beforeEach); also replace the\nhardcoded 200ms sleep after triggering onChange(`${workingDir}/...`) with a wait\nderived from the DEBOUNCE constant (e.g., use DEBOUNCE * 2 or similar) so the\nassertion on mockServerChannel.emit (used by registerIndexJsonRoute and the\nWatchpack onChange handler) waits an appropriate, self-documented duration.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/index-json.test.ts",
+          "line_number": 691,
+          "start_line": 663,
+          "commit_sha": "a49d9e19931d79ebd932f57da3a192a4c7d383f0",
+          "created_at": "2026-02-27T10:23:45Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment requests specific code changes: move mock setup to beforeEach and replace hardcoded 200ms sleep with a value derived from the DEBOUNCE constant."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6qwJai",
+          "author": "ghengeveld",
+          "body": "This looks broken, since it's not a template string but a regular string.",
+          "file_path": "code/builders/builder-vite/src/codegen-modern-iframe-script.ts",
+          "line_number": 36,
+          "start_line": null,
+          "commit_sha": "a49d9e19931d79ebd932f57da3a192a4c7d383f0",
+          "created_at": "2026-02-27T14:59:18Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a bug \u2014 a string that should be a template literal but is instead a regular string \u2014 implying it needs to be fixed."
+    }
+  ],
+  "review_thread_count": 2,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 2,
+    "stage1_kept": 2,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

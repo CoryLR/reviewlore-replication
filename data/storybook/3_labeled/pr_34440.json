@@ -1,0 +1,670 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34440,
+  "title": "CLI: Streamline Node.js version detection code",
+  "body": "## What I did\r\n\r\nImproved old node runtime warnings and ensured the min version declaration is well centralised.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n\r\n1. Create a test project\r\n2. Run `npx storybook@latest init` with a non-supported Node runtime (e.g., 22.x)\r\n3. Observe the warning correctly displays min versions\r\n4. Run other SB commands with an out-of-date Node version\r\n5. Observe the same warning\r\n6. Run a SB command with an outrageously out of date Node version\r\n7. Watch the CLI crash; not much can be done about that\r\n\r\n### Documentation\r\n\r\n\u00f8\r\n\r\n## Checklist for Maintainers\r\n\r\n- [x] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [x] Make sure this PR contains **one** of the labels below:\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\r\n## Summary by CodeRabbit\r\n\r\n* **New Features**\r\n  * Interactive preflight now detects declared Node versions and prompts to update .nvmrc or package.json engines when below Storybook's minimum, with selectable target versions and graceful skip/CI behavior.\r\n  * CLI now uses a centralized human-readable minimum-version message when the runtime is unsupported.\r\n\r\n* **Refactor**\r\n  * Centralized Node.js minimum-version policy and validation used across CLI and setup flows.\r\n\r\n* **Tests**\r\n  * Added comprehensive tests for parsing, detection, validation, prompts, and update flows.\r\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "Sidnioulz",
+  "merged_at": "2026-04-11T23:09:34Z",
+  "base_ref": "next",
+  "merge_commit_sha": "5647e6eeb4c30390a36ebdb469560d89d5ffa3e9",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "aae6c9522b45169b395609dd95c2fa6d7b17c2ea",
+    "3694b08c64efef2410dcd4f78d1a5af60806e388"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60x0_S",
+          "author": "copilot-pull-request-reviewer",
+          "body": "`detectDeclaredNodeVersions()` searches for `.nvmrc` all the way up the directory tree (`find.up('.nvmrc', { cwd })`). When `sb init` is run from a subdirectory (or inside a non-repo folder), this can accidentally pick up and later *modify* an unrelated `.nvmrc` (e.g. one in the user\u2019s home directory). Consider bounding the search with `last: getProjectRoot()` (or otherwise limiting it to the intended project root) so we only ever read/update project-owned files.",
+          "file_path": "code/core/src/common/node-version.ts",
+          "line_number": 124,
+          "start_line": null,
+          "commit_sha": "7b510148f0cd8d5bc52119a2cc3036d2921cf244",
+          "created_at": "2026-04-03T13:54:03Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The directory traversal search can accidentally find and modify unrelated .nvmrc files outside the project root, which is a logic/boundary error."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc60yH70",
+          "author": "Sidnioulz",
+          "body": "@copilot apply changes based on [this feedback](https://github.com/storybookjs/storybook/pull/34440#discussion_r3032960978)\r\n\r\nAlso add a unit test for that if possible.",
+          "file_path": "code/core/src/common/node-version.ts",
+          "line_number": 124,
+          "start_line": null,
+          "commit_sha": "7b510148f0cd8d5bc52119a2cc3036d2921cf244",
+          "created_at": "2026-04-03T14:15:37Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc60yQEg",
+          "author": "copilot-swe-agent",
+          "body": "Done in 89c5d2d. `detectDeclaredNodeVersions()` now passes `last: getProjectRoot()` to `find.up('.nvmrc', ...)`, bounding the upward search to the project root (same pattern used by `findFilesUp` in `paths.ts`). Two unit tests were added: one verifying `find.up` is called with the correct `{ cwd, last }` options, and one verifying that `nvmrcPath` is `undefined` when the mock simulates no `.nvmrc` within the project root.",
+          "file_path": "code/core/src/common/node-version.ts",
+          "line_number": 124,
+          "start_line": null,
+          "commit_sha": "7b510148f0cd8d5bc52119a2cc3036d2921cf244",
+          "created_at": "2026-04-03T14:25:16Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests bounding the find.up search to prevent accidentally modifying unrelated .nvmrc files, with a specific fix proposed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60x0_e",
+          "author": "copilot-pull-request-reviewer",
+          "body": "`parseNodeVersionString()` treats major-only values like `\"22\"` or `\"20\"` as `22.0.0` / `20.0.0`. In `.nvmrc`, major-only is a common way to mean \u201clatest 22.x\u201d, which should be considered supported under the stated policy (20.19+ or 22.12+). As-is, `.nvmrc: 22` will be flagged as unsupported and trigger a bump prompt. Consider preserving the input\u2019s precision (major vs major.minor vs full) and adjusting the support check accordingly for major-only declarations.",
+          "file_path": "code/core/src/common/node-version.ts",
+          "line_number": 92,
+          "start_line": null,
+          "commit_sha": "a8bc7b3f3477f1402faf50ef8bffc59dfb6979a2",
+          "created_at": "2026-04-03T13:54:04Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "Treating major-only version strings like '22' as '22.0.0' deviates from the intended semantics of .nvmrc declarations, causing incorrect unsupported version flags."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc60yQiV",
+          "author": "Sidnioulz",
+          "body": "@copilot apply changes based on [this feedback](https://github.com/storybookjs/storybook/pull/34440#discussion_r3032960990)\r\n\r\nAdd a parameter to check if we use nvmrc logic (treat missing bits as latest, so as long as the present bits are equal or higher, we're good) or semver logic (in which case 22 is treated as 22.0.0 because we want to ensure that we bump the version to e.g. 22.22.1)",
+          "file_path": "code/core/src/common/node-version.ts",
+          "line_number": 92,
+          "start_line": null,
+          "commit_sha": "a8bc7b3f3477f1402faf50ef8bffc59dfb6979a2",
+          "created_at": "2026-04-03T14:25:49Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc60yo6b",
+          "author": "copilot-swe-agent",
+          "body": "Done in 495ace2. `parseNodeVersionString` now returns a `precision: 'major' | 'minor' | 'patch'` field tracking how many version components were present. `isNodeVersionSupported` gains an optional `{ mode, precision }` parameter:\n\n- `mode: 'nvmrc'` + `precision: 'major'` (e.g. `.nvmrc: 22`): supported if major 22 exists in `MIN_SUPPORTED_NODE_VERSIONS` (i.e. \"latest 22.x\" is valid)\n- `mode: 'nvmrc'` + `precision: 'minor'` (e.g. `.nvmrc: 22.14`): supported if `22.14 >= 22.12` at the minor level\n- `mode: 'nvmrc'` + `precision: 'patch'` or `mode: 'strict'` (default): current strict behavior\n\nBoth `.nvmrc` check paths in `PreflightCheckCommand` and `node-version-check.ts` now use `{ mode: 'nvmrc', precision: parsed.precision }`.",
+          "file_path": "code/core/src/common/node-version.ts",
+          "line_number": 92,
+          "start_line": null,
+          "commit_sha": "a8bc7b3f3477f1402faf50ef8bffc59dfb6979a2",
+          "created_at": "2026-04-03T14:54:42Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where major-only version strings are incorrectly flagged as unsupported, and suggests preserving input precision."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60x0_o",
+          "author": "copilot-pull-request-reviewer",
+          "body": "`updateEnginesNode()` claims to preserve formatting, but it only infers a numeric indent width and always rewrites via `JSON.stringify`, which will reformat minified JSON and can\u2019t preserve tabs/newlines/key ordering/comments. Also, `indentMatch[1].length` will turn tab-indented JSON into spaces. Consider using the same indentation detection approach as `JsPackageManager` (it uses `detect-indent`) and/or soften the docstring to match actual behavior.",
+          "file_path": "code/core/src/common/node-version.ts",
+          "line_number": 166,
+          "start_line": null,
+          "commit_sha": "89c5d2d48529b8345994741f4b291f099c991305",
+          "created_at": "2026-04-03T13:54:04Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The function claims to preserve formatting but actually reformats JSON incorrectly (tabs become spaces, minified JSON is reformatted), so behavior doesn't match documented intent."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc60yMPm",
+          "author": "Sidnioulz",
+          "body": "@copilot apply changes based on [this feedback](https://github.com/storybookjs/storybook/pull/34440#discussion_r3032961000)",
+          "file_path": "code/core/src/common/node-version.ts",
+          "line_number": 166,
+          "start_line": null,
+          "commit_sha": "89c5d2d48529b8345994741f4b291f099c991305",
+          "created_at": "2026-04-03T14:20:44Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc60yo-O",
+          "author": "copilot-swe-agent",
+          "body": "Done in 495ace2. `updateEnginesNode` now uses `detect-indent` (already used by `JsPackageManager`) to detect indentation. The detected `indent` string (e.g. `\"\\t\"` for tabs, `\"  \"` for 2-space) is passed directly to `JSON.stringify`, preserving tab-indented files correctly. Falls back to 2-space indent when no indentation is detected (e.g. minified JSON).",
+          "file_path": "code/core/src/common/node-version.ts",
+          "line_number": 166,
+          "start_line": null,
+          "commit_sha": "89c5d2d48529b8345994741f4b291f099c991305",
+          "created_at": "2026-04-03T14:54:45Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags multiple issues with updateEnginesNode() formatting behavior and suggests using detect-indent or softening the docstring."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60x0_5",
+          "author": "copilot-pull-request-reviewer",
+          "body": "This new flow can prompt the user during `execute()`, but it doesn\u2019t respect `--yes` / non-interactive/CI runs. `prompt.select` will still attempt an interactive clack prompt even when `process.stdin/stdout` aren\u2019t TTYs (the prompt layer doesn\u2019t auto-disable for selects), which can hang automated usage. Consider skipping the prompt (and just logging the warning) when `options.yes === true` and/or when the terminal isn\u2019t interactive / `process.env.CI` is set.",
+          "file_path": "code/lib/create-storybook/src/commands/PreflightCheckCommand.ts",
+          "line_number": 160,
+          "start_line": null,
+          "commit_sha": "506d788cd39bc2b201dbd2e1badb8931332115cb",
+          "created_at": "2026-04-03T13:54:04Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Missing guard for non-interactive/CI environments causes interactive prompt to hang in automated pipelines \u2014 a missing edge case in control flow."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc60yL01",
+          "author": "Sidnioulz",
+          "body": "@copilot apply changes based on [this feedback](https://github.com/storybookjs/storybook/pull/34440#discussion_r3032961017)",
+          "file_path": "code/lib/create-storybook/src/commands/PreflightCheckCommand.ts",
+          "line_number": 160,
+          "start_line": null,
+          "commit_sha": "506d788cd39bc2b201dbd2e1badb8931332115cb",
+          "created_at": "2026-04-03T14:20:16Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc60ypBG",
+          "author": "copilot-swe-agent",
+          "body": "Done in 495ace2. `options.yes` is now threaded through `execute` \u2192 `checkDeclaredNodeVersion(yes)` \u2192 `promptVersionBump(..., yes)`. The interactive guard is now `!yes && process.stdout.isTTY && process.stdin.isTTY && !process.env.CI && !process.env.STORYBOOK_CI`, so passing `--yes` skips the bump prompt (same as CI/non-TTY environments).",
+          "file_path": "code/lib/create-storybook/src/commands/PreflightCheckCommand.ts",
+          "line_number": 160,
+          "start_line": null,
+          "commit_sha": "506d788cd39bc2b201dbd2e1badb8931332115cb",
+          "created_at": "2026-04-03T14:54:49Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags that prompts don't respect --yes/CI/non-interactive environments and suggests adding guards."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60x1AA",
+          "author": "copilot-pull-request-reviewer",
+          "body": "`promptVersionBump()` directly calls `updateNvmrc` / `updateEnginesNode` without handling filesystem/JSON errors. Since this check is described as non-blocking, a write failure (permissions, invalid JSON, etc.) would currently throw and abort init. Consider wrapping the update in try/catch and logging a warning so initialization can continue even if the bump can\u2019t be applied.\n```suggestion\n      try {\n        if (type === 'nvmrc') {\n          updateNvmrc(filePath, selected);\n        } else {\n          updateEnginesNode(filePath, selected);\n        }\n      } catch (error) {\n        logger.warn(\n          dedent`\n            Could not update ${type === 'nvmrc' ? '.nvmrc' : 'package.json engines.node'} at ${filePath}.\n            Storybook initialization will continue without applying the Node.js version bump.\n            ${error instanceof Error ? error.message : String(error)}\n          `\n        );\n```",
+          "file_path": "code/lib/create-storybook/src/commands/PreflightCheckCommand.ts",
+          "line_number": 214,
+          "start_line": null,
+          "commit_sha": "7b510148f0cd8d5bc52119a2cc3036d2921cf244",
+          "created_at": "2026-04-03T13:54:04Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Unchecked Return",
+          "label_confidence": "high",
+          "label_reasoning": "Filesystem/JSON errors from updateNvmrc/updateEnginesNode are not caught, causing unhandled exceptions that abort initialization instead of being handled gracefully."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc60yelX",
+          "author": "Sidnioulz",
+          "body": "@copilot take that into account",
+          "file_path": "code/lib/create-storybook/src/commands/PreflightCheckCommand.ts",
+          "line_number": 214,
+          "start_line": null,
+          "commit_sha": "7b510148f0cd8d5bc52119a2cc3036d2921cf244",
+          "created_at": "2026-04-03T14:42:46Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc60ypDb",
+          "author": "copilot-swe-agent",
+          "body": "Already addressed in the previous commit (89c5d2d) \u2014 `updateNvmrc`/`updateEnginesNode` calls in `promptVersionBump` are wrapped in try/catch with a `logger.warn` that lets init continue on failure.",
+          "file_path": "code/lib/create-storybook/src/commands/PreflightCheckCommand.ts",
+          "line_number": 214,
+          "start_line": null,
+          "commit_sha": "7b510148f0cd8d5bc52119a2cc3036d2921cf244",
+          "created_at": "2026-04-03T14:54:51Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Identifies missing error handling in promptVersionBump() and provides a concrete code suggestion with try/catch."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60x1AW",
+          "author": "copilot-pull-request-reviewer",
+          "body": "For the `engines.node` \u201ccurrent runtime\u201d option, the value is set to `>=${runtimeVersion}` (includes patch), while the minimum options are `>=${major}.${minor}` (no patch). This makes the runtime option unnecessarily strict (e.g. `>=22.14.2`) and inconsistent with the other choices. Consider using `>=${runtimeMajor}.${runtimeMinor}` (or otherwise aligning the formatting with the minimum-version options).",
+          "file_path": "code/lib/create-storybook/src/commands/PreflightCheckCommand.ts",
+          "line_number": 198,
+          "start_line": null,
+          "commit_sha": "506d788cd39bc2b201dbd2e1badb8931332115cb",
+          "created_at": "2026-04-03T13:54:04Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Inconsistency in version string formatting \u2014 runtime option uses full patch version while minimum options omit patch \u2014 causing unnecessarily strict constraints."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Points out inconsistency in version string formatting for the runtime option and suggests aligning it with other options."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60x1Aj",
+          "author": "copilot-pull-request-reviewer",
+          "body": "`handleUnsupportedNodeRuntime()` can also prompt via `prompt.select`, but there\u2019s no guard for non-interactive/CI usage. On an unsupported Node runtime in CI, this can hang instead of exiting with an error. Consider detecting non-interactive environments (e.g. `!process.stdin.isTTY || !process.stdout.isTTY || process.env.CI`) and skipping the bump prompt in that case (just print the error and exit).",
+          "file_path": "code/lib/create-storybook/src/node-version-check.ts",
+          "line_number": 48,
+          "start_line": null,
+          "commit_sha": "506d788cd39bc2b201dbd2e1badb8931332115cb",
+          "created_at": "2026-04-03T13:54:05Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Missing CI/non-interactive environment check in handleUnsupportedNodeRuntime causes the process to hang in CI instead of exiting with an error."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc60yfTI",
+          "author": "Sidnioulz",
+          "body": "@copilot apply changes based on [this feedback](https://github.com/storybookjs/storybook/pull/34440#discussion_r3032961059)",
+          "file_path": "code/lib/create-storybook/src/node-version-check.ts",
+          "line_number": 48,
+          "start_line": null,
+          "commit_sha": "506d788cd39bc2b201dbd2e1badb8931332115cb",
+          "created_at": "2026-04-03T14:43:37Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that handleUnsupportedNodeRuntime() can hang in CI/non-interactive environments and suggests adding detection and skipping the prompt."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60x1At",
+          "author": "copilot-pull-request-reviewer",
+          "body": "If both `.nvmrc` and `package.json#engines.node` are bumped in the same run, the exit message only mentions `.nvmrc` (because it branches on `nvmrcBumped` first) and silently omits that `engines.node` was also updated. Consider emitting a combined message when both were changed so the user gets accurate instructions/context.",
+          "file_path": "code/lib/create-storybook/src/node-version-check.ts",
+          "line_number": 89,
+          "start_line": null,
+          "commit_sha": "506d788cd39bc2b201dbd2e1badb8931332115cb",
+          "created_at": "2026-04-03T13:54:05Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "When both .nvmrc and engines.node are bumped, the exit message only reports one update due to incorrect branching logic \u2014 missing the combined case."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc60yf7K",
+          "author": "Sidnioulz",
+          "body": "Only one is checked and updated AFAIK. Verify this before making any code change. If only one is checked (i.e. if the first check for nvmrc returns a need to bump, and also enforces that there wont be a check on the package engine), then do not change this piece of logic.",
+          "file_path": "code/lib/create-storybook/src/node-version-check.ts",
+          "line_number": 89,
+          "start_line": null,
+          "commit_sha": "506d788cd39bc2b201dbd2e1badb8931332115cb",
+          "created_at": "2026-04-03T14:44:19Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Identifies that when both .nvmrc and engines.node are bumped, the exit message only mentions .nvmrc; suggests emitting a combined message."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60x5Ix",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Reject version strings with more than 3 numeric segments.**\n\nLine 82 currently allows values like `22.14.2.1` and truncates silently to `22.14.2`. That can mis-detect declared versions and skip needed prompts.\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n-  const parts = trimmed.split('.').map(Number);\n+  const rawParts = trimmed.split('.');\n+  if (rawParts.length > 3) {\n+    return undefined;\n+  }\n+  const parts = rawParts.map(Number);\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  const rawParts = trimmed.split('.');\n  if (rawParts.length > 3) {\n    return undefined;\n  }\n  const parts = rawParts.map(Number);\n\n  if (parts.some((p) => Number.isNaN(p))) {\n    return undefined;\n  }\n\n  return {\n    major: parts[0],\n    minor: parts[1] ?? 0,\n    patch: parts[2] ?? 0,\n  };\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/common/node-version.ts` around lines 82 - 92, The parser\ncurrently accepts more than three numeric segments (e.g., \"22.14.2.1\") and\nsilently truncates; update the logic that computes const parts =\ntrimmed.split('.').map(Number) to reject inputs with more than three segments by\nreturning undefined when parts.length > 3 (keep the existing Number.isNaN\ncheck), so the function that returns { major: parts[0], minor: parts[1] ?? 0,\npatch: parts[2] ?? 0 } only runs for 1\u20133 segment version strings.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/common/node-version.ts",
+          "line_number": 92,
+          "start_line": null,
+          "commit_sha": "a8bc7b3f3477f1402faf50ef8bffc59dfb6979a2",
+          "created_at": "2026-04-03T13:58:39Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Version strings with more than 3 segments (e.g., '22.14.2.1') are silently truncated rather than rejected, leading to incorrect version detection."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc62Ot0m",
+          "author": "Sidnioulz",
+          "body": "Let's make that a problem for another day...",
+          "file_path": "code/core/src/common/node-version.ts",
+          "line_number": 92,
+          "start_line": null,
+          "commit_sha": "a8bc7b3f3477f1402faf50ef8bffc59dfb6979a2",
+          "created_at": "2026-04-09T11:03:54Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where version strings with more than 3 segments are silently truncated, and provides a concrete code fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60x5I-",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Do not swallow non-version failures in a broad catch.**\n\nThis `catch` also absorbs unexpected errors thrown by `handleUnsupportedNodeRuntime` (e.g., file update failures), replacing actionable diagnostics with generic version messaging.\n\n<details>\n<summary>Proposed fix (scope the fallback to import/version-check failures only)</summary>\n\n```diff\n-} catch {\n+} catch (error) {\n   try {\n     const { MIN_SUPPORTED_NODE_DESCRIPTION } = await import('storybook/internal/common');\n     const { logger } = await import('storybook/internal/node-logger');\n     logger.error(\n       `To run Storybook, you need Node.js version ${MIN_SUPPORTED_NODE_DESCRIPTION}.\\n` +\n         `You are currently running Node.js ${process.version}.`\n     );\n   } catch {\n     // Back up in case Node version is so old that dynamic imports or the logger fail to run.\n     console.error(\n       `\\nStorybook does not support Node.js ${process.version}. Please upgrade to run Storybook.\\n`\n     );\n+    if (error) {\n+      // keep original error path debuggable when fallback logger is unavailable\n+    }\n   } finally {\n     process.exit(1);\n   }\n }\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/lib/create-storybook/src/bin/index.ts` around lines 13 - 29, The current\nbroad catch after calling handleUnsupportedNodeRuntime swallows all errors;\nchange it so only import/version-check failures are handled locally: have the\nouter catch capture the thrown error (e.g., catch (err)) and if the error is not\nan import/version-check failure rethrow it so actionable diagnostics from\nhandleUnsupportedNodeRuntime propagate, otherwise run the existing\ndynamic-import fallback (the block that imports storybook/internal/common and\nstorybook/internal/node-logger, logs MIN_SUPPORTED_NODE_DESCRIPTION via\nlogger.error or falls back to console.error and process.exit(1)). Concretely,\nwrap only the dynamic imports and logging in their own try/catch (referencing\nMIN_SUPPORTED_NODE_DESCRIPTION, logger, and process.exit), or inspect the caught\nerr and rethrow when it\u2019s not an import/module-resolution error, instead of\nswallowing all errors.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits b8167af to 7c54d1a",
+          "file_path": "code/lib/create-storybook/src/bin/index.ts",
+          "line_number": 29,
+          "start_line": null,
+          "commit_sha": "506d788cd39bc2b201dbd2e1badb8931332115cb",
+          "created_at": "2026-04-03T13:58:39Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Overly broad catch block swallows non-import errors from handleUnsupportedNodeRuntime, replacing actionable diagnostics with generic version messaging."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc62NEB5",
+          "author": "Sidnioulz",
+          "body": "Good intuition but the finally block guarantees exit. We do want to swallow errors because we know the runtime is too old and we don't want users requesting code changes, we want them to update the runtime.",
+          "file_path": "code/lib/create-storybook/src/bin/index.ts",
+          "line_number": 29,
+          "start_line": null,
+          "commit_sha": "506d788cd39bc2b201dbd2e1badb8931332115cb",
+          "created_at": "2026-04-09T09:41:38Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that a broad catch swallows non-version-check errors, hiding actionable diagnostics, and proposes a scoped fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60x5JB",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, let's examine the PreflightCheckCommand.ts file to see the context\ncat -n code/lib/create-storybook/src/commands/PreflightCheckCommand.ts | sed -n '150,185p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1538\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Now let's check the node-version-check.ts file\ncat -n code/lib/create-storybook/src/node-version-check.ts | sed -n '45,75p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1311\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's verify the semver package is used and check its minVersion behavior\nrg \"minVersion\" code/lib/create-storybook/src --type ts -B 2 -A 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3679\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check what isNodeVersionSupported does\nrg \"isNodeVersionSupported\" code/lib/create-storybook/src --type ts -B 3 -A 8\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 8898\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nnode <<'EOF'\nconst { minVersion } = require('semver');\n\n// Test case from the review\nconst range = \">=18 <19 || >=20.19.0\";\nconst result = minVersion(range);\n\nconsole.log(`Input range: ${range}`);\nconsole.log(`minVersion() result: ${result?.version || 'null'}`);\nconsole.log(`Major: ${result?.major}, Minor: ${result?.minor}, Patch: ${result?.patch}`);\n\n// Additional tests\nconst testCases = [\n  \">=18 <19 || >=20.19.0\",\n  \">=18 || >=20\",\n  \"^18 || ^20\",\n  \">=18.0.0 <19.0.0 || >=20.19.0\",\n];\n\ntestCases.forEach(tc => {\n  const res = minVersion(tc);\n  console.log(`\\nRange: ${tc}`);\n  console.log(`Result: ${res?.version}`);\n});\nEOF\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 901\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Also check the isNodeVersionSupported implementation\nrg \"export.*isNodeVersionSupported|function isNodeVersionSupported|const isNodeVersionSupported\" code --type ts -A 10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 820\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Get the full isNodeVersionSupported function and MIN_SUPPORTED_NODE_VERSIONS\nrg \"MIN_SUPPORTED_NODE_VERSIONS|export function isNodeVersionSupported\" code/core/src/common/node-version.ts -A 15\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1658\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Install semver in the repo context and test\ncd code && npm list semver 2>/dev/null | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 113\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for package.json to find where semver is available\nfind code -name \"package.json\" -exec grep -l '\"semver\"' {} \\;\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 354\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if semver is in create-storybook package.json\ncat code/lib/create-storybook/package.json | grep -A 20 -B 5 '\"semver\"'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 628\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Now test minVersion with the actual semver from the repo\ncd code/lib/create-storybook && node <<'EOF'\nconst { minVersion } = require('semver');\n\n// Test case from the review\nconst range = \">=18 <19 || >=20.19.0\";\nconst result = minVersion(range);\n\nconsole.log(`Input range: ${range}`);\nconsole.log(`minVersion() result: ${result?.version || 'null'}`);\nif (result) {\n  console.log(`Major: ${result.major}, Minor: ${result.minor}, Patch: ${result.patch}`);\n}\n\n// Additional tests\nconst testCases = [\n  \">=18 <19 || >=20.19.0\",\n  \">=18 || >=20\",\n  \"^18 || ^20\",\n  \">=18.0.0 <19.0.0 || >=20.19.0\",\n];\n\nconsole.log('\\n--- Test Cases ---');\ntestCases.forEach(tc => {\n  const res = minVersion(tc);\n  console.log(`Range: \"${tc}\"`);\n  console.log(`Result: ${res?.version || 'null'}`);\n  console.log('');\n});\nEOF\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 953\n\n---\n\n\ud83c\udf10 Web query:\n\n`semver minVersion OR-range union behavior \"||\"`\n\n\ud83d\udca1 Result:\n\nIn npm's semver implementation (node-semver), the \"||\" operator in version ranges creates a union of comparator sets. A version satisfies the range if it satisfies at least one of the sets separated by \"||\". Within each set (separated by spaces), comparators form an intersection\u2014all must be satisfied. For example: - \">=1.2.7 <1.3.0\" matches versions >=1.2.7 AND <1.3.0. - \"1.2.7 || >=1.2.9 <2.0.0\" matches 1.2.7 OR (versions >=1.2.9 AND <2.0.0). The minVersion(range) function returns the lowest possible version that satisfies the range, which for an OR-range (\"A || B || C\") is the minimum of minVersion(A), minVersion(B), and minVersion(C). Example: minVersion('14.0.0 || 16.1.0 || 18.0.0') returns '14.0.0'. This behavior is standard in npm, Yarn, and compatible tools. The core semver.org spec defines version formats but not ranges; node-semver provides the de facto range specification used by the JS ecosystem. Pre-releases are not included by default unless explicitly specified in a comparator or with {includePrerelease: true}.\n\nCitations:\n\n- 1: https://semver-nuget.org/v2.3.x/Semver.html\n- 2: https://classic.yarnpkg.com/en/docs/dependency-versions\n- 3: https://github.com/npm/node-semver/issues/649\n- 4: https://docs.npmjs.com/cli/v6/using-npm/semver/\n- 5: https://github.com/npm/node-semver/\n- 6: https://registry.npmjs.org/semver\n- 7: https://github.com/npm/npm/blob/d081cc6/doc/misc/semver.md\n- 8: https://npm.github.io/using-pkgs-docs/package-json/types-of-dependencies.html\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's check if there are any tests or documentation about minVersion behavior in the codebase\nrg \"minVersion\" code --type ts -B 3 -A 5 | grep -A 8 -B 8 \"||\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let me verify the actual behavior by checking more context about how the decision is made\ncat -n code/core/src/common/node-version.ts | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2024\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's trace through the logic manually with a specific example\n# First, verify what isNodeVersionSupported returns for 18.0.0\ncat -n code/core/src/common/node-version.ts | sed -n '1,80p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2960\n\n---\n\n\n\n</details>\n\n**`minVersion()` incorrectly flags version ranges that include supported Node.js versions.**\n\nFor a value like `>=18 <19 || >=20.19.0`, `minVersion()` returns `18.0.0`, causing this code to warn and offer to rewrite a range that already includes supported Storybook versions (20.19.0, 22.12.0+, etc.). The check collapses the entire OR-union to its absolute minimum rather than testing whether any part of the union satisfies `isNodeVersionSupported()`. Evaluate the comparator sets individually or centralize this logic in the shared node-version util.\n\nThe same issue exists in `code/lib/create-storybook/src/node-version-check.ts:52-68`.\n\nAlso applies to lines 178-181.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/lib/create-storybook/src/commands/PreflightCheckCommand.ts` around lines\n154 - 157, The logic using minVersion(declared.enginesNode) incorrectly\ncollapses OR-ranges; instead determine whether any alternative in the range\nalready allows a supported Node by splitting the range into its comparator sets\nand testing each set against isNodeVersionSupported, or better yet add a shared\nhelper (e.g., isRangeSupported(range) in the node-version util) that returns\ntrue if any comparator-set satisfies isNodeVersionSupported. Replace the current\nminVersion+isNodeVersionSupported checks in PreflightCheckCommand (where\ndeclared.enginesNode is used to potentially call promptVersionBump) and the\nanalogous block in node-version-check.ts with calls to this new helper (or\nimplement the split-and-test logic inline) so you only prompt to rewrite ranges\nthat contain no supported comparator-set.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper:ee476a29-587a-44ba-addd-4f64c1a25f0d -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 89c5d2d to 3d0a774",
+          "file_path": "code/lib/create-storybook/src/commands/PreflightCheckCommand.ts",
+          "line_number": 157,
+          "start_line": null,
+          "commit_sha": "89c5d2d48529b8345994741f4b291f099c991305",
+          "created_at": "2026-04-03T13:58:39Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Using minVersion() on OR-ranges collapses the entire union to its minimum, incorrectly flagging ranges that already include supported Node.js versions."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a major bug where minVersion() on OR-ranges causes false positives, prompting rewrites of already-supported ranges, with a proposed fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60x5JJ",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if the file exists and examine line 10 and surrounding context\nhead -20 code/lib/create-storybook/src/node-version-check.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 697\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check similar import patterns in other test files in the same directory\nfd '\\.test\\.ts$' code/lib/create-storybook/src --exec head -15 {} + | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4886\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for other imports from './node-version-check' to see the pattern used elsewhere\nrg \"from ['\\\"]\\.\\/node-version-check\" code/lib/create-storybook/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 173\n\n---\n\n\n\n</details>\n\n**Add the `.ts` suffix on this relative import.**\n\nThis import violates the repo's explicit-extension rule for TypeScript relative imports. Other test files in the same directory consistently use extensions (e.g., `./TelemetryService.ts`, `./VersionService.ts`).\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n-import { handleUnsupportedNodeRuntime } from './node-version-check';\n+import { handleUnsupportedNodeRuntime } from './node-version-check.ts';\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nimport { handleUnsupportedNodeRuntime } from './node-version-check.ts';\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/lib/create-storybook/src/node-version-check.test.ts` at line 10, The\ntest import is missing the TypeScript file extension: update the relative import\nin node-version-check.test.ts to include the .ts suffix so it matches the repo's\nexplicit-extension rule; specifically, change the import that references\nhandleUnsupportedNodeRuntime from './node-version-check' to\n'./node-version-check.ts' so the test imports the symbol\nhandleUnsupportedNodeRuntime with the explicit .ts extension like other tests.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper:ee476a29-587a-44ba-addd-4f64c1a25f0d -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 89c5d2d to 3d0a774",
+          "file_path": "code/lib/create-storybook/src/node-version-check.test.ts",
+          "line_number": 10,
+          "start_line": null,
+          "commit_sha": "495ace23c122a13b3214334605f9eaa8ce7a5e45",
+          "created_at": "2026-04-03T13:58:40Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "high",
+          "label_reasoning": "Missing .ts extension on relative import violates the repository's explicit-extension convention for TypeScript imports."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Points out a missing .ts extension on a relative import that violates repo conventions, with a concrete fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60x5JQ",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Handle the \u201cboth files updated\u201d case in exit messaging.**\n\nIf both `.nvmrc` and `engines.node` are bumped, the current branch logs only the `.nvmrc` update. Please add a combined branch so users see all file changes explicitly.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/lib/create-storybook/src/node-version-check.ts` around lines 71 - 88,\nThe current conditional only shows the .nvmrc update when both nvmrcBumped and\nenginesBumped are true; add an explicit branch at the top (e.g., if (nvmrcBumped\n&& enginesBumped)) that calls logger.error with a combined dedent message\nreferencing MIN_SUPPORTED_NODE_DESCRIPTION and runtimeVersion and explicitly\nlists both updates (the updated .nvmrc value from nvmrcBumped and the updated\nengines.node value from enginesBumped) and the appropriate next steps (nvm use\nand npx storybook@latest init); keep the existing single-update branches as\nfallbacks for the other two cases.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 89c5d2d to 3d0a774",
+          "file_path": "code/lib/create-storybook/src/node-version-check.ts",
+          "line_number": 88,
+          "start_line": null,
+          "commit_sha": "639897e35398537d7dcbab1e231203d19c132b7d",
+          "created_at": "2026-04-03T13:58:40Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Missing branch for the case where both files are updated causes incomplete user-facing messaging \u2014 a logic gap in the conditional structure."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies that the combined nvmrc+engines bump case is not handled in exit messaging and requests an explicit combined branch."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60x5JU",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Preserve patch-level minimums when writing `engines.node`.**\n\nLine 103 currently emits `>=${major}.${minor}` for `engines`, which drops patch precision from `MIN_SUPPORTED_NODE_VERSIONS`. That will understate requirements once a supported major has a non-zero minimum patch.\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n-      value:\n-        type === 'nvmrc' ? `${v.major}.${v.minor}.${v.patch}` : `>=${v.major}.${v.minor}`,\n+      value:\n+        type === 'nvmrc'\n+          ? `${v.major}.${v.minor}.${v.patch}`\n+          : `>=${v.major}.${v.minor}.${v.patch}`,\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  const options: Array<{ value: string; label: string }> = MIN_SUPPORTED_NODE_VERSIONS.map(\n    (v) => ({\n      value:\n        type === 'nvmrc'\n          ? `${v.major}.${v.minor}.${v.patch}`\n          : `>=${v.major}.${v.minor}.${v.patch}`,\n      label: formatMinVersion(v).replace('+', ''),\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/lib/create-storybook/src/node-version-check.ts` around lines 100 - 104,\nThe options mapping currently drops patch precision for the `engines.node` case\n(when type !== 'nvmrc') by emitting `>=${v.major}.${v.minor}`; update the\ntemplate in the options creation (the mapping over MIN_SUPPORTED_NODE_VERSIONS\nthat sets value based on `type === 'nvmrc'`) to include the patch level for the\nengines case as well (e.g. `>=${v.major}.${v.minor}.${v.patch}`) so\nMIN_SUPPORTED_NODE_VERSIONS' patch constraints are preserved; leave the label\nusing formatMinVersion(v) unchanged.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/lib/create-storybook/src/node-version-check.ts",
+          "line_number": 104,
+          "start_line": null,
+          "commit_sha": "639897e35398537d7dcbab1e231203d19c132b7d",
+          "created_at": "2026-04-03T13:58:40Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Dropping patch precision when writing engines.node understates version requirements, which will be incorrect once supported majors have non-zero minimum patches."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies that patch precision is dropped in engines.node output and provides a concrete code fix to preserve it."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60x9WM",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if the file exists and examine the import at line 14\nif [ -f \"code/core/src/common/node-version.test.ts\" ]; then\n  echo \"=== File exists, checking line 14 ===\"\n  sed -n '10,20p' code/core/src/common/node-version.test.ts\nelse\n  echo \"File does not exist\"\nfi\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 439\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if the target module exists\nif [ -f \"code/core/src/common/node-version.ts\" ]; then\n  echo \"Target module exists: code/core/src/common/node-version.ts\"\n  head -5 code/core/src/common/node-version.ts\nelse\n  echo \"Target module does not exist\"\nfi\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 249\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for similar relative imports in test files to see the pattern used\necho \"=== Sample test files with relative imports (first 5) ===\"\nrg \"from '\\./[^']*'\" code/core/src --type ts --glob \"*.test.ts\" -A 0 -B 0 | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2220\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check imports in the specific test file to see the pattern used\necho \"=== All imports in node-version.test.ts ===\"\nrg \"^import|^} from\" code/core/src/common/node-version.test.ts -A 0 -B 0\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 205\n\n---\n\n\n\n</details>\n\n**Use explicit `.ts` extension in this relative import.**\n\nThe import at line 14 should include the file extension to match the repository TypeScript convention.\n\n<details>\n<summary>\u2705 Proposed fix</summary>\n\n```diff\n-} from './node-version';\n+} from './node-version.ts';\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n} from './node-version.ts';\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/common/node-version.test.ts` at line 14, Update the relative\nimport in node-version.test.ts to include the explicit TypeScript extension:\nchange the import that currently references './node-version' to use\n'./node-version.ts' so it follows the repo's TypeScript import convention and\nresolves correctly; ensure any other imports in the same file follow the same\npattern.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk:5799ba20-bc88-47ca-89c7-e7c4e57651e7 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 89c5d2d to 3d0a774",
+          "file_path": "code/core/src/common/node-version.test.ts",
+          "line_number": 14,
+          "start_line": null,
+          "commit_sha": "7b510148f0cd8d5bc52119a2cc3036d2921cf244",
+          "created_at": "2026-04-03T14:03:54Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "high",
+          "label_reasoning": "Missing .ts extension on relative import violates the repository's explicit-extension convention for TypeScript imports."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Points out a missing .ts extension on a relative import in a test file, with a concrete fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc601Gr_",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Missing `isCI()` mock may cause flaky tests in CI environments.**\n\nThe implementation (line 33 of `node-version-check.ts`) uses `isCI()` to determine if interactive mode is allowed: `const isInteractive = process.stdout.isTTY && !isCI()`. These tests set `isTTY = true` but don't mock `isCI()`. If tests run in a CI environment, `isCI()` returns `true`, causing `isInteractive` to be `false` and skipping the prompt paths\u2014which would break several assertions.\n\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n+import {\n+  detectDeclaredNodeVersions,\n+  isCI,\n+  updateEnginesNode,\n+  updateNvmrc,\n+} from 'storybook/internal/common';\n ...\n\n describe('handleUnsupportedNodeRuntime', () => {\n   beforeEach(() => {\n     vi.clearAllMocks();\n     vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);\n     setStdoutIsTTY(true);\n+    vi.mocked(isCI).mockReturnValue(false);\n   });\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/lib/create-storybook/src/node-version-check.test.ts` around lines 25 -\n33, Tests set process.stdout.isTTY but do not mock isCI(), so CI environments\nmake isInteractive false and break prompts; mock the isCI() function used by\nnode-version-check (symbol: isCI) in the test suite to return false in\nbeforeEach (e.g., vi.spyOn(moduleContainingIsCI, 'isCI').mockReturnValue(false))\nso interactive paths run, and restore/clear that mock in afterEach with\nvi.restoreAllMocks() or the matching mock restore to avoid cross-test pollution;\nensure the mock targets the same isCI import used by the implementation\nreferenced by handleUnsupportedNodeRuntime.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot:99fc555a-9240-43ec-9651-09e373ada9d0 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/lib/create-storybook/src/node-version-check.test.ts",
+          "line_number": 33,
+          "start_line": null,
+          "commit_sha": "506d788cd39bc2b201dbd2e1badb8931332115cb",
+          "created_at": "2026-04-03T18:06:21Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Missing mock for isCI() in tests can cause flaky test behavior in CI environments where isCI() returns true, breaking assertions about interactive prompt paths."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies that isCI() is not mocked in tests, which could cause flaky behavior in CI environments, and suggests adding the mock in beforeEach."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62o-rO",
+          "author": "yannbf",
+          "body": "Is there a reason not to use semver here? It should simplify the code quite a bit if you used parse, coerce and satisfies",
+          "file_path": "code/core/src/common/node-version.ts",
+          "line_number": 63,
+          "start_line": null,
+          "commit_sha": "a8bc7b3f3477f1402faf50ef8bffc59dfb6979a2",
+          "created_at": "2026-04-10T12:21:52Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Redundancy Handling",
+          "label_confidence": "medium",
+          "label_reasoning": "Suggestion to use the semver library (parse, coerce, satisfies) instead of custom version parsing logic would reduce unnecessary complexity and redundant code."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc62qC9H",
+          "author": "ndelangen",
+          "body": "We should be able to use semver here, indeed.",
+          "file_path": "code/core/src/common/node-version.ts",
+          "line_number": 63,
+          "start_line": null,
+          "commit_sha": "a8bc7b3f3477f1402faf50ef8bffc59dfb6979a2",
+          "created_at": "2026-04-10T13:14:16Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6246OG",
+          "author": "Sidnioulz",
+          "body": "Good call folks! Thanks! I've changed it to use semver and removed some unused code paths.",
+          "file_path": "code/core/src/common/node-version.ts",
+          "line_number": 63,
+          "start_line": null,
+          "commit_sha": "a8bc7b3f3477f1402faf50ef8bffc59dfb6979a2",
+          "created_at": "2026-04-11T18:02:05Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Phrased as a question but implies a suggestion to use semver's parse/coerce/satisfies to simplify the custom version-parsing code."
+    }
+  ],
+  "review_thread_count": 18,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc62Op_m",
+            "author": "Sidnioulz",
+            "body": "```suggestion\n```",
+            "file_path": "code/lib/create-storybook/src/commands/PreflightCheckCommand.test.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "7c54d1a2569be72f96fc56fded854621002a6c27",
+            "created_at": "2026-04-09T11:00:34Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 18,
+    "stage1_kept": 17,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 1,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

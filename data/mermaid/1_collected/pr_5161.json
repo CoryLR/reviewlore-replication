@@ -1,0 +1,207 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 5161,
+  "title": "Feature/5114 add parallel commit config",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nAdds support for parallel commits in git graphs.\r\n\r\nResolves #5114 \r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nThe logic consists on searching for the closest parent commit of the current commit being positioned and placing it right after said parent, instead of the default that places after the latest commit.\r\n\r\n`parallelCommits: false`\r\n![image](https://github.com/mermaid-js/mermaid/assets/31048764/2716fae7-36f8-4457-aa3f-20e4ce9849c5)\r\n\r\n`parallelCommits: true`\r\n![image](https://github.com/mermaid-js/mermaid/assets/31048764/decdb701-4358-4281-9703-ebec2d0871f7)\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n- [ ] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/docs/community/development.md#3-update-documentation) is used for all new features.\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "mathbraga",
+  "merged_at": "2024-01-23T05:01:43Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "05e17c0bf08d99810321b07710d62adff1be3673",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "1612d3fabd5ae991dcb656649caca6c8382ff81b",
+    "1bad612c516c9674f47356f443a84cab0662b7d4"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85WiFqQ",
+          "author": "nirname",
+          "body": "There is already `gitGraphConfig` defined\r\n```suggestion\r\n  const isParallelCommits = gitGraphConfig.parallelCommits;\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 114,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-14T17:49:07Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85WiF2P",
+          "author": "nirname",
+          "body": "It seems there is only one argument in `findClosesParent` function, so the second is extra\r\n```suggestion\r\n      const closestParent = findClosestParent(commit.parents);\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 119,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-14T17:54:02Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85WiGdF",
+          "author": "nirname",
+          "body": "There is no check for the case when `closesParent` is blank string. I am not sure, maybe there is always an empty element in `commitPos`, but it seems strange a little bit. Initial commit should not have a parent, for instance, if I am not mistaken",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 120,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-14T18:11:07Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85WrMp3",
+          "author": "mathbraga",
+          "body": "`closestParent` will never be blank here I believe. The `commit.parents.length` in the `if` condition guarantees that the commit has atleast 1 parent, so the `findClosestParent` inside always returns a parent. Initial commit for example won't satisfy this `if` condition since its `commit.parents.length` will be 0.\r\n\r\nI could pass the `closestParent` definition to outside the `if`, just above it, and then change the `if` condition to something like this:\r\n```javascript\r\nif (isParallelCommits && closestParent) {...}\r\n```\r\n\r\nBut tell me if you still wish to change this.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 120,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-16T22:48:00Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85WiGgg",
+          "author": "nirname",
+          "body": "Maybe it is better to return undefined when parent is missing",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 76,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-14T18:12:33Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85WrOCh",
+          "author": "mathbraga",
+          "body": "The way I used `findClosestParent` in the code guarantees the function returns a parent as I mentioned above. But I do agree to return `undefined` for correctness, and the function could be used in other contexts aswell.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 76,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-16T22:53:23Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85W7DCl",
+          "author": "sidharthv96",
+          "body": "If we move the magic numbers 40 and 10 to constants (and replace other usages), that would be nice.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 126,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-19T04:16:00Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85XEG73",
+          "author": "mathbraga",
+          "body": "Noticed the `pos + 10` was very repetitive throughout the code so I also made that into a const. Some of the 10 values seemed to have a different context so I left them untouched.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 126,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-21T00:18:56Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85XIswc",
+          "author": "sidharthv96",
+          "body": "\u2764\ufe0f ",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 376,
+          "start_line": 333,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-22T13:56:44Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85XItGN",
+          "author": "sidharthv96",
+          "body": "Shouldn't posWithOffset be set after the if block, as pos is updated inside it?",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 134,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-22T13:57:13Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85XLG1E",
+          "author": "mathbraga",
+          "body": "Yes it should, it even breaks the tests I added, not sure how I missed this. Good catch.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 134,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-22T23:05:14Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85XIt3F",
+          "author": "sidharthv96",
+          "body": "Oh, and please swap the blocks of this `if` to avoid the negation. \r\n",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 133,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-22T13:59:16Z",
+          "is_outdated": true
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 8
+}

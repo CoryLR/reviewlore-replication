@@ -1,0 +1,146 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34116,
+  "title": "Vue: Make globals reactive in decorators",
+  "body": "This reverts commit 07f07ec33f1ff3cbebb5d2354f553e22f1780bb4.\r\n\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n#### Manual testing\r\nSee https://github.com/storybookjs/storybook/pull/33562\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Reactive global state is now supported in Vue 3 decorators.\n  * Decorators can update story args dynamically via updateArgs; new example stories demonstrate counter and locale-driven behavior.\n\n* **Tests**\n  * Added end-to-end tests covering decorator-driven arg updates and reactive globals in Vue 3.\n  * Expanded unit tests to validate reactive global handling and updateArgs behavior.\n\n* **Documentation**\n  * New Vue 3 docs and snippets showing reactive globals and updateArgs usage in decorators.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "Sidnioulz",
+  "merged_at": "2026-03-17T15:44:00Z",
+  "base_ref": "next",
+  "merge_commit_sha": "662b52fb1b0fc6413d6e982ab0271c6fcad8e89b",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "f1d7dea3cd17343e8d18e644d936b71104581b8c",
+    "089e2b710b0aaca1e7533d3250f1498db5579181"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uXoC2",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Don't skip the delete pass when `nextArgs` is empty.**\n\nReturning here leaves every stale key in `reactiveArgs` / `reactiveGlobals` intact, so resetting args or clearing toolbar globals back to `{}` keeps the old values alive in Vue decorators. This should still run the deletion loop and end up with an empty reactive object.\n\n\n<details>\n<summary>\ud83d\udca1 Proposed fix</summary>\n\n```diff\n export function updateArgs<\n   T extends {\n     [name: string]: unknown;\n   },\n >(reactiveArgs: T, nextArgs: T) {\n-  if (Object.keys(nextArgs).length === 0) {\n-    return;\n-  }\n   const currentArgs = isReactive(reactiveArgs) ? reactiveArgs : reactive(reactiveArgs);\n   // delete all args in currentArgs that are not in nextArgs\n   Object.keys(currentArgs).forEach((key) => {\n     if (!(key in nextArgs)) {\n       delete currentArgs[key];\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  const currentArgs = isReactive(reactiveArgs) ? reactiveArgs : reactive(reactiveArgs);\n  // delete all args in currentArgs that are not in nextArgs\n  Object.keys(currentArgs).forEach((key) => {\n    if (!(key in nextArgs)) {\n      delete currentArgs[key];\n    }\n  });\n  // add/update args from nextArgs\n  Object.keys(nextArgs).forEach((key) => {\n    currentArgs[key] = nextArgs[key];\n  });\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/renderers/vue3/src/render.ts` around lines 156 - 158, The early return\nwhen Object.keys(nextArgs).length === 0 prevents the deletion pass from running\nand leaves stale keys in reactiveArgs/reactiveGlobals; remove the early return\nand ensure the existing deletion loop (the code that iterates reactiveArgs and\nreactiveGlobals and deletes keys not present in nextArgs) always runs even if\nnextArgs is empty so that both reactiveArgs and reactiveGlobals are fully\ncleared when nextArgs is {}.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/vue3/src/render.ts",
+          "line_number": 158,
+          "start_line": 156,
+          "commit_sha": "089e2b710b0aaca1e7533d3250f1498db5579181",
+          "created_at": "2026-03-12T15:21:03Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6vYxph",
+          "author": "Sidnioulz",
+          "body": "@huang-julien @chakAs3 any thoughts on that? It's unrelated to the PR, but is the bunny correct here? Do we have a memleak or potential arg corruption going on?",
+          "file_path": "code/renderers/vue3/src/render.ts",
+          "line_number": 158,
+          "start_line": 156,
+          "commit_sha": "089e2b710b0aaca1e7533d3250f1498db5579181",
+          "created_at": "2026-03-16T19:38:14Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6vys5g",
+          "author": "huang-julien",
+          "body": "Oops, a bit late to the party. \nI think rabbit is right. We should probably clean up properties from old reactive object if the next one is empty. \nIt's not really about memleak, but more about the reactive global not reflecting the state of storycontext.globals",
+          "file_path": "code/renderers/vue3/src/render.ts",
+          "line_number": 158,
+          "start_line": 156,
+          "commit_sha": "089e2b710b0aaca1e7533d3250f1498db5579181",
+          "created_at": "2026-03-17T20:08:52Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6yHKQK",
+          "author": "Sidnioulz",
+          "body": "Thanks @huang-julien! I've created https://github.com/storybookjs/storybook/issues/34319 as a follow up for contributors.",
+          "file_path": "code/renderers/vue3/src/render.ts",
+          "line_number": 158,
+          "start_line": 156,
+          "commit_sha": "089e2b710b0aaca1e7533d3250f1498db5579181",
+          "created_at": "2026-03-25T13:26:48Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uXoDg",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udf10 Web query:\n\n`In Vue 3 templates, is `:lang={{globals?.locale || 'en'}}` valid syntax, or should the binding be written as `:lang=\"globals?.locale || 'en'\"`?`\n\n\ud83d\udca1 Result:\n\n` :lang={{globals?.locale || 'en'}} ` is **not** valid Vue 3 template syntax\u2014mustache interpolation (`{{ }}`) can\u2019t be used inside HTML attributes. Use a `v-bind` / `:` binding with a JavaScript expression instead:\n\n```vue\n:lang=\"globals?.locale || 'en'\"\n```\n\nThis is exactly what Vue\u2019s template syntax docs describe for attribute bindings. [1]\n\n**Sources**  \n[1] Vue.js Guide \u2014 Template Syntax (Attribute Bindings): ([vuejs.org](https://vuejs.org/guide/essentials/template-syntax.html?source=post_page-----f1acd4696b71----------------------))\n\nCitations:\n\n- 1: https://vuejs.org/guide/essentials/template-syntax.html?source=post_page-----f1acd4696b71----------------------\n\n---\n\n\n\n</details>\n\n**Fix the `:lang` binding syntax in both Vue snippets.**\n\n`:lang={{globals?.locale || 'en'}}` is not valid Vue template syntax\u2014mustache interpolation (`{{ }}`) cannot be used inside HTML attributes. Use a `v-bind` binding with a JavaScript expression instead: `:lang=\"globals?.locale || 'en'\"`.\n\n<details>\n<summary>\ud83d\udca1 Proposed fix</summary>\n\n```diff\n         template: `\n-          <div :lang={{globals?.locale || 'en'}}>\n+          <div :lang=\"globals?.locale || 'en'\">\n             <p>Greeting: {{greeting}}</p>\n             <story />\n           </div>\n         `,\n```\n</details>\n\nAlso applies to lines 40-45.\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n        template: `\n          <div :lang=\"globals?.locale || 'en'\">\n            <p>Greeting: {{greeting}}</p>\n            <story />\n          </div>\n        `,\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@docs/_snippets/decorator-with-reactive-globals.md` around lines 14 - 19, The\nVue template uses mustache interpolation inside an attribute (the lang attribute\nin the template string) which is invalid; update both template snippets to use a\nv-bind on the lang attribute so it receives a JavaScript expression that uses\nglobals?.locale with a fallback of 'en' (i.e., bind the lang attribute rather\nthan using {{ }}); locate the template blocks containing the lang attribute and\nreplace the attribute usage accordingly in both places.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "docs/_snippets/decorator-with-reactive-globals.md",
+          "line_number": 19,
+          "start_line": 14,
+          "commit_sha": "089e2b710b0aaca1e7533d3250f1498db5579181",
+          "created_at": "2026-03-12T15:21:04Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uXoDu",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udf10 Web query:\n\n`In Storybook Vue 3, should `.storybook/preview.ts` export a default `Preview` object, and would a file that only contains `const WithIncrementDecorator = { args, decorators }` be treated as valid preview configuration?`\n\n\ud83d\udca1 Result:\n\nYes\u2014**`.storybook/preview.ts` should export Storybook \u201cproject annotations\u201d**, and the currently recommended/typed pattern is a **default export** of a `Preview` object (e.g. `const preview: Preview = { decorators, parameters, args, ... }; export default preview;`). [1]\n\nStorybook can also read **specific named exports** (e.g. `export const decorators = [...]`) from `preview.ts`, which it turns into internal configuration. [2]\n\nA file that *only* contains:\n\n```ts\nconst WithIncrementDecorator = { args, decorators };\n```\n\nis **not valid preview configuration by itself**, because **nothing is exported** for Storybook to consume. To make it effective, you\u2019d need to export it (either as the `default` preview object or by exporting the relevant named fields). [1][2][3]\n\n**Sources:**  \n[1] Storybook docs \u2013 Setup / `.storybook/preview.ts` default `Preview` export pattern ([storybook.js.org](https://storybook.js.org/docs/8.6/get-started/setup))  \n[2] Storybook docs \u2013 Builder API (preview config via named exports like `decorators`) ([storybook.js.org](https://storybook.js.org/docs/8/builders/builder-api?utm_source=openai))  \n[3] Storybook docs \u2013 Global args configured via default export in `preview.js|ts` ([storybook.js.org](https://storybook.js.org/docs/writing-stories/args))\n\nCitations:\n\n- 1: https://storybook.js.org/docs/8.6/get-started/setup\n- 2: https://storybook.js.org/docs/8/builders/builder-api?utm_source=openai\n- 3: https://storybook.js.org/docs/writing-stories/args\n\n---\n\n\n\n</details>\n\n**Snippet filename does not match the code pattern\u2014no exports.**\n\nThe code defines `WithIncrementDecorator` as a constant but exports nothing. Storybook's `.storybook/preview.ts` requires either a default export of a `Preview` object or named exports (e.g., `export const decorators = [...]`). Pasting this code into a preview file will not register the decorator. Either show this as a `*.stories.*` example with an exported story, or convert it to a proper preview default export.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@docs/_snippets/decorator-with-updateArgs.md` around lines 1 - 28, The snippet\ndefines WithIncrementDecorator but never exports it, so Storybook won't register\nthe decorator; update the snippet to export the decorator properly by converting\nthe constant into a preview export (for example create a default export matching\nStorybook's Preview shape that includes decorators or export a named\n\"decorators\" array referencing the decorator), ensure the decorator uses\nuseArgs()/updateArgs as shown (keep the function body and template) and remove\nthe unused WithIncrementDecorator constant or replace it with an exported value\nso Storybook's preview file receives either a default export or named export\n(e.g., export const decorators = [...]) that includes the decorator.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:grasshopper -->\n\n<!-- This is an auto-generated reply by CodeRabbit -->",
+          "file_path": "docs/_snippets/decorator-with-updateArgs.md",
+          "line_number": 28,
+          "start_line": 1,
+          "commit_sha": "089e2b710b0aaca1e7533d3250f1498db5579181",
+          "created_at": "2026-03-12T15:21:04Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6vYu16",
+          "author": "Sidnioulz",
+          "body": "@coderabbitai Learn: files in docs/_snippets are shown in our doc site to teach users, so they aren't always functionally complete. Look at them from a doc/teaching perspective and don't mention missing imports/exports/code when it would be obvious to users how to complete the snippet.",
+          "file_path": "docs/_snippets/decorator-with-updateArgs.md",
+          "line_number": 28,
+          "start_line": 1,
+          "commit_sha": "089e2b710b0aaca1e7533d3250f1498db5579181",
+          "created_at": "2026-03-16T19:36:09Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6vYwhp",
+          "author": "coderabbitai",
+          "body": "`@Sidnioulz`, understood! I'll keep that in mind for future reviews \u2014 documentation snippets in `docs/_snippets` are meant to teach concepts and don't need to be functionally complete. I'll avoid flagging missing imports, exports, or boilerplate when it would be self-evident to the reader.\n\n---\n\n<details>\n<summary>\u270f\ufe0f Learnings added</summary>\n\n```\nLearnt from: Sidnioulz\nRepo: storybookjs/storybook PR: 34116\nFile: docs/_snippets/decorator-with-updateArgs.md:1-28\nTimestamp: 2026-03-16T19:37:22.815Z\nLearning: In the storybookjs/storybook repository, files under `docs/_snippets/` are documentation snippets displayed on the Storybook doc site for teaching/illustration purposes. They are intentionally incomplete and do not need to be functionally self-contained. Do not flag missing imports, exports, or other boilerplate code in these files when it would be obvious to users how to complete the snippet in their own project.\n```\n\n> Note: Learnings are effective only in the context of similar code segments. To apply general coding guidelines, please configure [review instructions](https://docs.coderabbit.ai/guides/review-instructions). You can manage existing learnings in the [app](https://app.coderabbit.ai/learnings).\n\n</details>\n\n\n\n---\n\n<details>\n<summary>\ud83e\udde0 Learnings used</summary>\n\n```\nLearnt from: kasperpeulen\nRepo: storybookjs/storybook PR: 0\nFile: :0-0\nTimestamp: 2026-01-28T09:16:24.155Z\nLearning: In Storybook CSF factories codemod, preview files with only named exports (including re-exports like `export { withTheme } from './decorators'`) still require a default export to be added via `export default definePreview({})`, because story files import the preview default with `import preview from '../.storybook/preview'`. Named exports do not count as default exports, so the codemod correctly adds a default export even when re-exports are present.\n```\n\n---\n\n```\nLearnt from: ndelangen\nRepo: storybookjs/storybook PR: 32507\nFile: code/core/src/manager/globals/globals-module-info.ts:25-33\nTimestamp: 2025-09-24T09:39:39.233Z\nLearning: In Storybook, storybook/actions/decorator is a preview-only entrypoint and should not be included in manager globals configuration. The duplicatedKeys array in code/core/src/manager/globals/globals-module-info.ts is specifically for manager-side externalization, not preview entrypoints.\n```\n\n---\n\n```\nLearnt from: Sidnioulz\nRepo: storybookjs/storybook PR: 32458\nFile: code/core/src/components/components/tooltip/WithTooltip.tsx:54-96\nTimestamp: 2025-11-05T09:37:25.920Z\nLearning: Repo: storybookjs/storybook \u2014 In code/core/src/components/components/tooltip/WithTooltip.tsx, the legacy WithTooltip implementation is intentionally reintroduced for backward compatibility and is deprecated; maintainers (per Sidnioulz) do not want maintenance or improvements on it. Prefer WithTooltipNew/Popover; avoid suggesting changes to WithTooltip.* going forward.\n```\n\n---\n\n```\nLearnt from: Sidnioulz\nRepo: storybookjs/storybook PR: 32458\nFile: code/core/src/components/components/Select/Select.tsx:200-204\nTimestamp: 2025-11-05T09:38:47.712Z\nLearning: Repo: storybookjs/storybook \u2014 Guidance: Until Storybook 11 is released, do not suggest using React.useId anywhere (e.g., in code/core/src/components/components/Select/Select.tsx) to maintain compatibility with React 17 runtimes. Prefer advising: accept a caller-provided props.id and, if needed, generate a client-only fallback id to minimize SSR hydration issues \u2014 but avoid useId. Resume prompting for useId after Storybook 11.\n```\n\n---\n\n```\nLearnt from: CR\nRepo: storybookjs/storybook PR: 0\nFile: AGENTS.md:0-0\nTimestamp: 2026-03-14T06:03:34.145Z\nLearning: Applies to code/**/*.test.{ts,tsx,js,jsx} : Export functions that need direct tests and test real behavior, not just syntax patterns\n```\n\n</details>\n\n\n\n<!-- This is an auto-generated reply by CodeRabbit -->",
+          "file_path": "docs/_snippets/decorator-with-updateArgs.md",
+          "line_number": 28,
+          "start_line": 1,
+          "commit_sha": "089e2b710b0aaca1e7533d3250f1498db5579181",
+          "created_at": "2026-03-16T19:37:28Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uzPMQ",
+          "author": "yannbf",
+          "body": "```suggestion\n  test.skip(templateName !== 'vue3-vite/default-ts', 'Only run these tests on Vue 3');\n```",
+          "file_path": "code/e2e-tests/framework-vue3.spec.ts",
+          "line_number": 15,
+          "start_line": null,
+          "commit_sha": "6bda49b828bf399a32cba4621e164a0f123c8bea",
+          "created_at": "2026-03-13T17:16:52Z",
+          "is_outdated": true
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 4
+}

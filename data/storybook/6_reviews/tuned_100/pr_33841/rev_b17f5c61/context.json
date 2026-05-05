@@ -1,0 +1,64 @@
+{
+  "pr_number": 33841,
+  "head_sha": "b17f5c619735fe8f9dca99b97a389bfa4b1c0069",
+  "merge_base_sha": "f242e765ea014b427a7e374676ab7c8c0b427116",
+  "title": "Docs: Add troubleshooting for react-docgen-typescript in monorepos",
+  "description": "Closes #\n\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\n\n<!--\n\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\n\n-->\n\n## What I did\n\nAdds a troubleshooting entry to the TypeScript configuration docs explaining why inherited props are missing when using `react-docgen-typescript` with workspace packages in a monorepo.\n\n**Root cause:** The `@joshwooding/vite-plugin-react-docgen-typescript` Vite plugin creates a TS program from files matching its `include` glob (default: `**/**.tsx`), resolved from the Storybook project directory. Workspace package files are outside that directory and aren't included in the program, so inherited types (e.g. MUI `ButtonProps`) can't be resolved.\n\n**Fix:** Add workspace source files to the `include` option in `reactDocgenTypescriptOptions`.\n\nAddresses https://github.com/storybookjs/storybook/discussions/33837  \nReproduction: https://github.com/kasperpeulen/storybook-rdt-workspace-repro\n\n## Checklist for Contributors\n\n### Testing\n\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\n\n#### The changes in this PR are covered in the following automated tests:\n\n- [ ] stories\n- [ ] unit tests\n- [ ] integration tests\n- [ ] end-to-end tests\n\n#### Manual testing\n\n> [!CAUTION]\n> This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!\n\nDocumentation-only change. Verified the fix described in the docs by reproducing the issue and confirming the `include` workaround resolves it. See reproduction repo linked above.\n\n### Documentation\n\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\n\n- [x] Add or update documentation reflecting your changes\n- [ ] If you are deprecating/removing a feature, make sure to update\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\n\n## Checklist for Maintainers\n\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\n- [ ] Make sure this PR contains **one** of the labels below:\n   <details>\n     <summary>Available labels</summary>\n\n  - `bug`: Internal changes that fixes incorrect behavior.\n  - `maintenance`: User-facing maintenance tasks.\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\n  - `feature request`: Introducing a new feature.\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\n  - `other`: Changes that don't fit in the above categories.\n\n   </details>\n\n### \ud83e\udd8b Canary release\n\n<!-- CANARY_RELEASE_SECTION -->\n\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\n\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\n\n<!-- CANARY_RELEASE_SECTION -->\n\n<!-- BENCHMARK_SECTION -->\n<!-- BENCHMARK_SECTION -->\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n\n## Summary by CodeRabbit\n\n* **Documentation**\n  * Added Storybook configuration examples demonstrating TypeScript setup best practices for monorepo environments.\n  * Added troubleshooting guidance for inherited props handling in monorepo projects using react-docgen-typescript with workspace packages.\n\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "diff": "diff --git a/docs/_snippets/storybook-main-rdt-monorepo-include.md b/docs/_snippets/storybook-main-rdt-monorepo-include.md\nnew file mode 100644\nindex 00000000000..f83cc765397\n--- /dev/null\n+++ b/docs/_snippets/storybook-main-rdt-monorepo-include.md\n@@ -0,0 +1,35 @@\n+```ts filename=\".storybook/main.ts\" renderer=\"react\" language=\"ts\" tabTitle=\"CSF 3\"\n+// Replace your-framework with the framework you are using, e.g. react-vite, nextjs, vue3-vite, etc.\n+import type { StorybookConfig } from '@storybook/your-framework';\n+\n+const config: StorybookConfig = {\n+  framework: '@storybook/your-framework',\n+  stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],\n+  typescript: {\n+    reactDocgen: 'react-docgen-typescript',\n+    reactDocgenTypescriptOptions: {\n+      // Add your workspace package source files so they're included in the TS program\n+      include: ['**/**.tsx', '../../packages/ui/src/**/*.tsx'],\n+    },\n+  },\n+};\n+\n+export default config;\n+```\n+\n+```ts filename=\".storybook/main.ts\" renderer=\"react\" language=\"ts\" tabTitle=\"CSF Next \ud83e\uddea\"\n+// Replace your-framework with the framework you are using (e.g., react-vite, nextjs, nextjs-vite)\n+import { defineMain } from '@storybook/your-framework/node';\n+\n+export default defineMain({\n+  framework: '@storybook/your-framework',\n+  stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],\n+  typescript: {\n+    reactDocgen: 'react-docgen-typescript',\n+    reactDocgenTypescriptOptions: {\n+      // Add your workspace package source files so they're included in the TS program\n+      include: ['**/**.tsx', '../../packages/ui/src/**/*.tsx'],\n+    },\n+  },\n+});\n+```\ndiff --git a/docs/configure/integration/typescript.mdx b/docs/configure/integration/typescript.mdx\nindex 7ab70691877..0f8b02244ba 100644\n--- a/docs/configure/integration/typescript.mdx\n+++ b/docs/configure/integration/typescript.mdx\n@@ -110,6 +110,22 @@ Out of the box, Storybook supports the `satisfies` operator for almost every fra\n \n   {/* prettier-ignore-end */}\n \n+  ### Inherited props are missing for components from workspace packages\n+\n+  If you're using `react-docgen-typescript` in a monorepo with npm/yarn/pnpm workspaces, you may find that components imported from a workspace package are missing inherited props (e.g., MUI's `ButtonProps`), while the same component imported locally works fine.\n+\n+  This happens because the underlying Vite plugin creates a TypeScript program from files matching its `include` glob (default: `**/**.tsx`), resolved from the Storybook project's directory. Workspace package files are outside that directory and aren't included in the program, so inherited types can't be resolved.\n+\n+  To fix this, add your workspace package source files to the `include` option:\n+\n+  {/* prettier-ignore-start */}\n+\n+  <CodeSnippets path=\"storybook-main-rdt-monorepo-include.md\" />\n+\n+  {/* prettier-ignore-end */}\n+\n+  Adjust the path (`../../packages/ui/src/**/*.tsx`) to match your monorepo layout. Note that `tsconfigPath` only affects compiler options \u2014 it does not change which files are included in the TypeScript program.\n+\n   ### The types are not being generated for my component\n \n   If you're working with a React project, type inference is automatically enabled for your components using the `react-docgen` library for improved build times and type safety. However, you may run into a situation where some options may not work as expected (e.g., [`Enums`](https://www.typescriptlang.org/docs/handbook/enums.html), React's [`forwardRef`](https://react.dev/reference/react/forwardRef)). This is primarily due to how the `react-docgen` package is implemented, making it difficult for Storybook to infer the component's metadata and generate types automatically. To solve this, you can update the `typescript` configuration option in your Storybook configuration file to use `react-docgen-typescript` instead. For example:\n",
+  "human_comments": [
+    {
+      "body": "```suggestion\n// Replace your-framework with the framework you are using, e.g. react-vite, nextjs, nextjs-vite, etc.\n```",
+      "author": "kylegach",
+      "file_path": "docs/_snippets/storybook-main-rdt-monorepo-include.md",
+      "line_number": 2,
+      "is_resolved": true,
+      "category": "Comment Requirements",
+      "dimension": "Code Style"
+    },
+    {
+      "body": "```suggestion\n      // \ud83d\udc47 Add your workspace package source files so they're included in the TS program\n```",
+      "author": "kylegach",
+      "file_path": "docs/_snippets/storybook-main-rdt-monorepo-include.md",
+      "line_number": 11,
+      "is_resolved": true,
+      "category": "Comment Requirements",
+      "dimension": "Code Style"
+    },
+    {
+      "body": "```suggestion\n      // \ud83d\udc47 Add your workspace package source files so they're included in the TS program\n```",
+      "author": "kylegach",
+      "file_path": "docs/_snippets/storybook-main-rdt-monorepo-include.md",
+      "line_number": 30,
+      "is_resolved": true,
+      "category": "Comment Requirements",
+      "dimension": "Code Style"
+    },
+    {
+      "body": "```suggestion\n  ### Inherited args are missing for components from workspace packages\n```",
+      "author": "kylegach",
+      "file_path": "docs/configure/integration/typescript.mdx",
+      "line_number": 113,
+      "is_resolved": true,
+      "category": "Documentation",
+      "dimension": "Code Style"
+    },
+    {
+      "body": "```suggestion\n  If you're using `react-docgen-typescript` in a monorepo with npm/yarn/pnpm workspaces, you may find that components imported from a workspace package are missing inherited args (e.g., MUI's `ButtonProps`), while the same component imported locally works fine.\n```",
+      "author": "kylegach",
+      "file_path": "docs/configure/integration/typescript.mdx",
+      "line_number": 115,
+      "is_resolved": true,
+      "category": "Documentation",
+      "dimension": "Code Style"
+    },
+    {
+      "body": "```suggestion\n  Adjust the path (`../../packages/ui/src/**/*.tsx`) to match your monorepo layout. Note that `tsconfigPath` only affects compiler options. It does not change which files are included in the TypeScript program.\n```\n\nCan you clarify the `tsconfigPath` part? It seems to be missing some context.",
+      "author": "kylegach",
+      "file_path": "docs/configure/integration/typescript.mdx",
+      "line_number": 127,
+      "is_resolved": true,
+      "category": "Unclear Code Descriptions",
+      "dimension": "Maintainability and Readability"
+    }
+  ]
+}

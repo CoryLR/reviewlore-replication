@@ -1,0 +1,22 @@
+{
+  "pr_number": 4501,
+  "source_mr_date": "2023-08-20T14:56:43Z",
+  "candidates": [
+    "When refactoring diagram code (e.g., migrating from JS to TS, moving files, restructuring exports), do not simultaneously change test inputs or expected values; structural refactoring and behavior/format changes to test data must be in separate commits or PRs so reviewers can verify the refactoring did not alter behavior.",
+    "In `DiagramDB` interface declarations and implementations, use unambiguous names for reset operations: prefer `resetConfig` over bare `reset` or overloading `clear` when the method specifically resets configuration state, to clearly distinguish it from `clear()` which resets runtime diagram data.",
+    "A diagram DB's `clear()` method must reset all diagram state including configuration; if config has a default value it should be reassigned inside `clear()` (e.g., `config = structuredClone(DEFAULT_CONFIG)`) so callers only need to call `clear()` between renders without separately triggering a config reset.",
+    "Use the built-in Web API `structuredClone()` for deep-cloning plain configuration objects (e.g., when snapshotting default configs or resetting mutable state) rather than `JSON.parse(JSON.stringify(...))` or manual spread-based deep copy.",
+    "Use `String.prototype.startsWith()` for string prefix tests (e.g., `value.startsWith(':')`) instead of the `value.substring(0, 1) === ':'` pattern.",
+    "In diagram renderers, config values must be resolved in ascending priority order: (1) diagram-level defaults, then (2) global site config, then (3) per-render directive/local config. Because `getConfig()` in `packages/mermaid/src/config.ts` already merges site config with directive overrides, the pattern `cleanAndMerge(db.getConfig(), getConfig().<diagramKey>)` achieves the correct final precedence.",
+    "In diagram renderer `draw` functions, explicitly cast `diagObj.db` to the diagram-specific DB interface (e.g., `const db = diagObj.db as PieDB`) rather than leaving it typed as the generic `DiagramDB`, to enable type-safe access to diagram-specific methods without extra null checks.",
+    "Avoid `if/else` constructs when the `if` branch already exits via `return`; drop the `else` keyword and let the fallthrough code execute directly, keeping logic flat.",
+    "Diagram-specific default config values must be sourced from `packages/mermaid/src/defaultConfig.ts`, which loads from `config.schema.yaml` via the `?only-defaults=true` Vite plugin, rather than being hardcoded inside individual diagram files; this ensures all defaults are visible in the auto-generated config documentation.",
+    "Individual diagram DB implementations should not define their own `setConfig()` function; diagram-specific config overrides must flow through the global config system (`getConfig()` in `packages/mermaid/src/config.ts`) via directives, to prevent config state from leaking between renders or conflicting with the global config lifecycle.",
+    "Changes that add, remove, or rename optional methods on the shared `DiagramDB` interface in `packages/mermaid/src/diagram-api/types.ts` should be submitted as a dedicated PR with focused discussion, not bundled into a diagram-specific refactoring PR where they are harder to evaluate in isolation.",
+    "Cypress `describe` block names for diagram rendering tests should use lowercase and match the diagram's syntax keyword exactly (e.g., `describe('pie', ...)` not `describe('Pie Chart', ...)`), consistent with the naming convention used across `cypress/integration/rendering/`.",
+    "Do not self-resolve a review comment that contains an unanswered question or is awaiting confirmation from the original commenter; only the original commenter (or a maintainer) should mark such a comment resolved, so outstanding questions remain visible when another reviewer opens the PR."
+  ],
+  "analysis": [],
+  "cost_usd": 0.26882300000000003,
+  "duration_seconds": 139.2864329814911
+}

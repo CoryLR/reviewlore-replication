@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+      "line_number": 525,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`{ recursive: true }` is not supported by Node.js `fs.watch` on Linux (only macOS and Windows). On Linux this throws `ERR_FEATURE_UNAVAILABLE_ON_PLATFORM`, which the surrounding `try/catch` silently swallows and logs at debug level. The result is that file watching silently does nothing on Linux CI and Linux dev servers, so changed components are never re-extracted until the next full page reload.\n\nConsider a cross-platform alternative: use the `chokidar` package (already a transitive dependency in many Storybook configurations) or `@parcel/watcher`, both of which fall back to polling on Linux. Alternatively, detect the platform and emit a warning when recursive watching is unavailable:\n```ts\nif (process.platform === 'linux') {\n  logger.warn('[reactComponentMeta] Recursive fs.watch unsupported on Linux; file watching disabled.');\n  return;\n}\n```",
+      "index": 0
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+      "line_number": 35,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`ComponentMetaManager.instance` is a static field that is assigned once and never cleared. If `dispose()` is ever called outside the `process.on('exit', ...)` handler (e.g. during a plugin-level restart or in a future test that uses `getInstance()`), subsequent calls to `getInstance()` will return a Promise resolving to the already-disposed manager \u2014 causing `ls.getProgram()` calls on a disposed LanguageService.\n\nA minimal fix is to reset the field in `dispose()` so that the next caller gets a fresh instance:\n```ts\nstatic async disposeInstance() {\n  const m = await this.instance;\n  this.instance = undefined;\n  m?.dispose();\n}\n```\nOr at minimum document that `getInstance()` must not be called after `dispose()`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+      "line_number": 11,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The production source files (`ComponentMetaManager.ts`, `ComponentMetaProject.ts`) import Node built-ins without the `node:` protocol prefix (`'fs'`, `'path'`), while all the new test files consistently use `'node:path'` and `'node:fs'`. The rest of the codebase uses `node:` for built-ins. Please align the production imports:\n```ts\nimport { type FSWatcher, existsSync, watch } from 'node:fs';\nimport * as path from 'node:path';\n```",
+      "index": 2
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 197,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`commandLine.fileNames.includes(fileName)` is an O(n) scan inside a `for` loop, making `ensureFiles(fileNames)` O(n\u00b2) in the number of file names. For a large monorepo project (e.g. Mantine with 133 components each pulling in many story files), this will be called with a large `allFiles` array on every batch extract.\n\nConsider maintaining a `Set<string>` mirror of `commandLine.fileNames`, or at minimum build a `Set` once at the top of `ensureFiles`:\n```ts\nensureFiles(fileNames: string[]): void {\n  const existing = new Set(this.commandLine.fileNames);\n  const toAdd = fileNames.filter(f => !existing.has(f));\n  if (toAdd.length > 0) {\n    this.commandLine.fileNames.push(...toAdd);\n    this.projectVersion++;\n  }\n}\n```",
+      "index": 3
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 253,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`this.entries = entries` overwrites the stored entries on every call to `extractPropsFromStories`. The warmup timer that fires 100 ms after a file change re-extracts `this.entries`, which only contains the *last* batch \u2014 not the union of all batches requested since the project was created. In a dev server handling multiple simultaneous manifest requests (e.g. different story groups), some components may never be warmed up after a file change.\n\nConsider accumulating entries or documenting the intentional last-wins behaviour so future maintainers understand why the warmup is best-effort:\n```ts\n// Only the most-recently-extracted batch is re-warmed; this is intentional.\n// Full correctness is ensured by on-demand extraction; warmup only speeds up the common path.\nthis.entries = entries;\n```",
+      "index": 4
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 468,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`arrayItemsEqual` builds `new Set(a)` and then checks membership for every element of `b`. This makes the comparison order-insensitive (correct for file lists) but also insensitive to duplicate counts: if `a = ['x', 'y']` and `b = ['x', 'x']`, the lengths match (2 === 2), every element of `b` is found in the set, and the function returns `true` \u2014 incorrectly reporting the arrays as equal.\n\nIn practice TypeScript file lists should not contain duplicates, so the bug is unlikely to trigger, but the function should either document this assumption or be fixed:\n```ts\n// Correct O(n) set-based comparison (assumes no duplicates in either array)\nfunction arrayItemsEqual(a: string[], b: string[]) {\n  if (a.length !== b.length) return false;\n  const setA = new Set(a);\n  return b.every(f => setA.has(f));\n  // If duplicates are possible, use a frequency map instead.\n}\n```",
+      "index": 5
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 127,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The third generic of `PresetPropertyFn` is typed as `{ manifestEntries: IndexEntry[]; watch: boolean }` (non-optional `watch`). However, `writeManifests` calls `getManifests(presets)` with no second argument, so `watch` is `undefined` when the option object is spread into `presets.apply`. TypeScript should flag the mismatch at the `apply` call site because `undefined` is not assignable to `boolean`.\n\nChange to `watch?: boolean` to match the optional intent:\n```ts\n{ manifestEntries: IndexEntry[]; watch?: boolean }\n```\nThis also makes the function's own `if (manager && watch)` guard more obviously correct.",
+      "index": 6
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/reactDocgenTypescript.test.ts",
+      "line_number": 1207,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Five test cases (`DtsComponent`, `ForwardRef`, `RenamedExport`, `DisplayNameOverride`, `Barrel`) are removed. The replacement comment says \"RDT returns [] for all of these\" \u2014 but if that's true, those tests were documenting *expected RDT failures* (regression guards). Removing them means:\n1. A future RDT patch that inadvertently starts returning results for these patterns won't be caught.\n2. Developers no longer have a reference for *which patterns RDT cannot handle*.\n\nConsider replacing the deleted snapshot assertions with explicit `expect(result).toEqual([])` or `expect(result).toHaveLength(0)` expectations, clearly marked as \"RDT known limitation\" so the intent is preserved.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "**Linux file-watching is silently broken.** `fs.watch` with `{ recursive: true }` is only supported on macOS and Windows per the Node.js documentation. On Linux (the dominant CI platform and common dev environment), the call raises `ERR_FEATURE_UNAVAILABLE_ON_PLATFORM`, which `watchDirectory`'s `try/catch` absorbs silently. The net effect is that `startWatching()` registers no watchers on Linux, and component prop changes are never picked up without a full server restart. Since the PR description highlights incremental updates as a key performance benefit, this effectively disables that benefit for Linux users. A cross-platform watcher library (e.g., `chokidar`) or a platform check with a clear user-facing warning is needed before this is enabled by default.",
+      "index": 8
+    },
+    {
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "**Inconsistent `node:` built-in protocol across new files.** All new test files (`ComponentMetaManager.test.ts`, `ComponentMetaProject.test.ts`, `componentMetaExtractor.checker.test.ts`) correctly use `import ... from 'node:path'` and `import ... from 'node:fs'`, matching the project convention. The new production files (`ComponentMetaManager.ts`, `ComponentMetaProject.ts`) import the same modules without the `node:` prefix. Please align the production imports to use `node:` as well.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 1.00473685,
+  "duration_seconds": 491.39544892311096
+}

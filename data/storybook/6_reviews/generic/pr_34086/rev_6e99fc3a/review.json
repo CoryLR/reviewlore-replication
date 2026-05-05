@@ -1,0 +1,46 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/docs/src/blocks/components/Story.tsx",
+      "line_number": 47,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "When a story crashes, `setError(err)` is called (lines 57\u201358), and on the next render the component returns the error view early (line 70\u201375), so the `<div ref={storyRef}>` at line 86 is never mounted. React consequently sets `storyRef.current` to `null`. When the reset button is clicked and `resetKey` increments, this guard returns `() => {}` immediately without re-rendering the story or clearing the `error` state. The reset button is entirely non-functional for crashed stories \u2014 the user sees the error view and clicking Reset has no visible effect.\n\nThe root cause is using `resetKey` as a `useEffect` dependency rather than as a React `key` prop. Changing Canvas.tsx to render `<Story ... key={resetKey} />` instead of passing `resetKey` as a prop would cause React to fully unmount and remount the entire subtree on reset, automatically clearing `error`, `showLoader`, and all other local state, and would make recovery from crashes work correctly.",
+      "index": 0
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/blocks/Canvas.tsx",
+      "line_number": 102,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Threading `resetKey` through three layers of props (`Canvas` \u2192 `Story` block \u2192 `getStoryProps` \u2192 `InlineStory`) solely to appear in a `useEffect` dependency array is non-idiomatic React. The conventional way to force a full remount is to place a `key` prop directly on the component:\n\n```tsx\n<Story of={of || story.moduleExport} meta={props.meta} {...props.story} key={resetKey} />\n```\n\nThis would cause React to unmount and remount the entire `Story` subtree when `resetKey` changes, automatically resetting all state in `InlineStory` (including `error` and `showLoader`). It would also eliminate the `resetKey?: number` additions to `CommonProps`, `getStoryProps`, and the `InlineStory` destructuring \u2014 a meaningful reduction in surface area.",
+      "index": 1
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/blocks/Canvas.tsx",
+      "line_number": 87,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The PR description states this uses `FORCE_REMOUNT` \"matching the existing Story canvas reload behavior,\" but the code emits `RESET_STORY_ARGS`. The two events are semantically distinct: `FORCE_REMOUNT` is defined as \"Force the current story to re-render from scratch, with its initial args\" and triggers `StoryRender.remount()`, while `RESET_STORY_ARGS` only resets args in the story store without causing a remount. The remount is handled separately here by `resetKey`. The PR description should be corrected to accurately describe this dual-mechanism approach, and a code comment explaining why `RESET_STORY_ARGS` + `resetKey` is used instead of `FORCE_REMOUNT` (e.g., because inline docs stories don't go through the `StoryRender` path) would help future maintainers.",
+      "index": 2
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/blocks/Canvas.tsx",
+      "line_number": 85,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`resetKey` state and `handleResetStory` are unconditionally initialized on every render of `Canvas`, even when `inline` is `false`. In that case, `onResetStory` is passed as `undefined` at line 100, and neither the state nor the callback is ever used. Consider computing these only when needed \u2014 for example, by moving them below the `inline` computation and guarding with `if (inline)`, or by extracting the inline-story controls into a small wrapper component. As-is, this creates unnecessary React state for every iframed story in docs.",
+      "index": 3
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "There is a naming inconsistency between the PR description and the implementation. The PR description's manual testing steps refer to a \"Reload story\" button (step 4), but the rendered button label at Preview.tsx line 267 reads \"Reset story\", and all identifiers in the code (`handleResetStory`, `onResetStory`, `docblock-reset-story`) use \"reset\". The PR description should be updated to use the correct label so that reviewers and testers are looking for the right thing.",
+      "index": 4
+    }
+  ],
+  "cost_usd": 0.58904325,
+  "duration_seconds": 397.9415180683136
+}

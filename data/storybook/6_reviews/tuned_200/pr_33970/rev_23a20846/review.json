@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.tsx",
+      "line_number": 17,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`@react-aria/live-announcer` is imported here (and `destroyAnnouncer` is imported in `TestProviderRender.stories.tsx`), but neither the vitest addon's `code/addons/vitest/package.json` nor the stories file's package declares this package as a dependency. It is only declared in `code/core/package.json`. Per the monorepo convention, each workspace must declare every package it directly imports in its own `package.json`. This will break installs and module resolution in environments that respect strict workspace boundaries. Add `@react-aria/live-announcer` to `code/addons/vitest/package.json`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/vitest.d.ts",
+      "line_number": 3,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The import path `./core/src/shared/utils/toHaveLiveRegion` is incorrect. Because this file lives at `code/core/vitest.d.ts`, the relative path resolves to `code/core/core/src/shared/utils/toHaveLiveRegion` \u2014 a `core/core` double-segment that does not exist. TypeScript will silently treat `LiveRegionMatcherOptions` as `any`, stripping the type safety from the custom matcher entirely. The correct path is `./src/shared/utils/toHaveLiveRegion`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/package.json",
+      "line_number": 319,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`extend-to-be-announced` is added as a devDependency but is never imported or used anywhere in the codebase. The PR description states it would be registered via `import 'extend-to-be-announced/vitest'` in `storybook.setup.ts`, but that import does not appear in the diff. Searching the repository confirms there are no `toBeAnnounced` or `extend-to-be-announced` call sites. Remove this entry (and the corresponding `aria-live-capture` transitive dep in `yarn.lock`) to avoid a dead dependency that installs and resolves at no benefit.",
+      "index": 2
+    },
+    {
+      "file_path": "code/vitest-setup.ts",
+      "line_number": 6,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The side-effect-only import on line 6 (`import './core/src/shared/utils/toHaveLiveRegion'`) is redundant. `toHaveLiveRegion.ts` contains no auto-registration side effects \u2014 it only exports a function and a type. The named import on line 7 already evaluates the module. Remove line 6.",
+      "index": 3
+    },
+    {
+      "file_path": "code/.storybook/storybook.setup.ts",
+      "line_number": 8,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`toHaveLiveRegion.ts` has no side effects (it only defines and exports a function). Importing it here for its side effects is a no-op and does not register the matcher with Vitest's or Storybook's `expect`. The actual `expect.extend({ toHaveLiveRegion })` registration for Storybook's test `expect` is performed in `preview.tsx`, and for Vitest it is performed in `vitest-setup.ts`. Remove this import.",
+      "index": 4
+    },
+    {
+      "file_path": "code/addons/vitest/src/custom-matchers.d.ts",
+      "line_number": 7,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The declared return type `Promise<void>` is incorrect. The `toHaveLiveRegion` implementation in `toHaveLiveRegion.ts` is entirely synchronous \u2014 it returns `{ pass: boolean; message: () => string }` inline. Declaring it as `Promise<void>` tells TypeScript the assertion is async, which would require `await` at every call site and makes TypeScript flag direct (non-awaited) usages inside `waitFor` callbacks as unhandled promises. Change the return type to `void`.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `toHaveLiveRegion` matcher works by inspecting the live DOM \u2014 it only passes if the text is present in an `aria-live` region at the moment the assertion runs. `@react-aria/live-announcer` typically sets the region content, lets the browser announce it, and then clears the node after a short delay (to allow re-announcement of the same message). If `waitFor`'s first poll happens after the content is cleared, the assertion will fail intermittently, making these stories flaky under load. The `extend-to-be-announced` library (whose dependency was added but then unused) addresses exactly this gap by using a `MutationObserver` to capture announcements regardless of when the DOM is cleaned up. Consider either (a) using `extend-to-be-announced`'s `toBeAnnounced` matcher as originally described in the PR, or (b) documenting this timing sensitivity with a comment in each story.",
+      "index": 6
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description states that `extend-to-be-announced` is \"registered in `code/.storybook/storybook.setup.ts` via `import 'extend-to-be-announced/vitest'`\", and the usage section shows `toBeAnnounced` as the primary test API. However, the actual implementation uses a hand-rolled `toHaveLiveRegion` DOM matcher and `expect(document.body).toHaveLiveRegion(...)` exclusively. The description is inconsistent with the code. If `toHaveLiveRegion` is the chosen approach, update the PR description and the JSDoc example in `toHaveLiveRegion.ts` to reflect reality; if `toBeAnnounced` was the intended API, the implementation needs to be completed.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.7084713499999999,
+  "duration_seconds": 376.44404006004333
+}

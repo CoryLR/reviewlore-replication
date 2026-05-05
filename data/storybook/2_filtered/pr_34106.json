@@ -1,0 +1,250 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34106,
+  "title": "Addon-Vitest: Handle additional vitest config export patterns in postinstall",
+  "body": "- [x] Fix `defineConfig(mergeConfig(...))` pattern (defineConfig wrapping mergeConfig)\n- [x] Fix `mergeConfig(...) as ViteUserConfig` pattern (TSAsExpression wrapping)\n- [x] Fix `defineConfig(mergeConfig(...) satisfies ViteUserConfig)` pattern (TSSatisfiesExpression)\n- [x] Fix `export default config` where `config = mergeConfig(...)` (variable re-export)\n- [x] Fix `mergeConfig(viteConfig, vitestConfig)` where vitestConfig is a variable\n- [x] Fix `defineProject({...})` pattern (alias for defineConfig)\n- [x] Fix `const test = {...}; mergeConfig(viteConfig, { test })` pattern (shorthand property)\n- [x] Add unit tests for all new patterns (7 new tests, all 26 tests passing)\n- [x] Code review feedback addressed (type safety + readability improvements)\n- [x] ESLint/Prettier issues resolved\n- [x] CodeQL security scan (no issues)\n\n<!-- START COPILOT CODING AGENT SUFFIX -->\n\n[View original Slack conversation](https://chromaticqa.slack.com/archives/C0AKKBU7VEJ/p1773243652437969?thread_ts=1773243652.437969&cid=C0AKKBU7VEJ)\n\n<!-- START COPILOT CODING AGENT TIPS -->\n---\n\n\ud83d\udd12 GitHub Advanced Security automatically protects Copilot coding agent pull requests. You can protect all pull requests by enabling Advanced Security for your repositories. [Learn more about Advanced Security.](https://gh.io/cca-advanced-security)\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Tests**\n  * Added extensive test suites covering many Vitest config shapes, workspace/project scenarios, and expression-resolution behaviors; consolidated one existing test to focus on template loading.\n\n* **Bug Fixes**\n  * Improved detection and safe merging of complex Vitest configs (workspace vs projects, TS wrappers), reducing incorrect updates.\n\n* **Refactor**\n  * Adopted a resolution-first approach to reliably locate and modify target test configurations.\n\n* **Behavior**\n  * Template selection refined to avoid introducing conflicting workspace/projects keys.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "copilot-swe-agent",
+  "merged_at": "2026-03-17T19:03:04Z",
+  "base_ref": "next",
+  "merge_commit_sha": "271bd1e14a5444f2adbf94c7307e6bda3d349113",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "2f5025f3f0165b8647760cc27ea99c16667acda6",
+    "f894b4d43c6aa92566951e1aeed1976cda591439"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uHFa6",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Handle existing `test.workspace` arrays the same way.**\n\nThis guard only matches `projects`, but the new flow already treats `workspace` as a supported sibling shape later on. A target like `mergeConfig(viteConfig, { test: { workspace: [...] } })` will miss the append path at Line 450 and get rewrapped as a single project instead.  \n\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n-/** Type guard for a property that is a `projects` key with an ArrayExpression value. */\n-const isProjectsArrayProp = (\n+/** Type guard for a property that is a `projects` or `workspace` key with an ArrayExpression value. */\n+const isProjectsArrayProp = (\n   p: t.ObjectMethod | t.ObjectProperty | t.SpreadElement\n ): p is t.ObjectProperty =>\n   p.type === 'ObjectProperty' &&\n   p.key.type === 'Identifier' &&\n-  p.key.name === 'projects' &&\n+  (p.key.name === 'projects' || p.key.name === 'workspace') &&\n   p.value.type === 'ArrayExpression';\n```\n</details>\n\n\nAlso applies to: 450-460\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/vitest/src/updateVitestFile.ts` around lines 103 - 110, The type\nguard isProjectsArrayProp only matches a `projects` property so objects shaped\nlike `test: { workspace: [...] }` are missed; update the guard (used when\ndetecting array-valued project lists for mergeConfig/viteConfig handling) to\naccept either an Identifier named \"projects\" OR an Identifier named \"workspace\"\nwith ArrayExpression value so the same append/merge logic applies; locate and\nchange the isProjectsArrayProp predicate and any usages in the merge flow that\nrely on it (the mergeConfig/viteConfig handling where test.workspace is\nsupported) to ensure test.workspace arrays are treated identically to\ntest.projects arrays.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 00a0296 to bc75a64",
+          "file_path": "code/addons/vitest/src/updateVitestFile.ts",
+          "line_number": 110,
+          "start_line": null,
+          "commit_sha": "00a02968a058c537fa22f472c09245b99c5abb76",
+          "created_at": "2026-03-11T21:28:59Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a concrete code fix to update the type guard to also handle 'workspace' key, with a specific diff provided."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uHFbC",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udf10 Web query:\n\n`In Babel/@babel/types AST, is `export const config = mergeConfig(...)` represented as an `ExportNamedDeclaration` wrapping a `VariableDeclaration`, rather than as a top-level `VariableDeclaration` node in `program.body`?`\n\n\ud83d\udca1 Result:\n\nYes. In Babel\u2019s AST, `export const config = mergeConfig(...)` is a top-level `ExportNamedDeclaration` node in `program.body`, whose `.declaration` is a `VariableDeclaration` (with kind `\"const\"`), rather than a standalone top-level `VariableDeclaration` node. [1], [2]\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the file structure and content around lines 36-39\ncat -n code/core/src/babel/expression-resolver.ts | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1976\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for tests or usage of this resolver to understand the expected behavior\nrg -l \"expression-resolver|resolveExpression\" --type ts --type tsx code/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there are preview-related test files that might use exported variables\nfd -e test.ts -e spec.ts code/ | xargs grep -l \"export const\" 2>/dev/null | head -10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 390\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for where resolveExpression is called and what context it's used in\nrg \"resolveExpression\" code/ -A 3 -B 3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 5349\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for test files that might use this resolver\nfd . code/ --full-path | grep -i \"expression-resolver\" | grep -i test\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there are any references to ExportNamedDeclaration in the context\nrg \"ExportNamedDeclaration\" code/ -B 2 -A 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 14469\n\n---\n\n\n\n</details>\n\n**Resolve exported variable declarations.**\n\nLines 36\u201339 only check for bare `VariableDeclaration` nodes. In Babel AST, `export const config = mergeConfig(...)` is an `ExportNamedDeclaration` wrapping a `VariableDeclaration`, so those identifiers won't be resolved. Multiple utilities in the codebase (`findVarInitialization.ts`, `ConfigFile.ts`) already implement the correct dual-check pattern.\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n-  const declarator = ast.program.body\n-    .filter((n): n is t.VariableDeclaration => n.type === 'VariableDeclaration')\n-    .flatMap((varDecl) => varDecl.declarations)\n+  const declarator = ast.program.body\n+    .flatMap((node) => {\n+      if (node.type === 'VariableDeclaration') {\n+        return node.declarations;\n+      }\n+      if (node.type === 'ExportNamedDeclaration' && node.declaration?.type === 'VariableDeclaration') {\n+        return node.declaration.declarations;\n+      }\n+      return [];\n+    })\n     .find((d) => d.id.type === 'Identifier' && (d.id as t.Identifier).name === varName);\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  const declarator = ast.program.body\n    .flatMap((node) => {\n      if (node.type === 'VariableDeclaration') {\n        return node.declarations;\n      }\n      if (node.type === 'ExportNamedDeclaration' && node.declaration?.type === 'VariableDeclaration') {\n        return node.declaration.declarations;\n      }\n      return [];\n    })\n    .find((d) => d.id.type === 'Identifier' && (d.id as t.Identifier).name === varName);\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/babel/expression-resolver.ts` around lines 36 - 39, The\ndeclarator lookup only checks for top-level VariableDeclaration nodes so\nexported vars like `export const config = ...` are missed; update the logic that\nbuilds `declarator` (in expression-resolver.ts, where `declarator` and `varName`\nare used) to also consider `ExportNamedDeclaration` nodes that have a\n`declaration` which is a `VariableDeclaration` (or unwrap exports before\nflatMapping), i.e. replicate the dual-check pattern used in\nfindVarInitialization.ts/ConfigFile.ts so you search both bare\nVariableDeclaration nodes and VariableDeclaration nodes wrapped inside\nExportNamedDeclaration when matching the identifier name.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 00a0296",
+          "file_path": "code/core/src/babel/expression-resolver.ts",
+          "line_number": 39,
+          "start_line": null,
+          "commit_sha": "d8b7f7c23111f48c911b4f03fd2b0f222da439a6",
+          "created_at": "2026-03-11T21:28:59Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where exported variable declarations are missed and provides a specific code fix."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uH2Nt",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Resolve the exported config before picking the workspace vs. projects template.**\n\n`configUsesWorkspace()` does a file-wide `ObjectProperty` scan and only recognizes inline `test: { workspace: ... }`. That misses shapes like `const test = { workspace: [...] }; export default defineConfig({ test })`, and it can also false-positive on unrelated `test.workspace` objects elsewhere in the file. In either case `getTemplateName(configFile)` can choose the wrong template and reintroduce the `workspace`/`projects` conflict this change is trying to avoid. Reusing the same export-resolution path that `updateConfigFile()` uses would make template selection match the config shapes this PR now supports.\n\n\n\nAlso applies to: 264-264, 451-484\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/vitest/src/postinstall.ts` around lines 193 - 205, The\ngetTemplateName function currently calls configUsesWorkspace(configContent) on\nthe raw file text which misses exported/aliased test objects and can\nfalse-positive; change getTemplateName to first resolve the exported config\nAST/value using the same export-resolution logic used by updateConfigFile (reuse\nor call that resolver) and pass the resolved config object or its serialized\nsource to configUsesWorkspace (or a new helper that inspects the resolved test\nproperty) so template selection correctly detects whether the effective config\nuses workspace vs projects before returning 'vitest.config.template' vs\n'vitest.config.3.2.template' (keep references to getTemplateName,\nconfigUsesWorkspace, and updateConfigFile to locate the code).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/vitest/src/postinstall.ts",
+          "line_number": 214,
+          "start_line": 202,
+          "commit_sha": "f894b4d43c6aa92566951e1aeed1976cda591439",
+          "created_at": "2026-03-11T22:19:02Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential issue with configUsesWorkspace() and suggests a concrete refactor to use export-resolution logic."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uH2N0",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, let's check if the file exists and examine lines 10-20\nhead -30 code/addons/vitest/src/updateVitestFile.config.4.test.ts | cat -n\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1195\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Also look for sibling test files to check if the pattern is repeated\nfd 'updateVitestFile.*\\.test\\.ts' code/addons/vitest/src/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 348\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Examine the full structure of the file to understand the mock setup\nwc -l code/addons/vitest/src/updateVitestFile.config.4.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 126\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the mock setup in sibling test files\nhead -25 code/addons/vitest/src/updateVitestFile.config.3.2.test.ts | cat -n\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1124\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check another sibling file\nhead -25 code/addons/vitest/src/updateVitestFile.config.test.ts | cat -n\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 978\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's a beforeEach block in the main test file\ngrep -n \"beforeEach\" code/addons/vitest/src/updateVitestFile.config.4.test.ts | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for how mocks are set up in other test files to see the standard pattern\ngrep -r \"vi\\.mock.*spy.*true\" code/addons/vitest/src/ --include=\"*.test.ts\" | head -3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there are any beforeEach blocks with mock setup in other vitest files in the codebase\nfind code/addons/vitest/src -name \"*.test.ts\" -exec grep -l \"beforeEach\" {} \\; | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 277\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check one of these files to see how beforeEach and mocks are actually used\ngrep -A 10 \"beforeEach\" code/addons/vitest/src/node/boot-test-runner.test.ts | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 686\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if spy: true is used in the codebase\ngrep -r \"spy.*true\" code/addons/vitest/src/ --include=\"*.test.ts\" | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look at the spy-mocking.mdc file to understand the exact rules\ncat .cursor/rules/spy-mocking.mdc 2>/dev/null || cat .cursorrules 2>/dev/null | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1585\n\n---\n\n\n\n</details>\n\n**Use the repo-standard Vitest spy mock setup here.**\n\nLines 10\u201320 use inline `vi.fn()` and `mockImplementation()` directly inside `vi.mock()` calls, and the same pattern is copied into sibling test files (updateVitestFile.config.3.2.test.ts, updateVitestFile.config.test.ts). Per the repository's spy-mocking rules, refactor to use:\n1. `spy: true` option in all `vi.mock()` calls\n2. Mock behavior implementations moved to `beforeEach` blocks\n3. `vi.mocked()` to type and access the mocked functions\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/vitest/src/updateVitestFile.config.4.test.ts` around lines 10 -\n20, Replace the inline mocks in the vi.mock(...) calls by enabling the spy\nbehavior and moving implementations into beforeEach: use\nvi.mock('storybook/internal/node-logger', () => ({ logger: { info: () => {},\nwarn: () => {}, error: () => {} } }), { spy: true }) and\nvi.mock('../../../core/src/shared/utils/module', () => ({ resolvePackageDir: ()\n=> undefined }), { spy: true }) in the top-level mock declarations, then in\nbeforeEach set the real implementations via vi.mocked(...) to access and set the\nmock implementations for logger.info/logger.warn/logger.error and\nresolvePackageDir (e.g., vi.mocked(logger.info).mockImplementation(...),\nvi.mocked(resolvePackageDir).mockImplementation(() => join(__dirname, '..')));\nupdate the sibling tests (updateVitestFile.config.3.2.test.ts,\nupdateVitestFile.config.test.ts) the same way.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/vitest/src/updateVitestFile.config.4.test.ts",
+          "line_number": 20,
+          "start_line": 10,
+          "commit_sha": "f894b4d43c6aa92566951e1aeed1976cda591439",
+          "created_at": "2026-03-11T22:19:02Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests refactoring mock setup to follow repository standards using spy: true, beforeEach, and vi.mocked()."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uH2N5",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Make these workspace snapshots match the real postinstall input.**\n\n`postinstall.ts` strips the `ROOT_CONFIG` placeholder and the empty `extends` entry before it parses the workspace template, but both tests build `source` from the raw `loadTemplate()` result and snapshot that unprocessed shape. The assertions therefore cover a template variant that production never passes to `updateWorkspaceFile()`. Preprocess the template here the same way before diffing so the snapshots track the shipped flow.\n\n\n\nAlso applies to: 79-85\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/vitest/src/updateVitestFile.config.workspace.test.ts` around\nlines 24 - 30, The workspace test is parsing the raw template rather than the\npreprocessed form used in production; replicate postinstall.ts preprocessing\nbefore calling babel.babelParse by loading the template via\nloadTemplate('vitest.workspace.template', ...) then remove the ROOT_CONFIG\nplaceholder and strip any empty \"extends\" entry (EXTENDS_WORKSPACE === ''/empty)\nthe same way postinstall.ts does, and use that processed string as the input to\nbabel.babelParse (affecting the variable source and the assertions that call\nupdateWorkspaceFile()); make the same change for the second test block around\nthe other occurrence (lines 79-85) so snapshots match the real postinstall\ninput.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/vitest/src/updateVitestFile.config.workspace.test.ts",
+          "line_number": 30,
+          "start_line": 24,
+          "commit_sha": "f894b4d43c6aa92566951e1aeed1976cda591439",
+          "created_at": "2026-03-11T22:19:03Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests preprocessing the template in tests to match actual production input before snapshotting."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uIDcA",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nsed -n '1,30p' code/addons/vitest/src/updateVitestFile.config.3.2.test.ts\nrg -n \"vi\\\\.mock\\\\(|vi\\\\.mocked\\\\(|beforeEach\\\\(\" code/addons/vitest/src/updateVitestFile.config.3.2.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1295\n\n---\n\n\n\n</details>\n\n**Apply the standard Vitest spy mock pattern for all mocks in this file.**\n\nThe mocks on lines 10-20 must follow the mandatory spy mocking rules: use `{ spy: true }` in `vi.mock()`, move behavior implementations into `beforeEach()` blocks via `vi.mocked()`, and remove inline `vi.fn()` / `mockImplementation()` calls.\n\nPer coding guidelines for test files:\n- Use `vi.mock()` with the `spy: true` option for all package and file mocks\n- Implement mock behaviors in `beforeEach` blocks\n- Use `vi.mocked()` for type-safe mock access\n- Avoid inline mock implementations within test cases\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/vitest/src/updateVitestFile.config.3.2.test.ts` around lines 10 -\n20, The two inline mocks should be converted to spy-style mocks: call\nvi.mock('storybook/internal/node-logger', { spy: true }) and\nvi.mock('../../../core/src/shared/utils/module', { spy: true }) (keeping the\nsame module strings), remove inline vi.fn() and mockImplementation usage, and\nmove behavior setup into a beforeEach where you obtain type-safe mock handles\nvia vi.mocked(loggerModule) / vi.mocked(moduleUtils) and set\nlogger.info/warn/error = vi.fn() and\nmoduleUtils.resolvePackageDir.mockReturnValue(join(__dirname, '..')); ensure all\nmock implementations live in beforeEach and use vi.mocked for access.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/vitest/src/updateVitestFile.config.3.2.test.ts",
+          "line_number": 20,
+          "start_line": 10,
+          "commit_sha": "f894b4d43c6aa92566951e1aeed1976cda591439",
+          "created_at": "2026-03-11T22:35:58Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests refactoring mock setup in another test file to follow the standard spy mock pattern."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uIDcE",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nsed -n '1,30p' code/addons/vitest/src/updateVitestFile.config.test.ts\nrg -n \"vi\\\\.mock\\\\(|vi\\\\.mocked\\\\(|beforeEach\\\\(\" code/addons/vitest/src/updateVitestFile.config.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1075\n\n---\n\n\n\n</details>\n\n**Use `{ spy: true }`, `beforeEach()`, and `vi.mocked()` for mock setup.**\n\nBoth `vi.mock()` calls here use inline `vi.fn()` and `mockImplementation()` directly in the factory functions, which violates the repository's Vitest mocking standards. Refactor to use `{ spy: true }` option, move mock behavior setup into `beforeEach` blocks, and access mocks via `vi.mocked()` for type safety.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/vitest/src/updateVitestFile.config.test.ts` around lines 10 - 20,\nRefactor the two vi.mock calls so the factories are passive and use the { spy:\ntrue } option, then move all mock behavior into a beforeEach: call\nvi.mock('storybook/internal/node-logger', () => ({ logger: { info: vi.fn(),\nwarn: vi.fn(), error: vi.fn() }}), { spy: true }) and\nvi.mock('../../../core/src/shared/utils/module', () => ({ resolvePackageDir:\nvi.fn() }), { spy: true }); in beforeEach set the implementations via\nvi.mocked(logger).info.mockImplementation(...)/warn/error and\nvi.mocked(resolvePackageDir).mockImplementation(() => join(__dirname, '..')) so\ntests use vi.mocked(...) for type-safe access to logger.info/warn/error and\nresolvePackageDir instead of inline factories.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/vitest/src/updateVitestFile.config.test.ts",
+          "line_number": 20,
+          "start_line": 10,
+          "commit_sha": "f894b4d43c6aa92566951e1aeed1976cda591439",
+          "created_at": "2026-03-11T22:35:58Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests refactoring mock setup in yet another test file to follow the standard spy mock pattern."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uOLjb",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Duplicate test case name.**\n\nThis test (lines 461-538) has the same name as the test at lines 217-294: \"adds projects property to test config\". Both tests appear to exercise the same scenario. Consider removing the duplicate or renaming one to clarify the different intent.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/vitest/src/updateVitestFile.config.4.test.ts` around lines 461 -\n538, The test named \"adds projects property to test config\" is duplicated;\nlocate the second occurrence of the it(...) block that uses babel.babelParse,\nupdateConfigFile, getDiff and either delete this duplicate test or rename its\ndescription to a unique, descriptive string (and adjust expectations if the\nintent differs) so both tests have distinct names and purposes; ensure any\nimports or helper usage (babel.babelParse, updateConfigFile, getDiff) remain\ncorrect after removing/renaming.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/vitest/src/updateVitestFile.config.4.test.ts",
+          "line_number": 546,
+          "start_line": 465,
+          "commit_sha": "f894b4d43c6aa92566951e1aeed1976cda591439",
+          "created_at": "2026-03-12T08:10:17Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a duplicate test case name and requests removal or renaming to clarify intent."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uW3JQ",
+          "author": "yannbf",
+          "body": "Should we add a comment to revisit this often? Or a way to remind us that Vitest might introduce new properties and we should add them",
+          "file_path": "code/addons/vitest/src/updateVitestFile.ts",
+          "line_number": 244,
+          "start_line": null,
+          "commit_sha": "f894b4d43c6aa92566951e1aeed1976cda591439",
+          "created_at": "2026-03-12T14:54:10Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6uXtFA",
+          "author": "valentinpalkovic",
+          "body": "The reminder would need to be set in a different way somehow. A comment in this file will be overlooked.",
+          "file_path": "code/addons/vitest/src/updateVitestFile.ts",
+          "line_number": 244,
+          "start_line": null,
+          "commit_sha": "f894b4d43c6aa92566951e1aeed1976cda591439",
+          "created_at": "2026-03-12T15:24:02Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6uXuLW",
+          "author": "valentinpalkovic",
+          "body": "I'll experiment with TypeScript types from `vitest` and see how it goes.",
+          "file_path": "code/addons/vitest/src/updateVitestFile.ts",
+          "line_number": 244,
+          "start_line": null,
+          "commit_sha": "f894b4d43c6aa92566951e1aeed1976cda591439",
+          "created_at": "2026-03-12T15:24:36Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding a comment or reminder mechanism to revisit the property list as Vitest may introduce new properties \u2014 implies a concrete code addition."
+    }
+  ],
+  "review_thread_count": 9,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 9,
+    "stage1_kept": 9,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

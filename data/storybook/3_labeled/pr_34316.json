@@ -1,0 +1,100 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34316,
+  "title": "CLI: Prompt for init crash reports",
+  "body": "Closes #\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\nPrompt for crash report consent when `storybook init` fails, so init errors can include full stack traces after the user opts in. This reuses the existing consent/cache flow and adds coverage for both accept and reject paths.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n##### Crash report prompting\r\n\r\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Open Storybook in your browser\r\n3. Access X story\r\n\r\n-->\r\n\r\n1. From the repo root, compile `create-storybook` with `yarn nx compile create-storybook`.\r\n2. In a separate terminal, start the local telemetry collector with `cd scripts && yarn jiti ./event-log-collector.ts`.\r\n3. Create a fresh temp project and trigger an init failure:\r\n   `tmp=\"$(mktemp -d)\" && cd \"$tmp\" && printf '{ \"name\": \"sb-init-repro\", \"private\": true }\\n' > package.json && HOME=\"$tmp/.home\" env -u STORYBOOK_DISABLE_TELEMETRY STORYBOOK_TELEMETRY_URL=\"http://127.0.0.1:6007/event-log\" STORYBOOK_TELEMETRY_DEBUG=1 node PATH_TO_STORYBOOK_REPO/storybook/code/lib/create-storybook/dist/bin/index.js --no-dev`\r\n4. Confirm init fails with project detection and now shows the crash report consent prompt.\r\n5. Accept the prompt once, then inspect events with `curl -s http://127.0.0.1:6007/event-log | python -m json.tool` and verify the `error` event includes `payload.error`.\r\n6. Repeat with a fresh temp directory/Home and reject the prompt; verify the `error` event is still sent but `payload.error` is omitted.\r\n\r\n##### _Not_ prompting in non-blocking error cases\r\n\r\n1. Build the local `create-storybook` CLI from the Storybook repo:\r\n\r\n```bash\r\ncd /Users/jeppe/dev/work/storybook/storybook\r\nyarn nx compile create-storybook\r\n```\r\n\r\n2. Start the local telemetry event collector in a separate terminal:\r\n\r\n```bash\r\ncd /Users/jeppe/dev/work/storybook/storybook/scripts\r\nyarn jiti ./event-log-collector.ts\r\n```\r\n\r\n3. Create a fresh Vite React TypeScript app:\r\n\r\n```bash\r\nnpm create vite@latest sb-nonblocking-repro -- --template react-ts\r\ncd sb-nonblocking-repro\r\nnpm install\r\n```\r\n\r\n4. Replace `vite.config.ts` with this file:\r\n\r\n```ts\r\nimport { defineConfig } from 'vite';\r\nimport react from '@vitejs/plugin-react';\r\n\r\nexport default defineConfig(() => ({\r\n  plugins: [react()],\r\n}));\r\n```\r\n\r\n5. Run `storybook init` with the locally built CLI and point telemetry at the event collector:\r\n\r\n```bash\r\nenv -u STORYBOOK_DISABLE_TELEMETRY \\\r\nSTORYBOOK_TELEMETRY_URL=\"http://127.0.0.1:6007/event-log\" \\\r\nSTORYBOOK_TELEMETRY_DEBUG=1 \\\r\nnode PATH_TO_YOUR_STORYBOOK_REPO/storybook/code/lib/create-storybook/dist/bin/index.js \\\r\n  --features test \\\r\n  --yes \\\r\n  --no-dev\r\n```\r\n\r\n**Expected result**\r\n\r\n- `storybook init` continues far enough to hit addon-vitest setup\r\n- addon-vitest setup fails **non-fatally**\r\n- **no crash-report consent prompt appears**\r\n\r\n**Inspect the captured telemetry**\r\n\r\n```bash\r\ncurl -s http://127.0.0.1:6007/event-log | python -m json.tool\r\n```\r\n\r\nLook for an `error` event with:\r\n\r\n- `\"eventType\": \"init\"`\r\n- `\"blocking\": false`\r\n- no `payload.error` field unless crash-report consent was already cached beforehand\r\n\r\nIf needed, I can also write the matching **blocking init error** verification steps in the same format.\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Tests**\n  * Expanded telemetry tests: improved TTY handling, covered init failure paths, prompt/consent flows, cached-consent and non-blocking init scenarios; added assertions for consent persistence and telemetry payloads.\n\n* **Bug Fixes**\n  * Init events now respect cached crash-report consent, include full error details only when consented, and suppress prompts for non-blocking init events.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "JReinhold",
+  "merged_at": "2026-03-27T09:33:57Z",
+  "base_ref": "next",
+  "merge_commit_sha": "8d123090a6c3a8fb5bfc15beda16298b6b375264",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "88a1f4a40a8719e4e0b3f1d5f34c2373320c835d",
+    "82b7f691c67e29abbbf8e866856f1b1d90c72715"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6yEe2w",
+          "author": "valentinpalkovic",
+          "body": "Are we making sure that we don't prompt if the error is a `non-blocking` error? `blocking: false`. Or do we even want to prompt in this scenario?",
+          "file_path": "code/core/src/core-server/withTelemetry.ts",
+          "line_number": 22,
+          "start_line": null,
+          "commit_sha": "82b7f691c67e29abbbf8e866856f1b1d90c72715",
+          "created_at": "2026-03-25T11:18:41Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The comment questions whether the code correctly handles the case where `blocking: false`, suggesting a potential missing condition/edge case in the prompting logic."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6yEsgg",
+          "author": "shilman",
+          "body": "Good catch @valentinpalkovic ",
+          "file_path": "code/core/src/core-server/withTelemetry.ts",
+          "line_number": 22,
+          "start_line": null,
+          "commit_sha": "82b7f691c67e29abbbf8e866856f1b1d90c72715",
+          "created_at": "2026-03-25T11:28:43Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6yFhy1",
+          "author": "JReinhold",
+          "body": "Why would we not prompt in a non-blocking scenario? Don't we still benefit from the information?",
+          "file_path": "code/core/src/core-server/withTelemetry.ts",
+          "line_number": 22,
+          "start_line": null,
+          "commit_sha": "82b7f691c67e29abbbf8e866856f1b1d90c72715",
+          "created_at": "2026-03-25T12:13:13Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6yZm_U",
+          "author": "Sidnioulz",
+          "body": "We could prompt with a slightly different message to avoid confusion, e.g. \"Some errors happened, though Storybook successfully installed. <usual consent message here>\"",
+          "file_path": "code/core/src/core-server/withTelemetry.ts",
+          "line_number": 22,
+          "start_line": null,
+          "commit_sha": "82b7f691c67e29abbbf8e866856f1b1d90c72715",
+          "created_at": "2026-03-26T07:47:13Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6yquax",
+          "author": "JReinhold",
+          "body": "I've disabled prompting for errors in non-blocking scenarios, specifically during init only. I've also updated the manual QA steps in the PR description with this case.",
+          "file_path": "code/core/src/core-server/withTelemetry.ts",
+          "line_number": 22,
+          "start_line": null,
+          "commit_sha": "82b7f691c67e29abbbf8e866856f1b1d90c72715",
+          "created_at": "2026-03-26T20:38:00Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "The comment raises a concern about whether non-blocking errors are handled correctly, implying the code may need to add a check to skip prompting when `blocking: false`."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

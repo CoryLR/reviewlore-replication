@@ -1,0 +1,92 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 151,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`waitForModuleGraph` is declared as a `const` local variable inside `start()`, so `bail()` has no reference to it and cannot clear it. If `bail()` is called while the module graph is still empty (before the interval self-clears), the interval keeps running. After `bail()` sets `watcherChangeHandler = undefined`, the interval callback harmlessly short-circuits on that path \u2014 but if `start()` is then called again, `server` is reassigned to the new instance. The stale interval will now see the new server's (potentially non-empty) `fileToModulesMap`, call `waitForRequestsIdle()` on it, and fire `watcherChangeHandler?.()` as a spurious initial notification against the new server. Promote `waitForModuleGraph` to a module-level `let` variable and clear it in `bail()`, mirroring how `debounce` and `watcherChangeHandler` are managed.",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 83,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "When `getOrCreateModuleNode` is called recursively for importers and imported modules (e.g., `getOrCreateModuleNode(importer)`), the element type inferred from iterating `viteModuleNode.importers` (typed as `Set<object>` in the parameter) is `object`. Passing an `object` to a parameter that requires `{ file: string | null; type: ModuleNode['type']; importers: Set<object>; importedModules: Set<object> }` is a TypeScript error \u2014 `object` doesn't structurally satisfy the required shape. The test file's own `ViteModuleNodeLike` type correctly solves this with a recursive self-reference (`importers: Set<ViteModuleNodeLike>`). Apply the same pattern to `getOrCreateModuleNode`'s parameter type, or type the parameter directly with Vite's `ModuleNode` type via `ViteDevServer['moduleGraph']['fileToModulesMap']`'s element type.",
+      "index": 1
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 118,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`bail()` silently discards all registered `onModuleGraphChange` callbacks via `listeners.clear()`. Callers have no way to know their subscription was dropped; if the server is restarted (bail + start cycle), they would need to re-subscribe. This contract is non-obvious and isn't documented anywhere. Add a JSDoc comment to both `bail()` and `onModuleGraphChange` noting that `bail()` clears all listeners and callers must re-register after the next `start()` call if they want to resume receiving events.",
+      "index": 2
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 122,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The callback signature `(moduleGraph: ModuleGraph) => void` gives the builder no channel to communicate failure states: if the Vite server encounters an error while the module graph is being populated, or if a startup timeout is hit, listeners receive no signal at all. A discriminated union callback type \u2014 e.g., `{ type: 'moduleGraph'; moduleGraph: ModuleGraph } | { type: 'error'; error: Error } | { type: 'unavailable'; reason: string }` \u2014 would allow consumers to handle those cases. The `Builder.onModuleGraphChange` signature in `core-common.ts` should be updated to match so the API can be robustly implemented by other builders too.",
+      "index": 3
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 139,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The debounce delay `100` (milliseconds) is a magic number repeated in both the implementation (`setTimeout(..., 100)`) and the test assertions (`vi.advanceTimersByTimeAsync(50)`, `vi.advanceTimersByTimeAsync(100)`). Extract it as a named module-level constant (e.g., `const DEBOUNCE_DELAY_MS = 100`) and reference it in both `start()` and the tests. Per project conventions, async timing tests should derive their wait values from the named constant, not hard-code the raw number.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/types/modules/core-common.ts",
+      "line_number": 279,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `onModuleGraphChange` method added to `Builder` has no JSDoc comment. Given it is a new optional public interface method with a non-trivial lifecycle (returns an unsubscribe function; subscriptions are cleared on `bail()`), it warrants documentation explaining: what the callback receives, that the returned function unsubscribes the listener, and how the subscription behaves across `bail()`/`start()` cycles.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/types/modules/core-common.ts",
+      "line_number": 294,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`ModuleNode` has no JSDoc, while the `ModuleGraph` type directly above it has a doc comment. Add at minimum a one-sentence description explaining what a `ModuleNode` represents (one distinct module identity for a file) and why the same file can have multiple nodes (e.g., SSR vs. client context, query-param variants). This mirrors the reasoning already documented on `ModuleGraph`.",
+      "index": 6
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 7,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Per project spy-mocking conventions, placing `vi.fn()` calls inside a `vi.mock()` factory body is discouraged. Replace the factory with an auto-mock (`vi.mock('./vite-server')`) and configure mock behavior in `beforeEach` via `vi.mocked(createViteServer).mockResolvedValue(fakeViteServer)`. The full factory-replacement form is reserved for modules that cannot be imported at all; for `vite-server`, auto-mocking then configuring in `beforeEach` is sufficient.",
+      "index": 7
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 97,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The polling-interval path inside `start()` \u2014 where `waitForModuleGraph` fires, detects a non-empty `fileToModulesMap`, calls `waitForRequestsIdle()`, and then invokes `watcherChangeHandler?.()` as the initial snapshot notification \u2014 is not exercised by any test. All tests trigger `watcherChangeHandler` via manual `watcher.emit(...)` calls. Consider advancing fake timers past 1000 ms with a non-empty `fileToModulesMap` to cover this initialization path, since it's the primary production code path for delivering the first module-graph snapshot.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `Builder` interface in `core-common.ts` adds `onModuleGraphChange?(cb: (moduleGraph: ModuleGraph) => void): () => void`, but the `ViteBuilder` implementation in `index.ts` is annotated as `NonNullable<ViteBuilder['onModuleGraphChange']>`. The return type of the interface method is `() => void` (the unsubscribe function), which is correct. However, the callback type accepted by the interface (`(moduleGraph: ModuleGraph) => void`) does not include error or unavailability signals. If a second builder (webpack5, etc.) ever implements this method, it would also be limited to happy-path-only signalling. The interface's callback type should be a discriminated union from the start to keep the cross-builder contract robust.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`buildModuleGraph` is explicitly exported from `index.ts`, making it part of the public API of `@storybook/builder-vite`. It is a Vite-specific internal conversion utility whose shape is tightly coupled to `ViteDevServer['moduleGraph']['fileToModulesMap']`. If it is only exported to enable unit testing, consider moving it to a separate file (e.g., `utils/build-module-graph.ts`) that can be imported by tests directly, while keeping the `index.ts` public surface limited to `start`, `bail`, `build`, and `onModuleGraphChange`.",
+      "index": 10
+    }
+  ],
+  "cost_usd": 0.9609584500000001,
+  "duration_seconds": 735.4471437931061
+}

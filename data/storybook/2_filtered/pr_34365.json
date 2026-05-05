@@ -1,0 +1,734 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34365,
+  "title": "Build: Add eval harness for Storybook agentic setup",
+  "body": "Closes https://github.com/storybookjs/storybook/issues/34295 (M0 milestone)\n\n## What I did\n\nEval harness to measure how well AI agents complete Storybook setup after `npx storybook@latest init --yes` on real-world projects. Primary metric: **ghost stories** (do rendered components actually work).\n\n### Architecture\n\n```\neval.ts          \u2014 single run:     node scripts/eval/eval.ts -p mealdrop\neval-parallel.ts \u2014 all 8 combos:   node scripts/eval/eval-parallel.ts -p mealdrop\n```\n\n**Pipeline per run:** copy from cache \u2192 run agent \u2192 grade (build + typecheck + ghost stories + setup patterns + changed files) \u2192 save to Google Sheets\n\n### Agents (via SDK, not CLI)\n\n| Agent | SDK | Models |\n|-------|-----|--------|\n| claude | `@anthropic-ai/claude-agent-sdk` | sonnet-4.6, opus-4.6, haiku-4.5 |\n| codex | `@openai/codex-sdk` | gpt-5.4 |\n\nAgent is inferred from model: `-m gpt-5.4` auto-selects codex.\n\n### Four independent axes\n\n```\nagent \u00d7 model \u00d7 effort \u00d7 prompt\n```\n\n- **Effort**: low, medium, high, max (maps to Claude `effort` / Codex `model_reasoning_effort`)\n- **Prompts**: `setup` (default), `self-heal` (vitest-based iteration loop)\n\n### Parallel execution\n\n`eval-parallel.ts` spawns 8 separate node processes (4 models \u00d7 2 prompts) with live-streamed prefixed logs:\n```\n[sonnet-4.6+setup] \ud83d\ude80 Session started\n[gpt-5.4+self-heal] \ud83d\udd27 $ npx vitest run...\n[opus-4.6+setup] \ud83d\udcac I'll analyze the project...\n```\n\n### Pre-prepared repos\n\n6 forked repos with `eval-baseline` branches (storybook already initialized):\n- **mealdrop** \u2014 styled-components, Redux, React Router\n- **edgy** \u2014 Tailwind, HeadlessUI, React Router\n- **wikitok** \u2014 simple Tailwind\n- **baklava** \u2014 component library, Zustand\n- **echarts** \u2014 ECharts React wrapper\n- **evergreen-ci** \u2014 GraphQL workspace\n\nFirst run clones + installs \u2192 caches. Subsequent runs copy from cache \u2014 agent starts immediately.\n\n### Grading\n\n- **Ghost stories** \u2014 discovers candidate components, runs vitest with `STORYBOOK_COMPONENT_PATHS` to auto-generate and test stories (mirrors core-server implementation)\n- **Storybook build** \u2014 pass/fail\n- **TypeScript errors** \u2014 count\n- **Setup patterns** \u2014 detects tailwind, redux, router, styled-components, etc.\n- **Changed files** \u2014 git diff from baseline\n\n### Results\n\n- Structured `summary.json` per trial\n- Google Sheets upload (set `EVAL_GOOGLE_SHEETS_URL`)\n- Run ID / Upload ID for grouping\n- Environment capture (node version, git info)\n\n## Checklist for Contributors\n\n### Testing\n\n#### The changes in this PR are covered in the following automated tests:\n\n- [ ] stories\n- [ ] unit tests\n- [ ] integration tests\n- [ ] end-to-end tests\n\n#### Manual testing\n\nTested end-to-end on mealdrop and wikitok with multiple model/prompt combinations via `eval-parallel.ts`.\n\n### Documentation\n\n- [ ] Add or update documentation reflecting your changes\n- [ ] If you are deprecating/removing a feature, make sure to update\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\n\n## Checklist for Maintainers\n\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\n- [ ] Make sure this PR contains **one** of the labels below:\n   <details>\n     <summary>Available labels</summary>\n\n  - `bug`: Internal changes that fixes incorrect behavior.\n  - `maintenance`: User-facing maintenance tasks.\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\n  - `feature request`: Introducing a new feature.\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\n  - `other`: Changes that don't fit in the above categories.\n\n   </details>\n\n### \ud83e\udd8b Canary release\n\n<!-- CANARY_RELEASE_SECTION -->\n\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\n\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\n\n<!-- CANARY_RELEASE_SECTION -->\n\n<!-- BENCHMARK_SECTION -->\n<!-- BENCHMARK_SECTION -->\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n\n## Summary by CodeRabbit\n\n* **New Features**\n  * Added evaluation framework with CLI for testing and benchmarking agent implementations against projects.\n  * Introduced ghost stories testing utilities for component validation.\n\n* **Improvements**\n  * Updated Node.js requirement to 22.22.1 for improved TypeScript support.\n  * Enhanced TypeScript module resolution with explicit file extensions.\n  * Upgraded CI resource allocation for faster job execution.\n\n* **Chores**\n  * Updated repository tooling paths and configuration.\n\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "kasperpeulen",
+  "merged_at": "2026-03-31T14:17:28Z",
+  "base_ref": "project/sb-agentic-setup",
+  "merge_commit_sha": "5093a3ebf4345184b23ccd5c75da5024a7f24efb",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "be37485e7c5e39446897c0d253021163a9df55ae",
+    "65893e93a77b07503963d52d5c7a78fa040149f9"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zsL-D",
+          "author": "Sidnioulz",
+          "body": "We probably wanna share the rationale of adding `.ts` with the team (maybe open a PR for `tsconfig` now?) so they can flag potential side effects (will Node 20 trip up?), and/or so they can also start applying `.ts`.",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/get-candidates.ts",
+          "line_number": 8,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T09:36:20Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests opening a PR for tsconfig and sharing rationale with the team \u2014 implies a concrete follow-up action/change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zsM29",
+          "author": "Sidnioulz",
+          "body": "nit: potential formatting setup issue. check if fmt job passes in CI?",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/parse-vitest-report.ts",
+          "line_number": 7,
+          "start_line": 1,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T09:37:03Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential formatting issue and asks to verify CI passes \u2014 implies a formatting fix is needed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zsQER",
+          "author": "Sidnioulz",
+          "body": "nit: worth grouping up into the place where you define default effort, so we have a centralised definition for all the parameters that affect eval output.\n\nAt the `lib/agents` level I would find it normal that every parameter is mandatory, so that the dispatcher calling the agents has to centralise params by design.",
+          "file_path": "scripts/eval/lib/agents/claude-code.ts",
+          "line_number": 8,
+          "start_line": null,
+          "commit_sha": "0c5f06a85d0da80aa254aa5ccaa58e1960af91b1",
+          "created_at": "2026-03-31T09:39:27Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6zwXAO",
+          "author": "kasperpeulen",
+          "body": "Done. The per-agent defaults and execution settings now live in `AGENTS`, and `eval.ts` reads model/effort defaults from there instead of hardcoding them.",
+          "file_path": "scripts/eval/lib/agents/claude-code.ts",
+          "line_number": 8,
+          "start_line": null,
+          "commit_sha": "0c5f06a85d0da80aa254aa5ccaa58e1960af91b1",
+          "created_at": "2026-03-31T13:07:49Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests refactoring to centralise default parameter definitions and making agent-level parameters mandatory."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zsSZ-",
+          "author": "Sidnioulz",
+          "body": "1: Same here, we might wanna centralise this if possible (but I suppose those are agent specific)?\n\n2: I saw agents run `mv` or `rm`, will these be included by default in the Bash tool?",
+          "file_path": "scripts/eval/lib/agents/claude-code.ts",
+          "line_number": 29,
+          "start_line": null,
+          "commit_sha": "0c5f06a85d0da80aa254aa5ccaa58e1960af91b1",
+          "created_at": "2026-03-31T09:41:12Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6zwXIw",
+          "author": "kasperpeulen",
+          "body": "Grouped these with the other agent execution knobs in `AGENTS`. For Claude the harness-level Bash toggle now lives next to the tool allowlist, and the comment there calls out that individual shell commands still flow through Claude's Bash tool.",
+          "file_path": "scripts/eval/lib/agents/claude-code.ts",
+          "line_number": 29,
+          "start_line": null,
+          "commit_sha": "0c5f06a85d0da80aa254aa5ccaa58e1960af91b1",
+          "created_at": "2026-03-31T13:07:55Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Raises two concerns: centralising agent-specific config, and whether mv/rm are included in Bash tool permissions \u2014 both imply potential changes."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zsVvM",
+          "author": "Sidnioulz",
+          "body": "q: Is there any sense in wrapping this in a try-catch block so we can write partial run transcripts if there is a crash/error?",
+          "file_path": "scripts/eval/lib/agents/claude-code.ts",
+          "line_number": 24,
+          "start_line": null,
+          "commit_sha": "0c5f06a85d0da80aa254aa5ccaa58e1960af91b1",
+          "created_at": "2026-03-31T09:43:36Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6ztTXw",
+          "author": "yannbf",
+          "body": "Good catch",
+          "file_path": "scripts/eval/lib/agents/claude-code.ts",
+          "line_number": 24,
+          "start_line": null,
+          "commit_sha": "0c5f06a85d0da80aa254aa5ccaa58e1960af91b1",
+          "created_at": "2026-03-31T10:31:46Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6zwXPV",
+          "author": "kasperpeulen",
+          "body": "Done. Both drivers now write `transcript.json` from a `finally` block so we still keep partial transcripts when a run errors mid-stream.",
+          "file_path": "scripts/eval/lib/agents/claude-code.ts",
+          "line_number": 24,
+          "start_line": null,
+          "commit_sha": "0c5f06a85d0da80aa254aa5ccaa58e1960af91b1",
+          "created_at": "2026-03-31T13:08:00Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests wrapping code in a try-catch block to handle partial transcripts on crash \u2014 implies a concrete code change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zsW35",
+          "author": "Sidnioulz",
+          "body": "q: Is that consistent with the permissions for Claude?",
+          "file_path": "scripts/eval/lib/agents/codex.ts",
+          "line_number": 18,
+          "start_line": null,
+          "commit_sha": "0c5f06a85d0da80aa254aa5ccaa58e1960af91b1",
+          "created_at": "2026-03-31T09:44:26Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6zwXVq",
+          "author": "kasperpeulen",
+          "body": "Made this explicit in `AGENTS` as well. Claude now documents its tool-allowlist permission model and Codex its `approvalPolicy: \"never\"` model, so the difference is visible in one place.",
+          "file_path": "scripts/eval/lib/agents/codex.ts",
+          "line_number": 18,
+          "start_line": null,
+          "commit_sha": "0c5f06a85d0da80aa254aa5ccaa58e1960af91b1",
+          "created_at": "2026-03-31T13:08:04Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions whether permissions are consistent with Claude's permissions \u2014 implies a potential fix if they are not."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zsX5R",
+          "author": "Sidnioulz",
+          "body": "As we discussed, we should check what the most common default effort is.",
+          "file_path": "scripts/eval/lib/agents/config.test.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "db7a142cc4e47498ea2996db74f3de59f0daa966",
+          "created_at": "2026-03-31T09:45:15Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6zwXc5",
+          "author": "kasperpeulen",
+          "body": "Done. The default effort is `medium` now, and `eval.ts` reads defaults from `AGENTS` so the CLI and tests stay aligned.",
+          "file_path": "scripts/eval/lib/agents/config.test.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "db7a142cc4e47498ea2996db74f3de59f0daa966",
+          "created_at": "2026-03-31T13:08:09Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests verifying and potentially updating the default effort value in the test \u2014 implies a code/config change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zscuJ",
+          "author": "Sidnioulz",
+          "body": "Missing pricing data for Claude",
+          "file_path": "scripts/eval/lib/agents/config.ts",
+          "line_number": 111,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T09:48:31Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6zwXkP",
+          "author": "kasperpeulen",
+          "body": "I left pricing empty for Claude on purpose because Claude already reports `total_cost_usd` from the SDK. The pricing table here is only for manual estimation when the driver doesn't return cost natively.",
+          "file_path": "scripts/eval/lib/agents/config.ts",
+          "line_number": 111,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T13:08:14Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly flags missing pricing data for Claude \u2014 implies the data needs to be added."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zsi1a",
+          "author": "Sidnioulz",
+          "body": "nit: For completeness, should those thresholds also be stored alongside the raw data/scores in results? Or I guess if we have the raw data we can already recompute new scores and it's fine.",
+          "file_path": "scripts/eval/lib/grade.ts",
+          "line_number": 60,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T09:52:59Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6zwYjl",
+          "author": "kasperpeulen",
+          "body": "Good idea, but I left this out of the current pass. Right now we can recompute from the raw data; persisting thresholds and weights would be a nice follow-up for reproducibility.",
+          "file_path": "scripts/eval/lib/grade.ts",
+          "line_number": 60,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T13:08:58Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests storing thresholds alongside raw data/scores in results \u2014 implies a potential enhancement to the data output."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zsobb",
+          "author": "Sidnioulz",
+          "body": "is that a `tail` function?\n\nDo we have any counterpoints to tailing build logs, @yannbf? Might we be missing data?",
+          "file_path": "scripts/eval/lib/grade.ts",
+          "line_number": 277,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T09:57:25Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6ztcnu",
+          "author": "yannbf",
+          "body": "I think it's fine because this is only used in this file for build and type checking, at 2000 characters cut.",
+          "file_path": "scripts/eval/lib/grade.ts",
+          "line_number": 277,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T10:39:43Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6zwXq2",
+          "author": "kasperpeulen",
+          "body": "Yep, effectively a tail helper. I kept it because the full build/typecheck logs are still written to files; this truncation is only for the summary payload we surface inline.",
+          "file_path": "scripts/eval/lib/grade.ts",
+          "line_number": 277,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T13:08:19Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions whether tailing build logs could cause missing data \u2014 implies a potential bug or improvement to address."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zst1n",
+          "author": "Sidnioulz",
+          "body": "@yannbf @kasperpeulen let's keep in mind that if we ever make changes to the project repos, we'll need to manually clear cache.\n\n@kasperpeulen if you still have LLM credits to spare, could your agent inject git HEAD ref IDs into its cache keys? \ud83d\ude06 ",
+          "file_path": "scripts/eval/lib/prepare-trial.ts",
+          "line_number": 35,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T10:01:29Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6ztZVZ",
+          "author": "yannbf",
+          "body": "Oof good catch. We can also add some timed validation to overwrite if it's been too long",
+          "file_path": "scripts/eval/lib/prepare-trial.ts",
+          "line_number": 35,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T10:37:00Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6zwXxu",
+          "author": "kasperpeulen",
+          "body": "Addressed. The repo cache now stores repo/branch/baseline metadata and refreshes when the remote `eval-baseline` head moves, so branch updates won't silently reuse stale clones.",
+          "file_path": "scripts/eval/lib/prepare-trial.ts",
+          "line_number": 35,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T13:08:24Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests injecting git HEAD ref IDs into cache keys \u2014 a concrete suggested code change directed at a specific person."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zsvcM",
+          "author": "Sidnioulz",
+          "body": "@yannbf suggested moving these to `storybookjs` org. We could also make the repos private to the org and anonymise repo names that way if anyone requests it.",
+          "file_path": "scripts/eval/lib/projects.ts",
+          "line_number": 12,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T10:02:41Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6zwYnS",
+          "author": "kasperpeulen",
+          "body": "I haven't moved the benchmark repos in this branch.",
+          "file_path": "scripts/eval/lib/projects.ts",
+          "line_number": 12,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T13:09:01Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests moving repos to the storybookjs org and potentially making them private \u2014 implies a concrete change to project configuration."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zs1d_",
+          "author": "Sidnioulz",
+          "body": "nit: I'd prefer using https://www.npmjs.com/package/cachedir or similar so the files end up in `~/.cache/storybook-eval` rather than a sibling folder to the repo. Feel free to ignore this tho",
+          "file_path": "scripts/eval/lib/utils.ts",
+          "line_number": 16,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T10:07:32Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6ztP2P",
+          "author": "yannbf",
+          "body": "I think it's fine to not add yet another dependency to the repo, and by having it easily accessible we can debug the projects if something goes wrong",
+          "file_path": "scripts/eval/lib/utils.ts",
+          "line_number": 16,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T10:28:49Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6zwX4T",
+          "author": "kasperpeulen",
+          "body": "Leaving the current cache path for now. I agree with keeping it easy to inspect/debug without adding another dependency here.",
+          "file_path": "scripts/eval/lib/utils.ts",
+          "line_number": 16,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T13:08:28Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests using a cachedir package to store files in a standard cache location \u2014 implies a dependency and path change."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zs4_o",
+          "author": "Sidnioulz",
+          "body": "We discussed in the peer review adding a small frontmatter to prompts where we can store metadata, e.g. `monorepo: true`, etc.\n\nThis will help us cross-analyse multiple prompts by traits to attribute score variance to specific traits and to have a better chance at computing statistical significance later on.\n\n@yannbf do you already have a list of conditionals applied by the `ai` command to inject content into the prompt?",
+          "file_path": "scripts/eval/prompts/setup.md",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T10:10:16Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6ztR1Z",
+          "author": "yannbf",
+          "body": "No, the command is quite simple for now and we will be improving it once we start using the eval system. The one conditional right now is csf factories, but no project uses it by default yet",
+          "file_path": "scripts/eval/prompts/setup.md",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T10:30:24Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6zwYrM",
+          "author": "kasperpeulen",
+          "body": "I haven't added prompt frontmatter in this pass. Agreed it's a useful follow-up once we start comparing prompts more systematically.",
+          "file_path": "scripts/eval/prompts/setup.md",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T13:09:03Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding frontmatter metadata to prompts for cross-analysis \u2014 implies a concrete structural change to prompt files."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zs6Zw",
+          "author": "yannbf",
+          "body": "Can you move the projects to https://github.com/orgs/storybook-tmp/?",
+          "file_path": "scripts/eval/lib/projects.ts",
+          "line_number": 12,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T10:11:25Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6zwYuz",
+          "author": "kasperpeulen",
+          "body": "Not yet in this branch.",
+          "file_path": "scripts/eval/lib/projects.ts",
+          "line_number": 12,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T13:09:06Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly requests moving projects to a specific GitHub org \u2014 a direct, concrete action requested."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zs66Z",
+          "author": "Sidnioulz",
+          "body": "Is that intended?",
+          "file_path": "scripts/tsconfig.json",
+          "line_number": 33,
+          "start_line": null,
+          "commit_sha": "eccfb785ebbfeb1694c682bddeecea52d5bd7ae2",
+          "created_at": "2026-03-31T10:11:50Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions whether something is intended \u2014 implies a potential bug or unintended configuration that should be reviewed/fixed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zs7gI",
+          "author": "Sidnioulz",
+          "body": "nit: Maybe mention agent harness consuming this file?",
+          "file_path": ".gitignore",
+          "line_number": 88,
+          "start_line": null,
+          "commit_sha": "0c5f06a85d0da80aa254aa5ccaa58e1960af91b1",
+          "created_at": "2026-03-31T10:12:20Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6zwX_K",
+          "author": "kasperpeulen",
+          "body": "Added that context to the ignore entry comment.",
+          "file_path": ".gitignore",
+          "line_number": 88,
+          "start_line": null,
+          "commit_sha": "0c5f06a85d0da80aa254aa5ccaa58e1960af91b1",
+          "created_at": "2026-03-31T13:08:33Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding a comment to the .gitignore file mentioning the agent harness \u2014 implies a documentation/comment change."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6ztKWu",
+          "author": "yannbf",
+          "body": "Are there ways to add info related to:\n\n- model used\n- time spent on operations\n- context usage\n- ghost stories rate before/after <-- the before rate is quite important\n\nThese can be done later:\n- changes made to preview.js\n- setup patterns identified, set up patterns implemented in preview.js (so we can see whether it found something but didn't setup)\n- quality (renders without errors and not empty, has styles)",
+          "file_path": "scripts/eval/eval.ts",
+          "line_number": 170,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T10:24:19Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6zwYzf",
+          "author": "kasperpeulen",
+          "body": "Not yet in this pass. The main follow-up I still see here is expanding the saved report schema with model/time/context/before-after ghost metrics.",
+          "file_path": "scripts/eval/eval.ts",
+          "line_number": 170,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T13:09:10Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding several specific pieces of information to the output \u2014 implies concrete additions to the eval output code."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6ztVDu",
+          "author": "yannbf",
+          "body": "What do these mean? Can you write comments or make this more clear?",
+          "file_path": "scripts/eval/lib/grade.ts",
+          "line_number": 10,
+          "start_line": null,
+          "commit_sha": "0c5f06a85d0da80aa254aa5ccaa58e1960af91b1",
+          "created_at": "2026-03-31T10:33:18Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6zwYGN",
+          "author": "kasperpeulen",
+          "body": "Clarified this by renaming the field to `gitStatus` and documenting the `A/M/D/R` meanings in the type definition.",
+          "file_path": "scripts/eval/lib/grade.ts",
+          "line_number": 10,
+          "start_line": null,
+          "commit_sha": "0c5f06a85d0da80aa254aa5ccaa58e1960af91b1",
+          "created_at": "2026-03-31T13:08:38Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests comments or clarification be added to the code \u2014 implies a documentation/comment change."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6ztWpZ",
+          "author": "yannbf",
+          "body": "Is this file needed at all? Can't we use the JsPackageManager instance for this instead?",
+          "file_path": "scripts/eval/lib/package-manager.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "65893e93a77b07503963d52d5c7a78fa040149f9",
+          "created_at": "2026-03-31T10:34:43Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions whether the file is needed and suggests using an existing JsPackageManager instance instead \u2014 implies the file could be removed or refactored."
+    }
+  ],
+  "review_thread_count": 21,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6zrYcR",
+            "author": "kasperpeulen",
+            "body": "do with zod ",
+            "file_path": "scripts/eval/eval.ts",
+            "line_number": 128,
+            "start_line": null,
+            "commit_sha": "0c5f06a85d0da80aa254aa5ccaa58e1960af91b1",
+            "created_at": "2026-03-31T08:58:36Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6zwWW7",
+            "author": "kasperpeulen",
+            "body": "Kept this in Zod, but simplified `eval.ts` back down to the original flat flow. The agent-specific defaults now still come from `AGENTS`, and the rest of the CLI stays in the straightforward early-return structure.",
+            "file_path": "scripts/eval/eval.ts",
+            "line_number": 128,
+            "start_line": null,
+            "commit_sha": "0c5f06a85d0da80aa254aa5ccaa58e1960af91b1",
+            "created_at": "2026-03-31T13:07:22Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 21,
+    "stage1_kept": 20,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 1,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 194,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `key=\"icon\"` prop on these SVG elements is a no-op. React `key` is only meaningful for elements rendered inside an iterable (e.g., a `.map()` call or an array) to help reconciliation. These JSX nodes are stored as static values in `StatusIconMap` and then rendered directly as `{changeIcon}` \u2014 not inside a list \u2014 so React silently discards the key. Remove `key=\"icon\"` from all three new SVG entries.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 305,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`textColor` is now derived exclusively from `testStatus`, silently dropping the original behavior where it was computed from the most-critical status across all statuses. A story with only a change-detection status (e.g., `status-value:new`) will have `testStatus = 'status-value:unknown'`; `getStatus` for `unknown` returns no `textColor`, so the story label text will lose its color tint entirely. If the intent is to reserve text coloring for test statuses only, document that decision with a comment. Otherwise, derive `textColor` from the combined most-critical status \u2014 e.g., `getMostCriticalStatusValue([changeStatus, testStatus])` \u2014 so change-detection statuses continue to affect label color.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 229,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`getChangeDetectionStatus` is a pure data-transformation function with no UI dependencies, yet it is exported from `Tree.tsx` (a UI component) instead of `status.ts`, where the closely related `getMostCriticalStatusValue`, `getGroupStatus`, and other status helpers live. This conflates concerns and forces the unit test to import a utility function through the component's full module graph. Moving it to `status.ts` would make it easier to discover, test in isolation, and reuse.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 218,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`statusOrder` does not appear to be used anywhere in this file \u2014 `getMostCriticalStatusValue` (imported from `status.ts`) uses its own internal `statusPriority` array for priority determination. If `statusOrder` truly has no consumers, updating it is misleading and the array should be removed. If it is used elsewhere (e.g., for display ordering), the new placement of `'status-value:error'` after `'status-value:warning'` in the array is a behavior change from the pre-PR ordering and should be explicitly justified.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 355,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The test-status button uses `ariaLabel={\\`Status: ${testStatus.replace('status-value:', '')}\\`}` while the adjacent change-detection button uses `\"Change status: X\"`. Now that two status buttons coexist in the same leaf node, `\"Status: X\"` is ambiguous for screen-reader users who will hear both announcements in sequence. Use `\"Test status: X\"` to be symmetrical with the sibling button and unambiguous.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/manager/utils/status.test.ts",
+      "line_number": 238,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `'priority within change-detection slot'` test populates `StatusByTypeId` with three entries sharing `typeId: 'storybook/change-detection'` under the keys `first`, `second`, and `third`, requiring `as unknown as StatusByTypeId` to bypass the type. Since `StatusByTypeId = Record<StatusTypeId, Status>`, there can be at most one entry per `typeId` key at runtime, making this scenario unreachable in production. Consider replacing this test with a realistic case, or \u2014 if multiple distinct change-detection providers with different typeIds are an intended future use \u2014 model the test that way and remove the cast.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/manager/utils/status.test.ts",
+      "line_number": 250,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "This test calls `getMostCriticalStatusValue` (from `status.ts`), not `getChangeDetectionStatus`, so it does not belong in the `dual-slot status splitting` describe block. Move it to the existing `getHighestStatus` suite to keep each suite focused on a single function and to make failures clearly attributable.",
+      "index": 6
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "None of the five new story variants (`WithChangeDetectionOnly`, `WithChangeDetectionAndTestStatus`, `WithTestStatusOnly`, `WithAffectedStatus`, `BranchWithChangeDetectionPriority`) include a `play` function. The central behavioral claim of this PR \u2014 that two independent status icon slots render correctly for various status combinations \u2014 is validated only visually. Each story should use `canvas.getByTestId('tree-change-status-button')` / `getByTestId('tree-status-button')` assertions (or `getByRole('button', { name: ... })`) to confirm the correct buttons appear and disappear per the given `allStatuses` input, catching regressions automatically.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.622752,
+  "duration_seconds": 554.7238321304321
+}

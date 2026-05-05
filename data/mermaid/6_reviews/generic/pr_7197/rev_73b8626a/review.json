@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 758,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Regression: `case 'day':` is missing from the topXAxis switch. The original code (visible in the removed `-` lines of this hunk) had all seven cases \u2014 millisecond, second, minute, hour, **day**, week, month. The new topXAxis switch skips straight from `case 'hour':` to `case 'week':`. Any diagram with `topAxis: true` and `tickInterval 1day` will now silently fall through the switch and not apply the custom tick interval on the top axis. The bottomXAxis switch correctly keeps `case 'day':` at line 695.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 622,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The guard against excessive tick counts can be silently bypassed when the time domain contains invalid dates. If either `minTime` or `maxTime` is an `Invalid Date` object (whose `.getTime()` is `NaN`), then `maxTime - minTime` evaluates to `NaN`. `Math.ceil(NaN / intervalMs)` is also `NaN`, and the check `NaN > MAX_TICK_COUNT` is `false` \u2014 so custom tick intervals are applied even with an invalid domain, which is exactly the crash scenario this PR aims to prevent. Fix: add `if (isNaN(timeDiffMs)) { return Infinity; }` immediately after line 622.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttDb.js",
+      "line_number": 313,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The comment on this line reads `// For all other formats, if dayjs strict parsing fails, throw an error`, but the code below does not throw \u2014 it logs a debug message and then falls through to `new Date(str)` for every format type, not just timestamp formats. The intended stricter behaviour (reject invalid dates for non-timestamp formats rather than falling back to `new Date()`) is documented but never implemented. This will mislead future maintainers, and the PR's own unit test at line 529 of ganttDb.spec.ts confirms the unintended fallback still occurs. Either implement the early-throw or remove the inaccurate comment.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 618,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`getEstimatedTickCount` is declared as a named function inside `draw()`, but it does not close over any variable from the outer scope \u2014 it only uses its own parameters and the module-level `dayjs`. Defining it inside `draw()` causes it to be re-created on every render call and makes it impossible to unit-test in isolation. It belongs at module scope alongside `MAX_TICK_COUNT`.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 747,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Inconsistent behaviour between the two axes: the bottom axis block (around line 676) emits a `log.warn` when `estimatedTicks > MAX_TICK_COUNT`, giving the developer a diagnostic message. The top axis block here silently skips applying the custom interval with no warning at all. Both axes should behave identically when rejecting an interval. This inconsistency is a direct consequence of the duplicated code (see general comments).",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttDb.js",
+      "line_number": 273,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`isTimestampFormat` is declared with `const` inside `getStartDate`, meaning a new function object is allocated on every invocation of `getStartDate`. Since the helper closes over no outer-scope variables and is a pure function of its argument, it should be lifted to module scope (alongside other module-level helpers) to avoid the repeated allocation.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttDb.js",
+      "line_number": 318,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The comment `// Timestamp formats can fall back to new Date()` implies that only timestamp formats reach this line, but as noted above all format types fall through here. The comment directly contradicts the observed behaviour and the nearby `if (!isTimestampFormat(dateFormat))` block, which also takes a path for non-timestamp formats without throwing. The comment should be removed or corrected to `// All formats fall back to native Date parsing`.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttDb.spec.ts",
+      "line_number": 529,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This assertion depends on `new Date('202-12-01')` returning a Date whose `getFullYear()` is `202`. Three-digit year strings are not part of the ECMAScript date-time string format (which requires four-digit years), so parsing is implementation-defined. The same file already contains a comment at line 323 of ganttDb.js warning that 'WebKit browsers can mis-parse invalid dates to be ridiculously huge numbers'. On WebKit/Safari or a stricter engine this `new Date('202-12-01')` may return `Invalid Date`, causing the test to throw rather than return year 202, making this test non-portable. Consider asserting on an error being thrown for the malformed input, or pinning to a date string that is unambiguous across engines.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The entire tick-interval block \u2014 parsing, validating `every`, estimating tick count, and the seven-case switch \u2014 is copy-pasted verbatim between the bottomXAxis and topXAxis code paths. The duplication has already caused a concrete regression in this PR (the missing `case 'day':` on the top axis) and an inconsistency (bottom axis warns, top axis does not). Extracting a shared helper such as `applyTickInterval(axis, every, interval, weekday, domain)` would remove roughly 40 lines of duplication, make the logic easier to test in isolation, and ensure both axes always behave identically.",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description states the root cause was 'a Temporal Dead Zone (TDZ) error'. TDZ is a specific JavaScript concept: accessing a `let` or `const` binding before its declaration within a block scope. No such access pattern exists in this diff \u2014 the actual problems were a lack of tick count validation in the renderer and inconsistent `new Date()` fallback for malformed dates. Using TDZ incorrectly in the commit message and PR description will mislead anyone searching the git history or issue tracker for the real root cause of #5496.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.9446596,
+  "duration_seconds": 801.1077079772949
+}

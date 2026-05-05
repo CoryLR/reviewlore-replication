@@ -1,0 +1,66 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33864,
+  "title": "Actions: Fix HandlerFunction type to support async callback props",
+  "body": "Closes #23731\n\n## What I did\n\nChanged the return type of `HandlerFunction` from `void` to `any` so that action handlers can be assigned to async callback props (e.g. `onSubmit: () => Promise<void>`) without causing type errors.\n\nThe issue is that `(...args: any[]) => void` is not assignable to `(...args: any[]) => Promise<void>`, but `(...args: any[]) => any` is, since `any` is compatible with all return types.\n\n## Checklist for Contributors\n\n### Testing\n\n#### The changes in this PR are covered in the following automated tests:\n\n- [ ] stories\n- [ ] unit tests\n- [ ] integration tests\n- [ ] end-to-end tests\n\n#### Manual testing\n\nThis is a type-only change. Verified that the existing `HandlerFunction` usages in the codebase (e.g. `action()` return type, `ActionsMap`, test stories) remain compatible.\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Updates**\n  * Handler functions may now return Promise<void> as well as void, enabling async handlers and broader compatibility in composed flows.\n\n* **Tests**\n  * Added type-level tests asserting both async and sync handler signatures to improve type safety and guard against regressions.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "mixelburg",
+  "merged_at": "2026-03-04T15:38:03Z",
+  "base_ref": "next",
+  "merge_commit_sha": "670866dc456e0a5cbe4628c340bf26114563ed81",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "52a6b3b74de10d73f83adb251b1107420467f19e",
+    "31c27e9599f6d1a635438d05baa0603046a6cc9d"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6oP60s",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check import patterns in existing test-d files\necho \"=== Checking test-d.ts files for expectTypeOf imports ===\"\nrg -n \"from ['\\\"]expect-type['\\\"]\" --type=ts -g '*.test-d.ts' | head -20\necho \"\"\nrg -n \"from ['\\\"]vitest['\\\"]\" --type=ts -g '*.test-d.ts' | head -20\necho \"\"\necho \"=== Checking for toMatchTypeOf vs toExtend usage ===\"\nrg -n \"toMatchTypeOf|toExtend\" --type=ts -g '*.test-d.ts' | head -30\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1565\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Read the full test file to see what it's actually testing\necho \"=== Full content of HandlerFunction.test-d.ts ===\"\ncat code/core/src/actions/models/HandlerFunction.test-d.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 466\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check package.json to see what version of expect-type is installed\necho \"=== expect-type version check ===\"\nrg '\"expect-type\"' package.json | head -5\necho \"\"\n# Also check for vitest version\nrg '\"vitest\"' package.json | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 99\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check expect-type version in yarn.lock or package-lock.json to see if v1.2.0+ is used\necho \"=== Checking expect-type version in lock files ===\"\nrg -A2 '\"expect-type\"' yarn.lock | head -10\necho \"\"\n# Also check for references to toExtend/toMatchTypeOf in package.json or docs\necho \"=== Checking for expect-type changelog or docs references ===\"\nfd -e md -e txt | xargs rg -l \"expect-type\" | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 178\n\n---\n\n\ud83c\udf10 Web query:\n\n`expect-type toMatchTypeOf deprecation toExtend v1.2.0`\n\n\ud83d\udca1 Result:\n\nIn **expect-type**, `.toMatchTypeOf()` is **deprecated** in favor of: **`.toMatchObjectType()`** (for \u201cobject has at least these keys\u201d checks) or **`.toExtend()`** (for \u201cis-a / subtype\u201d checks). There are *no foreseeable plans to remove* `.toMatchTypeOf()`, but you\u2019re encouraged to migrate because `.toMatchObjectType()` is stricter and `.toExtend()` is equivalent for \u201cextends\u201d semantics. [1]\n\n**Migration:**\n\n- If you used `.toMatchTypeOf<Expected>()` to mean \u201cActual extends Expected\u201d \u2192 use:\n  ```ts\n  expectTypeOf<Actual>().toExtend<Expected>()\n  ```\n  [1]\n\n- If you used `.toMatchTypeOf<{ a: number }>()` to allow extra object keys \u2192 use:\n  ```ts\n  expectTypeOf(value).toMatchObjectType<{ a: number }>()\n  ```\n  [1]\n\n**Source**\n1. expect-type README (\u201cWhy is `.toMatchTypeOf` deprecated?\u201d and matcher docs). [1]\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check what Vitest recommends by looking at Vitest test files in the repo\necho \"=== Sample of how Vitest type tests are structured in recent files ===\"\ncat code/addons/pseudo-states/src/types.test-d.ts | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1383\n\n---\n\n\n\n</details>\n\n**Update import source to `'vitest'` and replace deprecated `toMatchTypeOf` with `toExtend`.**\n\nThis file should align with the pattern used in other type-test files in the repo (e.g., `code/addons/pseudo-states/src/types.test-d.ts`):\n\n1. Import `expectTypeOf` from `'vitest'` instead of `'expect-type'`\n2. Replace `toMatchTypeOf` with `toExtend` (the deprecated API has been superseded in expect-type)\n\n<details>\n<summary>Suggested changes</summary>\n\n```diff\n-import { expectTypeOf } from 'expect-type';\n+import { expectTypeOf } from 'vitest';\n import type { HandlerFunction } from './HandlerFunction';\n\n // Should be assignable to async callback props (the fixed case)\n-expectTypeOf<HandlerFunction>().toMatchTypeOf<() => Promise<void>>();\n+expectTypeOf<HandlerFunction>().toExtend<() => Promise<void>>();\n\n // Should remain assignable to plain void callbacks\n-expectTypeOf<HandlerFunction>().toMatchTypeOf<() => void>();\n+expectTypeOf<HandlerFunction>().toExtend<() => void>();\n```\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/actions/models/HandlerFunction.test-d.ts` at line 1, Replace\nthe deprecated expect-type import and matcher: change the import of expectTypeOf\nin HandlerFunction.test-d.ts to come from 'vitest' instead of 'expect-type', and\nupdate any usages of the old matcher toMatchTypeOf to the new toExtend matcher\n(e.g., calls like expectTypeOf(<type>).toMatchTypeOf(...) should become\nexpectTypeOf(<type>).toExtend(...)); ensure all occurrences in this test file\nare updated so the file follows the same pattern as other type-test files.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:churro -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit eb0cf6b",
+          "file_path": "code/core/src/actions/models/HandlerFunction.test-d.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "70baca1df30a6cde9c292b2f6ccf5ebf81f700db",
+          "created_at": "2026-02-18T14:53:26Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6pw7ZE",
+          "author": "Sidnioulz",
+          "body": "q: Why not apply `void | Promise<void>` instead? This would enable using async functions whilst still communicating to users that no return value will be consumed.",
+          "file_path": "code/core/src/actions/models/HandlerFunction.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "1218f599c9de9de7dc5e35b720e486c0bf9331ec",
+          "created_at": "2026-02-24T16:18:34Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6rQ8vA",
+          "author": "Sidnioulz",
+          "body": "```suggestion\nexport type HandlerFunction = (...args: any[]) => void | Promise<void>;\n```\n\nI'll make the change and see how CI reacts.",
+          "file_path": "code/core/src/actions/models/HandlerFunction.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "1218f599c9de9de7dc5e35b720e486c0bf9331ec",
+          "created_at": "2026-03-02T16:20:01Z",
+          "is_outdated": true
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 2
+}

@@ -1,0 +1,106 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 49,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Commented-out debug `logger.info` call left in production code. Per project rules, all debugging artifacts (commented-out debug blocks, `console.*`, stray logger calls) must be removed before merging. Delete this line.",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 112,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`server.warmupRequest(importPath)` is called with raw story `importPath` values from the index (e.g. `'./src/Button.stories.tsx'`). Vite's `warmupRequest` expects a module URL \u2014 either a root-relative absolute path (e.g. `'/src/Button.stories.tsx'`) or an absolute file-system path. A CWD-relative `./`-prefixed path has no defined 'current location' in the server context, so Vite will silently fail to resolve it and no module-graph entries will be created. Since the polling loop waits for `fileToModulesMap.size > 0`, this will always trigger the 30-second timeout. The paths should be resolved to absolute paths first: `server.warmupRequest(resolve(workingDir, importPath))`. Note: the unit tests use `'/src/Button.tsx'`-style absolute paths as map keys and mock `warmupRequest`, so this bug does not surface there.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/dev-server.ts",
+      "line_number": 165,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The outer `catch` block (for failures from `storyIndexGeneratorPromise` or the `listening` promise) does not call `changeDetectionService.dispose()`. This can leave a pending debounce timer or an in-flight git scan running even though the server setup has failed. `changeDetectionService` is defined in the enclosing `if (!options.ignorePreview)` scope (line 118), so it is accessible here. Add `await changeDetectionService?.dispose().catch(() => undefined);` alongside the other bail calls.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 240,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`this.gitDiffProvider.getRepoRoot()` is called explicitly in this `Promise.all` but `getChangedFiles()` (also in this `Promise.all`) already calls `getRepoRoot()` internally before running any git commands. On the first scan both calls race to execute `git rev-parse --show-toplevel`; subsequent calls hit the cache but the structural redundancy remains. Consider returning `repoRoot` as part of the `GitDiffResult` from `getChangedFiles()` to eliminate the extra call.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 260,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`Math.min(...Array.from(affectedStoryFiles.values(), ...))` is called before checking whether the map is empty. When `affectedStoryFiles` is empty (no stories are reachable from this changed file), the spread produces no arguments and `Math.min()` returns `Infinity`. While not a runtime bug (the inner `for` loop is also empty), it is confusing and wasteful. Add an early `if (affectedStoryFiles.size === 0) continue;` guard before computing `lowestDistance`.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/trace-changed.ts",
+      "line_number": 20,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`startingNodes` is iterated twice in quick succession \u2014 once to build the initial `queue` array via `Array.from(startingNodes, ...)` (line 20) and again with `startingNodes.forEach(...)` to populate `visited` (lines 23\u201325). These can be combined into a single pass:\n```ts\nconst queue: { node: ModuleNode; distance: number }[] = [];\nstartingNodes.forEach((node) => {\n  visited.set(node, 0);\n  queue.push({ node, distance: 0 });\n});\n```",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/trace-changed.ts",
+      "line_number": 28,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "The `queue` array is never compacted: `queueIndex` advances forward but processed elements remain allocated. For a large module graph with thousands of modules, all visited entries accumulate for the lifetime of the call. A simple periodic compaction \u2014 or replacing the array+index with a proper deque \u2014 would bound the peak memory per traversal. At minimum add a comment noting the trade-off so future readers understand the choice.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/core-server/index.ts",
+      "line_number": 32,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`ChangeDetectionService` is exported here directly from `'./change-detection/service'`, bypassing the `'./change-detection'` barrel that already re-exports it (see `change-detection/index.ts`). All other `change-detection` exports in this file use the barrel (`'./change-detection'`). Use the barrel consistently: `export { ChangeDetectionService } from './change-detection';`.",
+      "index": 7
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 145,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Between `server.watcher.on('all', watcherChangeHandler)` (line 145) and the guard check at line 141 (`if (!watcherChangeHandler) return`), `bail()` could theoretically be called asynchronously (e.g. during the microtask turn after `waitForRequestsIdle` resolves). In that case `bail()` calls `server.watcher.off('all', watcherChangeHandler)` and sets `watcherChangeHandler = undefined` \u2014 so the listener is removed \u2014 but `watcherChangeHandler()` is still called on line 146 as a stale reference captured before the check. Add a second null-guard immediately before the `watcherChangeHandler()` call: `if (!watcherChangeHandler) return; watcherChangeHandler();` to make the teardown race-free.",
+      "index": 8
+    },
+    {
+      "file_path": ".vscode/settings.json",
+      "line_number": 50,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Changing `typescript.tsdk` from `./typescript/lib` to `./node_modules/typescript/lib` is unrelated to change-detection. Per project conventions, PRs should be strictly scoped to their stated objective. Please extract this into a separate, focused commit or PR.",
+      "index": 9
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The module-level singleton state in `builder-vite/src/index.ts` (`server`, `listeners`, `debounce`, `watcherChangeHandler`, `waitForModuleGraph`, `moduleGraphRegistrationClosed`) is shared across all invocations of `start`/`bail` within the same Node.js process lifetime. This was already the pattern before the PR, but the addition of `moduleGraphRegistrationClosed` tightens the contract: listeners MUST be registered before `start()` and cannot be re-registered after `bail()` + re-`start()` unless the module is re-imported. The `bail()` resets `moduleGraphRegistrationClosed = false` and clears `listeners`, so a second `start()` after `bail()` works \u2014 but this is not obvious. Consider adding a JSDoc comment on `start()` and `onModuleGraphChange()` explaining the expected call ordering and the single-registration constraint.",
+      "index": 10
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The module-level `readinessDeferred` and `readinessState` in `readiness.ts` are reset in the `ChangeDetectionService` constructor via `resetChangeDetectionReadiness()`. If a second `ChangeDetectionService` is ever constructed while the first is still running (e.g. due to a hot-reload of the dev server config), the reset will discard any readiness already resolved by the first instance and the first instance's in-flight `setChangeDetectionReadiness()` call would then win silently. Adding a comment in the constructor and in `resetChangeDetectionReadiness()` noting the singleton assumption (one active service per process) would help future maintainers avoid this pitfall.",
+      "index": 11
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `cancelTelemetry` SIGINT/SIGTERM handler in `dev-server.ts` (lines 177\u2013192) does not call `changeDetectionService.dispose()` before `process.exit(0)`. In practice the OS cleans up after exit, but any debounce timer that fires in the window before exit could attempt a new git scan and produce confusing log output. For consistency with the error path (which does call `dispose()`), add `await changeDetectionService.dispose().catch(() => undefined)` in `cancelTelemetry` before the `process.exit(0)` call.",
+      "index": 12
+    }
+  ],
+  "cost_usd": 0.9715189000000001,
+  "duration_seconds": 716.9227757453918
+}

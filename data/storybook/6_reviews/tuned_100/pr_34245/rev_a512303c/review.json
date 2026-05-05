@@ -1,0 +1,60 @@
+{
+  "inline_comments": [
+    {
+      "file_path": ".lintstagedrc.mjs",
+      "line_number": 3,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`detectAgent()` returns `AgentInfo | undefined` \u2014 it returns `undefined` when not running inside an agent. Accessing `.name` on `undefined` throws `TypeError: Cannot read properties of undefined (reading 'name')`, which breaks the pre-commit hook for every human developer who is not running in an AI agent context.\n\nUse optional chaining:\n```js\nconst fmtCmd = detectAgent()?.name ? 'oxfmt' : 'oxfmt --check';\n```",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/input/iframe.html",
+      "line_number": 73,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The formatter has indented the body lines of a template literal that is used as a **user-visible string**. The original text had no leading whitespace; the new version inserts 6 spaces at the start of each continuation line.\n\nAlthough `<p>` renders in a block context where browsers collapse leading spaces, the behavior is not guaranteed for text immediately following a `<br/>` tag, and the literal string passed to `console`, logs, or any non-HTML consumer would carry those 6 leading spaces verbatim. More importantly, this is conceptually wrong: a formatter should never alter the content of a template literal that is a human-readable message. Restore the original zero-indentation inside this template literal.",
+      "index": 1
+    },
+    {
+      "file_path": "code/package.json",
+      "line_number": 27,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Using `cd ..` in an npm/yarn script is fragile: it assumes the current working directory is exactly `code/` at the time the script runs, which can break if the script is invoked via `yarn --cwd code lint` from any other location. Use `--cwd` instead for a reliable, path-independent invocation:\n```json\n\"lint\": \"yarn lint:js && yarn --cwd .. fmt:check\"\n```",
+      "index": 2
+    },
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 48,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The override block for `\"*.md\"` and `\"*.mdx\"` (disabling `importOrderSeparation` and `importOrderSortSpecifiers`) is dead code. Both `*.md` and `*.mdx` appear in `ignorePatterns`, so oxfmt never processes those files and this override is never applied. Either remove the override block or add a comment explaining why it is being kept for future use.",
+      "index": 3
+    },
+    {
+      "file_path": ".lintstagedrc.mjs",
+      "line_number": 7,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`fmtCmd` is applied to `code/**` files but not to `scripts/**` files. The scripts directory is covered by the root `.oxfmtrc.json` (no ignore entry for it), so `yarn fmt:write` at the root will format scripts files, but lint-staged will not auto-format them on commit. This inconsistency means a human committing a scripts file that is not yet formatted will get a lint-staged run that lints but does not format, while the same file in `code/` would be formatted (or at least checked). If intentional, add a comment; otherwise add `fmtCmd` to the `scripts/**` entry.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Several `.md` and `.mdx` files have been reformatted (single \u2192 double quotes in code examples) despite `*.md` and `*.mdx` being listed in `ignorePatterns` of the new root `.oxfmtrc.json`. Affected files include `code/lib/eslint-plugin/docs/rules/*.md` and `docs/configure/integration/eslint-plugin.mdx`. The PR description explicitly states these file types are to remain excluded ('keep for md, mdx excluded \u2014 assess if we fmt them in another PR'). These changes appear to be an accidental artifact of running the formatter during development before the ignore patterns were finalised, and should be reverted to keep the diff focused on the stated intent.",
+      "index": 5
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `pretty-docs` task has been removed from `ALL_TASKS` in `.github/workflows/nx.yml` but the replacement `fmt` CI job (added in `scripts/ci/common-jobs.ts`) is a plain root-level yarn script and is not an Nx task, so it does not need to appear there. This is correct as-is, but it is worth confirming that no other references to `pretty-docs` exist in CI configuration that were missed (e.g., workflow `if:` conditions or dashboard references that enumerated task names).",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.46151354999999994,
+  "duration_seconds": 291.8203778266907
+}

@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.stories.tsx",
+      "line_number": 12,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "This import crosses a package boundary via a deep relative path (`'../../../../core/src/manager/utils/toHaveLiveRegion'`), reaching from `code/addons/vitest/src/components/` into `code/core/src/manager/utils/`. Per project conventions, code in one monorepo package must import from another package via a public entry point (e.g. `storybook/internal/...`), not via a deep relative path into the target package's source tree. Deep relative imports are fragile under directory restructuring and bypass the package's intended API surface. Consider either exposing this utility through an appropriate `storybook/internal` subpath export, or co-locating the helper inside the vitest addon itself if it is only needed there.",
+      "index": 0
+    },
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.stories.tsx",
+      "line_number": 340,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`mockStore.send` is not defined on the mock. The mock store is exported from `manager-store.mock.ts` via `testUtils.mocked(new experimental_MockUniversalStore(...))` and exposes only `getState`, `setState`, `runWithState`, `settingsChanged`, `onRunAll`, and `onClearAll` \u2014 no `send` method exists. Calling `.mockImplementation(...)` on `undefined` will throw `TypeError: Cannot read properties of undefined (reading 'mockImplementation')` when this story mounts, crashing it before any button click can occur. A corrected approach: add a `send` spy to the mock store, or drive the state transition by calling the `setState` callback directly from within the render function's effect rather than intercepting `store.send`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+      "line_number": 24,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Missing Vitest type augmentation. After `expect.extend({ toHaveLiveRegion })`, calling `expect(el).toHaveLiveRegion(...)` at every call site produces a TypeScript error (`Property 'toHaveLiveRegion' does not exist on type 'Assertion<HTMLElement>'`) because Vitest's generic `Assertion<T>` type has no knowledge of the new matcher. Add a module augmentation to this file so that the types follow the implementation wherever it is imported:\n```ts\ndeclare module 'vitest' {\n  interface Assertion<R = any> {\n    toHaveLiveRegion(options: LiveRegionMatcherOptions): R;\n  }\n  interface AsymmetricMatchersContaining {\n    toHaveLiveRegion(options: LiveRegionMatcherOptions): any;\n  }\n}\n```\nThis also benefits the companion test file, which calls the matcher without any `@ts-ignore` suppression.",
+      "index": 2
+    },
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.tsx",
+      "line_number": 207,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`componentTestStatusValueToStoryIds` and `a11yStatusValueToStoryIds` are plain objects in the dependency array. If the parent component or call site constructs new object references on each render (e.g. via inline object literals or `Object.fromEntries`), this effect will re-fire on every render even when `testProviderState` has not changed. The `prevState === testProviderState` guard prevents a duplicate announcement, but the effect still runs unnecessarily. If these props are reference-unstable at the call site, consider reading the counts into a `useRef` that is updated via a separate, cheaper effect, so the announcement effect only depends on `testProviderState`.",
+      "index": 3
+    },
+    {
+      "file_path": "code/addons/vitest/package.json",
+      "line_number": 78,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`@react-aria/live-announcer` is placed in `dependencies`. Placing it there is correct given that `TestProviderRender.tsx` imports `announce` at runtime. However, the PR description states both `@react-aria/live-announcer` and `extend-to-be-announced` are added as devDependencies in `code/core/package.json` \u2014 which conflicts with what the diff actually does. Verify the intended bundling contract: if the pre-bundling pipeline already includes this package from core's devDependencies and makes it available to the addon's manager-side bundle, the explicit `dependencies` entry here could be redundant or classified incorrectly. Either way, the PR description should match the implementation.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/manager/utils/toHaveLiveRegion.test.ts",
+      "line_number": 1,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test suite has no case for the failure-message path when no live regions exist at all (i.e. `candidateDetails` is empty, rendering `'  (none)'`). Adding a test like `expect(() => expect(document.createElement('div')).toHaveLiveRegion({ text: 'x' })).toThrow('(none)')` would pin the empty-region branch of the error message and prevent silent regressions to that path. Similarly, the `role=\"log\"` case is tested for text matching but not for its level inference (`'polite'`) \u2014 a parallel to the existing `role=\"status\"` and `role=\"alert\"` level-inference tests would give complete coverage of all four selectors.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description and the implementation are substantially inconsistent, making it difficult to review what was actually delivered. The description says: (1) `extend-to-be-announced` is integrated via `storybook.setup.ts` using `import 'extend-to-be-announced/vitest'`, and (2) test assertions use `toBeAnnounced()`. The actual code uses a custom `toHaveLiveRegion` matcher instead, and `storybook.setup.ts` is not modified at all in the diff. The description also says both packages are added as devDependencies to `code/core/package.json`, while the diff adds `@react-aria/live-announcer` as a runtime dependency to the vitest addon's own `package.json`. The description should be updated to accurately reflect what the PR does so future reviewers and changelog readers are not misled.",
+      "index": 6
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `AnnouncesTestRunFinished` and `AnnouncesTestRunCrashed` stories both rely on a `setTimeout(..., 100)` to drive their state transitions. A 100 ms hard-coded delay is environment-sensitive: on a slow CI runner the timer may fire after `waitFor` times out (default 1 000 ms is usually sufficient, but the delay adds latency to every test run regardless), while under extremely fast execution the component may not yet have committed the initial render before the timer fires. Prefer driving state transitions synchronously inside the `play` function itself \u2014 e.g. expose a `setState` callback via a ref or test-id hook \u2014 rather than relying on wall-clock timing.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.9887007000000001,
+  "duration_seconds": 793.0604429244995
+}

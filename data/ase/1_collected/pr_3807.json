@@ -1,0 +1,620 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3807,
+  "title": "Add MaskedMTKNPT for NPT cell fluctuation along specified axes",
+  "body": "# Summary\n\nThis MR adds NPT along specified axes by MTK equations, which uses Nose-Hoover-like chains for both thermostats and barostats.\nFor example, `MaskedMTKNPT(mask=(False, False, True))` indicates to allow fluctuating along c-axis (so called NPzT).\nThe barostat for the cell fluctuations is controlled by damping parameter pdamp (in time unit).\nMy implementation note for the MTK equations is in the same PDF for the previous Nose-Hoover chain implementation, https://github.com/lan496/lan496.github.io/blob/main/notes/nose_hoover_chain/main.pdf.\n\n# Testing\n\n## Conserved quantity\n\nIn `ase/test/md/test_nose_hoover_chain.py`, I have checked the new masked NPT integrator conserves the following energy-like quantity.\n\n![image](/uploads/c7f815bce9c7a955c066825c43b8dd1a/image.png)\n\nHere, $p_c$ is a conjugated momentum for $c$-axis ($c$ in {x, y, z}).\nFinally, I have found the conserved quantity for masked MTK equations.\n\n## Barostat damping parameter (`pdamp`) dependency\n\nI performed NPzT by changing `pdamp` parameter with `pressure_au=10 * GPa` and `tdamp=100*timestep`.\nThe figure below shows the instantaneous stress tensors during NPT trajectories.\nHere I define the stress tensors by pxx = -atoms.get_stress()[0, 0] and so on.\npzz is close to the external pressure (10 GPa) as expected.\nAlso, the stress tensors are well-controlled in a wide range of `pdamp` from `100*timestep` to `10000*timestep`.\n\n![image](/uploads/40bb700e72f57e0ce14b28ff35600b2a/image.png)\n\nFor `pressure_au=10 * GPa`, the following figures show that only the $c$ length is fluctuated as expected.\n\n![image](/uploads/f897e03c7e3c62db4c64fb6f3cab40e9/image.png)\n\nI checked the distributions of instantaneous pressure with Q-Q plot for these trajectories.\nIf the distribution is normal, the ordered points should line up straight.\nAll cases are distributed like normal distributions within 2\u03c3 regions.\n\n![image](/uploads/2b3ab9b3c89a3da7ae2715b8129e09aa/image.png)\n\n# Scripts\n\n<details><summary>Scripts for testings</summary>\n\n```python\nimport weakref\nfrom concurrent.futures import ThreadPoolExecutor, as_completed\nfrom typing import IO, Union\n\nimport asap3\nimport numpy as np\n\nimport ase.build\nimport ase.units\nfrom ase import Atoms\nfrom ase.calculators.emt import EMT\nfrom ase.md.logger import MDLogger\nfrom ase.md.md import MolecularDynamics\nfrom ase.md.nose_hoover_chain import MTKNPT, IsotropicMTKNPT, NoseHooverChainNVT, MaskedMTKNPT\nfrom ase.md.velocitydistribution import MaxwellBoltzmannDistribution, Stationary\nfrom ase.parallel import world\n\nclass CustomMDLogger(MDLogger):\n\n    def __init__(\n        self,\n        dyn: MolecularDynamics,\n        atoms: Atoms,\n        logfile: Union[IO, str],\n    ):\n        self.dyn: MolecularDynamics = weakref.proxy(dyn)\n        self.atoms = atoms\n\n        self.logfile = self.openfile(file=logfile, mode='w', comm=world)\n\n        self.hdr = \"step,time(ps),epot(eV/atom),ekin(eV/atom),etot(eV/atom),temperature(K),volume(Ang3/atom),pxx(GPa),pyy(GPa),pzz(GPa),pyz(GPa),pzx(GPa),pxy(GPa),a(Ang),b(Ang),c(Ang)\"\n        self.fmt = \"%d\" + \",%.8f\" * 15 + \"\\n\"\n\n        self.logfile.write(self.hdr + \"\\n\")\n\n    def __call__(self):\n        num_atoms = len(self.atoms)\n        epot_eV_per_atom = self.atoms.get_potential_energy() / num_atoms\n        ekin_eV_per_atom = self.atoms.get_kinetic_energy() / num_atoms\n        etot_eV_per_atom = epot_eV_per_atom + ekin_eV_per_atom\n        temperature_K = self.atoms.get_temperature()\n        volume_Ang3_per_atom = self.atoms.get_volume() / num_atoms\n\n        stress_GPa = self.atoms.get_stress(include_ideal_gas=True, voigt=False) / ase.units.GPa\n        pxx_GPa = -stress_GPa[0, 0]\n        pyy_GPa = -stress_GPa[1, 1]\n        pzz_GPa = -stress_GPa[2, 2]\n        pyz_GPa = -stress_GPa[1, 2]\n        pzx_GPa = -stress_GPa[2, 0]\n        pxy_GPa = -stress_GPa[0, 1]\n\n        a_Ang = np.linalg.norm(self.atoms.cell[0])\n        b_Ang = np.linalg.norm(self.atoms.cell[1])\n        c_Ang = np.linalg.norm(self.atoms.cell[2])\n\n        steps = self.dyn.nsteps\n        time_ps = self.dyn.get_time() / (1000 * ase.units.fs)\n\n        dat = (\n            steps,\n            time_ps,\n            epot_eV_per_atom,\n            ekin_eV_per_atom,\n            etot_eV_per_atom,\n            temperature_K,\n            volume_Ang3_per_atom,\n            pxx_GPa,\n            pyy_GPa,\n            pzz_GPa,\n            pyz_GPa,\n            pzx_GPa,\n            pxy_GPa,\n            a_Ang,\n            b_Ang,\n            c_Ang,\n        )\n\n        self.logfile.write(self.fmt % dat)\n        self.logfile.flush()\n\ndef run_npzt(pdamp_timestep: int, pressure_GPa: int):\n    atoms = ase.build.bulk(\"Cu\", crystalstructure='hcp', a=2.53, c=4.0).repeat((4, 4, 4))\n    atoms.calc = asap3.EMT()\n\n    temperature_K = 300\n    rng = np.random.default_rng(0)\n    MaxwellBoltzmannDistribution(atoms, temperature_K=temperature_K, force_temp=True, rng=rng)\n    Stationary(atoms)\n\n    timestep = 1.0 * ase.units.fs\n    md = MaskedMTKNPT(\n        atoms,\n        timestep=timestep,\n        temperature_K=temperature_K,\n        pressure_au=float(pressure_GPa) * ase.units.GPa,\n        tdamp=100 * timestep,\n        pdamp=pdamp_timestep * timestep,\n        mask=(False, False, True),\n    )\n    logfile = f'npzt_pressure-{pressure_GPa}_pdamp-{pdamp_timestep}.log'\n    md.attach(CustomMDLogger(md, atoms, logfile), interval=100)\n    md.run(100_000)\n```\n\n</details>\n\n\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [x] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [x] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [x] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [ ] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "lan496",
+  "merged_at": "2026-03-10T10:03:10.789Z",
+  "base_ref": "master",
+  "merge_commit_sha": "33aa3260d99e726e4615ab1d8ad0bc1c6845525c",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2925610153",
+          "author": "lan496",
+          "body": "@schiotz, I would appreciate it if you could take a look at this MR when you have time. It implements NPT with individually selectable axes, which I believe addresses your earlier comment: https://gitlab.com/ase/ase/-/merge_requests/3595#note_2611636717",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-12-02T01:24:23.004Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2927350338",
+          "author": "schiotz",
+          "body": "I am at a conference this week, but I\u2019ll look at this next week.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-12-02T14:57:24.843Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2965448557",
+          "author": "schiotz",
+          "body": "@askhl @yuzie007 \nThis MR is ready for merging, I think @lan496 need it soon.  I have tested that it passes the ASE test suite, also when merged with the current master branch (but I cannot push the merge to this branch, unfortunately).\n\nI have also added a test of this dynamics to the slow part of the Asap test suite, where statistics are accumulated and verified.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-12-19T09:43:23.702Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2965983375",
+          "author": "askhl",
+          "body": "nitpick: let's use super() nowadays",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 747,
+          "commit_sha": "f475c5e9bd5a8e74d496f919d5c4d163fe69e677",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2025-12-19T13:31:06.152Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2968883048",
+          "author": "lan496",
+          "body": "`super().__init__` gives `TypeError: MTKNPT.init() got multiple values for argument 'atoms'` because of chain inheritance, MaskedMTKNPT->MTKNPT->MolecularDynamics. So, I leave this line",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 747,
+          "commit_sha": "f475c5e9bd5a8e74d496f919d5c4d163fe69e677",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2025-12-22T08:07:22.142Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3076395402",
+          "author": "ajjackson",
+          "body": "You might have included an extra copy of `self` in the arguments; `super().__init__` includes it automatically. How about\n\n```python\nsuper().__init__(\n    atoms=atoms,\n    timestep=timestep,\n    **kwargs,\n)\n```",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 747,
+          "commit_sha": "f475c5e9bd5a8e74d496f919d5c4d163fe69e677",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2026-02-11T16:10:39.018Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3077347540",
+          "author": "lan496",
+          "body": "Thank you for your comment. I have tried it, but the error persists.\n\n```\n>       super().__init__(\n            atoms=atoms,\n            timestep=timestep,\n            **kwargs,\n        )\nE       TypeError: MTKNPT.__init__() missing 4 required positional arguments: 'temperature_K', 'pressure_au', 'tdamp', and 'pdamp'\n```",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 747,
+          "commit_sha": "f475c5e9bd5a8e74d496f919d5c4d163fe69e677",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2026-02-11T22:52:09.563Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3078173488",
+          "author": "schiotz",
+          "body": "It is because ``MTKNPT.__init__()`` has this signature:\n```\ndef __init__(\n        self,\n        atoms: Atoms,\n        timestep: float,\n        temperature_K: float,\n        pressure_au: float,\n        tdamp: float,\n        pdamp: float,\n        tchain: int = 3,\n        pchain: int = 3,\n        tloop: int = 1,\n        ploop: int = 1,\n        **kwargs,\n    ):\n```\nSo you need to provide atoms, timestep, temperature_K, pressure_au, tdamp, and pdamp.\n\n**BUT, very important:**  Ask's suggested change assumed that you actually want to run the __init__ method of the class you inherit from.  But you do not, you appear to *replace* that init function and just want to run the init function of the \"grandparent\" class, MolecularDynamics.  In that case you do not want to use ``super()`` but should call it explicitly as you did originally, in my opinion.",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 747,
+          "commit_sha": "f475c5e9bd5a8e74d496f919d5c4d163fe69e677",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2026-02-12T08:34:13.160Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3081987739",
+          "author": "lan496",
+          "body": "Then I would prefer to call the grandparents' __init__ directly.\n\nThe thermodynamic variables handled in MTKNPT and MaskedNPT differ slightly in both meaning and initialization order, so invoking MTKNPT.__init__ via super() is not appropriate in this case.",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 747,
+          "commit_sha": "f475c5e9bd5a8e74d496f919d5c4d163fe69e677",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2026-02-13T11:49:50.077Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3081992494",
+          "author": "schiotz",
+          "body": "I agree.  I think @askhl overlooked that it was the grandparent class and not the parent class that you called.  It is very unusual, but it is correct in this case.",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 747,
+          "commit_sha": "f475c5e9bd5a8e74d496f919d5c4d163fe69e677",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2026-02-13T11:51:54.002Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3082962811",
+          "author": "askhl",
+          "body": "Right I had overlooked that.  It definitely deserves a comment in the code since it's very unusual to inherit a class and *not* call its constructor (presumably the constructor *solves the problem* of how to create an instance of the class so subclasses should call that instead of also needing to solve that problem).  There must be some problem with the design that we should try to fix at some point.",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 747,
+          "commit_sha": "f475c5e9bd5a8e74d496f919d5c4d163fe69e677",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2026-02-13T16:48:48.651Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2965983409",
+          "author": "askhl",
+          "body": "we don't need np.array() since np.sum() already converts to array when it needs to",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 794,
+          "commit_sha": "cf1ac3c56dee3933719c2ea52d38b9c557eddc05",
+          "base_sha": "4594c90797cd9607c2b60e5cc067b71e98180443",
+          "created_at": "2025-12-19T13:31:07.039Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2968880821",
+          "author": "lan496",
+          "body": "I have fixed in 0f3f0b61",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 794,
+          "commit_sha": "cf1ac3c56dee3933719c2ea52d38b9c557eddc05",
+          "base_sha": "4594c90797cd9607c2b60e5cc067b71e98180443",
+          "created_at": "2025-12-22T08:06:00.458Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2965983419",
+          "author": "askhl",
+          "body": "I see these lines:\n\n```\nnose_hoover_chain.py-        dt2 = self.dt / 2\nnose_hoover_chain.py-\nnose_hoover_chain.py-        self._p_eps = self._barostat.integrate_nhc_baro(self._p_eps, dt2)\nnose_hoover_chain.py-        self._p = self._thermostat.integrate_nhc(self._p, dt2)\nnose_hoover_chain.py:        self._integrate_p_cell(dt2)\nnose_hoover_chain.py:        self._integrate_p(dt2)\nnose_hoover_chain.py-        self._integrate_q(self.dt)\nnose_hoover_chain.py-        self._integrate_q_cell(self.dt)\nnose_hoover_chain.py:        self._integrate_p(dt2)\nnose_hoover_chain.py:        self._integrate_p_cell(dt2)\nnose_hoover_chain.py-        self._p = self._thermostat.integrate_nhc(self._p, dt2)\nnose_hoover_chain.py-        self._p_eps = self._barostat.integrate_nhc_baro(self._p_eps, dt2)\nnose_hoover_chain.py-\nnose_hoover_chain.py-        self._update_atoms()\n```\n\nin master already (twice actually).  We should use methods, functions and other abstractions and avoid copy-pasted code (see e.g. https://en.wikipedia.org/wiki/Duplicate_code).  Please make a function and call it where necessary so that this operation is implemented in only one place.  I notice that there are also some other duplicated bits in nose_hoover_chain.py (calls to `self._integrate_p_xi_j`).  I think all of those should be possible to enclose in functions.  If these functions take large groups of the same parameters, then that's an indication of what classes are needed by the design.",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 814,
+          "commit_sha": "cf1ac3c56dee3933719c2ea52d38b9c557eddc05",
+          "base_sha": "4594c90797cd9607c2b60e5cc067b71e98180443",
+          "created_at": "2025-12-19T13:31:07.233Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2968880612",
+          "author": "lan496",
+          "body": "I have refactored derived `step` function in 0f3f0b61",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 814,
+          "commit_sha": "cf1ac3c56dee3933719c2ea52d38b9c557eddc05",
+          "base_sha": "4594c90797cd9607c2b60e5cc067b71e98180443",
+          "created_at": "2025-12-22T08:05:51.437Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2965983423",
+          "author": "askhl",
+          "body": "Should this be sum(mask) * 3 or should mask have nine elements rather than the three indicated by the type hint?",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 804,
+          "commit_sha": "4c9afb4c3bf3b6654b118c6d3d501c3d90f12979",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2025-12-19T13:31:07.443Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2968880237",
+          "author": "lan496",
+          "body": "mask=(True, True, True) and mask=None should give different behavior as implemented. I have added a comment in docstring in 0f3f0b61",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 804,
+          "commit_sha": "4c9afb4c3bf3b6654b118c6d3d501c3d90f12979",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2025-12-22T08:05:34.134Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2965983427",
+          "author": "askhl",
+          "body": "We don't need an error message because Python already defines one",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 800,
+          "commit_sha": "cf1ac3c56dee3933719c2ea52d38b9c557eddc05",
+          "base_sha": "4594c90797cd9607c2b60e5cc067b71e98180443",
+          "created_at": "2025-12-19T13:31:07.656Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2968876913",
+          "author": "lan496",
+          "body": "I have fixed in 0f3f0b61",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 800,
+          "commit_sha": "cf1ac3c56dee3933719c2ea52d38b9c557eddc05",
+          "base_sha": "4594c90797cd9607c2b60e5cc067b71e98180443",
+          "created_at": "2025-12-22T08:03:09.243Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2988438282",
+          "author": "lan496",
+          "body": "@askhl Apologies for the ping. I believe this MR is ready for review again",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-01-07T11:03:10.172Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2998209361",
+          "author": "schiotz",
+          "body": "@askhl I think this is ready to be merged. I have tested that it stills passes the statistical tests in Asap.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-01-12T08:41:36.854Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3030662018",
+          "author": "askhl",
+          "body": "Sorry, I still don't understand the mask parameter very well.\n\nAs far as I can see from the text, there can be 0, 1, 2, 3, or 9 cell DOFs depending on the mask keyword.\n\n * What is special about 0, 1, 2, 3, and 9?  Shouldn't it be equally possible to set 5 or 6 or any other number?\n * If mask is (True, True, True) such that a, b and c axes can all fluctuate, isn't that 9 degrees of freedom because each axis has three coordinates?\n * If the mask isn't specified, the dynamics object should probably use `atoms.pbc` to decide which axes are allowed to fluctuate.\n\n(I haven't completely thought about the implications of `atoms.pbc`.  For example if there is only one periodic direction, it wouldn't make sense for that direction's cell vector to fluctuate into the directions of other cell vectors.  So there would only be one cell DOF in a 1D system, and up to 4 DOFs in a 2D system, and up to 9 DOFs in a 3D system..... to avoid fluctuations into non-periodic directions.  Or something like that!)",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 786,
+          "commit_sha": "4c9afb4c3bf3b6654b118c6d3d501c3d90f12979",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2026-01-23T15:08:51.860Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3031722798",
+          "author": "lan496",
+          "body": "> What is special about 0, 1, 2, 3, and 9?  Shouldn't it be equally possible to set 5 or 6 or any other number?\n\nIn principle, arbitrary combinations of strain components might be imagined, but in practice only those sets of DOFs for which a consistent extended-Lagrangian / integrator with a conserved quantity is known are implemented.\nFor example, dof=5 would mean fluctuating x, y, z, xy, and yx components, but I cannot find a proper update rule that yields a conserved energy-like quantity. \nFor this reason, only the standard cases (0, 1, 2, 3, and 9) with known integrators are accepted here.\n\n> If mask is (True, True, True) such that a, b and c axes can all fluctuate, isn't that 9 degrees of freedom because each axis has three coordinates?\n\nHere the interpretation follows LAMMPS fix nh keywords. https://docs.lammps.org/fix_nh.html\n`mask = (True, True, True)` corresponds to fluctuating the a-, b-, and c-axis lengths only (LAMMPS iso), not the full 3\u00d73 cell matrix.\nIn this mode the off-diagonal components are constrained (for an initially orthogonal cell they remain zero), so this is a 3-DOF barostat, which is different from the full 9-DOF `MTKNPT` case (equivalent to LAMMPS tri), where shear components are also dynamical.\n\n> If the mask isn't specified, the dynamics object should probably use atoms.pbc to decide which axes are allowed to fluctuate.\n\nIn fact, I did not consider this case carefully.\nAt the moment the code implicitly assumes a fully periodic system.\nShould we add a sanity check (for example, requiring `atoms.pbc == (True, True, True)` or at least warning when non-periodic directions are combined with cell DOFs)?",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 786,
+          "commit_sha": "4c9afb4c3bf3b6654b118c6d3d501c3d90f12979",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2026-01-23T23:28:49.245Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3082962907",
+          "author": "askhl",
+          "body": "OK, I understand now.  Maybe the docstring could explain explicitly that the angle-varying cases are not implemented?\n\nI suggest to accept fully periodic pbc, and then raise an error in all other cases telling the user to set the mask (this forces the user to think about the fact that only lengths and not angles can change).",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 786,
+          "commit_sha": "4c9afb4c3bf3b6654b118c6d3d501c3d90f12979",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2026-02-13T16:48:49.945Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3083637597",
+          "author": "lan496",
+          "body": "> Maybe the docstring could explain explicitly that the angle-varying cases are not implemented?\n\nI've added the supplement in 50061750.\n\nSince `MTKBarostat` will not be directly used by users, I prefer keeping the input `mask` keyword to a minimum.\nWe would add the 3x3 full mask to the union type `mask: tuple[bool, bool, bool] | None` without breaking backward compatibility if we could implement a fully periodic MTK barostat.",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 786,
+          "commit_sha": "4c9afb4c3bf3b6654b118c6d3d501c3d90f12979",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2026-02-13T23:51:50.762Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3082962960",
+          "author": "askhl",
+          "body": "Thanks a lot.  Aside from the addition of comments, I won't have more comments now (I swear :sweat_smile:)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-13T16:48:50.496Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3083227064",
+          "author": "askhl",
+          "body": "(Wait, it was mostly the change of atoms.pbc behaviour that was the important part, not the addition of comments)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-13T18:35:43.248Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3133634450",
+          "author": "lan496",
+          "body": "Sorry for the ping. I believe this MR is ready for review again",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-05T07:53:54.193Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3140749645",
+          "author": "yuzie007",
+          "body": "If I understand correctly, these `_R` correspond to *Q* or *Q'* in Martyna or Tuckerman. If so, could you maybe rename them `_Q` or at least leave a comment?",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 814,
+          "commit_sha": "4c9afb4c3bf3b6654b118c6d3d501c3d90f12979",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2026-03-08T15:18:46.169Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3142255324",
+          "author": "lan496",
+          "body": "Yes, it is Q'_j in the original paper. I've left a comment in f475c5e9",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 814,
+          "commit_sha": "4c9afb4c3bf3b6654b118c6d3d501c3d90f12979",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2026-03-09T11:20:47.326Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3140749663",
+          "author": "yuzie007",
+          "body": "A short docstring like `\"\"\"Virtual mass for barostat.\"\"\"`, like that of `IsotropicMTKBarostat` may be helpful.",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 822,
+          "commit_sha": "4c9afb4c3bf3b6654b118c6d3d501c3d90f12979",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2026-03-08T15:18:46.788Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3142255841",
+          "author": "lan496",
+          "body": "Added in f475c5e9",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 822,
+          "commit_sha": "4c9afb4c3bf3b6654b118c6d3d501c3d90f12979",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2026-03-09T11:20:57.829Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3140749665",
+          "author": "yuzie007",
+          "body": "Not sure if we should mark it as `iso`. If I understand correctly, the fluctuation of each axis can be different, so anisotropic deformation is allowed, unlike `IsotropicMTKNPT`, or?",
+          "file_path": "ase/test/md/test_nose_hoover_chain.py",
+          "line_number": 339,
+          "commit_sha": "bf8e4686d0194d72259f9a7072f2de65e82f2940",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2026-03-08T15:18:47.085Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3142257665",
+          "author": "lan496",
+          "body": "You are right. I've fixed the test name to `triaxial`, which would be more appropriate.",
+          "file_path": "ase/test/md/test_nose_hoover_chain.py",
+          "line_number": 339,
+          "commit_sha": "bf8e4686d0194d72259f9a7072f2de65e82f2940",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2026-03-09T11:21:35.349Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3140749667",
+          "author": "yuzie007",
+          "body": "Thank you so much @lan496 for the MR, and sorry for the delay of review on the maintainers' side.\nThis MR has been on board in every maintainers' meeting with marked as high priority, yet still needed some time to proceed the review.\n\nThe addition in this MR is amazing. With this we can cover many options in LAMMPS `npt`, specifically:\n\n- `iso`: `IsotropicMTKNPT`\n- `tri`: `MTKNPT`\n- `aniso` etc.: `MaskedMTKNPT` (new!)\n\nStill a major concern of maintainers is duplication of the codes.\nI particularly feel `__init__` can still be largely simplified.\n\nI guess one of the reasons not calling `MTKNPT.__init__` is due to `self._mask`, which was unnecessary for `MTKNPT` but necessary for `MaskedMTKNPT`.\nIt is however not unreasonable to have `mask = None` in `MTKNPT`, indicating full flexibility of the cell, as `mask = None` for `MTKBarostat` means so.\nWith this change, we can unify the way of instantiating `MTKBarostat`, and therefore `MaskedMTKNPT` can use `MTKNPT.__init__`.\n\nIn a similar way, we can also unify `get_conserved_energy` by cutting out the different parts into e.g. `_get_cell_kinetic_energy`.\n\nI have implemented my suggestion in https://gitlab.com/yuzie007/ase/-/merge_requests/3 on top of the present MR. The tests you implemented have been passed. Could you have a look? (@askhl, @ajjackson, @schiotz, do you guys also think this is the way to go?) If OK with you, I will push the changes to your branch and start further review on top of it (while I have no other big requests, and it will hopefully be close to merging).\n\nApart from the above major suggestion, may I also ask a few questions?\n\n1. In the [LAMMPS `fix_nh` page](https://docs.lammps.org/fix_nh.html), they show their integrator with the statement \"This factorization differs somewhat from that of Tuckerman et al. ...\". Related to this, do we now implement the original Martyna / Tuckerman integrator, or that used in LAMMPS? If so, it might be helpful to have a small note for that in a docstring, so that users should not expect exactly the same trajectories.\n\n2. While the methodology of `IsotropicMTKNPT` and `MTKNPT` are found in Martyna / Tuckerman papers, did you derive the formula for `MaskedMTKNPT` by yourself, so it is best to refer to your notes on github? Or, can we find an essentially similar implementation in e.g. LAMMPS `fix_nh.cpp`?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-08T15:18:47.571Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3142301465",
+          "author": "lan496",
+          "body": "> Could you have a look?\n\nOf course! Thank you and the maintainers for your effort. I will check it\n\n> do we now implement the original Martyna / Tuckerman integrator, or that used in LAMMPS?\n\nI simply follow Tuckerman's book (and the original MTK papers) for factorizing the Liouville operator. I've added a comment in f475c5e9.\n\n> did you derive the formula for MaskedMTKNPT by yourself, so it is best to refer to your notes on github? Or, can we find an essentially similar implementation in e.g. LAMMPS fix_nh.cpp?\n\nYes, I derived it by myself because I could not find a proper reference for the Masked MTK-style integrator. I do not fully understand the LAMMPS' nh implementation (I cannot find any technical document for it \ud83d\ude1e). At least, I feel it is fine to link to my implementation note for details, though I suspect that there may be an earlier reference somewhere.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-09T11:34:56.508Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3144403313",
+          "author": "yuzie007",
+          "body": "Thank you @lan496 for the quick response and clear information! I have now pushed my suggestion (https://gitlab.com/yuzie007/ase/-/merge_requests/3) to the present MR.\nOn my side, the present version looks good for merging.\nAfter the feedback also from @askhl, @ajjackson, @schiotz, hopefully we will be able to merge soon.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-09T22:34:33.414Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3145500221",
+          "author": "schiotz",
+          "body": "Looks good to me!  Thank you very much indeed for this contribution to ASE.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-10T09:48:04.552Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3145544126",
+          "author": "ajjackson",
+          "body": "This directs us to MTKNPT for the references, but what about the keyword arguments? This is a public class and `ploop` is not a commonly-encountered parameter name!\n\nWe should say here that the kwargs have the same meaning as in MTKNPT, or add a Parameters section. I'd prefer the latter but either is ok given that it's not a _very_ public class.\n\n(Does it actually need to be public at all? It's only used within this module, right? Fewer public classes = smaller API to break)",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 779,
+          "commit_sha": "4c9afb4c3bf3b6654b118c6d3d501c3d90f12979",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2026-03-10T10:00:20.838Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3145544156",
+          "author": "ajjackson",
+          "body": "I have a couple of niggles about the MTKBarostat public/private status and its docstring.\n\nBut these are not blockers. Generally this is now looking pretty readable and well-structured! Thanks a lot to those who worked on it :smile:",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-10T10:00:21.474Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3145552866",
+          "author": "askhl",
+          "body": "OK, I'll go ahead and merge then.\n\nThanks a lot @lan496 and everyone!",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-10T10:03:03.811Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 22
+}

@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "ase/md/velocitydistribution.py",
+      "line_number": 179,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The docstring of the *new, canonical* function defers to the *deprecated* function for parameter details: `See :func:`MaxwellBoltzmannDistribution` for details of parameters.`\n\nThis is backwards. `thermalize_momenta` is replacing `MaxwellBoltzmannDistribution`, so it should be the authoritative reference, not the other way around. Additionally, `thermalize_momenta` already has a complete `Parameters` section directly below, so this sentence is both redundant and misleading \u2014 readers following the cross-reference will land on a deprecated function.\n\nThis line should be removed. The `MaxwellBoltzmannDistribution` docstring (the deprecated wrapper) is the right place for a forward-pointing cross-reference: `Use :func:`thermalize_momenta` instead.`",
+      "index": 0
+    },
+    {
+      "file_path": "ase/md/velocitydistribution.py",
+      "line_number": 98,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`@deprecated('Use thermalize_momenta', DeprecationWarning)` \u2014 the deprecation message doesn't tell users where to find the replacement. `MaxwellBoltzmannDistribution` currently lives in `ase.md.velocitydistribution`, while `thermalize_momenta` is the first velocity-distribution helper to be promoted to the top-level `ase.md` namespace. Users may not discover the new import path from this message alone.\n\nConsider: `'Use thermalize_momenta (importable from ase.md) instead'`.",
+      "index": 1
+    },
+    {
+      "file_path": "ase/md/velocitydistribution.py",
+      "line_number": 202,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `rng` docstring example recommends `numpy.random.RandomState(seed)`, but `RandomState` is the legacy NumPy RNG interface. The project convention and the rest of the test suite in this very MR use `np.random.default_rng(seed)`, which returns the modern `Generator`. Update the example to:\n\n```\nrng=numpy.random.default_rng(seed)\n```\n\nThis keeps the docs consistent with ASE's established RNG style (see `ase/md/velocitydistribution.py` tests, `ase/md/langevin.py`, etc.) and avoids pointing new users at the deprecated `RandomState` API.",
+      "index": 2
+    },
+    {
+      "file_path": "ase/test/md/test_maxwellboltzmann.py",
+      "line_number": 24,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`@pytest.mark.filterwarnings('ignore::DeprecationWarning')` suppresses all deprecation warnings in the test rather than asserting that the expected one is raised. Per project convention, `pytest.warns` should be used:\n\n```python\ndef test_maxwell_boltzmann_distribution(atoms: Atoms) -> None:\n    \"\"\"Test deprecated `MaxwellBoltzmannDistribution`.\"\"\"\n    ...\n    with pytest.warns(DeprecationWarning, match='thermalize_momenta'):\n        MaxwellBoltzmannDistribution(atoms, temperature_K=temperature, rng=rng)\n```\n\nThe `filterwarnings` approach means the test will pass even if the deprecation warning is accidentally removed \u2014 one of the few behaviors this test exists to guard against.",
+      "index": 3
+    },
+    {
+      "file_path": "changelog.d/20260315_145047_yuji.ikeda.ac.jp_init_momenta.rst",
+      "line_number": 37,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The file retains all of the unused commented-out section headers from the `scriv` template (`.. I/O`, `.. ---`, `.. Calculators`, `.. GUI`, `.. Development`, etc.) starting around here and running to the end of the file. These should be stripped out before merging; only the active `Molecular dynamics` section and its three bullets should remain.",
+      "index": 4
+    },
+    {
+      "file_path": "changelog.d/20260315_145047_yuji.ikeda.ac.jp_init_momenta.rst",
+      "line_number": 33,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The bullet `Remove the deprecated parameter ``temp`` (temperature in eV) from MaxwellBoltzmannDistribution` describes a breaking change \u2014 callers that still pass `temp=0.025` will now receive a `TypeError` rather than a deprecation warning \u2014 but it is not labelled as such. Per project conventions, breaking changes must be explicitly flagged. Consider adding a note such as `(breaking: callers using ``temp=`` will now raise ``TypeError``)` so users upgrading know to audit their code.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`atoms.set_momenta(momenta, apply_constraint=True)` in `thermalize_momenta` (line 208) passes a value that is already the default for `set_momenta`. While the explicit form makes the constraint-applying intent visible \u2014 which is useful since the PR description highlights the `FixCom` interaction as a feature \u2014 a short inline comment (e.g., `# apply e.g. FixCom if set`) would communicate the *why* more directly than repeating the default value.",
+      "index": 6
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The overall delegation strategy is clean: `MaxwellBoltzmannDistribution` is reduced to a thin `@deprecated` wrapper that maps `force_temp` \u2192 `exact_temperature` and forwards to `thermalize_momenta`, eliminating all code duplication. The equivalence test `test_maxwell_boltzmann_distribution` \u2014 which seeds two independent RNGs identically and asserts `np.testing.assert_allclose` on the resulting momenta \u2014 is a good regression guard for this refactor. One small gap: `thermalize_momenta` is never called with `exact_temperature=True` in a test that also checks the resulting temperature numerically (that is, `test_maxwellboltzmann_dof` only verifies `exact_temperature=True` via `pytest.approx`, which is fine, but it uses the fixture's full 500 000-atom cell). This is not a blocker but worth noting for anyone adding future tests.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.61376055,
+  "duration_seconds": 344.41993021965027
+}

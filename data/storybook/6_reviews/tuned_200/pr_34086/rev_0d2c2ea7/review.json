@@ -1,0 +1,44 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/docs/src/blocks/blocks/Canvas.tsx",
+      "line_number": 88,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The PR description states this uses `FORCE_REMOUNT` to \"re-render stories in docs from scratch, matching the existing Story canvas reload behavior.\" The code emits `RESET_STORY_ARGS` instead, which is a fundamentally different action: it resets arg values to their initial state but does **not** unmount/remount the component. Stories with internal state from `useState`, `useReducer`, class-component lifecycle, or `useEffect(() => ..., [])` side effects will **not** be reset \u2014 the component keeps its current mounted instance. `FORCE_REMOUNT` is the event used by the toolbar's \"Reload story\" button and would provide the \"from-scratch\" reset the PR describes. If this is intentionally arg-reset-only, the PR description, button label, and UX copy should be corrected to make the distinction clear.",
+      "index": 0
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/blocks/Canvas.tsx",
+      "line_number": 85,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The PR description says the button is \"shown by default for all inline stories \u2014 no configuration needed,\" but `resetButton ?? false` means the button is **opt-in** and hidden unless a user explicitly sets `parameters.docs.canvas.resetButton = true`. This is the opposite of the described behavior. If the intent is always-on for inline stories (matching the description), remove the `resetButton` parameter entirely \u2014 the existing `inline &&` guard on line 100 already scopes it to inline stories. If opt-in is intentional, the PR description must be corrected.",
+      "index": 1
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/components/Preview.tsx",
+      "line_number": 267,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR title calls this \"Reload story,\" but the button renders \"Reset story\" with `UndoIcon`. The existing toolbar button for `FORCE_REMOUNT` uses the label \"Reload story\" with `SyncIcon`. Having two differently-named, differently-iconned buttons that users may interpret as equivalent \u2014 or may not know are distinct \u2014 will be confusing. The label and icon should be finalized to clearly reflect the actual operation, and ideally be aligned with the naming decision made for the event (see Canvas.tsx line 88).",
+      "index": 2
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "There are three conflicting descriptions of what this feature does: (1) the PR title says \"Reload story\" (implying a full remount), (2) the PR description says it uses `FORCE_REMOUNT`, and (3) the implementation uses `RESET_STORY_ARGS` with button text \"Reset story.\" Before merging, the team should decide whether the intended behavior is (a) **reset args only** (`RESET_STORY_ARGS`, no component unmount) or (b) **full remount** (`FORCE_REMOUNT`, complete lifecycle reset), and make the event, button text, icon, and documentation consistently reflect that choice throughout the PR.",
+      "index": 3
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "No automated tests are included (the PR checklist has stories, unit tests, integration tests, and e2e tests all unchecked). The `Preview` component change in particular \u2014 the new conditional rendering of the action bar (`onResetStory || ...`) and the button itself \u2014 would benefit from at least a story that exercises both the `onResetStory` provided and `onResetStory` omitted states, so the button's presence/absence can be captured in visual regression tests.",
+      "index": 4
+    }
+  ],
+  "cost_usd": 0.32358054999999997,
+  "duration_seconds": 170.89781188964844
+}

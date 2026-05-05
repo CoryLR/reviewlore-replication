@@ -1,0 +1,525 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4657,
+  "title": "Bug/4645 graph node containing keyword",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nFix issues relating to keywords being parsed in node idStrings, vertex text, and edge text\r\n\r\nResolves #4645 \r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nPreviously, tokens were modularized to many parts. E.g., there was no Alphanumeric token, instead, there was an alphabet token `ALPHA`, a numbers token `NUM`, and an underscore token `UNDERSCORE`. The parser originally used recursion and concatenation on token types for things such as idString. However, this made it very difficult to debug issues such as the `call` and `click` keywords eliciting their respective states inside vertex and edge texts. Also, it was impossible to allow keywords in idStrings, because the parser would have to parse a keyword and then concatenate it to other tokens, resulting in eliciting errors for parsing a keyword in the wrong places. \r\n\r\nTo combat this, I added separate states for vertex and edge text. Now, we can add anything between the vertices and links without adding additional token types to the grammar (doing this is what resulted in super long definitions such as `alphaNumToken`). We can also have quotes inside vertices and edges without escaping them.\r\n\r\nOne problem I could not solve was allowing node idStrings to start with keywords. Previously, if the keyword occurred anywhere in the idString it would elicit an error. Now, it only elicits an error if it appears at the start of idString. E.g., `graph-node` and `graph.node` would elicit an error. However, it's important to note that an error will not be elicited if the keyword is followed by an underscore. I.e., `graph_node` is valid. I'm not sure why this happens, as the regex is valid. I spent a couple days on this problem alone and could not make it work.    \r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n- [x] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/docs/community/development.md#3-update-documentation) is used for all new features.\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "ibrahimWassouf",
+  "merged_at": "2023-08-05T16:01:04Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "e1379ee0483a15b82a38385b0c8db0f7e86ea79a",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "f8ebfeefec466d5001939f5a520a89cee2e4639d",
+    "34bf618ecb199788d47ac7479c4a806103d271bd"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85LxvEr",
+          "author": "nirname",
+          "body": "Is not used anymore",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow.jison",
+          "line_number": 607,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-22T18:23:42Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85LxwCA",
+          "author": "ibrahimWassouf",
+          "body": "true, I thought I was still using it in `alphaNumStatement`, but I must have removed it without paying attention. There were a lot of minor changing I was making to try to get tests to pass, so I must've lost track. Thanks for catching this!",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow.jison",
+          "line_number": 607,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-22T19:06:41Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Implies that unused code should be removed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85LxvHc",
+          "author": "nirname",
+          "body": "Was not used even before that PR, obsolete.",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow.jison",
+          "line_number": 609,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-22T18:24:25Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags obsolete/unused code, implying it should be removed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85LxvM3",
+          "author": "nirname",
+          "body": "It is possible to add aliases to this capture groups.\r\nApart from the `$1` they also have built-in `$name`\r\n```\r\nline: name greeting { $1===$name } // either $1 or $name\r\n```\r\nand it also possible to give them own aliases\r\n```\r\nline: name greeting\\[text] { $text }\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow.jison",
+          "line_number": 515,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-22T18:28:14Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Lxv_3",
+          "author": "ibrahimWassouf",
+          "body": "I'm sorry, I don't understand what this is talking about. Maybe I'm just unfamiliar with using this syntax, could you please elaborate?",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow.jison",
+          "line_number": 515,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-22T19:04:19Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85LyGMD",
+          "author": "nirname",
+          "body": "By changing grammar rules  sometimes you have to rename `$1` to `$3` for example, but we can avoid it by assigning names or aliases to those 'capture groups' and access them using given aliases.\r\n\r\nhttps://gerhobbelt.github.io/jison/docs/#accessing-values-and-location-information\r\n\r\nThis would take a whole lot more space, but eventually it could be much more readable and less error prone (during editing those jison files).",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow.jison",
+          "line_number": 515,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-23T10:43:53Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests using named aliases for capture groups as an improvement to the current code."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85LxvYJ",
+          "author": "nirname",
+          "body": "Seems that it has become a different language. It used to be literally `default` only, and suddenly it became an `idString`. Is that what we want?",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow.jison",
+          "line_number": 511,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-22T18:33:37Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85LxwTK",
+          "author": "ibrahimWassouf",
+          "body": "So, the second line used to allow the alphaNum statements, which weren't just alphanumeric characters but also symbols. idString serves the same purpose as the old alphaNum, however, it also contains the `DEFAULT` keyword to help pass a single unit test. This means that the two grammar statements conflict here given that idString both replaces alphanum and has the `DEFAULT` token in its declaration",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow.jison",
+          "line_number": 511,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-22T19:20:51Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85LxwZ5",
+          "author": "ibrahimWassouf",
+          "body": "Really, I don't believe `DEFAULT` should even be in `idString`. I kept it in there because there is a unit test that wants the word `default` to be read as a node. That is the only keyword I believe can be read as a token, and I don't even know how it isn't conflicting with the keyword.",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow.jison",
+          "line_number": 511,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-22T19:26:08Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Lxwoo",
+          "author": "ibrahimWassouf",
+          "body": "After some thought, I think you're right. In this implementation, I think idString, and alphaNumStatement are near identical, but I left it to create a better conceptual separation of the two, because it would be confusing to use idString for everything. I will return the old grammar here.",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow.jison",
+          "line_number": 511,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-22T19:38:10Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85LyGgp",
+          "author": "nirname",
+          "body": "I see, you have combined two previous lines\r\n```\r\nCLASSDEF SPACE DEFAULT SPACE stylesOpt\r\nCLASSDEF SPACE alphaNum SPACE stylesOpt\r\n```\r\nThat is ok.\r\n\r\nBut in some places you simply replaced `alphaNum` with `idString`. And previously there was no a 'default' keyword. This means that we added `default` keyword to some constructions that previously had not contained it. Is that what we want?\r\n\r\n- May be it is, and we must create a test case for that\r\n- May be it is not, and it would be great to create a test case for that that shows that some graph definition was NOT allowed, and this behavior have not changed since then",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow.jison",
+          "line_number": 511,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-23T10:54:17Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85L8zlj",
+          "author": "ibrahimWassouf",
+          "body": "@nirname I added a test to showcase that idString should indeed be there. I think that the old way was a bit incorrect, because you were able to create a class called 'default' in `classDefStatement` but were not allowed to apply it because the `classStatement` expects an alphaNum which, as you pointed out, does not include the `DEFAULT` token. Again, I do not really think that we should be allowing any of the nodes or classes to be keywords but removing the `DEFAULT` keyword would technically be a breaking change. ",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow.jison",
+          "line_number": 511,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-26T00:08:43Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85MMY7T",
+          "author": "nirname",
+          "body": "When class def is default then it is applied to ALL the nodes, thus your node don't have to start with `default` word. So it is better to extend the test so that it would illustrate that the default style is applied independently of the node name. In this example it is applied to all the nodes\r\n```\r\n      graph TD\r\n\r\n      classDef default fill:#a34,stroke:#000,stroke-width:4px,color:#fff \r\n      hello --> default\r\n```\r\n\r\n```mermaid\r\n      graph TD\r\n\r\n      classDef default fill:#a34,stroke:#000,stroke-width:4px,color:#fff \r\n      hello --> default\r\n```\r\n\\\r\nI have checked your concern about styles, you are absolutely right. We need a test for this as well. If it is legit to call a node `default` (and it is), we must be able to apply styles to the node called `default` (and we can in your PR), we need coverage.\r\n\r\n```\r\nflowchart TD\r\n      classDef default fill:#a34\r\n      hello --> default\r\n\r\n      style default stroke:#000,stroke-width:4px\r\n```\r\n",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow.jison",
+          "line_number": 511,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-29T15:55:29Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85MMY9E",
+          "author": "nirname",
+          "body": "long speech short:\r\n* extend prev test\r\n* add one more",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow.jison",
+          "line_number": 511,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-29T15:57:04Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potentially unintended behavioral change (from literal 'default' to 'idString') and asks whether this is intentional, implying it may need to be reverted or confirmed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85MMV1a",
+          "author": "nirname",
+          "body": "If both `#quot` and `\\\"` are possible it would be better to keep both examples",
+          "file_path": "packages/mermaid/src/docs/syntax/flowchart.md",
+          "line_number": 394,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-29T13:54:48Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85MMWR5",
+          "author": "nirname",
+          "body": "Hmmm, I dont know where to put this comment, but I have checked, and this will throw an error:\r\n```\r\nA --> B[\"asdf\\\\\"]\r\n```\r\nAlthough I would simply like to add `\\` at the end of the string.\r\n\r\nThis can be a workaround, but not obvious one and if `\\` is though to be an escapement character, then it does not escape \"space\".\r\n```\r\nA --> B[\"asdf\\ \"]\r\n```\r\nObviously node title is trimmed, but this is not what the user expects\r\n\r\nBasically you have 3 options:\r\n* do some tricks within parser to avoid such situations (it could work but not common)\r\n* escape escapement character as well `\\\\` => '\\', `\\\"` => `\"`\r\n* use doubled quotes as escapement character `\"\"` => `\"`\r\n\r\nIf we add '\\' as escapement character, I doubt that this could be a breaking change. It would be great to ensure somehow, that old examples (with '\\') inside continue working.\r\n\r\nCurrently this\r\n```mermaid\r\nflowchart TD\r\n    A -->B[\"fwef\\\"]\r\n```\r\nis valid, whereas in new approach this is NOT valid. We cannot verify how many people would like to add this trailing slash (personally I think it it strange), but who knows, may be they stick to Windows folder notations and use something like `folder\\`, `subfolder\\`.\r\n\r\nAnd as a consequence, we cannot make `\\\\` to produce `\\` because it will ruin user's experience too (if someone had double slash it would became single, and to fix it one would need quadruple). So doubling quotes or making some fixes for trailing slash is our option",
+          "file_path": "packages/mermaid/src/docs/syntax/flowchart.md",
+          "line_number": 394,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-29T14:15:35Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85MMWv2",
+          "author": "nirname",
+          "body": "Not sure if this related to this request, but we are not able to add \\n to the node title even if I want. Say I want my node to contain `\\n` literally. Nor it is possible in editor neither in current branch\r\n\r\nI understand that this is pretty much a separate issue, but I have not looked at the issues list yet, so ignore it, or try to find related one.\r\n\r\n",
+          "file_path": "packages/mermaid/src/docs/syntax/flowchart.md",
+          "line_number": 394,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-29T14:38:03Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85MMZWj",
+          "author": "nirname",
+          "body": "More examples on why we cannot add `\\` as escape character implicitly\r\nIf a guy has a node\r\n```\r\ngraph\r\nnode[\"dir\\\"]\r\n```\r\n\r\n```mermaid\r\ngraph\r\nnode[\"dir\\\"]\r\n```\r\nThis node will become invalid in our new approach\r\n\r\nAnd if we make our users to escape `\\` with `\\` then\r\n```\r\ngraph\r\nnode[\"dir\\\\\"]\r\n```\r\n\r\n```mermaid\r\ngraph\r\nnode[\"dir\\\\\"]\r\n```\r\nbecomes invalid too, because in that case user would have to write\r\n```\r\nnode[\"dir\\\\\\\\\"]\r\n```\r\nto get the same result\r\n\r\nAlthough `\\` as an escape character is very common and widespread we probably cannot use it (unfortunately)",
+          "file_path": "packages/mermaid/src/docs/syntax/flowchart.md",
+          "line_number": 394,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-29T16:18:16Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85MMZea",
+          "author": "nirname",
+          "body": "May be @sidharthv96 or @knsv can enlighten us on making breaking changes, so I'd invite them in this discussion. I think we are pretty conservative of such changes because of the size of community so we are obliged to support many undesirable features for the backward compatibility",
+          "file_path": "packages/mermaid/src/docs/syntax/flowchart.md",
+          "line_number": 394,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-29T16:23:56Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85MMdHy",
+          "author": "ibrahimWassouf",
+          "body": "Well, in this branch a string like `node[\"dir\\\"]` would break because `\\\"` would be read as an escaped double quote, but I don't think something like `node[\"http:\\\\ link\"]` would be a problem. Can't we just tell users to use the HTML code `#bsol;` if they need a backslash at the end of the string? Because creating a non-breaking solution will probably lead to other undesirable effects no?",
+          "file_path": "packages/mermaid/src/docs/syntax/flowchart.md",
+          "line_number": 394,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-29T16:33:00Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85MMeTT",
+          "author": "ibrahimWassouf",
+          "body": "Otherwise, I can remove the escaped quotes feature, because that wasn't there before. That was added based on @sidharthv96 's [table above](https://github.com/mermaid-js/mermaid/pull/4657#issuecomment-1646660045)",
+          "file_path": "packages/mermaid/src/docs/syntax/flowchart.md",
+          "line_number": 394,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-29T16:35:07Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85MNkgv",
+          "author": "nirname",
+          "body": "We can extend existing behavior, but cannot change previous one, unless it is a bug. `node[\"dir\\\"]` is expected to produce node with `dir\\` label by our users, so we cannot change that. It have to keep working. There was only code-like quotes allowed inside a string, so we can ask to continue using it, in case one need a quote",
+          "file_path": "packages/mermaid/src/docs/syntax/flowchart.md",
+          "line_number": 394,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-30T22:16:55Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85MTdcK",
+          "author": "sidharthv96",
+          "body": "Sadly, breaking changes are only possible for our code, not syntax. It's frustrating, but we cannot have old diagrams breaking in sites after a mermaid upgrade. \r\n\r\nI didn't consider the end quote problem when adding the table, nice catch there @nirname. I guess we'll have to stick with `#quot;` for now, maybe until we come up with a better grammar overall, with fallback support to old grammars. ",
+          "file_path": "packages/mermaid/src/docs/syntax/flowchart.md",
+          "line_number": 394,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-08-01T06:39:16Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests keeping both examples (#quot and \\\") in the documentation."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85MMXCS",
+          "author": "nirname",
+          "body": "This is really cool that we check all the shapes. Not sure, but may be it is possible to shrink all those checks and loop over the examples just as you are doing with keywords. In case `it.each` is not working consider using plain javascript. This is simply recommendation, not necessary at all",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow-text.spec.js",
+          "line_number": 334,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-29T14:53:22Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests refactoring the test checks to loop over shape examples, reducing repetition."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85MMXE3",
+          "author": "nirname",
+          "body": "Apart from checking all the shapes we also have to check keywords in node names, e.g.\r\n```\r\n_graph\r\ngraph_\r\n```\r\nare valid node names. It is working in your request, but it would be nice to cover this case as well",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow-text.spec.js",
+          "line_number": 366,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-29T14:54:52Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85MMZeb",
+          "author": "ibrahimWassouf",
+          "body": "I believe I have done this in `flow-singlenode.spec.js` because I felt that the theme of the tests there were mainly testing node ID parsing",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow-text.spec.js",
+          "line_number": 366,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-29T16:23:56Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding test cases for keywords in node names (e.g., _graph, graph_)."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85MMXTE",
+          "author": "nirname",
+          "body": "Why have you combined `text` with shape start? Would not it be better to include opening and closing quotes directly to `text` production:\r\n```\r\n\"([\"                  return 'STADIUMSTART';\r\n\"])\"                  return 'STADIUMEND';\r\n\r\n%%\r\n\r\nvertex\r\n  : idString STADIUMSTART text STADIUMEND\r\n  ;\r\n\r\ntext\r\n  : QUOTE quoted_text QUOTE\r\n  | unquoted_text\r\n  ;\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow.jison",
+          "line_number": 150,
+          "start_line": 149,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-29T15:07:24Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85MMe6v",
+          "author": "ibrahimWassouf",
+          "body": "I'll have to think about this. The reason I combined the text state with shape is because I wanted keywords to be ignored inside shapes. Previously, keywords that did not start a state  were simply added to the `textToken` definition in the grammar. However, keywords `click` and `call` would throw an error because they would elicit a new state.",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow.jison",
+          "line_number": 150,
+          "start_line": 149,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-29T16:40:34Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a concrete structural refactor \u2014 moving opening/closing quotes into the 'text' production rule rather than combining them with shape start tokens."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85MMYJp",
+          "author": "nirname",
+          "body": "Very likely, this was added because you had united beginning of the shape with the beginning of the string. Have a look at another comment, I think we can avoid this. This is rather self-contradictory, because we are expecting string as initial condition but what we are getting in return is not the \"closing string quotes\".",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow.jison",
+          "line_number": 254,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-07-29T15:16:21Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Points out a self-contradictory design issue and references another comment suggesting a fix, implying the current approach should be changed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85MWyiW",
+          "author": "nirname",
+          "body": "In case we turned off escapement, do we still need this line?",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.js",
+          "line_number": 152,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-08-01T19:06:06Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85MW7gh",
+          "author": "ibrahimWassouf",
+          "body": "Nope, forgot to remove it with the vertex one...",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.js",
+          "line_number": 152,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-08-01T19:46:24Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions whether a line of code is still needed after escapement was turned off, implying it may should be removed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85MY-0k",
+          "author": "nirname",
+          "body": "This an extra as well",
+          "file_path": "packages/mermaid/src/docs/syntax/flowchart.md",
+          "line_number": 390,
+          "start_line": null,
+          "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+          "created_at": "2023-08-02T09:03:26Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags extra/unnecessary content in the documentation, implying it should be removed."
+    }
+  ],
+  "review_thread_count": 12,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85MMXFi",
+            "author": "nirname",
+            "body": ":+1: ",
+            "file_path": "packages/mermaid/src/diagrams/flowchart/parser/flow.jison",
+            "line_number": 21,
+            "start_line": 16,
+            "commit_sha": "34bf618ecb199788d47ac7479c4a806103d271bd",
+            "created_at": "2023-07-29T14:55:27Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_too_short"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 12,
+    "stage1_kept": 11,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 1,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

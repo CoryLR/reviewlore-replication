@@ -1,0 +1,56 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34189,
+  "title": "CLI: Add vike CLI metadata",
+  "body": "Closes #\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\nThis PR adds Vike as part of the cliIntegration detection for telemetry\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\nThis is a small change on an already solid work. I believe this can only be properly tested once released.\r\n- run `npm create vike@latest --- --react --storybook` with STORYBOOK_TELEMETRY_DEBUG=1 set in the environment\r\n- See Vike as `cliIntegration` in the payload\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n\n## Summary by CodeRabbit\n\n* **New Features**\n  * Added support for detecting vike as a CLI integration, enabling the system to properly recognize vike commands during setup and configuration.\n\n* **Tests**\n  * Added test coverage for vike detection functionality.\n\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "yannbf",
+  "merged_at": "2026-03-18T08:15:15Z",
+  "base_ref": "next",
+  "merge_commit_sha": "e3c577217ce8f1c7f4c377d7fcad2e98d5a6b58b",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "271bd1e14a5444f2adbf94c7307e6bda3d349113",
+    "d5e0d30a052f985ea155e64571b529541b4dd2f2"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6v6GOm",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Tighten Vike detection to avoid false telemetry attribution.**\n\nLine 68 uses a raw substring check, so commands that merely contain `vike` (not actual Vike invocation) can be misclassified as `cliIntegration: 'vike'`.\n\n\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n-      // Check for vike\n-      if (ancestor.command?.includes('vike')) {\n+      // Check for Vike invocation forms\n+      const command = ancestor.command ?? '';\n+      const isVikeCommand =\n+        /(?:^|\\s)create\\s+vike(?:@[^ ]+)?(?:\\s|$)/i.test(command) ||\n+        /(?:^|\\s)vike(?:@[^ ]+)?\\s+(?:new|init|create)\\b/i.test(command);\n+      if (isVikeCommand) {\n         return 'vike';\n       }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n      // Check for Vike invocation forms\n      const command = ancestor.command ?? '';\n      const isVikeCommand =\n        /(?:^|\\s)create\\s+vike(?:@[^ ]+)?(?:\\s|$)/i.test(command) ||\n        /(?:^|\\s)vike(?:@[^ ]+)?\\s+(?:new|init|create)\\b/i.test(command);\n      if (isVikeCommand) {\n        return 'vike';\n      }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/lib/create-storybook/src/services/VersionService.ts` around lines 67 -\n69, The current Vike detection in VersionService (the check on\nancestor.command?.includes('vike')) can misclassify commands that merely contain\nthe substring \"vike\"; update the detection logic in the same place where you\ncurrently return 'vike' so it only matches actual invocations (e.g., use a\nword-boundary regex or tokenized command check against ancestor.command to match\nwhole word \"vike\" or known binaries like \"vike\" or \"npx vike\"), ensuring the\ncheck targets the ancestor.command string exactly rather than any substring to\navoid false telemetry attribution.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/lib/create-storybook/src/services/VersionService.ts",
+          "line_number": 69,
+          "start_line": 67,
+          "commit_sha": "d5e0d30a052f985ea155e64571b529541b4dd2f2",
+          "created_at": "2026-03-18T06:34:16Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The substring check `includes('vike')` can match commands that merely contain 'vike' as part of a larger string, leading to false telemetry attribution. This is a logic error where the condition is too broad and doesn't correctly identify actual Vike invocations."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a potential bug where substring matching could cause false telemetry attribution, and proposes a concrete fix using regex patterns to tighten the Vike detection logic."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

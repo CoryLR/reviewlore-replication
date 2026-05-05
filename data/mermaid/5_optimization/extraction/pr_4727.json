@@ -1,0 +1,32 @@
+{
+  "pr_number": 4727,
+  "source_mr_date": "2023-08-28T08:10:30Z",
+  "candidates": [
+    "The `mermaid` package must not import langium internals (e.g., `EmptyFileSystem`, raw langium service types). All Langium implementation details\u2014including default contexts and service factories\u2014must be encapsulated inside `mermaid-parser`. The `mermaid` package should depend only on the parser's public API: the `parse()` function, AST types, and error classes.",
+    "Do not add diagram-type detection logic inside `mermaid-parser` while `mermaid` already handles detection. Accept the diagram type as an explicit parameter\u2014`parse(type, text)`\u2014rather than re-implementing detection in the parser package.",
+    "Keep the `mermaid-parser` package's public API surface minimal: export only the `parse` function, custom error classes, and AST types from `packages/parser/src/index.ts`. Do not use broad wildcard re-exports of internal language or generated modules at the package boundary.",
+    "Use `undefined` for absent or missing values, not `null`. Only use `null` when directly interfacing with an external API that explicitly returns it (e.g., `RegExp.prototype.exec`).",
+    "When importing from the same module, separate type-only imports from value imports into distinct statements: `import type { ... } from 'langium'` followed by `import { ... } from 'langium'`.",
+    "Custom parse error classes should expose `lexerErrors` and `parserErrors` as typed public properties so callers can access them programmatically. The human-readable error message should be built with `.map(err => err.message).join('\\n')` rather than coercing the array to a string (which produces `[object Object]`).",
+    "When migrating a parser from JISON to Langium, do not remove or break any previously accepted grammar constructs. Backwards compatibility with existing diagram syntax is a core mermaid principle. Retain existing grammar acceptance tests to demonstrate this continuity.",
+    "When overriding token patterns in a `TokenBuilder` (e.g., adding a negative lookahead to restrict keyword matching), add an inline comment explaining the reason for the override and the parsing rule it enforces.",
+    "Do not import types directly from `chevrotain`. Derive the `TokenType` locally from Langium's `DefaultTokenBuilder` return type instead: `type TokenType = ReturnType<DefaultTokenBuilder['buildKeywordTokens']>[number]`.",
+    "Each diagram's `populateDB` logic should live inside that diagram's own directory (e.g., `packages/mermaid/src/diagrams/info/infoParser.ts`). The three common fields\u2014`title`, `accTitle`, and `accDescr`\u2014should be delegated to a shared `populateCommonDb` helper in `diagrams/common/`. Avoid top-level dispatch functions that use `isXxx()` type-guards to route to diagram-specific DB population.",
+    "When guarding JISON-specific properties such as `parser.parser?.yy`, add a comment explaining the invariant: that `parser.parser` is present only on JISON-based parsers and the check is required for Langium parser compatibility.",
+    "In build scripts, invoke langium code generation via its JavaScript API (e.g., the `generate()` function exported from `langium-cli`) rather than spawning a shell string command. If a subprocess is unavoidable, use `execFileSync` to avoid shell-injection vulnerabilities from paths that contain spaces.",
+    "When changing package build order from parallel (`Promise.allSettled`) to sequential (`for...of await`), add a comment explaining the dependency reason\u2014specifically which package must be built first and why (e.g., '`mermaid-parser` must finish before `mermaid` because `mermaid` depends on it').",
+    "Declare workspace package dependencies with `workspace:^` rather than `workspace:*` in `package.json`, so that semver range checking applies even within the monorepo and breaking changes in the depended-upon package are not silently consumed.",
+    "New packages added to this monorepo must be published under the `@mermaid-js` npm organization scope (e.g., `@mermaid-js/parser`), not as unscoped package names.",
+    "Every new package directory in the monorepo must include a `README.md` that describes the package's purpose and how it works. For parser packages, a sequence diagram of the parsing pipeline is a useful starting point.",
+    "In a new package's `package.json` `exports` field, use only `\".\"` as the entry point. Avoid wildcard patterns like `\"./*\"` to prevent internal modules from accidentally becoming part of the public API.",
+    "Use explicit `if()` statements for conditional side effects (function calls, optional-chaining assignments). Do not use `&&` short-circuit evaluation for side effects; it is less idiomatic and harder to read in this codebase.",
+    "When a variable holds an unwrapped parsed AST object, name it `ast` rather than `result`. The name `result` implies the intermediate `ParseResult<T>` wrapper and is misleading once the value has been unwrapped.",
+    "If a test utility function is used by only one test file, define it within that file rather than a separate shared utility module. Only extract it to a shared file (e.g., `test-util.ts`) when it is needed across multiple test files.",
+    "Parser and grammar test suites must include failure cases that verify expected error messages, not only success (no-throw) cases.",
+    "Verify that the `repository.directory` field in a new package's `package.json` accurately reflects the package's path within the monorepo (e.g., `\"packages/parser\"` for a package located at `packages/parser/`).",
+    "The `mermaid` application version should be injected by the `mermaid` package itself (from its own `package.json`), not sourced from or embedded in `mermaid-parser`. The two packages can be released independently, so the parser must never import or embed `mermaid`'s version number."
+  ],
+  "analysis": [],
+  "cost_usd": 0.37398224999999996,
+  "duration_seconds": 194.1094000339508
+}

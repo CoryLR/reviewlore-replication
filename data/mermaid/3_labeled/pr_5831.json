@@ -1,0 +1,67 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 5831,
+  "title": "feat: Return parsed config from `mermaid.parse`",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nThis enables users to get the config that's defined in the frontmatter or directives when parsing a mermaid diagram.\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nWe're returning the config along with diagramType. \r\nBecause we were returning an object, it's not a breaking change. \r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://mermaid.js.org/community/contributing.html)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n- [x] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://mermaid.js.org/community/contributing.html#update-documentation) is used for all new features.\r\n- [x] :butterfly: If your PR makes a change that should be noted in one or more packages' changelogs, generate a changeset by running `pnpm changeset` and following the prompts. Changesets that add features should be `minor` and those that fix bugs should be `patch`. Please prefix changeset messages with `feat:`, `fix:`, or `chore:`.\r\n",
+  "author": "sidharthv96",
+  "merged_at": "2024-09-09T12:25:05Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "ddb51cdcbcfa0e8d66126fefc1fec03310f465b4",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "750f58d7db17ddc9a216f2b85e087d9c2fa4d404",
+    "d053284536e0b1f9f03e20d825b60b059479546b"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85oSqFb",
+          "author": "aloisklink",
+          "body": "PR looks good to me!\r\n\r\nOne nit-pick, it looks like this value will never be `undefined`, but the types of `processAndSetConfigs` aren't strict enough.\r\n\r\nI think we could do the following to make the types stricter/more-accurate:\r\n\r\n```diff\r\nindex fdb175e52..915dab750 100644\r\n--- a/packages/mermaid/src/diagram-api/types.ts\r\n+++ b/packages/mermaid/src/diagram-api/types.ts\r\n@@ -6,7 +6,7 @@ import type { BaseDiagramConfig, MermaidConfig } from '../config.type.js';\r\n\r\n export interface DiagramMetadata {\r\n   title?: string;\r\n-  config?: MermaidConfig;\r\n+  config: MermaidConfig;\r\n }\r\n\r\n export interface InjectUtils {\r\n```",
+          "file_path": "packages/mermaid/src/types.ts",
+          "line_number": 56,
+          "start_line": null,
+          "commit_sha": "d053284536e0b1f9f03e20d825b60b059479546b",
+          "created_at": "2024-09-09T07:31:58Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The comment points out that the type definition allows `undefined` for a value that will never actually be `undefined`, meaning the type does not accurately reflect the runtime behavior \u2014 a mismatch between declared types and actual semantics."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85oULxi",
+          "author": "sidharthv96",
+          "body": "In `DiagramMetadata`, config is actually optional by logic (metadata can optionally have config or title). \r\nChanging the return type to `satisfies` reflects the actual types, making it non optional. \r\n\r\n```diff\r\n--- a/packages/mermaid/src/preprocess.ts\r\n+++ b/packages/mermaid/src/preprocess.ts\r\n@@ -49,7 +49,7 @@ const processDirectives = (code: string) => {\r\n  * @param code - The code to preprocess.\r\n  * @returns The object containing the preprocessed code, title, and configuration.\r\n  */\r\n-export function preprocessDiagram(code: string): DiagramMetadata & { code: string } {\r\n+export function preprocessDiagram(code: string) {\r\n   const cleanedCode = cleanupText(code);\r\n   const frontMatterResult = processFrontmatter(cleanedCode);\r\n   const directiveResult = processDirectives(frontMatterResult.text);\r\n@@ -59,5 +59,5 @@ export function preprocessDiagram(code: string): DiagramMetadata & { code: strin\r\n     code,\r\n     title: frontMatterResult.title,\r\n     config,\r\n-  };\r\n+  } satisfies DiagramMetadata & { code: string };\r\n }\r\n```",
+          "file_path": "packages/mermaid/src/types.ts",
+          "line_number": 56,
+          "start_line": null,
+          "commit_sha": "d053284536e0b1f9f03e20d825b60b059479546b",
+          "created_at": "2024-09-09T11:55:38Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment suggests a concrete code change: making the `config` property in `DiagramMetadata` non-optional by removing the `?` from its type definition, with a specific diff provided."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

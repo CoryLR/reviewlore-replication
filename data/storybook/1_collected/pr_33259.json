@@ -1,0 +1,865 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33259,
+  "title": "Core: Improve the story generation experience",
+  "body": "Closes https://github.com/storybookjs/storybook/issues/33258\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\nThis PR introduces a big rewrite in the internals of Storybook to detach the story creation in an API, and similarly the docgen extraction which will be useful in many different workflows in the future.\r\n\r\n- **Server-side ArgTypes extraction**  \r\n  - Introduces `internal_getArgTypes`, which runs on the server to derive ArgTypes data for components via docgen, without needing to spin up the preview. This is a key piece in the story creation.\r\n  - Such ArgTypes will be used to create dummy data when creating stories (but can be used separately in any other flow if desired!)\r\n\r\n- **Dummy args generation from ArgTypes**  \r\n  - Adds `generateDummyArgsFromArgTypes`, which synthesizes example args based on ArgTypes passed to it. Unlike before, this is recursive and will generate a deeply nested object with dummy data. It also accounts for handlers and creates signals so they're replaced by `fn()` from 'storybook/test` later on during story creation.\r\n\r\n- **Create\u2011new\u2011story flow refactor**  \r\n  - Refactors the \u201cCreate new story file\u201d server channel to go through a new `generateStoryFile` helper, which includes the new argTypes extraction and dummy data generation. This can also be executed through a CLI command in the future if we wished to.\r\n  - The UI flow to create stories from the `+` button now performs a single round trip to the server which generates a story file with the necessary dummy args. This is richer now and supports more types and generates better args for the stories.\r\n\r\n- **Ecosystem metadata**  \r\n  - Extends telemetry payloads with an ecosystem identifier to help detect testing/theming/state management/etc. packages from a list of whitelisted packages.\r\n\r\n- **Render error categorization**  \r\n  - Adds a `categorizeRenderErrors` helper to group common failures based on an error message and stack. This surfaces common causes for rendering errors such as missing providers, themind, routing, state management, hooks issues, etc.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n_This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!_\r\n\r\n1. See notion for instructions\r\n2. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n3. Open Storybook in your browser\r\n4. Creates story files from components\r\n5. It should successfully create story files with args containing dummy data for required props\r\n\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\nThis pull request has been released as version `0.0.0-pr-33259-sha-c94d6386`. Try it out in a new sandbox by running `npx storybook@0.0.0-pr-33259-sha-c94d6386 sandbox` or in an existing project with `npx storybook@0.0.0-pr-33259-sha-c94d6386 upgrade`.\r\n<details>\r\n<summary>More information</summary>\r\n\r\n| | |\r\n| --- | --- |\r\n| **Published version** | [`0.0.0-pr-33259-sha-c94d6386`](https://npmjs.com/package/storybook/v/0.0.0-pr-33259-sha-c94d6386) |\r\n| **Triggered by** | @yannbf |\r\n| **Repository** | [storybookjs/storybook](https://github.com/storybookjs/storybook) |\r\n| **Branch** | [`yann/ghost-stories-research`](https://github.com/storybookjs/storybook/tree/yann/ghost-stories-research) |\r\n| **Commit** | [`c94d6386`](https://github.com/storybookjs/storybook/commit/c94d6386a58039767e4368056b5c2f86bafaac36) |\r\n| **Datetime** | Mon Jan 12 09:26:15 UTC 2026 (`1768209975`) |\r\n| **Workflow run** | [20914194755](https://github.com/storybookjs/storybook/actions/runs/20914194755) |\r\n\r\nTo request a new release of this pull request, mention the `@storybookjs/core` team.\r\n\r\n_core team members can create a new canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=33259`_\r\n</details>\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\r\n## Summary by CodeRabbit\r\n\r\n* **New Features**\r\n  * Ghost Stories: automatic discovery and test runs for components with Vitest, plus a UI trigger to start the flow.\r\n  * Automatic story generation utility to create story files for components.\r\n\r\n* **Improvements**\r\n  * Generates realistic dummy props/args for stories to improve preview fidelity.\r\n  * Richer error categorization and reporting for test failures.\r\n  * Telemetry now reports known ecosystem packages by category.\r\n  * Better React doc extraction to improve ArgTypes inference.\r\n\r\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\r\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "yannbf",
+  "merged_at": "2026-01-12T17:18:06Z",
+  "base_ref": "next",
+  "merge_commit_sha": "d38bd40409dc2144eaf91ebcbdce612122943048",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "2d801559ff702f2ae51e1e67ecaa70e206656053",
+    "48189788a6f0278f29abd23ba753192ef1d50bdc"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fiV1T",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, let's find the implementation of optionalEnvToBoolean\nrg \"optionalEnvToBoolean\" --type ts --type tsx -A 5 -B 2 | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find the file and examine the current usage\ncat -n code/addons/vitest/src/vitest-plugin/index.ts | sed -n '495,510p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 636\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for STORYBOOK_COMPONENT_PATHS to understand what it should contain\nrg \"STORYBOOK_COMPONENT_PATHS\" --type ts --type tsx --type js -B 2 -A 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for getComponentTestPaths function definition\nrg \"getComponentTestPaths\" --type ts --type tsx --type js -B 2 -A 10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find optionalEnvToBoolean implementation without file type flags\nrg \"function optionalEnvToBoolean|const optionalEnvToBoolean|export.*optionalEnvToBoolean\" -A 10 | head -60\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 777\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find where optionalEnvToBoolean is imported in the current file\nhead -50 code/addons/vitest/src/vitest-plugin/index.ts | rg \"import|require\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1082\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for STORYBOOK_COMPONENT_PATHS definition and usage\nrg \"STORYBOOK_COMPONENT_PATHS\" -B 2 -A 2 | head -80\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3113\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for getComponentTestPaths function\nrg \"getComponentTestPaths\" -A 8 | head -80\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2353\n\n---\n\n\n\n</details>\n\n**Use `getComponentTestPaths().length > 0` instead of `optionalEnvToBoolean()` for checking STORYBOOK_COMPONENT_PATHS.**\n\n`STORYBOOK_COMPONENT_PATHS` is a semicolon-separated list of file paths, not a boolean. While `optionalEnvToBoolean()` does return `true` for non-empty path strings, it's semantically incorrect and obscures intent. The `getComponentTestPaths()` function already exists in this file and properly parses this environment variable; use its length to determine whether the plugin should be registered.\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n-  if (optionalEnvToBoolean(process.env.STORYBOOK_COMPONENT_PATHS)) {\n+  if (getComponentTestPaths().length > 0) {\n     plugins.push(createComponentTestTransformPlugin(presets, finalOptions.configDir));\n   }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  if (getComponentTestPaths().length > 0) {\n    plugins.push(createComponentTestTransformPlugin(presets, finalOptions.configDir));\n  }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/addons/vitest/src/vitest-plugin/index.ts around lines 501 - 503, The\ncheck uses optionalEnvToBoolean(process.env.STORYBOOK_COMPONENT_PATHS) but\nSTORYBOOK_COMPONENT_PATHS is a semicolon-separated path list; instead call\ngetComponentTestPaths() and check its length (getComponentTestPaths().length >\n0) to decide whether to register the plugin; replace the current condition with\nthat so plugins.push(createComponentTestTransformPlugin(presets,\nfinalOptions.configDir)) runs only when getComponentTestPaths() returns at least\none path.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 9c8f492 to c5a1503",
+          "file_path": "code/addons/vitest/src/vitest-plugin/index.ts",
+          "line_number": 503,
+          "start_line": null,
+          "commit_sha": "396a9e1b5bb83d758d7eafc0ee196c9c4b724a49",
+          "created_at": "2026-01-09T15:17:58Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fiV1o",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\nfind code/core/src -name \"generate-story.ts\" -type f\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 114\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat code/core/src/core-server/utils/generate-story.ts | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2982\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg -n \"type GenerateStoryResult|interface GenerateStoryResult\" code/core/src/core-server/utils/generate-story.ts -A 30\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 984\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/core-server/server-channel/create-new-story-channel.ts | sed -n '25,45p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 923\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's any type narrowing already in place\nrg -n \"result.success\" code/core/src/core-server/server-channel/create-new-story-channel.ts -B2 -A10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 572\n\n---\n\n\n\n</details>\n\n**Refactor `GenerateStoryResult` into a discriminated union type to eliminate unsafe non-null assertions.**\n\nThe `GenerateStoryResult` type doesn't use a discriminated union pattern\u2014all properties are optional regardless of the `success` value. This forces the non-null assertions on lines 34-36 to rely on implementation details.\n\nRefactor the type definition in `generate-story.ts` to properly encode the contract:\n\n```typescript\nexport type GenerateStoryResult =\n  | {\n      success: true;\n      storyId: string;\n      kind: string;\n      storyFilePath: string;\n      exportedStoryName: string;\n    }\n  | {\n      success: false;\n      kind: string;\n      storyFilePath: string;\n      error: string;\n      errorType: 'STORY_FILE_EXISTS' | 'UNKNOWN';\n    };\n```\n\nWith this change, the `if (result.success)` check on line 29 of `create-new-story-channel.ts` will automatically narrow the type, and the non-null assertions can be safely removed.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/server-channel/create-new-story-channel.ts around\nlines 34 - 36, Refactor the GenerateStoryResult type in generate-story.ts into a\ndiscriminated union (success: true with storyId, kind, storyFilePath,\nexportedStoryName; success: false with kind, storyFilePath, error, errorType) so\nTypeScript can narrow by the success flag, then remove the unsafe non-null\nassertions in create-new-story-channel.ts (references: result.storyId,\nresult.storyFilePath, result.exportedStoryName) and rely on the if\n(result.success) branch to access those properties without assertions.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/server-channel/create-new-story-channel.ts",
+          "line_number": 36,
+          "start_line": 34,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T15:17:58Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fiV1x",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Vitest mocking rule: add `{ spy: true }` to all `vi.mock()` calls.**\n\nRepo guidelines require `vi.mock(..., { spy: true })` for package/file mocks; currently none of these provide it. This impacts consistency and can change how mocks behave across Vitest upgrades. As per coding guidelines, please adjust the mocks.  \n\n\n<details>\n<summary>Example fix pattern</summary>\n\n```diff\n-vi.mock('storybook/internal/common', async (importOriginal) => {\n+vi.mock(\n+  'storybook/internal/common',\n+  async (importOriginal) => {\n     const actual = await importOriginal<typeof import('storybook/internal/common')>();\n     return {\n       ...actual,\n       cache: {\n         get: vi.fn(),\n         set: vi.fn(),\n       },\n       executeCommand: vi.fn(),\n       resolvePathInStorybookCache: vi.fn(),\n     };\n-});\n+  },\n+  { spy: true }\n+);\n```\n\n</details>\n\n\nAlso applies to: 50-65\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/server-channel/ghost-stories-channel.test.ts\naround lines 10 - 41, Update the three vi.mock calls for\n'storybook/internal/common', 'storybook/internal/telemetry', and\n'../utils/ghost-stories/get-candidates' to include the Vitest spy option by\npassing { spy: true } as the second argument to vi.mock; preserve the existing\nasync importOriginal callback and returned overrides (cache, executeCommand,\nresolvePathInStorybookCache, getLastEvents, getSessionId, getStorybookMetadata,\ntelemetry, getComponentCandidates) but change each vi.mock signature to\nvi.mock(..., { spy: true }, async (importOriginal) => { ... }) so the mocks\nfollow the repo guideline.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/server-channel/ghost-stories-channel.test.ts",
+          "line_number": 41,
+          "start_line": 10,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T15:17:58Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fiV1z",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Restore console spies to avoid leaking state across the test suite.**\n\nThese spies are created at file scope and never `mockRestore()`\u2019d, which can bleed into other tests.  \n\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n import { beforeEach, describe, expect, it, vi } from 'vitest';\n+import { afterAll } from 'vitest';\n@@\n   const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});\n   const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});\n+\n+  afterAll(() => {\n+    consoleErrorSpy.mockRestore();\n+    consoleLogSpy.mockRestore();\n+  });\n```\n\n</details>\n\n\n> Committable suggestion skipped: line range outside the PR's diff.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/server-channel/ghost-stories-channel.test.ts\naround lines 75 - 102, The console spies consoleErrorSpy and consoleLogSpy\ncreated at file scope are never restored and can leak into other tests; add a\nteardown that calls consoleErrorSpy.mockRestore() and\nconsoleLogSpy.mockRestore() (e.g., in an afterEach or afterAll) to restore the\noriginal console methods, while keeping the existing mockClear() calls to reset\ninvocation state.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 9c8f492 to c5a1503",
+          "file_path": "code/core/src/core-server/server-channel/ghost-stories-channel.test.ts",
+          "line_number": 102,
+          "start_line": 75,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T15:17:58Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fiV13",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Potential null reference when accessing `lastInit.body.sessionId`.**\n\nIf `lastEvents?.init` is undefined or doesn't have a `body` property, accessing `lastInit.body.sessionId` will throw a runtime error.\n\n\n<details>\n<summary>\ud83d\udc1b Suggested fix with null check</summary>\n\n```diff\n       const lastInit = lastEvents?.init;\n       const lastGhostStoriesRun = lastEvents['ghost-stories'];\n-      if (lastGhostStoriesRun || lastInit.body.sessionId !== sessionId) {\n+      if (lastGhostStoriesRun || !lastInit?.body?.sessionId || lastInit.body.sessionId !== sessionId) {\n         logger.debug('Skipping ghost run - already run or different session');\n         return;\n       }\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/server-channel/ghost-stories-channel.ts around\nlines 43 - 44, The code accesses lastInit.body.sessionId without guarding\nagainst lastInit or lastInit.body being undefined; update the condition that\nreferences lastEvents/lastInit and sessionId to use safe checks (e.g., optional\nchaining or explicit null checks) so you only access sessionId when lastInit and\nlastInit.body exist\u2014replace the direct access to lastInit.body.sessionId with\nlastInit?.body?.sessionId (or equivalent) in the if condition that also checks\nlastGhostStoriesRun.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 9c8f492 to c5a1503",
+          "file_path": "code/core/src/core-server/server-channel/ghost-stories-channel.ts",
+          "line_number": 44,
+          "start_line": null,
+          "commit_sha": "396a9e1b5bb83d758d7eafc0ee196c9c4b724a49",
+          "created_at": "2026-01-09T15:17:58Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fiV17",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**\ud83d\udea8 Remove debugging code before merging.**\n\nThe TODO comment explicitly states \"DO NOT MERGE WITH THIS\" - this commented-out return statement will cause the ghost run to execute on every request instead of only on init runs.\n\n\n<details>\n<summary>\ud83d\udc1b Required fix</summary>\n\n```diff\n       if (lastGhostStoriesRun || lastInit.body.sessionId !== sessionId) {\n-        logger.debug('Would normally skip ghost run');\n-        // TODO: uncomment this later, it's commented out for debugging purposes DO NOT MERGE WITH THIS\n-        // return;\n+        logger.debug('Skipping ghost run - already run or different session');\n+        return;\n       }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n      if (lastGhostStoriesRun || lastInit.body.sessionId !== sessionId) {\n        logger.debug('Skipping ghost run - already run or different session');\n        return;\n      }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/server-channel/ghost-stories-channel.ts around\nlines 44 - 48, Remove the debugging workaround in ghost-stories-channel.ts by\nrestoring the original early return inside the if (lastGhostStoriesRun ||\nlastInit.body.sessionId !== sessionId) block so the ghost run is skipped for\nnon-init requests; specifically, uncomment the commented-out return; (or re-add\na return statement) in that block (near the logger.debug('Would normally skip\nghost run')) to prevent ghost runs on every request.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 2f71ad4 to d037ec7",
+          "file_path": "code/core/src/core-server/server-channel/ghost-stories-channel.ts",
+          "line_number": 48,
+          "start_line": null,
+          "commit_sha": "396a9e1b5bb83d758d7eafc0ee196c9c4b724a49",
+          "created_at": "2026-01-09T15:17:58Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fiV2C",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find ArgTypes and SBType type definitions\nrg -n \"type ArgTypes\\s*=\" --type=ts -A 10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find SBType definition\nrg -n \"type SBType\\s*=\" --type=ts -A 15\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 596\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for argType.type.required usage\nrg -n \"argType\\.type\\.required\" --type=ts -B 2 -A 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 628\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for the file being reviewed to understand context\ncat -n code/core/src/core-server/utils/get-dummy-props-for-args.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 10051\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for ArgTypes type definition\nrg -n \"type ArgTypes\\s*=\" --type=ts -B 2 -A 20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for import of ArgTypes to understand its structure\nrg -n \"from.*ArgTypes\" --type=ts | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2256\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for csf index file to see what ArgTypes exports\ncat -n code/core/src/csf/index.ts | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2019\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for ArgTypes definition in the csf directory\nrg -n \"ArgTypes\" code/core/src/csf --type=ts -B 2 -A 10 | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4699\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the main csf export file\ncat -n code/core/src/csf/index.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3791\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for InputType definition\nrg -n \"type InputType\\s*=\" code/core/src/csf --type=ts -B 2 -A 20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Also search for StrictInputType\nrg -n \"type StrictInputType\\s*=\" code/core/src/csf --type=ts -B 2 -A 20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search more broadly for InputType\nrg -n \"InputType\" code/core/src/csf --type=ts -B 1 -A 10 | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4801\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look at the story.ts file around where ArgTypes is defined\ncat -n code/core/src/csf/story.ts | head -200\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 7020\n\n---\n\n\n\n</details>\n\n**Fix the required field detection logic \u2014 it's checking the wrong property.**\n\nLine 28 checks `argType.type.required`, but the `required` field doesn't exist on `SBType`. According to the `InputType` interface definition, `required` should be checked directly on the `argType` object (i.e., `argType.required`), not nested within its `type` property. The current logic will always evaluate to `false`, causing all props to be treated as optional regardless of whether they're actually required.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/get-dummy-props-for-args.ts around lines 26\n- 48, The required-detection is wrong: change the isRequired check to read the\nrequired flag from argType (i.e., argType.required) instead of\nargType.type.required; update the variable isRequired in the loop over\nObject.entries(argTypes) to use argType.required so required props are placed\ninto the required map and optional ones into optional, leaving the rest of the\ndummy-value generation (generateDummyValueFromSBType, sbType handling, and\nassignment to required/optional) unchanged.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/get-dummy-args-from-argtypes.ts",
+          "line_number": 48,
+          "start_line": 26,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T15:17:59Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fiV2G",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, let's read the test file around lines 234-240 to see the full context\nhead -250 code/core/src/core-server/utils/get-new-story-file.test.ts | tail -30\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 728\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's check the implementation of generateDummyValueFromSBType\ncat -n code/core/src/core-server/utils/get-dummy-props-for-args.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 10051\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for where 42 or special 'answer' handling might come from\nrg -n \"42|answer\" code/core/src/core-server/utils/get-dummy-props-for-args.ts -C3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's also check the test file for how the mock data is set up\nrg -n \"answer.*42|42.*answer\" code/core/src/core-server/utils/get-new-story-file.test.ts -C5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 287\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Read the test file to see the full test case setup\nsed -n '180,250p' code/core/src/core-server/utils/get-new-story-file.test.ts | cat -n\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2661\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for where the Page component argTypes are defined in the test\nrg -n \"answer|Page\" code/core/src/core-server/utils/get-new-story-file.test.ts -B5 -A2 | head -80\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2657\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for mock setup or test data that might define 42\nrg -n \"42|mockData|ComponentArgTypesData\" code/core/src/core-server/utils/get-new-story-file.test.ts -C3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 244\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search the entire test file for where 42 might come from\nrg -n \"42\" code/core/src/core-server/utils/get-new-story-file.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 90\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's any special case handling in the mock or in the actual implementation\nrg -n \"answer.*42|magic.*number|constant.*42\" code/core/src/core-server/utils/ -r\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 478\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's also check the git history to see if this test was recently added or modified\ngit log --oneline -n 20 -- code/core/src/core-server/utils/get-new-story-file.test.ts 2>/dev/null | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 110\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's something in the getNewStoryFile implementation that might override the dummy value\nrg -n \"answer|42\" code/core/src/core-server/utils/get-new-story-file.ts -C2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find the getNewStoryFile implementation\nfd -n \"get-new-story-file.ts\" code/core/src/core-server/utils/ --type f\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 295\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Read the getNewStoryFile.ts implementation to see how it uses the dummy value generation\ncat code/core/src/core-server/utils/get-new-story-file.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 7835\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's also check if there's a separate file that handles argTypes conversion\nfd -n \".*argType.*\\.ts\" code/core/src/core-server/utils/ --type f\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 295\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's check the CSF factory template to see how args are being generated\ncat code/core/src/core-server/utils/new-story-templates/csf-factory-template.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1600\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's also check git history to see when this test was added or last modified\ngit log -p --follow -S \"answer: 42\" -- code/core/src/core-server/utils/get-new-story-file.test.ts 2>/dev/null | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for any place that might hardcode or modify the answer value\nrg \"answer\" code/core/src/core-server/utils/new-story-templates/ -C3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's check the test file for get-dummy-props-for-args to see what it expects for number types\ncat code/core/src/core-server/utils/get-dummy-props-for-args.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 6705\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let me verify the exact argTypes structure being passed in the test\nsed -n '180,245p' code/core/src/core-server/utils/get-new-story-file.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2199\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's any code that might hardcode 42 specifically\nrg \"42\" code/core/src/core-server/utils/ -C5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 8972\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's run a simple test to verify the actual output of generateDummyValueFromSBType for number\ncat > /tmp/test_dummy.js << 'EOF'\n// Simulate the generateDummyValueFromSBType function behavior\nfunction generateDummyValueFromSBType(sbType, propName) {\n  switch (sbType.name) {\n    case 'number':\n      return 0;\n    case 'string':\n      return propName ?? 'Hello world';\n    case 'function':\n      return '[[STORYBOOK_FN_PLACEHOLDER]]';\n    default:\n      return undefined;\n  }\n}\n\n// Test with the exact types from the test\nconst answer = { name: 'number', required: true };\nconst result = generateDummyValueFromSBType(answer, 'answer');\nconsole.log('Result for answer prop with number type:', result);\nEOF\nnode /tmp/test_dummy.js\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 107\n\n---\n\n\n\n</details>\n\n**Fix incorrect snapshot value for `answer` property.**\n\nThe snapshot shows `answer: 42`, but `generateDummyValueFromSBType` for `{ name: 'number' }` returns `0`. This is confirmed by the unit tests in `get-dummy-props-for-args.test.ts` which explicitly assert `expect(generateDummyValueFromSBType({ name: 'number' })).toBe(0)`. Update the snapshot to `answer: 0`.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/get-new-story-file.test.ts around lines 234\n- 240, Update the snapshot for the Default story so the args.answer value\nmatches the dummy generator output: change the snapshot's answer from 42 to 0;\nspecifically, in the Default story definition (export const Default =\nmeta.story({ args: { answer: ... }})) replace 42 with 0 to align with\ngenerateDummyValueFromSBType({ name: 'number' }) which returns 0 as asserted in\nget-dummy-props-for-args.test.ts.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 9c8f492 to c5a1503",
+          "file_path": "code/core/src/core-server/utils/get-new-story-file.test.ts",
+          "line_number": 240,
+          "start_line": 234,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T15:17:59Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fiV2J",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Don\u2019t sort `CATEGORIZATION_RULES` on every `categorizeError()` call (mutates shared constant).**\n\nThis is avoidable overhead and mutates the module-level array. Pre-sort once or sort a copy.  \n\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n-const CATEGORIZATION_RULES: CategorizationRule[] = [\n+const CATEGORIZATION_RULES: CategorizationRule[] = [\n   {\n@@\n   },\n ];\n+\n+const CATEGORIZATION_RULES_BY_PRIORITY = [...CATEGORIZATION_RULES].sort(\n+  (a, b) => b.priority - a.priority\n+);\n@@\n export function categorizeError(\n   message: string,\n   stack?: string\n ): { category: ErrorCategory; matchedDependencies: string[] } {\n-  const rules = CATEGORIZATION_RULES.sort((a, b) => b.priority - a.priority);\n   const ctx = buildErrorContext(message, stack);\n-  const rule = rules.find((r) => r.match(ctx));\n+  const rule = CATEGORIZATION_RULES_BY_PRIORITY.find((r) => r.match(ctx));\n```\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/categorize-render-errors.ts\naround lines 165 - 180, categorizeError currently calls\nCATEGORIZATION_RULES.sort(...) which mutates the module-level array and re-sorts\non every invocation; change this to avoid mutating the shared constant by either\npre-sorting CATEGORIZATION_RULES once at module initialization (replace\nCATEGORIZATION_RULES with a sorted constant like SORTED_CATEGORIZATION_RULES) or\nsort a shallow copy inside categorizeError (use\n[...CATEGORIZATION_RULES].sort(...)) so the function uses a non-mutating sorted\nlist when computing rules and matchedDependencies via buildErrorContext,\nrules.find, and getMatchedDependencies.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/shared/utils/categorize-render-errors.ts",
+          "line_number": 201,
+          "start_line": 187,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T15:17:59Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fiV2P",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Comment says threshold is 0.2, but implementation uses 0.3.**\n\nThe comment on line 31 says \"below 0.2\" but the actual threshold in `get-candidates.ts` is `complexity < 0.3`. Update the comment for accuracy.\n\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n     // Mock getComponentComplexity\n     vi.mocked(getComponentComplexity)\n-      .mockReturnValueOnce(0.1) // Simple component (below 0.2)\n-      .mockReturnValueOnce(0.8); // Complex component (above 0.2)\n+      .mockReturnValueOnce(0.1) // Simple component (below 0.3)\n+      .mockReturnValueOnce(0.8); // Complex component (above 0.3)\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    // Mock getComponentComplexity\n    vi.mocked(getComponentComplexity)\n      .mockReturnValueOnce(0.1) // Simple component (below 0.3)\n      .mockReturnValueOnce(0.8); // Complex component (above 0.3)\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/get-candidates.test.ts around\nlines 29 - 32, The inline test comment incorrectly states \"below 0.2\" while the\nactual threshold used by the implementation is 0.3; update the comment in the\ntest where getComponentComplexity is mocked (the mockReturnValueOnce calls for\ngetComponentComplexity) to say \"below 0.3\" (or otherwise reflect the 0.3\nthreshold used in get-candidates.ts) so the test comment matches the implemented\ncomplexity cutoff.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/get-candidates.test.ts",
+          "line_number": 32,
+          "start_line": 29,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T15:17:59Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fiV2Y",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Harden `sampleCount` and avoid surprising behavior for `<= 0`.**\n\n`sampleCount` isn\u2019t guarded; `slice(0, sampleCount)` with `0`/negative yields empty, but the logs/metrics may become misleading.  \n\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n export async function getCandidatesForStorybook(\n   files: string[],\n   sampleCount: number\n ): Promise<{\n@@\n }> {\n+  if (sampleCount <= 0) {\n+    return { candidates: [], analyzedCount: 0, avgComplexity: 0 };\n+  }\n+\n   const simpleCandidates: { file: string; complexity: number }[] = [];\n   const analyzedCandidates: { file: string; complexity: number }[] = [];\n```\n\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nexport async function getCandidatesForStorybook(\n  files: string[],\n  sampleCount: number\n): Promise<{\n  candidates: string[];\n  analyzedCount: number;\n  avgComplexity: number;\n}> {\n  if (sampleCount <= 0) {\n    return { candidates: [], analyzedCount: 0, avgComplexity: 0 };\n  }\n\n  const simpleCandidates: { file: string; complexity: number }[] = [];\n  const analyzedCandidates: { file: string; complexity: number }[] = [];\n\n  for (const file of files) {\n    let source: string;\n    try {\n      source = await readFile(file, 'utf-8');\n      // filter out non-React code or files without exports\n      if (!isValidCandidate(source)) {\n        continue;\n      }\n    } catch {\n      continue;\n    }\n\n    const complexity = getComponentComplexity(source);\n    analyzedCandidates.push({ file, complexity });\n\n    if (complexity < 0.3) {\n      simpleCandidates.push({ file, complexity });\n      if (simpleCandidates.length >= sampleCount) {\n        break;\n      }\n    }\n  }\n\n  let selectedCandidates: { file: string; complexity: number }[] = [];\n\n  // If we have enough simple candidates, use those\n  if (simpleCandidates.length >= sampleCount) {\n    logger.debug(\n      `Found ${simpleCandidates.length} enough simple candidates after analyzing ${analyzedCandidates.length} out of ${files.length} files`\n    );\n    selectedCandidates = simpleCandidates\n      .sort((a, b) => a.complexity - b.complexity)\n      .slice(0, sampleCount);\n  } else {\n    logger.debug(\n      `Found ${simpleCandidates.length} simple and ${analyzedCandidates.length - simpleCandidates.length} complex candidates after analyzing ${analyzedCandidates.length} out of ${files.length} files`\n    );\n    selectedCandidates = analyzedCandidates\n      .sort((a, b) => a.complexity - b.complexity)\n      .slice(0, sampleCount);\n  }\n\n  const avgComplexity =\n    selectedCandidates.length > 0\n      ? selectedCandidates.reduce((acc, curr) => acc + curr.complexity, 0) /\n        selectedCandidates.length\n      : 0;\n\n  return {\n    candidates: selectedCandidates.map(({ file }) => file),\n    analyzedCount: analyzedCandidates.length,\n    avgComplexity,\n  };\n}\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/get-candidates.ts around lines\n64 - 128, Normalize and guard sampleCount at the start of\ngetCandidatesForStorybook: compute a new positive integer like const\nsampleCountSafe = Math.max(1, Math.floor(Number(sampleCount) || 0)); use\nsampleCountSafe everywhere instead of sampleCount (for the simpleCandidates\nlength checks, slice(0, ...), and in log messages) so zero/negative/NaN inputs\ndon't produce surprising empty slices or misleading metrics; also update log\ntext to reference sampleCountSafe where appropriate.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/get-candidates.ts",
+          "line_number": 126,
+          "start_line": 64,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T15:17:59Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fiV2h",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\nfind . -type f -name \"get-candidates.ts\" | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 130\n\n---\n\n\ud83c\udf10 Web query:\n\n`npm package glob v10.x Promise API and options cwd absolute`\n\n\ud83d\udca1 Result:\n\nShort answer: glob v10 has a native Promise API and supports cwd and absolute options.\n\nDetails and example:\n- API: calling glob(pattern, options) returns a Promise that resolves to matched paths. [1][2]\n- Options:\n  - cwd: string | URL \u2014 the directory to search (defaults to process.cwd()). Can be a file:// URL string or URL object. [1][3]\n  - absolute: boolean \u2014 when true, always return absolute paths; when false, always return relative paths. If unset, absolute patterns return absolute paths and others are returned relative to cwd. [3][4]\n- Behavior notes: absolute/glob-root interaction \u2014 patterns starting with / (or drive letters / UNC on Windows) behave as absolute patterns and may ignore or be combined with cwd/root per platform rules. See repo docs for Windows/CWD details. [1]\n\nMinimal example:\n- ESM:\n  import glob from \"glob\";\n  const files = await glob(\"**/*.js\", { cwd: \"/project/src\", absolute: true });\n\nSources:\n[1] isaacs/node-glob README & options (GitHub).  \n[2] node-glob typed API docs showing Promise signature.  \n[3] GlobOptions interface (docs) describing cwd and absolute.\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nsed -n '130,204p' ./code/core/src/core-server/utils/ghost-stories/get-candidates.ts | cat -n\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2471\n\n---\n\n\n\n</details>\n\n**Fix misleading debug log and improve error message for troubleshooting.**\n\nLine 186 logs `files.length` with label \"candidates files\", which is incorrect\u2014`candidates` comes from `getCandidatesForStorybook()`, not the glob results. Change to `logger.debug(`Candidate files: ${candidates.length}`);`\n\nLine 201: Return payload should include the actual error details for triage. Change `error: 'Failed to find candidates'` to `error: `Failed to find candidates: ${errorMessage}`` to help troubleshoot glob syntax or permission issues.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/get-candidates.ts around lines\n130 - 204, In getComponentCandidates, the debug log \"candidates files:\"\nincorrectly uses files.length \u2014 change the log in the block after calling\ngetCandidatesForStorybook(files, sampleSize) to reference candidates.length\n(from the returned { candidates }) so it reflects the actual candidate count;\nalso update the error return to include the captured errorMessage (i.e. set\nerror to `Failed to find candidates: ${errorMessage}`) so callers receive the\nreal failure details for triage.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/get-candidates.ts",
+          "line_number": 196,
+          "start_line": 128,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T15:17:59Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fiV2p",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Type safety issue: `firstChild` may not be an `HTMLElement`.**\n\n`canvasElement.firstChild` returns `ChildNode | null`, which could be a `Text` node, `Comment`, or other non-element node. Calling `isEmptyRender()` on a non-element node will fail because `getBoundingClientRect()` and `getComputedStyle()` are only available on `Element`/`HTMLElement`.\n\n\n<details>\n<summary>\ud83d\udd27 Proposed fix to ensure element type safety</summary>\n\n```diff\n-    const emptyRender = isEmptyRender(canvasElement.firstChild ?? canvasElement);\n+    const firstChild = canvasElement.firstChild;\n+    const targetElement = firstChild instanceof HTMLElement ? firstChild : canvasElement;\n+    const emptyRender = isEmptyRender(targetElement);\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    const firstChild = canvasElement.firstChild;\n    const targetElement = firstChild instanceof HTMLElement ? firstChild : canvasElement;\n    const emptyRender = isEmptyRender(targetElement);\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/test-annotations.ts at line\n25, The code calls isEmptyRender(canvasElement.firstChild ?? canvasElement) but\ncanvasElement.firstChild can be a non-element node (Text/Comment), causing\nmethods like getBoundingClientRect/getComputedStyle inside isEmptyRender to\nfail; update the call to pass an Element/HTMLElement only\u2014e.g., use\ncanvasElement.firstElementChild when available, or guard with an instanceof\nElement/HTMLElement check (or nodeType === 1) before calling isEmptyRender, and\nfallback to canvasElement if no element child exists so isEmptyRender always\nreceives a proper Element/HTMLElement.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 9c8f492 to c5a1503",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/test-annotations.ts",
+          "line_number": 25,
+          "start_line": null,
+          "commit_sha": "396a9e1b5bb83d758d7eafc0ee196c9c4b724a49",
+          "created_at": "2026-01-09T15:17:59Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fiV2r",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Fix wrong exported name for aliased function/class exports (`export { Foo as Bar }`).**\n\nIn the `ExportNamedDeclaration` specifier path, variable declarators correctly call `addComponent(exported.name, ...)`, but function/class declarations pass `bindingNodeId.name` instead of `exported.name`, which will mislabel tests and metadata.  \n\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n-        } else if (bindingPath.isFunctionDeclaration() || bindingPath.isClassDeclaration()) {\n+        } else if (bindingPath.isFunctionDeclaration() || bindingPath.isClassDeclaration()) {\n           const bindingNodeId = bindingPath.node.id;\n           if (t.isIdentifier(bindingNodeId)) {\n-            addComponent(bindingNodeId.name, localIdentifier, bindingPath);\n+            addComponent(exported.name, localIdentifier, bindingPath);\n           }\n         }\n```\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/csf-tools/vitest-plugin/component-transformer.ts around lines\n123 - 183, Exported aliased function/class names are mislabelled because in the\nExportNamedDeclaration specifier handling you call\naddComponent(bindingNodeId.name, localIdentifier, bindingPath) instead of using\nthe exported identifier; update the branches handling\nbindingPath.isFunctionDeclaration() and bindingPath.isClassDeclaration() to call\naddComponent(exported.name, localIdentifier, bindingPath) (keep the existing\nchecks for t.isIdentifier(bindingNodeId) and localIdentifier) so aliased exports\nlike `export { Foo as Bar }` use the exported.name when registering via\naddComponent.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 9c8f492 to c5a1503",
+          "file_path": "code/core/src/csf-tools/vitest-plugin/component-transformer.ts",
+          "line_number": 183,
+          "start_line": 123,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T15:17:59Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fiV2t",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Generate valid object keys for args/props (don\u2019t assume identifiers).**\n\n`t.identifier(key)` will generate invalid code for keys like `data-testid`, `aria-label`, keys starting with digits, etc. Use `t.stringLiteral(key)` when `!t.isValidIdentifier(key)` (or always use string literals).  \n\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n+  const toObjectKey = (key: string) =>\n+    t.isValidIdentifier(key) ? t.identifier(key) : t.stringLiteral(key);\n@@\n-      const properties = Object.entries(value).map(([key, val]) =>\n-        t.objectProperty(t.identifier(key), valueToNodeRecursive(val, replaceFnCalls))\n-      );\n+      const properties = Object.entries(value).map(([key, val]) =>\n+        t.objectProperty(toObjectKey(key), valueToNodeRecursive(val, replaceFnCalls))\n+      );\n       return t.objectExpression(properties);\n@@\n-    const properties = Object.entries(args).map(([key, value]) => {\n-      return t.objectProperty(t.identifier(key), valueToNodeRecursive(value, useFnImport));\n-    });\n+    const properties = Object.entries(args).map(([key, value]) =>\n+      t.objectProperty(toObjectKey(key), valueToNodeRecursive(value, useFnImport))\n+    );\n     return t.objectExpression(properties);\n```\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/csf-tools/vitest-plugin/component-transformer.ts around lines\n315 - 350, The object property keys in valueToNodeRecursive /\nbuildArgsExpression currently use t.identifier(key), which produces invalid code\nfor keys like data-testid, aria-label, keys starting with digits, or other\nnon-identifier strings; change the property key creation to use\nt.stringLiteral(key) whenever t.isValidIdentifier(key) is false (or always use\nstring literals) instead of t.identifier, i.e., replace\nt.objectProperty(t.identifier(key), ...) with conditional keyNode =\nt.isValidIdentifier(key) ? t.identifier(key) : t.stringLiteral(key) and use\nkeyNode in t.objectProperty to ensure generated keys are always valid.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 9c8f492 to c5a1503",
+          "file_path": "code/core/src/csf-tools/vitest-plugin/component-transformer.ts",
+          "line_number": 352,
+          "start_line": 315,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T15:17:59Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fiV2x",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Good coverage overall; fix the \u201cescape special regex characters\u201d test so it actually tests escaping.**\n\nCurrent test uses `'react-router'` (no regex-special chars), so it doesn\u2019t validate the escaping behavior.\n\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n     it('should escape special regex characters', () => {\n-      const regex = globToRegex('react-router');\n-      expect(regex.test('react-router')).toBe(true);\n-      expect(regex.test('react(router)')).toBe(false);\n+      const regex = globToRegex('react(router)');\n+      expect(regex.test('react(router)')).toBe(true);\n+      expect(regex.test('reactXrouter')).toBe(false);\n     });\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nimport { describe, expect, it } from 'vitest';\n\nimport { globToRegex, matchesPackagePattern } from './ecosystem-identifier';\n\ndescribe('ecosystem-identifier', () => {\n  describe('globToRegex', () => {\n    it('should convert exact match patterns', () => {\n      const regex = globToRegex('jest');\n      expect(regex.test('jest')).toBe(true);\n      expect(regex.test('jest-dom')).toBe(false);\n      expect(regex.test('@jest/core')).toBe(false);\n    });\n\n    it('should convert wildcard patterns with *', () => {\n      const regex = globToRegex('*playwright*');\n      expect(regex.test('playwright')).toBe(true);\n      expect(regex.test('@playwright/test')).toBe(true);\n      expect(regex.test('some-playwright-package')).toBe(true);\n      expect(regex.test('jest')).toBe(false);\n    });\n\n    it('should convert scoped package patterns', () => {\n      const regex = globToRegex('@vitest/*');\n      expect(regex.test('@vitest/ui')).toBe(true);\n      expect(regex.test('@vitest/coverage-v8')).toBe(true);\n      expect(regex.test('vitest')).toBe(false);\n      expect(regex.test('@jest/vitest')).toBe(false);\n    });\n\n    it('should convert prefix wildcard patterns', () => {\n      const regex = globToRegex('wdio*');\n      expect(regex.test('wdio')).toBe(true);\n      expect(regex.test('wdio-webdriverio')).toBe(true);\n      expect(regex.test('webdriverio')).toBe(false);\n    });\n\n    it('should handle multiple wildcards', () => {\n      const regex = globToRegex('*-router-*');\n      expect(regex.test('react-router-dom')).toBe(true);\n      expect(regex.test('vue-router-core')).toBe(true);\n      expect(regex.test('router')).toBe(false);\n      expect(regex.test('my-router')).toBe(false);\n    });\n\n    it('should escape special regex characters', () => {\n      const regex = globToRegex('react(router)');\n      expect(regex.test('react(router)')).toBe(true);\n      expect(regex.test('reactXrouter')).toBe(false);\n    });\n\n    it('should handle path-like patterns', () => {\n      const regex = globToRegex('*/router');\n      expect(regex.test('@reach/router')).toBe(true);\n      expect(regex.test('@remix-run/router')).toBe(true);\n      expect(regex.test('router')).toBe(false);\n      expect(regex.test('some/router')).toBe(true);\n    });\n\n    it('should handle complex patterns with multiple wildcards', () => {\n      const regex = globToRegex('@tanstack/*-router');\n      expect(regex.test('@tanstack/react-router')).toBe(true);\n      expect(regex.test('@tanstack/vue-router')).toBe(true);\n      expect(regex.test('@tanstack/router')).toBe(false);\n      expect(regex.test('tanstack/react-router')).toBe(false);\n    });\n  });\n\n  describe('matchesPackagePattern', () => {\n    it('should return true when package matches any pattern', () => {\n      const patterns = ['jest', 'vitest', '@testing-library/*'];\n      expect(matchesPackagePattern('jest', patterns)).toBe(true);\n      expect(matchesPackagePattern('vitest', patterns)).toBe(true);\n      expect(matchesPackagePattern('@testing-library/react', patterns)).toBe(true);\n    });\n\n    it('should return false when package matches no patterns', () => {\n      const patterns = ['jest', 'vitest', '@testing-library/*'];\n      expect(matchesPackagePattern('cypress', patterns)).toBe(false);\n      expect(matchesPackagePattern('mocha', patterns)).toBe(false);\n    });\n\n    it('should handle empty patterns array', () => {\n      expect(matchesPackagePattern('any-package', [])).toBe(false);\n    });\n\n    it('should handle complex glob patterns', () => {\n      const patterns = ['*playwright*', '@vitest/*', 'wdio*'];\n      expect(matchesPackagePattern('playwright', patterns)).toBe(true);\n      expect(matchesPackagePattern('@playwright/test', patterns)).toBe(true);\n      expect(matchesPackagePattern('@vitest/ui', patterns)).toBe(true);\n      expect(matchesPackagePattern('wdio', patterns)).toBe(true);\n      expect(matchesPackagePattern('wdio-webdriverio', patterns)).toBe(true);\n      expect(matchesPackagePattern('jest', patterns)).toBe(false);\n    });\n  });\n});\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/telemetry/ecosystem-identifier.test.ts around lines 1 - 96,\nThe \"should escape special regex characters\" test currently uses the pattern\n'react-router' which contains no regex-special chars; update that test to use a\npattern containing special characters (e.g., 'react(router)') so globToRegex is\nactually tested for escaping: call globToRegex('react(router)') and assert it\nmatches the literal 'react(router)' and does not match 'react-router' (ensuring\nparentheses are treated literally). Target the test case inside\necosystem-identifier.test.ts that describes escaping and modify the pattern and\nassertions accordingly.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/shared/utils/ecosystem-identifier.test.ts",
+          "line_number": 96,
+          "start_line": 1,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T15:17:59Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fiV27",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Fix `null` vs `undefined` mismatch in package maps (likely breaks strict TS).**\n\n`getSafeVersionSpecifier()` returns `string | null`, but `PackageGroupResult` is `Record<string, string | undefined>`. As written, the maps can contain `null`. Decide one strategy and make it consistent.  \n\n\n<details>\n<summary>Option A (recommended): allow `null` in the type</summary>\n\n```diff\n-type PackageGroupResult = Record<string, string | undefined>;\n+type PackageGroupResult = Record<string, string | null | undefined>;\n```\n\n</details>\n\n<details>\n<summary>Option B: normalize `null` to `undefined` when building maps</summary>\n\n```diff\n-        const version = getSafeVersionSpecifier(rawVersion);\n-        return [dep, version];\n+        const version = getSafeVersionSpecifier(rawVersion) ?? undefined;\n+        return [dep, version];\n```\n\n</details>\n\n\nAlso applies to: 68-125\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/telemetry/get-known-packages.ts around lines 17 - 27, The\npackage maps currently type PackageGroupResult as Record<string, string |\nundefined> but getSafeVersionSpecifier() returns string | null, causing a\nmismatch; update PackageGroupResult to Record<string, string | null> and update\nKnownPackagesList fields to use that same PackageGroupResult so null is an\nallowed value consistently (or alternatively, if you prefer normalization,\nconvert null -> undefined wherever getSafeVersionSpecifier() results are\ninserted); ensure all usages in this file (including where the maps are\nconstructed around getSafeVersionSpecifier()) follow the chosen approach so the\ntypes align.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit b3720f1",
+          "file_path": "code/core/src/telemetry/get-known-packages.ts",
+          "line_number": 27,
+          "start_line": null,
+          "commit_sha": "b47921ba301beabe574f81132615a1f12f6863ad",
+          "created_at": "2026-01-09T15:18:00Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fiV3B",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Remove the `any` type annotation to preserve type safety.**\n\nThe explicit `: any` annotation defeats TypeScript's type checking and is inconsistent with the pattern used for `cachedReadFileSync` (line 89) and `cachedFindUp` (line 91), which rely on type inference. The `cached` generic wrapper should correctly infer that `cachedResolveImport` has the signature `(id: string, options: resolve.SyncOpts) => string` from the wrapped `resolveImport` function.\n\nUsing `any` here removes compile-time guarantees and could mask type errors at call sites.\n\n\n\n<details>\n<summary>\u267b\ufe0f Restore type safety by removing the annotation</summary>\n\n```diff\n-export const cachedResolveImport: any = cached(resolveImport, { name: 'resolveImport' });\n+export const cachedResolveImport = cached(resolveImport, { name: 'resolveImport' });\n```\n\nIf explicit typing is required (e.g., due to a circular dependency or inference failure not visible here), use the correct signature instead:\n\n```typescript\nexport const cachedResolveImport: (id: string, options: resolve.SyncOpts) => string = cached(resolveImport, { name: 'resolveImport' });\n```\n\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nexport const cachedResolveImport = cached(resolveImport, { name: 'resolveImport' });\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/renderers/react/src/componentManifest/utils.ts at line 93, Remove the\nexplicit `: any` annotation on cachedResolveImport so TypeScript can infer its\ntype from cached(resolveImport, ...); locate the declaration `export const\ncachedResolveImport: any = cached(resolveImport, { name: 'resolveImport' });`\nand either delete the `: any` or, if inference fails, replace it with the\nprecise signature `(id: string, options: resolve.SyncOpts) => string` to match\nthe pattern used by cachedReadFileSync and cachedFindUp and preserve type\nsafety.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/utils.ts",
+          "line_number": 93,
+          "start_line": null,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T15:18:00Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fjKxr",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n**Add `spy: true` option to all `vi.mock()` calls.**\n\nAll mock declarations should include the `spy: true` option to follow the project's mocking guidelines and preserve original implementations while allowing selective overrides.\n\nAs per coding guidelines, the pattern should be:\n\n```typescript\nvi.mock('module-name', { spy: true });\n```\n\nThen use `vi.mocked()` to configure specific exports in `beforeEach` blocks.\n\n\n\n<details>\n<summary>\u267b\ufe0f Refactor to use spy: true pattern</summary>\n\n```diff\n-vi.mock('storybook/internal/common', async (importOriginal) => {\n-  const actual = await importOriginal<typeof import('storybook/internal/common')>();\n-  return {\n-    ...actual,\n-    cache: {\n-      get: vi.fn(),\n-      set: vi.fn(),\n-    },\n-    executeCommand: vi.fn(),\n-    resolvePathInStorybookCache: vi.fn(),\n-  };\n-});\n+vi.mock('storybook/internal/common', { spy: true });\n\n-vi.mock('storybook/internal/telemetry', async (importOriginal) => {\n-  const actual = await importOriginal<typeof import('storybook/internal/telemetry')>();\n-  return {\n-    ...actual,\n-    getLastEvents: vi.fn(),\n-    getSessionId: vi.fn(),\n-    getStorybookMetadata: vi.fn(),\n-    telemetry: vi.fn(),\n-  };\n-});\n+vi.mock('storybook/internal/telemetry', { spy: true });\n\n-vi.mock('../utils/ghost-stories/get-candidates', async (importOriginal) => {\n-  const actual = await importOriginal<typeof import('../utils/ghost-stories/get-candidates')>();\n-  return {\n-    ...actual,\n-    getComponentCandidates: vi.fn(),\n-  };\n-});\n+vi.mock('../utils/ghost-stories/get-candidates', { spy: true });\n\n-const mockFs = vi.hoisted(() => {\n-  return {\n-    existsSync: vi.fn(),\n-    mkdir: vi.fn(),\n-    readFile: vi.fn(),\n-  };\n-});\n-\n-vi.mock('node:fs', async (importOriginal) => {\n-  const actual = await importOriginal<typeof import('node:fs')>();\n-  return {\n-    ...actual,\n-    existsSync: mockFs.existsSync,\n-  };\n-});\n+vi.mock('node:fs', { spy: true });\n+vi.mock('node:fs/promises', { spy: true });\n\n-vi.mock('node:fs/promises', async (importOriginal) => {\n-  const actual = await importOriginal<typeof import('node:fs/promises')>();\n-  return {\n-    ...actual,\n-    mkdir: mockFs.mkdir,\n-    readFile: mockFs.readFile,\n-  };\n-});\n```\n\nThen in the test setup, import and configure the mocks:\n\n```typescript\nimport * as fs from 'node:fs';\nimport * as fsPromises from 'node:fs/promises';\n\n// In beforeEach:\nvi.mocked(fs.existsSync).mockReset();\nvi.mocked(fsPromises.mkdir).mockReset();\nvi.mocked(fsPromises.readFile).mockReset();\n```\n\n</details>\n\nBased on coding guidelines.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/server-channel/ghost-stories-channel.test.ts\naround lines 10 - 65, Replace the current factory-style vi.mock(...) calls with\nthe spy:true pattern (e.g. vi.mock('storybook/internal/common', { spy: true })\netc.) for these modules: 'storybook/internal/common',\n'storybook/internal/telemetry', '../utils/ghost-stories/get-candidates',\n'node:fs', and 'node:fs/promises'; remove the async importOriginal factories and\ninstead configure or reset specific exports in your test setup/beforeEach using\nvi.mocked(...) for the individual exports (e.g. vi.mocked(mockFs.existsSync) /\nvi.mocked(fs.existsSync), vi.mocked(fsPromises.mkdir),\nvi.mocked(fsPromises.readFile), vi.mocked(getComponentCandidates),\nvi.mocked(executeCommand), etc.), and eliminate or adapt the hoisted mockFs\npattern so the actual module implementations are preserved and only selected\nfunctions are overridden/reset per the project guideline.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/server-channel/ghost-stories-channel.test.ts",
+          "line_number": 65,
+          "start_line": 10,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T16:18:06Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fjKxy",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Use `null` instead of `undefined` for type correctness.**\n\nThe `findConfigFile` function returns `string | null`, not `string | null | undefined`. The mock should return `null` to match the actual return type.\n\n\n\n<details>\n<summary>\ud83d\udd27 Suggested fix</summary>\n\n```diff\n-    vi.mocked(findConfigFile).mockReturnValue(\n-      undefined as unknown as ReturnType<typeof findConfigFile>\n-    );\n+    vi.mocked(findConfigFile).mockReturnValue(null);\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    vi.mocked(findConfigFile).mockReturnValue(null);\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/get-new-story-file.test.ts around lines 26 -\n28, The tests mock findConfigFile with undefined which is incorrect because\nfindConfigFile returns string | null; update the mock call\nvi.mocked(findConfigFile).mockReturnValue(...) to return null instead of\nundefined so the mocked return type matches the real function signature (locate\nthe vi.mocked(findConfigFile).mockReturnValue usage in\nget-new-story-file.test.ts and change the value to null).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/get-new-story-file.test.ts",
+          "line_number": 28,
+          "start_line": 26,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T16:18:07Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fjKx3",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Fix regex to handle scoped npm packages.**\n\nThe regex pattern `[^/.]+` will fail to extract scoped package names (e.g., `@org/package`) correctly. When the stack contains `/deps/@org/package.js`, it will only capture `@org` instead of `@org/package`, leading to incorrect dependency matching and categorization.\n\n\n\n<details>\n<summary>\ud83d\udd27 Proposed fix</summary>\n\n```diff\n   for (const line of normalizedStack.split('\\n')) {\n-    const depMatch = line.match(/\\/deps\\/([^/.]+)\\.js/);\n+    const depMatch = line.match(/\\/deps\\/((?:@[^/]+\\/)?[^/.]+)\\.js/);\n     if (depMatch) {\n       stackDeps.add(depMatch[1]);\n     }\n   }\n```\n\nThe pattern `(?:@[^/]+\\/)?[^/.]+` matches:\n- Optional scoped package prefix: `@[^/]+\\/` (e.g., `@org/`)\n- Package name: `[^/.]+` (e.g., `package`)\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/categorize-render-errors.ts\naround lines 47 - 51, The loop that extracts dependency names from\nnormalizedStack uses the regex `/\\/deps\\/([^/.]+)\\.js/`, which fails for scoped\npackages like `@org/package`; update the pattern used when matching (where\ndepMatch is assigned) to capture an optional scope plus name (e.g., use a group\nthat allows an optional `@scope/` prefix followed by the package name) so\nstackDeps.add receives the full package id; ensure the new regex still anchors\nthe `.js` suffix and is applied in the same place where depMatch and stackDeps\nare used.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/categorize-render-errors.ts",
+          "line_number": 51,
+          "start_line": null,
+          "commit_sha": "c5a1503147ff5a9135d21c5b2711595fc5af45c2",
+          "created_at": "2026-01-09T16:18:07Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fjKx6",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Validate/clamp `sampleCount` / `sampleSize` (<= 0 currently yields odd semantics)**  \nWith `sampleSize=0` you end up logging \u201cFound 0 enough simple candidates\u2026\u201d and doing extra work for a guaranteed empty result. With negative values, `.slice(0, sampleCount)` will return \u201call but last N\u201d candidates. This is surprising.  \n\n\n<details>\n<summary>Proposed fix (minimal guardrails)</summary>\n\n```diff\n@@\n export async function getCandidatesForStorybook(\n   files: string[],\n   sampleCount: number\n ): Promise<{\n@@\n }> {\n+  if (!Number.isFinite(sampleCount) || sampleCount <= 0) {\n+    return { candidates: [], analyzedCount: 0, avgComplexity: 0 };\n+  }\n@@\n export async function getComponentCandidates({\n   sampleSize = 20,\n   globPattern = '**/*.{tsx,jsx}',\n@@\n } = {}): Promise<{\n@@\n }> {\n+  if (!Number.isFinite(sampleSize) || sampleSize <= 0) {\n+    logger.warn(`Invalid sample size: ${sampleSize}`);\n+    return { candidates: [], globMatchCount: 0, error: 'Invalid sample size' };\n+  }\n```\n</details>\n\n\nAlso applies to: 100-115, 134-146\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/get-candidates.ts around lines\n64 - 71, getCandidatesForStorybook currently accepts sampleCount/sampleSize\nvalues that lead to surprising behavior for zero or negative inputs;\nclamp/validate the incoming sampleCount (and any sampleSize variables used\nelsewhere) to a sensible range (e.g. Math.max(1, Math.min(sampleCount,\nfiles.length))) at the start of getCandidatesForStorybook so you never call\n.slice(0, sampleCount) with 0 or negative values, and apply the same guard to\nthe other occurrences referenced (the blocks around lines 100-115 and 134-146)\nso all slicing and sampling logic uses a validated positive integer bounded by\nfiles.length.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/get-candidates.ts",
+          "line_number": 71,
+          "start_line": 64,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T16:18:07Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fjKyC",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Handle non-finite complexity (NaN/Infinity) defensively**  \nIf `getComponentComplexity(source)` can ever return `NaN`/`Infinity` (parse edge-cases, division by zero, etc.), your sorting and avg computation become unstable and can pick nonsense candidates.  \n\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n@@\n     const complexity = getComponentComplexity(source);\n+    if (!Number.isFinite(complexity)) {\n+      continue;\n+    }\n     analyzedCandidates.push({ file, complexity });\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nexport async function getCandidatesForStorybook(\n  files: string[],\n  sampleCount: number\n): Promise<{\n  candidates: string[];\n  analyzedCount: number;\n  avgComplexity: number;\n}> {\n  const simpleCandidates: { file: string; complexity: number }[] = [];\n  const analyzedCandidates: { file: string; complexity: number }[] = [];\n\n  for (const file of files) {\n    let source: string;\n    try {\n      source = await readFile(file, 'utf-8');\n      // filter out non-React code or files without exports\n      if (!isValidCandidate(source)) {\n        continue;\n      }\n    } catch {\n      continue;\n    }\n\n    const complexity = getComponentComplexity(source);\n    if (!Number.isFinite(complexity)) {\n      continue;\n    }\n    analyzedCandidates.push({ file, complexity });\n\n    if (complexity < 0.3) {\n      simpleCandidates.push({ file, complexity });\n      if (simpleCandidates.length >= sampleCount) {\n        break;\n      }\n    }\n  }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/get-candidates.ts around lines\n64 - 96, The loop in getCandidatesForStorybook currently trusts\ngetComponentComplexity(source) and can push NaN/Infinity into analyzedCandidates\nand simpleCandidates, corrupting sorting/average logic; defensively check\nNumber.isFinite(complexity) after calling getComponentComplexity and if it's not\nfinite, skip adding it to analyzedCandidates and simpleCandidates (and continue\nthe loop), and when computing avgComplexity ensure you only average the finite\ncomplexities from analyzedCandidates; update any logic that stops when\nsimpleCandidates.length >= sampleCount to only count finite entries so sample\nselection remains stable.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/get-candidates.ts",
+          "line_number": 96,
+          "start_line": 64,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T16:18:07Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fjKyF",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Tighten debug logging (string concat + \u201cFull error\u201d formatting)**  \n- `logger.debug('candidates files:' + candidates.length);` is a bit awkward and loses context (which phase, which glob).  \n- `logger.debug(\\`Full error: ${error}\\`)` often prints `[object Object]`. Prefer logging the error object (if supported) or `errorMessage` + `cause`.  \n\n\n<details>\n<summary>Suggested tweak</summary>\n\n```diff\n@@\n-    logger.debug('candidates files:' + candidates.length);\n+    logger.debug(`Selected ${candidates.length} candidate files`);\n@@\n-    logger.debug(`Full error: ${error}`);\n+    logger.debug(error);\n```\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/get-candidates.ts",
+          "line_number": 201,
+          "start_line": null,
+          "commit_sha": "b3720f1bb63050ed028bda9fa664e678b881a030",
+          "created_at": "2026-01-09T16:18:07Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fjKyL",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Address type safety and opacity comparison issues.**\n\nTwo concerns with the current implementation:\n\n1. **Type safety**: The function expects `HTMLElement`, but line 25 may pass an `Element` (from `firstElementChild`). This could fail if the element is an `SVGElement` or other non-HTML element.\n\n2. **Opacity check**: The string comparison `style.opacity !== '0'` won't correctly handle values like `'0.0'` or `'0.00'`, which should be treated as invisible. Use numeric comparison instead.\n\n\n\n<details>\n<summary>\ud83d\udd27 Proposed fix</summary>\n\n```diff\n-const isEmptyRender = (element: HTMLElement) => {\n+export const isEmptyRender = (element: Element) => {\n+  if (!(element instanceof HTMLElement)) {\n+    return true; // Non-HTML elements are considered empty for ghost stories\n+  }\n+\n   const style = getComputedStyle(element);\n   const rect = element.getBoundingClientRect();\n \n   const rendersContent =\n     rect.width > 0 &&\n     rect.height > 0 &&\n     style.visibility !== 'hidden' &&\n-    style.opacity !== '0' &&\n+    parseFloat(style.opacity) > 0 &&\n     style.display !== 'none';\n \n   return !rendersContent;\n };\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nexport const isEmptyRender = (element: Element) => {\n  if (!(element instanceof HTMLElement)) {\n    return true; // Non-HTML elements are considered empty for ghost stories\n  }\n\n  const style = getComputedStyle(element);\n  const rect = element.getBoundingClientRect();\n\n  const rendersContent =\n    rect.width > 0 &&\n    rect.height > 0 &&\n    style.visibility !== 'hidden' &&\n    parseFloat(style.opacity) > 0 &&\n    style.display !== 'none';\n\n  return !rendersContent;\n};\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/test-annotations.ts around\nlines 4 - 16, Change isEmptyRender to accept Element (not HTMLElement) to match\ncallers like firstElementChild and avoid runtime mismatches; when checking\nopacity, convert the CSS string to a number and test numerically (e.g.\nNumber(style.opacity) > 0 or parseFloat(style.opacity) === 0) instead of string\nequality so values like \"0.0\" are treated as invisible; keep the rest of the\nchecks (visibility, display, rect dimensions) but use the updated type and\nnumeric opacity comparison in the rendersContent condition.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 8193e44 to b47921b",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/test-annotations.ts",
+          "line_number": 16,
+          "start_line": null,
+          "commit_sha": "c5a1503147ff5a9135d21c5b2711595fc5af45c2",
+          "created_at": "2026-01-09T16:18:07Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fjKyS",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Replace empty catch block with proper error handling.**\n\nThe empty `catch {}` block on line 37 silently swallows all errors, making debugging impossible and potentially hiding real bugs in the render analysis. This prevents developers from understanding why the ghost stories analysis might be failing.\n\nCompare with the a11y addon's `afterEach` implementation (see `code/addons/a11y/src/preview.tsx:13-95`), which properly reports errors via the reporting API.\n\n\n\n<details>\n<summary>\ud83d\udc1b Proposed fix with error reporting</summary>\n\n```diff\n const afterEach: AfterEach = async ({ reporting, canvasElement, globals }) => {\n-  try {\n-    // We only run this through ghost stories runs\n-    if (!globals.ghostStories) {\n-      return;\n-    }\n+  // We only run this through ghost stories runs\n+  if (!globals.ghostStories) {\n+    return;\n+  }\n \n+  try {\n     const emptyRender = isEmptyRender(canvasElement.firstElementChild ?? canvasElement);\n \n     if (emptyRender) {\n       reporting.addReport({\n         type: 'render-analysis',\n         version: 1,\n         result: {\n           emptyRender,\n         },\n         status: 'warning',\n       });\n     }\n-  } catch {}\n+  } catch (error) {\n+    reporting.addReport({\n+      type: 'render-analysis',\n+      version: 1,\n+      result: {\n+        error,\n+      },\n+      status: 'failed',\n+    });\n+  }\n };\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/test-annotations.ts around\nlines 18 - 38, The empty catch in the afterEach function silently swallows\nerrors; change it to catch the thrown error (e.g., `catch (err)`) and forward it\nto the reporting API like the a11y addon does: call reporting.addReport with\ntype 'render-analysis', version 1, status 'error' and include the error details\nin result (message/stack and any contextual info such as globals.ghostStories or\nthe element analyzed via isEmptyRender) so errors are visible for debugging; do\nnot reintroduce silent swallowing.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/test-annotations.ts",
+          "line_number": 38,
+          "start_line": 18,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T16:18:07Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fkjr_",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, find the test file and check the directory structure\nfd -t f \"parse-vitest-report\" code/core/src/core-server/utils/ghost-stories/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 207\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for where extractCategorizedErrors is exported\nast-grep --pattern 'export function extractCategorizedErrors($$$) { $$$ }' --allow-multiple-statement-body\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 319\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Also search for export with different patterns\nrg \"export.*extractCategorizedErrors\" code/core/src/core-server/utils/ghost-stories/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 175\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# List all files in the ghost-stories directory\nls -la code/core/src/core-server/utils/ghost-stories/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 828\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's check the actual import statement in the test file\nhead -10 code/core/src/core-server/utils/ghost-stories/parse-vitest-report.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 345\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Also verify the export in parse-vitest-report.ts\nrg -A 5 \"export function extractCategorizedErrors\" code/core/src/core-server/utils/ghost-stories/parse-vitest-report.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 270\n\n---\n\n\n\n</details>\n\n**Fix incorrect import path.**\n\nThe import on line 3 references a non-existent module `./categorize-render-errors`. The function `extractCategorizedErrors` is exported from `./parse-vitest-report`, not from a separate categorize-render-errors module.\n\n<details>\n<summary>Correct import statement</summary>\n\n```diff\n-import { extractCategorizedErrors } from './categorize-render-errors';\n+import { extractCategorizedErrors } from './parse-vitest-report';\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nimport { extractCategorizedErrors } from './parse-vitest-report';\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/parse-vitest-report.test.ts at\nline 3, The test imports extractCategorizedErrors from the wrong module; update\nthe import to reference the module that actually exports it by changing the\nimport source from './categorize-render-errors' to './parse-vitest-report' so\nthat extractCategorizedErrors resolves correctly.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits cc80d11 to c94d638",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/parse-vitest-report.test.ts",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "b47921ba301beabe574f81132615a1f12f6863ad",
+          "created_at": "2026-01-09T18:17:28Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fkjsG",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Add error handling for getActualPackageVersion.**\n\nIf `getActualPackageVersion` throws an exception, `Promise.all` will reject and crash the entire analysis. Consider wrapping each call in a try-catch or using `Promise.allSettled` to handle failures gracefully.\n\n\n\n<details>\n<summary>\ud83d\udee1\ufe0f Proposed fix with error handling</summary>\n\n```diff\n  const testPackagesResult = Object.fromEntries(\n    await Promise.all(\n      depNames\n        .filter((dep) => matchesPackagePattern(dep, TEST_PACKAGES))\n        .map(async (dep) => {\n-          const resolved = (await getActualPackageVersion(dep))?.version ?? allDependencies[dep];\n+          let resolved: string;\n+          try {\n+            resolved = (await getActualPackageVersion(dep))?.version ?? allDependencies[dep];\n+          } catch {\n+            resolved = allDependencies[dep];\n+          }\n\n          const version = getSafeVersionSpecifier(resolved);\n          return [dep, version];\n        })\n    )\n  );\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/telemetry/get-known-packages.ts around lines 93 - 104, The\ncurrent Promise.all over depNames calling getActualPackageVersion can reject the\nwhole batch if any call throws; update the logic that builds testPackagesResult\nso each getActualPackageVersion call is wrapped with per-item error handling\n(try/catch) or use Promise.allSettled, and on failure fall back to\nallDependencies[dep] and still pass the value through getSafeVersionSpecifier;\nalso surface or log the error for the failed dep (referencing depNames,\nmatchesPackagePattern, getActualPackageVersion, getSafeVersionSpecifier, and\nallDependencies) so a single package failure won't crash the analysis.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/telemetry/get-known-packages.ts",
+          "line_number": 108,
+          "start_line": 97,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-09T18:17:28Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f1Alw",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Critical: Remove debug code before merging.**\n\nThe TODO explicitly states \"DO NOT MERGE WITH THIS\". The commented-out `return` means ghost runs will never be skipped based on session/event history, defeating the intended logic to avoid redundant runs.\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n       if (\n         lastGhostStoriesRun ||\n         (lastInit?.body?.sessionId && lastInit?.body?.sessionId !== sessionId)\n       ) {\n-        logger.debug('Would normally skip ghost run');\n-        // TODO: uncomment this later, it's commented out for debugging purposes DO NOT MERGE WITH THIS\n-        // return;\n+        logger.debug('Skipping ghost run - already ran or different session');\n+        return;\n       }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n      if (\n        lastGhostStoriesRun ||\n        (lastInit?.body?.sessionId && lastInit?.body?.sessionId !== sessionId)\n      ) {\n        logger.debug('Skipping ghost run - already ran or different session');\n        return;\n      }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/server-channel/ghost-stories-channel.ts around\nlines 44 - 51, The debug block in ghost-stories-channel disables the intended\nskip logic by leaving the return commented out; restore the original behavior in\nthe conditional that checks lastGhostStoriesRun and lastInit?.body?.sessionId\n!== sessionId by removing the logger.debug-only path and re-enabling the return\nso the function exits when those conditions are met (i.e., uncomment the\nreturn), ensuring ghost runs are skipped as intended; keep logger.debug but run\nit before the return to preserve debugging output.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 2f71ad4 to d037ec7",
+          "file_path": "code/core/src/core-server/server-channel/ghost-stories-channel.ts",
+          "line_number": 46,
+          "start_line": 41,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T09:31:34Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f1Al-",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\nfind code -type f -name \"parse-vitest-report.ts\" | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 133\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/core-server/utils/ghost-stories/parse-vitest-report.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 5419\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for usages of parseVitestResults to understand how it's called\nrg \"parseVitestResults\" --type ts --type tsx -B 2 -A 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg \"parseVitestResults\" -A 2 -B 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 5614\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/core-server/utils/ghost-stories/parse-vitest-report.test.ts | head -150\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 5653\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/core-server/utils/ghost-stories/parse-vitest-report.test.ts | tail -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3569\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/core-server/utils/ghost-stories/run-story-tests.ts | grep -A 20 -B 5 \"parseVitestResults\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1534\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there are any tests that verify error handling for malformed inputs\ngrep -n \"partial\\|malformed\\|missing\\|undefined\\|null\" code/core/src/core-server/utils/ghost-stories/parse-vitest-report.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 341\n\n---\n\n\n\n</details>\n\n**Add type safety and guards for unexpected Vitest result shapes.**\n\nThe function uses `any` type and will crash if `testResults.testResults` or nested `assertionResults` properties are undefined/null, which is plausible if Vitest output format changes across versions or is partial. The tests only use well-formed complete objects and provide no coverage for malformed inputs.\n\nUse minimal structural types with safe defaults instead:\n- Define `VitestAssertionResult`, `VitestSuiteResult`, `VitestRunResult` types covering the accessed properties\n- Use `testResults.testResults ?? []` and `testSuite.assertionResults ?? []` to safely handle missing arrays\n- Add fallback `|| 'unknown'` for `storyId` to prevent undefined values\n- Use `?? false` for boolean checks to ensure consistent falsy handling\n\n<details>\n<summary>Proposed hardening (minimal types + safe iteration)</summary>\n\n```diff\n /** Transform the Vitest test results to our expected format and return a TestRunSummary */\n-export function parseVitestResults(testResults: any): TestRunSummary {\n+type VitestAssertionResult = {\n+  status: 'passed' | 'failed' | 'pending' | 'skipped' | 'todo' | string;\n+  fullName?: string;\n+  failureMessages?: string[];\n+  meta?: {\n+    storyId?: string;\n+    reports?: Array<{ type: string; result?: { emptyRender?: boolean } }>;\n+  };\n+};\n+\n+type VitestSuiteResult = { assertionResults?: VitestAssertionResult[] };\n+\n+type VitestRunResult = {\n+  success?: boolean;\n+  numTotalTests?: number;\n+  numPassedTests?: number;\n+  numFailedTests?: number;\n+  testResults?: VitestSuiteResult[];\n+};\n+\n+export function parseVitestResults(testResults: VitestRunResult): TestRunSummary {\n   // Transform the Vitest test results to our expected format\n   const storyTestResults: StoryTestResult[] = [];\n   let passedButEmptyRender = 0;\n\n-  for (const testSuite of testResults.testResults) {\n-    for (const assertion of testSuite.assertionResults) {\n-      const storyId = assertion.meta?.storyId || assertion.fullName;\n+  for (const testSuite of testResults.testResults ?? []) {\n+    for (const assertion of testSuite.assertionResults ?? []) {\n+      const storyId = assertion.meta?.storyId || assertion.fullName || 'unknown';\n\n       const status =\n         assertion.status === 'passed' ? 'PASS' : assertion.status === 'failed' ? 'FAIL' : 'PENDING';\n\n       // Check for empty render in reports\n-      const hasEmptyRender = assertion.meta?.reports?.some(\n-        (report: { type: string; result?: { emptyRender?: boolean } }) =>\n-          report.type === 'render-analysis' && report.result?.emptyRender === true\n-      );\n+      const hasEmptyRender =\n+        assertion.meta?.reports?.some(\n+          (report) => report.type === 'render-analysis' && report.result?.emptyRender === true\n+        ) ?? false;\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/parse-vitest-report.ts around\nlines 65 - 103, The parseVitestResults function currently uses any and assumes\ntestResults.testResults and nested assertionResults exist; add minimal\ninterfaces VitestRunResult, VitestSuiteResult, and VitestAssertionResult\ncovering only the accessed fields and change the testResults parameter to that\nrun type, then iterate over testResults.testResults ?? [] and for each testSuite\niterate over testSuite.assertionResults ?? []; guard the reports/metadata checks\nwith optional chaining and use ?? false for boolean checks, use storyId =\nassertion.meta?.storyId || assertion.fullName || 'unknown' to avoid undefined,\nand keep the rest of the logic but replace loose any usages with the new types.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/parse-vitest-report.ts",
+          "line_number": 97,
+          "start_line": 59,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T09:31:34Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f1AmA",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Avoid NaN rates when counts are missing; simplify the return.**\n\nIf any of `numTotalTests/numPassedTests/numFailedTests` is `undefined`, the rates become `NaN`. Also `enhancedResponse` can be returned inline.\n\n<details>\n<summary>Proposed fix (defaults + clamp + inline return)</summary>\n\n```diff\n-  const total = testResults.numTotalTests;\n-  const passed = testResults.numPassedTests;\n-  const failed = testResults.numFailedTests;\n+  const total = testResults.numTotalTests ?? storyTestResults.length;\n+  const passed = testResults.numPassedTests ?? storyTestResults.filter((r) => r.status === 'PASS').length;\n+  const failed = testResults.numFailedTests ?? storyTestResults.filter((r) => r.status === 'FAIL').length;\n\n   const successRate = total > 0 ? parseFloat((passed / total).toFixed(2)) : 0;\n   const failureRate = total > 0 ? parseFloat((failed / total).toFixed(2)) : 0;\n   const successRateWithoutEmptyRender =\n-    total > 0 ? parseFloat(((passed - passedButEmptyRender) / total).toFixed(2)) : 0;\n+    total > 0\n+      ? parseFloat((Math.max(0, passed - passedButEmptyRender) / total).toFixed(2))\n+      : 0;\n\n@@\n-  const enhancedResponse: TestRunSummary = {\n-    success: testResults.success,\n-    summary,\n-  };\n-\n-  return enhancedResponse;\n+  return { success: testResults.success ?? failed === 0, summary };\n }\n```\n</details>\n\n  -->\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  const total = testResults.numTotalTests ?? storyTestResults.length;\n  const passed = testResults.numPassedTests ?? storyTestResults.filter((r) => r.status === 'PASS').length;\n  const failed = testResults.numFailedTests ?? storyTestResults.filter((r) => r.status === 'FAIL').length;\n  const successRate = total > 0 ? parseFloat((passed / total).toFixed(2)) : 0;\n  const failureRate = total > 0 ? parseFloat((failed / total).toFixed(2)) : 0;\n  const successRateWithoutEmptyRender =\n    total > 0\n      ? parseFloat((Math.max(0, passed - passedButEmptyRender) / total).toFixed(2))\n      : 0;\n\n  // Extract and categorize unique errors\n  const errorClassification = extractCategorizedErrors(storyTestResults);\n  const categorizedErrors = errorClassification.categorizedErrors;\n\n  const summary = {\n    total,\n    passed,\n    passedButEmptyRender,\n    failed,\n    successRate,\n    successRateWithoutEmptyRender,\n    failureRate,\n    uniqueErrorCount: errorClassification.uniqueErrorCount,\n    categorizedErrors,\n  };\n\n  return { success: testResults.success ?? failed === 0, summary };\n}\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/parse-vitest-report.ts",
+          "line_number": 128,
+          "start_line": 98,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T09:31:34Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f1AmD",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Avoid mutating `CATEGORIZATION_RULES` and make tie-breaking explicit for deterministic categorization.**\n\n`CATEGORIZATION_RULES.sort(...)` mutates the exported-in-module constant and relies on sort stability for equal priorities (85/80). Safer to copy + add an explicit tie-breaker.\n\n<details>\n<summary>Proposed deterministic RULES construction</summary>\n\n```diff\n-const RULES = CATEGORIZATION_RULES.sort((a, b) => b.priority - a.priority);\n+const RULES = CATEGORIZATION_RULES\n+  .map((rule, index) => ({ rule, index }))\n+  .sort((a, b) => b.rule.priority - a.rule.priority || a.index - b.index)\n+  .map(({ rule }) => rule);\n```\n</details>\n\n  -->\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nconst CATEGORIZATION_RULES: CategorizationRule[] = [\n  {\n    category: ERROR_CATEGORIES.MODULE_IMPORT_ERROR,\n    priority: 100,\n    match: (ctx) =>\n      ctx.normalizedMessage.includes('cannot find module') ||\n      ctx.normalizedMessage.includes('module not found') ||\n      ctx.normalizedMessage.includes('cannot resolve module'),\n  },\n\n  {\n    category: ERROR_CATEGORIES.HOOK_USAGE_ERROR,\n    priority: 90,\n    match: (ctx) =>\n      ctx.normalizedMessage.includes('invalid hook call') ||\n      ctx.normalizedMessage.includes('rendered more hooks than') ||\n      ctx.normalizedMessage.includes('hooks can only be called'),\n  },\n\n  {\n    category: ERROR_CATEGORIES.MISSING_STATE_PROVIDER,\n    priority: 85,\n    match: (ctx) =>\n      Array.from(ctx.stackDeps).some(isStateManagementPackage) &&\n      (ctx.normalizedMessage.includes('context') ||\n        ctx.normalizedMessage.includes('undefined') ||\n        ctx.normalizedMessage.includes('null')),\n  },\n\n  {\n    category: ERROR_CATEGORIES.MISSING_ROUTER_PROVIDER,\n    priority: 85,\n    match: (ctx) =>\n      Array.from(ctx.stackDeps).some(isRouterPackage) ||\n      ctx.normalizedMessage.includes('usenavigate') ||\n      ctx.normalizedMessage.includes('router'),\n  },\n\n  {\n    category: ERROR_CATEGORIES.SERVER_COMPONENTS_ERROR,\n    priority: 85,\n    match: (ctx) =>\n      ctx.normalizedMessage.includes('server components') ||\n      ctx.normalizedMessage.includes('use client') ||\n      (ctx.normalizedMessage.includes('async/await') &&\n        ctx.normalizedMessage.includes('not supported')),\n  },\n\n  {\n    category: ERROR_CATEGORIES.MISSING_THEME_PROVIDER,\n    priority: 80,\n    match: (ctx) =>\n      (Array.from(ctx.stackDeps).some(isStylingPackage) &&\n        (ctx.normalizedMessage.includes('theme') || ctx.normalizedMessage.includes('undefined'))) ||\n      ctx.normalizedMessage.includes('usetheme') ||\n      (ctx.normalizedMessage.includes('theme') && ctx.normalizedMessage.includes('provider')),\n  },\n\n  {\n    category: ERROR_CATEGORIES.MISSING_TRANSLATION_PROVIDER,\n    priority: 80,\n    match: (ctx) =>\n      Array.from(ctx.stackDeps).some(isI18nPackage) ||\n      ctx.normalizedMessage.includes('i18n') ||\n      ctx.normalizedMessage.includes('translation') ||\n      ctx.normalizedMessage.includes('locale'),\n  },\n\n  {\n    category: ERROR_CATEGORIES.MISSING_PORTAL_ROOT,\n    priority: 70,\n    match: (ctx) =>\n      ctx.normalizedMessage.includes('portal') &&\n      (ctx.normalizedMessage.includes('container') || ctx.normalizedMessage.includes('root')) &&\n      (ctx.normalizedMessage.includes('null') || ctx.normalizedMessage.includes('not found')),\n  },\n\n  {\n    category: ERROR_CATEGORIES.MISSING_PROVIDER,\n    priority: 60,\n    match: (ctx) =>\n      ctx.normalizedMessage.includes('<provider>') ||\n      ((ctx.normalizedMessage.includes('could not find') ||\n        ctx.normalizedMessage.includes('missing')) &&\n        ctx.normalizedMessage.includes('context')) ||\n      (ctx.normalizedMessage.includes('usecontext') &&\n        (ctx.normalizedMessage.includes('null') || ctx.normalizedMessage.includes('undefined'))),\n  },\n\n  {\n    category: ERROR_CATEGORIES.COMPONENT_RENDER_ERROR,\n    priority: 10,\n    match: (ctx) =>\n      ctx.normalizedMessage.includes('cannot read') ||\n      ctx.normalizedMessage.includes('undefined is not a function') ||\n      ctx.normalizedMessage.includes('render'),\n  },\n];\n\nconst RULES = CATEGORIZATION_RULES\n  .map((rule, index) => ({ rule, index }))\n  .sort((a, b) => b.rule.priority - a.rule.priority || a.index - b.index)\n  .map(({ rule }) => rule);\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/shared/utils/categorize-render-errors.ts around lines 81 -\n181, CATEGORIZATION_RULES is being mutated by calling .sort(...) and the\ncomparator relies on sort stability for equal priorities; to fix, create RULES\nfrom a shallow copy (e.g., [...CATEGORIZATION_RULES] or\nCATEGORIZATION_RULES.slice()) and use a deterministic comparator that first\ncompares priority (b.priority - a.priority) and then breaks ties explicitly\n(e.g., compare category identifier or name or original index attached to each\nrule) so equal-priority rules always sort deterministically; update references\nto use RULES and avoid mutating CATEGORIZATION_RULES.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/shared/utils/categorize-render-errors.ts",
+          "line_number": 182,
+          "start_line": 81,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T09:31:34Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f1AmJ",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Add descriptions for `SERVER_COMPONENTS_ERROR` and `UNKNOWN_ERROR`.**\n\nThese are valid exported categories but currently fall through to the generic default message, which reduces the usefulness of the report.\n\n<details>\n<summary>Proposed switch additions</summary>\n\n```diff\n export function getCategoryDescription(category: ErrorCategory): string {\n   switch (category) {\n+    case ERROR_CATEGORIES.SERVER_COMPONENTS_ERROR:\n+      return 'Component appears to rely on React Server Components semantics that are not supported in this environment';\n+\n+    case ERROR_CATEGORIES.UNKNOWN_ERROR:\n+      return 'An uncategorized runtime error occurred during render';\n@@\n     default:\n       return 'Error could not be categorized';\n   }\n }\n```\n</details>\n\n -->\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nexport function getCategoryDescription(category: ErrorCategory): string {\n  switch (category) {\n    case ERROR_CATEGORIES.SERVER_COMPONENTS_ERROR:\n      return 'Component appears to rely on React Server Components semantics that are not supported in this environment';\n\n    case ERROR_CATEGORIES.UNKNOWN_ERROR:\n      return 'An uncategorized runtime error occurred during render';\n\n    case ERROR_CATEGORIES.MISSING_STATE_PROVIDER:\n      return 'Component attempted to access shared state without a state management provider';\n\n    case ERROR_CATEGORIES.MISSING_ROUTER_PROVIDER:\n      return 'Component attempted to access routing context without a router provider';\n\n    case ERROR_CATEGORIES.MISSING_THEME_PROVIDER:\n      return 'Component attempted to access theme values without a theme provider';\n\n    case ERROR_CATEGORIES.MISSING_TRANSLATION_PROVIDER:\n      return 'Component attempted to access translations without a translation provider';\n\n    case ERROR_CATEGORIES.MISSING_PROVIDER:\n      return 'Component attempted to access React context without a matching provider';\n\n    case ERROR_CATEGORIES.MISSING_PORTAL_ROOT:\n      return 'Component attempted to render a portal without a valid DOM container';\n\n    case ERROR_CATEGORIES.HOOK_USAGE_ERROR:\n      return 'React hook was used incorrectly';\n\n    case ERROR_CATEGORIES.MODULE_IMPORT_ERROR:\n      return 'A required dependency could not be resolved';\n\n    case ERROR_CATEGORIES.COMPONENT_RENDER_ERROR:\n      return 'Component failed during render due to a runtime error';\n\n    default:\n      return 'Error could not be categorized';\n  }\n}\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/shared/utils/categorize-render-errors.ts around lines 218 -\n249, The getCategoryDescription function currently falls through to the default\nfor ERROR_CATEGORIES.SERVER_COMPONENTS_ERROR and ERROR_CATEGORIES.UNKNOWN_ERROR;\nupdate getCategoryDescription to add explicit cases for SERVER_COMPONENTS_ERROR\n(e.g., \"Server component attempted to use client-only APIs or lifecycle during\nSSR\") and UNKNOWN_ERROR (e.g., \"An unclassified error occurred during render\")\nso both exportable categories return specific, helpful descriptions; modify the\nswitch in getCategoryDescription to include case\nERROR_CATEGORIES.SERVER_COMPONENTS_ERROR and case ERROR_CATEGORIES.UNKNOWN_ERROR\nreturning the new messages.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/shared/utils/categorize-render-errors.ts",
+          "line_number": 253,
+          "start_line": 219,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T09:31:34Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f1AmO",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, check the full test file to see the actual code\nhead -200 code/core/src/telemetry/get-known-packages.test.ts | cat -n\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 7656\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for other vi.mock usage patterns in the codebase to see repo conventions\nrg \"vi\\.mock\\(\" code --type ts --type tsx -A 2 | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udf10 Web query:\n\n`Vitest vi.mock() syntax ESM import() vs string module ID`\n\n\ud83d\udca1 Result:\n\nShort answer \u2014 both forms work; use import(...) (a Promise) when you want TypeScript-aware, path-checked, or relative/aliased ESM imports and to get proper typing for importOriginal; use a string module ID when you want to refer to a module by its resolved ID (aliases, package name, or virtual ID). Vitest\u2019s vi.mock overload accepts either a string path or a Promise returned by import(...). Examples and details:\n\n- Promise (dynamic import) form \u2014 preferred for ESM/TS because the import(...) is type-checked by TypeScript and Vitest\u2019s transformer strips the dynamic import and hoists the mock before the real import. You can also use the factory\u2019s importOriginal to call the real module:\n  - vi.mock(import('./myModule'), () => ({ fn: vi.fn() }))\n  - vi.mock(import('vscode'), () => ({ window: { createOutputChannel: vi.fn() } }))\n  - Docs: Vitest guide and API show this usage and explain hoisting/transform. [1][2]\n\n- String module ID form \u2014 use when you want to mock by module ID (package name, aliased id, virtual id) or when you already refer to the module as a string:\n  - vi.mock('./myModule')      // auto-mocks or loads __mocks__ if present\n  - vi.mock('axios', () => ({ get: vi.fn() }))\n  - Useful for jest-like __mocks__ lookup or when you don\u2019t need import typings. [1][2]\n\nImportant notes:\n- vi.mock is hoisted to the top of the file; it runs before imports. [2]\n- It only works for modules imported with import (not require). [2]\n- If you rely on setup files or cached imports, mocking may behave unexpectedly \u2014 prefer calling vi.mock in the test file (or use vi.doMock if you need non-hoisted behavior). [2]\n- For builtins or node: prefixed names, mock the same ID you import in code (e.g., 'node:fs' vs 'fs') to match resolution. [1]\n\nSources:\n[1] Vitest \u2014 Mocking Modules guide.  \n[2] Vitest \u2014 vi API (vi.mock overloads and notes).\n\n---\n\n\n\n</details>\n\n**Move mock implementation at line 171 out of the test case into a nested `beforeEach` block.**\n\nLine 171-174 overrides the mock implementation inside the test body, which violates the mocking guideline to implement mock behaviors in `beforeEach` blocks. Create a nested `describe` or use a separate `beforeEach` for this test case's specific mock behavior.\n\n<details>\n<summary>Proposed change</summary>\n\n```diff\n     it('should handle glob pattern matching for packages', async () => {\n       const packageJson: PackageJson = {\n         dependencies: {\n           '@vitest/ui': '1.0.0',\n           '@vitest/coverage-v8': '1.0.0',\n           vitest: '1.0.0',\n           playwright: '1.30.0',\n           'some-other-package': '1.0.0',\n         },\n       };\n\n       const result = await analyzeEcosystemPackages(packageJson);\n\n       expect(result.testPackages).toEqual({\n         '@vitest/ui': '1.0.0',\n         '@vitest/coverage-v8': '1.0.0',\n         vitest: '1.0.0',\n         playwright: '1.0.0',\n       });\n     });\n\n-    it('should handle special version specifiers', async () => {\n-      vi.mocked(getActualPackageVersion).mockImplementation(async (pkg: string) => ({\n-        name: pkg,\n-        version: 'file:../some/path',\n-      }));\n+    describe('with custom version specifiers', () => {\n+      beforeEach(() => {\n+        vi.mocked(getActualPackageVersion).mockImplementation(async (pkg: string) => ({\n+          name: pkg,\n+          version: 'file:../some/path',\n+        }));\n+      });\n\n+      it('should handle special version specifiers', async () => {\n         const packageJson: PackageJson = {\n           dependencies: {\n             '@testing-library/react': 'file:../some/path',\n             '@emotion/react': 'latest',\n             'styled-components': '*',\n             tailwindcss: 'workspace:*',\n           },\n         };\n\n         const result = await analyzeEcosystemPackages(packageJson);\n\n         expect(result.testPackages).toEqual({\n           '@testing-library/react': 'custom-protocol',\n         });\n\n         expect(result.stylingPackages).toEqual({\n           '@emotion/react': 'latest',\n           'styled-components': 'latest',\n           tailwindcss: 'custom-protocol',\n         });\n-      });\n+      });\n+    });\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/telemetry/get-known-packages.test.ts around lines 1 - 16, A\nmock implementation for getActualPackageVersion is currently being overridden\ninside a specific test body (lines ~171-174); move that mock setup into a nested\nbeforeEach (or a nested describe with its own beforeEach) so mocking occurs in\nsetup rather than inside the test. Locate the inline\nvi.mocked(getActualPackageVersion).mockImplementation(async (pkg: string) => ({\nname: pkg, version: '1.0.0' })) and copy that call into a nested beforeEach\nwithin the same top-level describe('get-known-packages') (or into a new nested\ndescribe for that test), then remove the inline mock from the test body so the\ntest only asserts behavior and uses the mocked implementation from beforeEach.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/telemetry/get-known-packages.test.ts",
+          "line_number": 16,
+          "start_line": 1,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T09:31:34Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f1AmR",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Move the inline mock override into a `beforeEach` (repo Vitest mocking rule).**  \n\nRight now the mock behavior is changed inside the test body (Line 171), which conflicts with the repo\u2019s \u201cmock behaviors in `beforeEach`\u201d guideline. (Based on learnings / coding guidelines)\n\n\n<details>\n<summary>Proposed refactor</summary>\n\n```diff\n-    it('should handle special version specifiers', async () => {\n-      vi.mocked(getActualPackageVersion).mockImplementation(async (pkg: string) => ({\n-        name: pkg,\n-        version: 'file:../some/path',\n-      }));\n-\n+    describe('special version specifiers', () => {\n+      beforeEach(() => {\n+        vi.mocked(getActualPackageVersion).mockImplementation(async (pkg: string) => ({\n+          name: pkg,\n+          version: 'file:../some/path',\n+        }));\n+      });\n+\n+      it('should handle special version specifiers', async () => {\n       const packageJson: PackageJson = {\n         dependencies: {\n           '@testing-library/react': 'file:../some/path',\n           '@emotion/react': 'latest',\n           'styled-components': '*',\n           tailwindcss: 'workspace:*',\n         },\n       };\n\n       const result = await analyzeEcosystemPackages(packageJson);\n\n       expect(result.testPackages).toEqual({\n         '@testing-library/react': 'custom-protocol',\n       });\n\n       expect(result.stylingPackages).toEqual({\n         '@emotion/react': 'latest',\n         'styled-components': 'latest',\n         tailwindcss: 'custom-protocol',\n       });\n-    });\n+      });\n+    });\n```\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/telemetry/get-known-packages.test.ts",
+          "line_number": 197,
+          "start_line": 170,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T09:31:34Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f1iw9",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Tighten typing of `categorizedErrors` (avoid `Record<string, any>`) + fix unique-error comment mismatch.**\n\n`reduce<Record<string, any>>` throws away type-safety, and the \u201cfull error message\u201d comment doesn\u2019t hold given `parseVitestResults()` stores only the first line in `StoryTestResult.error`.  \n\n\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n import type { ErrorCategory } from '../../../shared/utils/categorize-render-errors';\n import {\n   categorizeError,\n   getCategoryDescription,\n } from '../../../shared/utils/categorize-render-errors';\n-import { type ErrorCategorizationResult, type StoryTestResult, type TestRunSummary } from './types';\n+import {\n+  type CategorizedError,\n+  type ErrorCategorizationResult,\n+  type StoryTestResult,\n+  type TestRunSummary,\n+} from './types';\n\n /**\n  * For a given list of test results:\n  *\n  * - Go through failures\n  * - Categorize errors into categories\n  * - Return structured data about the run, with categorized errors instead of the actual error\n  *   messages\n  */\n function extractCategorizedErrors(testResults: StoryTestResult[]): ErrorCategorizationResult {\n   const failed = testResults.filter((r) => r.status === 'FAIL' && r.error);\n\n   const map = new Map<\n     ErrorCategory,\n     { count: number; examples: Set<string>; matchedDependencies: Set<string> }\n   >();\n\n-  // To count unique error messages (by their message, not by category)\n+  // To count unique extracted error messages (by message, not by category)\n   const uniqueErrorMessages = new Set<string>();\n\n   for (const r of failed) {\n     const { category, matchedDependencies } = categorizeError(r.error!, r.stack);\n     const example = r.error!.slice(0, 100);\n@@\n-  const categorizedErrors = Array.from(map.entries()).reduce<Record<string, any>>(\n+  const categorizedErrors = Array.from(map.entries()).reduce<Record<string, CategorizedError>>(\n     (acc, [category, data]) => {\n       acc[category] = {\n         description: getCategoryDescription(category),\n         count: data.count,\n         examples: Array.from(data.examples).slice(0, 3),\n         matchedDependencies: Array.from(data.matchedDependencies).sort(),\n       };\n       return acc;\n     },\n     {}\n   );\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/parse-vitest-report.ts around\nlines 16 - 62, The function extractCategorizedErrors should tighten the typing\nof categorizedErrors and correct the misleading comment about error content:\nreplace the loose reduce<Record<string, any>> with a precise type (e.g., a\nCategoryResult interface and a reduce target like Record<ErrorCategory,\nCategoryResult> or build the final object via Object.fromEntries with the exact\nmapped value type) so the compiler preserves types for\ndescription/count/examples/matchedDependencies; also update the comment about\nuniqueErrorMessages to note that StoryTestResult.error contains only the first\nline (so we\u2019re deduplicating by that stored snippet), and ensure you reference\nStoryTestResult.error when adding to uniqueErrorMessages and when creating\nexamples (example = r.error!.slice(0,100)) so the comment matches actual\nbehavior.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/parse-vitest-report.ts",
+          "line_number": 56,
+          "start_line": 16,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T10:13:03Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f1ixC",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Locate and inspect the file\nfind . -name \"parse-vitest-report.ts\" -type f\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 135\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check file size and location\nwc -l code/core/src/core-server/utils/ghost-stories/parse-vitest-report.ts 2>/dev/null || echo \"File not found at expected path\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 137\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# List files in the directory to understand structure\nls -la code/core/src/core-server/utils/ghost-stories/ 2>/dev/null | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 817\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Read the actual implementation\ncat -n code/core/src/core-server/utils/ghost-stories/parse-vitest-report.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 5419\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check the test file to understand expected input and error scenarios\ncat -n code/core/src/core-server/utils/ghost-stories/parse-vitest-report.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 10016\n\n---\n\n\n\n</details>\n\n**Harden `parseVitestResults()` to handle malformed Vitest output and prevent crashes or invalid metrics.**\n\nThe function unsafely assumes `testResults.testResults` and nested `assertionResults` are present and valid arrays, which will crash if the Vitest output is malformed or incomplete. Additionally, `storyId` can become `undefined`, and `successRateWithoutEmptyRender` can go negative if `passedButEmptyRender` exceeds `passed`.\n\nAdd defensive checks: default arrays with `Array.isArray()`, validate numeric properties with `Number.isFinite()`, compute totals from parsed assertions as fallbacks, clamp the passed-without-empty-render calculation to `>= 0`, and coerce boolean/undefined values safely.\n\n<details>\n<summary>Proposed hardening</summary>\n\n```diff\n export function parseVitestResults(testResults: any): TestRunSummary {\n   const storyTestResults: StoryTestResult[] = [];\n   let passedButEmptyRender = 0;\n\n-  for (const testSuite of testResults.testResults) {\n-    for (const assertion of testSuite.assertionResults) {\n+  const testSuites = Array.isArray(testResults?.testResults) ? testResults.testResults : [];\n+\n+  for (const testSuite of testSuites) {\n+    const assertions = Array.isArray(testSuite?.assertionResults) ? testSuite.assertionResults : [];\n+    for (const assertion of assertions) {\n       const storyId = assertion.meta?.storyId || assertion.fullName;\n@@\n       storyTestResults.push({\n-        storyId,\n+        storyId: storyId ?? 'unknown',\n         status,\n         error,\n         stack,\n       });\n     }\n   }\n\n-  const total = testResults.numTotalTests;\n-  const passed = testResults.numPassedTests;\n-  const failed = testResults.numFailedTests;\n+  const total = Number.isFinite(testResults?.numTotalTests)\n+    ? testResults.numTotalTests\n+    : storyTestResults.length;\n+  const passed = Number.isFinite(testResults?.numPassedTests)\n+    ? testResults.numPassedTests\n+    : storyTestResults.filter((r) => r.status === 'PASS').length;\n+  const failed = Number.isFinite(testResults?.numFailedTests)\n+    ? testResults.numFailedTests\n+    : storyTestResults.filter((r) => r.status === 'FAIL').length;\n+\n   const successRate = total > 0 ? parseFloat((passed / total).toFixed(2)) : 0;\n   const failureRate = total > 0 ? parseFloat((failed / total).toFixed(2)) : 0;\n+  const passedWithoutEmptyRender = Math.max(0, passed - passedButEmptyRender);\n   const successRateWithoutEmptyRender =\n-    total > 0 ? parseFloat(((passed - passedButEmptyRender) / total).toFixed(2)) : 0;\n+    total > 0 ? parseFloat((passedWithoutEmptyRender / total).toFixed(2)) : 0;\n@@\n   const enhancedResponse: TestRunSummary = {\n-    success: testResults.success,\n+    success: Boolean(testResults?.success),\n     summary,\n   };\n```\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/parse-vitest-report.ts",
+          "line_number": 128,
+          "start_line": 59,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T10:13:03Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f1ixJ",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**\u201cNo `fn` import\u201d test can false-pass if the transform fails to emit any tests.** \n\nRight now it only asserts absence of the `fn` import; it should also assert that a component test was generated (or that `getComponentArgTypes` was called), otherwise a regression that skips transforming components could still pass.\n\n<details>\n<summary>Concrete tweak</summary>\n\n```diff\n     const result = await componentTransform({\n       code,\n       fileName: 'src/components/Badge.tsx',\n       getComponentArgTypes: mockGetComponentArgTypes,\n     });\n\n+    expect(mockGetComponentArgTypes).toHaveBeenCalledWith({\n+      componentName: 'Badge',\n+      fileName: 'src/components/Badge.tsx',\n+    });\n+    expect(result.code).toContain('_test(\"Badge\", _testStory({');\n     expect(result.code).not.toContain('import { fn as _fn } from \"storybook/test\"');\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  it('does not add fn import when no function placeholders exist', async () => {\n    const code = `\n      import { Body } from '../typography';\n\n      export const Badge = ({ text }: { text: string }) => (\n        <div>\n          <Body>{text}</Body>\n        </div>\n      );\n    `;\n\n    const mockGetComponentArgTypes = vi.fn().mockResolvedValue({\n      rating: { name: 'rating', type: { name: 'number' } },\n      photoUrl: { name: 'photoUrl', type: { name: 'string', required: true } },\n    });\n\n    const result = await componentTransform({\n      code,\n      fileName: 'src/components/Badge.tsx',\n      getComponentArgTypes: mockGetComponentArgTypes,\n    });\n\n    expect(mockGetComponentArgTypes).toHaveBeenCalledWith({\n      componentName: 'Badge',\n      fileName: 'src/components/Badge.tsx',\n    });\n    expect(result.code).toContain('_test(\"Badge\", _testStory({');\n    expect(result.code).not.toContain('import { fn as _fn } from \"storybook/test\"');\n  });\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/csf-tools/vitest-plugin/component-transformer.test.ts around\nlines 216 - 240, The test \"does not add fn import when no function placeholders\nexist\" only checks for absence of the fn import and can false-pass if\ntransformation produced no tests; update the test that calls componentTransform\n(use the existing mockGetComponentArgTypes and result variables) to also assert\nthat the transform ran by expecting mockGetComponentArgTypes toHaveBeenCalled()\nor expecting result.code to include a generated test marker (e.g., component\nname Badge or string 'describe' / 'it') so the absence of the import is only\nvalidated when a component test was actually emitted.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/csf-tools/vitest-plugin/component-transformer.test.ts",
+          "line_number": 240,
+          "start_line": 216,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T10:13:04Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f5gsL",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Potential null/undefined access on `lastEvents`.**\n\nIf `getLastEvents()` returns `undefined` or `null`, accessing `lastEvents?.init` is safe due to optional chaining, but `lastEvents['ghost-stories']` on line 40 could throw if `lastEvents` is `null`.\n\n\n<details>\n<summary>\ud83d\udd27 Proposed fix for consistent optional access</summary>\n\n```diff\n       const lastInit = lastEvents?.init;\n-      const lastGhostStoriesRun = lastEvents['ghost-stories'];\n+      const lastGhostStoriesRun = lastEvents?.['ghost-stories'];\n       if (\n         lastGhostStoriesRun ||\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n      const lastEvents = await getLastEvents();\n      const sessionId = await getSessionId();\n      const lastInit = lastEvents?.init;\n      const lastGhostStoriesRun = lastEvents?.['ghost-stories'];\n      if (\n        lastGhostStoriesRun ||\n        (lastInit?.body?.sessionId && lastInit?.body?.sessionId !== sessionId)\n      ) {\n        return;\n      }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/server-channel/ghost-stories-channel.ts around\nlines 37 - 46, The code risks accessing lastEvents['ghost-stories'] when\ngetLastEvents() can return null/undefined; change the access to use optional\nchaining (e.g., assign lastGhostStoriesRun = lastEvents?.['ghost-stories'] or\notherwise guard lastEvents first) so both lastEvents?.init and the ghost-stories\nlookup are consistently safe, keeping the existing condition logic intact in\nghost-stories-channel.ts around getLastEvents(), lastInit, and\nlastGhostStoriesRun.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 4818978",
+          "file_path": "code/core/src/core-server/server-channel/ghost-stories-channel.ts",
+          "line_number": 46,
+          "start_line": 37,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T15:01:16Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f5gsc",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Potential edge case: empty `propName` returns empty string instead of fallback.**\n\nWhen `propName` is `undefined`, `name` becomes `''` (line 159). Then `name ?? 'Hello world'` (line 189) returns `''` because nullish coalescing (`??`) treats empty string as a valid value.\n\nIf the intent is to use `'Hello world'` when no meaningful name exists, consider using `||` instead:\n\n<details>\n<summary>\ud83d\udc1b Proposed fix</summary>\n\n```diff\n         default:\n-          return name ?? 'Hello world';\n+          return name || 'Hello world';\n       }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    case 'string': {\n      const name = propName ?? '';\n      const tokens = tokenize(name);\n      if (hasAny(tokens, COLOR_TOKENS)) {\n        return '#ff4785';\n      }\n\n      if (hasAny(tokens, DATE_TOKENS)) {\n        return new Date().toLocaleDateString();\n      }\n\n      const mostLikelyType = getMostLikelyTypeFromTokens(tokens);\n\n      if (options?.skipUrlGeneration && (mostLikelyType === 'image' || mostLikelyType === 'url')) {\n        return name;\n      }\n\n      switch (mostLikelyType) {\n        case 'image':\n          return 'https://placehold.co/600x400?text=Storybook';\n\n        case 'url':\n          return 'https://example.com';\n\n        case 'email':\n          return 'storybook@example.com';\n\n        case 'phone':\n          return '1234567890';\n\n        default:\n          return name || 'Hello world';\n      }\n    }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/get-dummy-args-from-argtypes.ts around lines\n158 - 191, The string-case branch uses propName -> name and falls back with\nnullish coalescing (name ?? 'Hello world'), which treats empty string as valid\nand returns ''. Update the fallback logic in the string case (the variable name\nand the final return) to treat empty/whitespace as missing \u2014 e.g., replace the\nnullish-coalescing fallback with a truthy check such as return (name &&\nname.trim()) ? name : 'Hello world' or use name || 'Hello world' so an empty\npropName yields the 'Hello world' default.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/get-dummy-args-from-argtypes.ts",
+          "line_number": 191,
+          "start_line": 158,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T15:01:16Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f5gsq",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Captured error message is unused.**\n\nThe `errorMessage` variable captures the error details but is not included in the return object or logged. Consider logging it for debugging purposes.\n\n<details>\n<summary>\ud83d\udc1b Proposed fix</summary>\n\n```diff\n   } catch (error: unknown) {\n     const errorMessage = error instanceof Error ? error.message : String(error);\n+    logger.debug(`Failed to find candidates: ${errorMessage}`);\n     return {\n       candidates: [],\n       error: 'Failed to find candidates',\n       globMatchCount,\n     };\n   }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  } catch (error: unknown) {\n    const errorMessage = error instanceof Error ? error.message : String(error);\n    logger.debug(`Failed to find candidates: ${errorMessage}`);\n    return {\n      candidates: [],\n      error: 'Failed to find candidates',\n      globMatchCount,\n    };\n  }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/get-candidates.ts around lines\n188 - 194, The catch block captures errorMessage but never uses it; update the\ncatch in getCandidates (or the function containing the try/catch) to include the\ncaptured error details by either adding error: `Failed to find candidates:\n${errorMessage}` to the returned object or logging the errorMessage before\nreturning (e.g., via console.error or the module logger). Keep globMatchCount in\nthe return as-is and ensure the variable name errorMessage is used so the actual\nerror content is surfaced for debugging.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/get-candidates.ts",
+          "line_number": 194,
+          "start_line": 188,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T15:01:16Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f5gsx",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# First, find where executeCommand is imported from\ngrep -r \"executeCommand\" code/core/src/core-server/utils/ghost-stories/run-story-tests.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 196\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Find the executeCommand implementation\nfd -t f \"command.ts\" \"command.js\" | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 162\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for executeCommand function definition\nrg -l \"export.*executeCommand\" --type ts --type js code/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 102\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Read the executeCommand implementation\ncat -n code/core/src/common/utils/command.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4914\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check how other callers of executeCommand handle env\nrg \"executeCommand\\(\" -A 10 code/ --type ts --type js | grep -A 10 \"env:\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4178\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check execa version and any configuration\ngrep -r \"execa\" code/core/package.json\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 87\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for any tests or comments about execa env behavior\nrg \"env:\" code/core/src/common/utils/command.ts -B 5 -A 5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 349\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check if there are any tests for executeCommand to understand env behavior\nfd \"command.*test\" code/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 621\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check one of the test files to see if they test env behavior\nhead -100 code/lib/create-storybook/src/commands/DependencyInstallationCommand.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3694\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for any documentation or comments about execa's env handling\nrg \"process.env\" code/core/src/common/ --type ts -A 2 -B 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 9230\n\n---\n\n\n\n</details>\n\n**Environment variables must be inherited from process.env.**\n\nThe `env` option only sets `STORYBOOK_COMPONENT_PATHS` without inheriting system and Node.js environment variables. This breaks Vitest execution since it requires PATH, NODE_ENV, and other variables to function. The fix is to spread `process.env`:\n\n<details>\n<summary>Required fix</summary>\n\n```diff\n       const testProcess = executeCommand({\n         command: 'npx',\n         args: [\n           'vitest',\n           'run',\n           '--Reporter=json',\n           '--testTimeout=1000',\n           `--outputFile=${outputFile}`,\n           ...componentFilePaths,\n         ],\n         stdio: 'pipe',\n         env: {\n+          ...process.env,\n           STORYBOOK_COMPONENT_PATHS: componentFilePaths.join(';'),\n         },\n       });\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/run-story-tests.ts around\nlines 27 - 41, The env passed to executeCommand when spawning the Vitest process\ncurrently only sets STORYBOOK_COMPONENT_PATHS and omits inheriting the parent\nenvironment; update the env for the call that creates testProcess (the\nexecuteCommand invocation) to spread process.env and then set\nSTORYBOOK_COMPONENT_PATHS (e.g., env: { ...process.env,\nSTORYBOOK_COMPONENT_PATHS: componentFilePaths.join(';') }) so PATH, NODE_ENV and\nother required variables are preserved while still injecting the story paths.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/run-story-tests.ts",
+          "line_number": 41,
+          "start_line": 27,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T15:01:16Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f5gs4",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Harden the type-guards against non-object inputs (avoid `'in'` throwing).**  \n\nToday `isElementsType()` uses `'elements' in value` (Line 28). If `react-docgen` ever returns `null`, a string-ish sentinel, or any non-object here, this will throw and force a `null` return from `getComponentDocgen` via the `catch` (silent-ish).  \n\n\n<details>\n<summary>Proposed diff</summary>\n\n```diff\n function isElementsType(value: ReactDocgenTsType): value is ReactDocgenElementsType {\n-  return 'elements' in value;\n+  return Boolean(value && typeof value === 'object' && 'elements' in value);\n }\n \n function isObjectSignatureType(value: ReactDocgenTsType): value is ReactDocgenObjectSignatureType {\n-  return value.name === 'signature' && (value as ReactDocgenObjectSignatureType).type === 'object';\n+  return (\n+    Boolean(value && typeof value === 'object') &&\n+    value.name === 'signature' &&\n+    (value as ReactDocgenObjectSignatureType).type === 'object'\n+  );\n }\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/renderers/react/src/componentManifest/reactDocgen/extractDocgenInfo.ts\naround lines 27 - 37, The three type-guard functions can throw when given\nnon-objects; update isElementsType, isObjectSignatureType, and isLiteralType to\nfirst ensure value is a non-null object (e.g. value !== null && typeof value ===\n'object') before checking properties, and use safe property checks (like\n'elements' in value or checking value.name only after confirming it's an object)\nso guards never access properties on primitives or null.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/reactDocgen/extractDocgenInfo.ts",
+          "line_number": 37,
+          "start_line": 27,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T15:01:16Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f5gs-",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Prefer deterministic docgen selection (don\u2019t assume `docgens[0]` is \u201cdefault export\u201d).**  \n\nWhen `componentName` isn\u2019t provided, `getComponentDocgen()` returns `docgens[0]` (Line 186-190). If `react-docgen` order changes (or multiple components exist), you may end up extracting argTypes for a non-primary component.  \n\n\n<details>\n<summary>Proposed diff</summary>\n\n```diff\n-    // Otherwise, return the first component found (typically the default export)\n-    const firstDocgen = docgens[0];\n+    // Otherwise, prefer the default export when available; fallback to first\n+    const firstDocgen = docgens.find((d) => d.exportName === 'default') ?? docgens[0];\n     return {\n       componentName: firstDocgen.actualName || firstDocgen.displayName || 'Unknown',\n       reactDocgen: { type: 'success', data: firstDocgen },\n     };\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/renderers/react/src/componentManifest/reactDocgen/extractDocgenInfo.ts\naround lines 153 - 195, getComponentDocgen currently returns docgens[0] when no\ncomponentName is given, which is nondeterministic; update it to\ndeterministically pick the primary component by inspecting docgens entries (use\nexportName === 'default' first, then any entry with a truthy exportName, then\nfall back to actualName or displayName, and finally pick the first sorted by\ncomponent name) \u2014 locate getComponentDocgen and replace the \u201cconst firstDocgen =\ndocgens[0]\u201d logic with a selection routine that prefers docgen.exportName ===\n'default', then docgen.exportName, then docgen.actualName/displayName, and as a\nlast resort picks a stable choice (e.g., sort docgens by\n(actualName||displayName||exportName) and take the first); keep error handling\nand return shape unchanged.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/reactDocgen/extractDocgenInfo.ts",
+          "line_number": 195,
+          "start_line": 153,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T15:01:16Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f6TTW",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Use `expect.any(Number)` for timing-based stats to avoid flaky tests.**\n\nThe exact value expectations for `candidateAnalysisDuration: 0` and `totalRunDuration: 0` could fail intermittently since these are calculated using `Date.now()` differences. Even with mocked async functions resolving immediately, timing can vary across systems.\n\nOther tests in this file correctly use `expect.any(Number)` for these fields (e.g., lines 192-197, 297-302).\n\n\n<details>\n<summary>\ud83d\udd27 Proposed fix</summary>\n\n```diff\n         expect(mockTelemetry.telemetry).toHaveBeenCalledWith('ghost-stories', {\n           success: false,\n           error: 'Failed to analyze components',\n           stats: {\n             globMatchCount: 0,\n-            candidateAnalysisDuration: 0,\n-            totalRunDuration: 0,\n+            candidateAnalysisDuration: expect.any(Number),\n+            totalRunDuration: expect.any(Number),\n             analyzedCount: 0,\n             avgComplexity: 0,\n             candidateCount: 0,\n           },\n         });\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n        expect(mockTelemetry.telemetry).toHaveBeenCalledWith('ghost-stories', {\n          success: false,\n          error: 'Failed to analyze components',\n          stats: {\n            globMatchCount: 0,\n            candidateAnalysisDuration: expect.any(Number),\n            totalRunDuration: expect.any(Number),\n            analyzedCount: 0,\n            avgComplexity: 0,\n            candidateCount: 0,\n          },\n        });\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/server-channel/ghost-stories-channel.test.ts\naround lines 439 - 450, The test assertion for mockTelemetry.telemetry in the\n'ghost-stories' spec is asserting exact zero durations which is flaky; update\nthe expected stats object so candidateAnalysisDuration and totalRunDuration use\nexpect.any(Number) instead of 0 (leave other fields as-is) to match the pattern\nused elsewhere in this test file and avoid timing-dependent failures when\nasserting mockTelemetry.telemetry for 'ghost-stories'.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/server-channel/ghost-stories-channel.test.ts",
+          "line_number": 450,
+          "start_line": 439,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T15:49:46Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f6TTo",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Apply same fix for timing stats here.**\n\nSame issue as above - exact values for duration stats could be flaky.\n\n\n<details>\n<summary>\ud83d\udd27 Proposed fix</summary>\n\n```diff\n         expect(mockTelemetry.telemetry).toHaveBeenCalledWith('ghost-stories', {\n           success: false,\n           error: 'JSON report not found',\n           stats: {\n             globMatchCount: 5,\n-            candidateAnalysisDuration: 0,\n-            totalRunDuration: 0,\n+            candidateAnalysisDuration: expect.any(Number),\n+            totalRunDuration: expect.any(Number),\n             analyzedCount: 2,\n             avgComplexity: 1.0,\n             candidateCount: 1,\n-            testRunDuration: 0,\n+            testRunDuration: expect.any(Number),\n           },\n         });\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n        expect(mockTelemetry.telemetry).toHaveBeenCalledWith('ghost-stories', {\n          success: false,\n          error: 'JSON report not found',\n          stats: {\n            globMatchCount: 5,\n            candidateAnalysisDuration: expect.any(Number),\n            totalRunDuration: expect.any(Number),\n            analyzedCount: 2,\n            avgComplexity: 1.0,\n            candidateCount: 1,\n            testRunDuration: expect.any(Number),\n          },\n        });\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/server-channel/ghost-stories-channel.test.ts\naround lines 525 - 537, The test asserts exact numeric timing values in the\ntelemetry payload for 'ghost-stories' (the expect(mockTelemetry.telemetry)...\ncall), which is flaky; update the assertion so timing stats\n(candidateAnalysisDuration, totalRunDuration, testRunDuration and any other\nduration fields) are matched loosely instead of exact numbers (e.g., use value\nmatchers like expect.any(Number) or assert via expect.objectContaining for the\nstats object) while keeping the other exact fields (globMatchCount,\nanalyzedCount, avgComplexity, candidateCount, error, success) unchanged.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/server-channel/ghost-stories-channel.test.ts",
+          "line_number": 537,
+          "start_line": 525,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T15:49:46Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f6TTw",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Apply same fix for timing stats here.**\n\nSame timing-sensitivity issue applies.\n\n\n<details>\n<summary>\ud83d\udd27 Proposed fix</summary>\n\n```diff\n         expect(mockTelemetry.telemetry).toHaveBeenCalledWith('ghost-stories', {\n           success: false,\n           error: 'Startup Error',\n           stats: {\n             globMatchCount: 5,\n-            candidateAnalysisDuration: 0,\n-            totalRunDuration: 0,\n+            candidateAnalysisDuration: expect.any(Number),\n+            totalRunDuration: expect.any(Number),\n             analyzedCount: 2,\n             avgComplexity: 1.0,\n             candidateCount: 1,\n-            testRunDuration: 0,\n+            testRunDuration: expect.any(Number),\n           },\n         });\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n        expect(mockTelemetry.telemetry).toHaveBeenCalledWith('ghost-stories', {\n          success: false,\n          error: 'Startup Error',\n          stats: {\n            globMatchCount: 5,\n            candidateAnalysisDuration: expect.any(Number),\n            totalRunDuration: expect.any(Number),\n            analyzedCount: 2,\n            avgComplexity: 1.0,\n            candidateCount: 1,\n            testRunDuration: expect.any(Number),\n          },\n        });\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/server-channel/ghost-stories-channel.test.ts\naround lines 580 - 592, The test is brittle because it asserts exact timing\nvalues; update the assertion on mockTelemetry.telemetry for the 'ghost-stories'\ncall so timing stats are matched with flexible matchers (e.g., replace literal 0\nfor candidateAnalysisDuration, totalRunDuration, and testRunDuration with\nexpect.any(Number) or the equivalent matcher), keeping deterministic fields\n(analyzedCount, candidateCount, avgComplexity, globMatchCount, etc.) as-is so\nthe test no longer fails due to small timing variance.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/server-channel/ghost-stories-channel.test.ts",
+          "line_number": 592,
+          "start_line": 580,
+          "commit_sha": "48189788a6f0278f29abd23ba753192ef1d50bdc",
+          "created_at": "2026-01-12T15:49:46Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 47
+}

@@ -1,0 +1,193 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3876,
+  "title": "Documentation minima hopping",
+  "body": "This replaces !3827 and solves #1774\nDeprecation message was added.",
+  "author": "HannaTuerk",
+  "merged_at": "2025-10-27T19:47:29.188Z",
+  "base_ref": "master",
+  "merge_commit_sha": "0529e14cad1d63452370e7f93ebf6330a26a512b",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2845901378",
+          "author": "askhl",
+          "body": "nicer/more modern `FixAtoms(mask=slab.symbols == 'Pt')`",
+          "file_path": "examples/tutorials/constrained_minima_hopping.py",
+          "line_number": 69,
+          "commit_sha": "bf48a4e6cb4dd2b78febed6c17184f55159b41fe",
+          "base_sha": "a620e93fd36fe78c6341df96acf8192cce85baf6",
+          "created_at": "2025-10-26T22:36:48.420Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Redundancy Handling",
+          "label_confidence": "medium",
+          "label_reasoning": "Suggests a more concise/modern way to express the FixAtoms mask, reducing unnecessary complexity in the code."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a specific code change to use a more modern/nicer syntax for FixAtoms."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2845901384",
+          "author": "askhl",
+          "body": "It is strange that we would make it periodic in Z when we are modelling an actual slab, and `fcc110()` returns the slab precisely how we'd want it (periodic in xy).  Can we avoid setting pbc?",
+          "file_path": "examples/tutorials/constrained_minima_hopping.py",
+          "line_number": 66,
+          "commit_sha": "bf48a4e6cb4dd2b78febed6c17184f55159b41fe",
+          "base_sha": "a620e93fd36fe78c6341df96acf8192cce85baf6",
+          "created_at": "2025-10-26T22:36:49.369Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "Setting pbc in Z for a slab model does not match the intended behavior \u2014 the code's behavior deviates from what is physically/logically intended when modeling a surface slab."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions the use of Z-periodic boundary conditions and asks to avoid setting pbc, implying a code change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2845901385",
+          "author": "askhl",
+          "body": "I think these three lines can be replaced by `i_cu0, i_cu1 = atoms.symbols.search('Cu')`",
+          "file_path": "examples/tutorials/constrained_minima_hopping.py",
+          "line_number": 127,
+          "commit_sha": "bf48a4e6cb4dd2b78febed6c17184f55159b41fe",
+          "base_sha": "a620e93fd36fe78c6341df96acf8192cce85baf6",
+          "created_at": "2025-10-26T22:36:49.525Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Redundancy Handling",
+          "label_confidence": "high",
+          "label_reasoning": "Three lines of code can be replaced by a single, cleaner expression, indicating unnecessary verbosity/redundancy."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests replacing three lines with a specific one-liner alternative."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2845901388",
+          "author": "askhl",
+          "body": "The best practice for reproducible random simulations is to create a seeded RNG (not touching the global one) and passing it around.  (See e.g. https://blog.scientific-python.org/numpy/numpy-rng/)\n\nWe aspire for all code to offer a default `rng` keyword which defaults to `np.random`, see e.g. `ase.md.velocitydistribution`.\n\nUnfortunately I can see that the minimahopping module does not offer an rng keyword, forcing the caller to seed the global generator.  Since that's unintended would you mind adding an `rng` keyword to minimahopping so the user can control randomness without touching the global generator?  Something like:\n\n```\nrng = np.random.default_rng(42)\nMinimaHopping(..., rng=rng)\n```",
+          "file_path": "examples/tutorials/constrained_minima_hopping.py",
+          "line_number": 57,
+          "commit_sha": "bf48a4e6cb4dd2b78febed6c17184f55159b41fe",
+          "base_sha": "a620e93fd36fe78c6341df96acf8192cce85baf6",
+          "created_at": "2025-10-26T22:36:49.694Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "high",
+          "label_reasoning": "The code seeds the global random number generator rather than using a seeded RNG passed through the API, which is incorrect usage of the randomness API and the MinimaHopping interface."
+        },
+        {
+          "id": "2846373819",
+          "author": "HannaTuerk",
+          "body": "Thanks for the suggestions and careful reading of the example @askhl , adding a rng to the function is a good idea, I will add it to the function and test it! :)",
+          "file_path": "examples/tutorials/constrained_minima_hopping.py",
+          "line_number": 57,
+          "commit_sha": "bf48a4e6cb4dd2b78febed6c17184f55159b41fe",
+          "base_sha": "a620e93fd36fe78c6341df96acf8192cce85baf6",
+          "created_at": "2025-10-27T08:08:47.755Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding an `rng` keyword to the minimahopping module to support seeded RNG without touching the global generator."
+    }
+  ],
+  "review_thread_count": 6,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2845901974",
+            "author": "askhl",
+            "body": "Again this looks very good :thumbsup:",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-26T22:39:31.891Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment/praise with no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2848231756",
+            "author": "askhl",
+            "body": "Thanks @HannaTuerk, merging!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-27T19:47:23.658Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Meta-discussion about PR merge logistics, not a code change."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 6,
+    "stage1_kept": 6,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 2,
+    "stage3_cost_usd": 0.017199250000000003
+  }
+}

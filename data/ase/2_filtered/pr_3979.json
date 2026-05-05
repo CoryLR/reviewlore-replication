@@ -1,0 +1,346 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3979,
+  "title": "added new plotting functions plot_only_atoms and modified plot_atoms to take ax_ params",
+  "body": "Here: Your concise description of the content of this merge request.\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [ ] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [ ] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [ ] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [ ] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [ ] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "HannaTuerk",
+  "merged_at": "2026-03-10T11:06:33.683Z",
+  "base_ref": "master",
+  "merge_commit_sha": "fba8809753c7038a041cfc752fec9368d7df4faa",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3092691306",
+          "author": "ajjackson",
+          "body": "Thanks Hanna for bringing this up. We had a chat together with Ask during the doc sprint, agreeing to something along the lines of\n\n```python\ndef plot_atoms(atoms: Atoms | Sequence[Atoms], ax=None, **parameters) -> Axes:\n\n    if ax is None:\n        _, ax = plt.subplots()\n\n    if not isinstance(atoms, Atoms):\n        if len(atoms) == 1 and isinstance(atoms[0], Atoms):\n            atoms = atoms[0]\n        else:\n            raise TypeError()\n\n    plot_atoms_raw(atoms, ax, **parameters)\n\n    ax.deletestuff()\n\n    return ax\n\ndef plot_atoms_raw(atoms: Atoms, ax: Axes, **parameters) -> Axes:\n    ...\n```\n\nThe downside is that it makes breaking changes to `plot_atoms`. But overall it leads to a nice maintainable structure where opinions and special-cases are contained in the outer function and if people are doing something more custom they should just call the inner one directly.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-18T10:02:15.286Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Proposes a concrete refactoring with specific code showing a new function structure and API design."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3131643622",
+          "author": "ajjackson",
+          "body": "I agree it would be simpler not to have this. And for tutorial purposes it is probably better to show people the \"normal way\" of fine-tuning Matplotlib plots.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-04T15:23:02.494Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Implies removing something (ax_parameters) and suggests showing the 'normal way' in tutorials \u2014 implies a code/doc change."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3131709438",
+          "author": "ajjackson",
+          "body": "While removing `ax_parameters` I also changed some `**parameters` to `**kwargs`. If people have strong opinions about that I won't resist changing back; it just seemed more idiomatic...",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-04T15:40:05.057Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a naming change (parameters \u2192 kwargs) and invites pushback, implying a potential revert is on the table."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3145635610",
+          "author": "askhl",
+          "body": "I would use\n\n```\n:func:`ase.visualize.plot.plot_atoms_raw`\n```\n\nand further down\n\n```\n:func:`~ase.visualize.plot.plot_atoms`\n```\n\nto sorten the shown importpath",
+          "file_path": "changelog.d/20260302_142033_a.j.jackson_new_plotting_function_no_plt_axis.rst",
+          "line_number": 15,
+          "commit_sha": "e7f348bffc208fc7fdda1478247574a7de0c73f2",
+          "base_sha": "0f25fae9585b5cc5094421e02a6262f6252cbd37",
+          "created_at": "2026-03-10T10:26:08.285Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests specific changes to RST doc references to use shorter import paths."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3145635690",
+          "author": "askhl",
+          "body": "let's ruff the file once and for all, while we are at it",
+          "file_path": "ase/visualize/plot.py",
+          "line_number": 1,
+          "commit_sha": "2a1ead94b80b8eada4dc490b28dac65c1dd8df8d",
+          "base_sha": "dab7bc8cdedf4a41b2c8832891a7b693978839a1",
+          "created_at": "2026-03-10T10:26:09.556Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3145712630",
+          "author": "ajjackson",
+          "body": "I had this earmarked as an easy one to `ruff format` once it's in, but didn't want to clutter the diff for code review?",
+          "file_path": "ase/visualize/plot.py",
+          "line_number": 1,
+          "commit_sha": "2a1ead94b80b8eada4dc490b28dac65c1dd8df8d",
+          "base_sha": "dab7bc8cdedf4a41b2c8832891a7b693978839a1",
+          "created_at": "2026-03-10T10:46:15.086Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3145737683",
+          "author": "ajjackson",
+          "body": "I guess if everyone is happy I can ruff format just before merge.",
+          "file_path": "ase/visualize/plot.py",
+          "line_number": 1,
+          "commit_sha": "2a1ead94b80b8eada4dc490b28dac65c1dd8df8d",
+          "base_sha": "dab7bc8cdedf4a41b2c8832891a7b693978839a1",
+          "created_at": "2026-03-10T10:52:21.300Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests running ruff (linter/formatter) on the file."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3145635702",
+          "author": "askhl",
+          "body": "shorten lines instead of noqa?",
+          "file_path": "ase/visualize/plot.py",
+          "line_number": 100,
+          "commit_sha": "e7f348bffc208fc7fdda1478247574a7de0c73f2",
+          "base_sha": "0f25fae9585b5cc5094421e02a6262f6252cbd37",
+          "created_at": "2026-03-10T10:26:09.771Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3145735517",
+          "author": "ajjackson",
+          "body": "I don't even see any long lines, let's remove it.",
+          "file_path": "ase/visualize/plot.py",
+          "line_number": 100,
+          "commit_sha": "e7f348bffc208fc7fdda1478247574a7de0c73f2",
+          "base_sha": "0f25fae9585b5cc5094421e02a6262f6252cbd37",
+          "created_at": "2026-03-10T10:51:43.731Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests shortening lines instead of using noqa suppression comments."
+    }
+  ],
+  "review_thread_count": 12,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3131152920",
+            "author": "HannaTuerk",
+            "body": "Hey @ajjackson , thanks for implementing this. I think it does not make sense to have the possibility to give additional axis keywords with the 'ax_'parameters in case we turn of the axis anyways. This is very confusing as many properties that are set e.g., axis labels will not be displayed in case the axis is turned off.\nI suggest we either:\n-  get rid of this additional feature since one can pass in an axis and modify everything else outside of ase or\n- we need to provide a flag to turn off of the axis within the function (with default False to avoid confusion where labels went).",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-04T13:31:09.635Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3131657218",
+            "author": "HannaTuerk",
+            "body": "ok, then let's remove this. Do you want to or shall I?\nI will add an issue for to add a tutorial on the intended usage of these functions on the tutorial milestone for now",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-04T15:27:07.685Z",
+            "is_outdated": false
+          },
+          {
+            "id": "3131705447",
+            "author": "ajjackson",
+            "body": "done!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-04T15:39:00.373Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3124813696",
+            "author": "ajjackson",
+            "body": "@HannaTuerk @askhl Ok I think I have done what was intended. Any thoughts?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-02T14:32:17.849Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Meta-discussion/status update asking for review, no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3135232746",
+            "author": "ajjackson",
+            "body": "Pipeline is passing now, I had done some bad formatting in the scriv note :upside_down: \n\nI think this is ready to go, but having edited it a lot probably best if Ask can give it a once-over.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-05T15:35:43.683Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Status update about pipeline passing and readiness to merge; no code change suggested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3145636901",
+            "author": "askhl",
+            "body": "Please feel free to ignore some/all of my comments and merge if you prefer.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-10T10:26:30.189Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Meta/social comment giving permission to ignore feedback and merge; no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3145789818",
+            "author": "ajjackson",
+            "body": "All done! Thanks everyone :smile:",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-10T11:07:39.017Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment/social comment with no code feedback."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 12,
+    "stage1_kept": 10,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 2,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 4,
+    "stage3_cost_usd": 0.021872250000000003
+  }
+}

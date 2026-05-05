@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 3,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Imports `dirname`, `join`, and `resolve` from `node:path` instead of `pathe`. The rest of this package (including `ChangeDetectionService.ts`) uses `pathe`, which always emits forward-slash paths regardless of platform. `node:path` on Windows produces backslash paths, so any path returned by `getGitDir` (e.g., `C:\\repo\\.git`) will be inconsistent with the forward-slash paths produced by `normalizePath` elsewhere. Change this import to `from 'pathe'` (or the platform-normalized alias used in the rest of the codebase).",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 114,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Both the `'head'` watcher and the `'packedRefs'` watcher are registered on the same path (`gitDir`, e.g. `/repo/.git`). Because a single `fs.watch` call is made per registration, any filesystem event inside the git directory triggers *both* listeners independently, causing `emitGitStateChange()` to fire twice per event. More subtly, the `'head'` callback also calls `reconfigureBranchWatcher(gitDir)` \u2014 so on a `git push` (which updates `packed-refs` but not `HEAD`) the branch watcher is unnecessarily torn down and rebuilt. The `WatcherKey` names `'head'` and `'packedRefs'` strongly imply the watchers cover distinct paths; the actual behavior contradicts that. Consider watching `.git/HEAD` and `.git/packed-refs` as individual files (watching their parent directory to catch atomic renames), or consolidate into a single directory watcher with a single `onChange` that handles both cases.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 95,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`onGitStateChange` silently replaces any existing callback without any diagnostic. The comment explains this is intentional, but there is no dev-time guard to surface accidental double-subscription. Adding a `DEV && this.gitStateCallback && console.warn(...)` check (or a simple invariant throw in non-production builds) would catch misuse early, since the displaced subscription is impossible to detect at the call site.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.ts",
+      "line_number": 54,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Both the raw `absolutePath` and its `normalizePath(absolutePath)` are registered as separate keys in `storyIdsByFile` (via `addStoryId`). On POSIX the two keys are identical, making one of the two calls a no-op. On Windows the non-normalized key is never looked up: `findAffectedStoryFiles` starts from a normalized `changedFile` and traverses a `normalizedModuleGraph`, so all returned story-file paths are normalized and only the normalized key is ever queried. The non-normalized key insertion is dead code in both cases. It also doubles the size of the map on Windows. Consider removing the `addStoryId(absolutePath, entry.id)` call and keeping only the normalized form, or (if `ModuleNode.file` values can be non-normalized) normalizing them at the source.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.ts",
+      "line_number": 256,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`nodes.forEach((node) => void existingNodes.add(node))` \u2014 `Set.prototype.add` returns `Set<T>`, not a `Promise`. The `void` operator is a well-understood signal for intentionally floating a Promise; using it on a synchronous return value is misleading and may confuse future readers into thinking something asynchronous is being discarded. Either remove `void` entirely, or rewrite as `existingNodes.add(node)` directly.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.test.ts",
+      "line_number": 107,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`void callback` inside the default `onGitStateChangeMock` implementation is an unusual way to silence an unused-parameter lint warning. The conventional TypeScript idiom is to prefix unused parameters with `_`, i.e., rename the parameter to `_callback`. Using `void` on a non-Promise value is also semantically incorrect (see the corresponding issue in `ChangeDetectionService.ts`) and reads as if something async is being discarded.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `MockGitDiffProvider` class in the test file is a clean improvement over the inline ad-hoc objects that previously stubbed `getChangedFiles` and `getRepoRoot`. Extending the real `GitDiffProvider` ensures type compatibility is always enforced and that any new public method added to the class will immediately require a corresponding override in the mock \u2014 making omissions visible at compile time rather than at runtime.",
+      "index": 6
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `WatcherKey` union (`'branch' | 'head' | 'packedRefs'`) is a nice mechanism for tracking watcher identity, but its semantics become confusing alongside the implementation detail that `'head'` and `'packedRefs'` currently watch the same directory path. If the two-watchers-on-the-same-path design is retained intentionally, a code comment explaining *why* two separate registrations are kept (e.g., different `onChange` semantics leading to different `clearWatcher` behavior) would prevent future readers from collapsing them into one.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.70652145,
+  "duration_seconds": 558.3931329250336
+}

@@ -1,0 +1,52 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 28,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `includes('ondevice')` check is case-sensitive. All current Storybook on-device packages (`@storybook/addon-ondevice-controls`, etc.) are lowercase, so this works today. However, a third-party or custom addon whose name uses mixed case (e.g. `@acme/addon-OnDevice-foo`) would be silently skipped. Consider using `.toLowerCase().includes('ondevice')` to make the detection case-insensitive and more robust.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 44,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`!!dryRun` converts the optional `boolean | undefined` to `boolean` before passing it to `updateMainConfig` (which requires a non-optional `boolean`). This is functionally correct, but `dryRun ?? false` more clearly communicates intent (\"default to false when not provided\") compared to a double negation.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 146,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test description \"handles the case where @storybook/react-native is in dependencies (not devDependencies)\" is misleading. `makePackageManager` accepts and returns a flat pre-merged object \u2014 it doesn't distinguish between `dependencies` and `devDependencies`. This mirrors how `getAllDependencies()` already merges all categories, so the test doesn't actually exercise any distinct code path around dep-vs-devDep placement. Consider renaming the test to reflect what it actually covers (e.g. \"returns ondevice addons when only a single ondevice addon is present\"), or remove it as redundant with the \"string addons\" case above.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 19,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`vi.mock('../helpers/mainConfigFile', ...)` omits the `.ts` extension, while the implementation file imports it as `'../helpers/mainConfigFile.ts'` (with extension). Vitest resolves both to the same physical file so the mock works correctly, and omitting the extension in `vi.mock` is the existing project convention. However, since this PR is actively standardizing on explicit `.ts` extensions in import paths (see the other test-file changes), it may be worth making this consistent too \u2014 or at least leaving a comment explaining the intentional omission.",
+      "index": 3
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `run()` method calls `appendValueToArray(['deviceAddons'], addon)` for each ondevice addon without first checking whether that addon already exists in `deviceAddons`. If a user has partially hand-migrated their config (moved some addons to `deviceAddons` manually but left them in `addons` too), the automigration will append duplicates. The `check()` method only inspects `mainConfig.addons`, so it has no visibility into the current state of `deviceAddons`. Consider reading the existing `deviceAddons` value inside `run()` (or inside `check()`) and skipping entries that are already present.",
+      "index": 4
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The MIGRATION.md entry says \"In Storybook 9, on-device addons\u2026*must* be listed under the `deviceAddons` key\" \u2014 language that implies a v9-specific requirement. However, the `check()` method has no `storybookVersion` guard and will trigger on any project version that has `@storybook/react-native` installed with ondevice addons in `addons`. This is consistent with how most other fixes behave (most don't gate on version), but the documentation language creates an expectation that is not matched by the implementation. Either soften the MIGRATION.md wording (e.g. \"Starting in Storybook 9\u2026\") or add a version guard in `check()` so the fix only runs on v9+ projects.",
+      "index": 5
+    }
+  ],
+  "cost_usd": 0.47398975000000004,
+  "duration_seconds": 261.4111349582672
+}

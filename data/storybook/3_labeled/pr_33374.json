@@ -1,0 +1,429 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33374,
+  "title": "UI: Make TagsFilter state persistent",
+  "body": "Closes #32986\r\n\r\n## What I did\r\n\r\n* Moved TagsFilter state for currently selected filters from the TagsFilter & Sidebar components into the `layout` module\r\n* Made that state persistent\r\n* Moved UI-related state (filter count, grouping of filters) to TagsFilterPanel where it is actually consumed\r\n* Mockied the `layout` module for TagsFilter* stories\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [x] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n* Run the local Storybook\r\n* Apply a tag filter of your choice\r\n* Reload the tab and notice the tag filter is maintained\r\n* Close and reopen your browser and notice the tag filter is maintained\r\n* Add default tag filters in your Storybook config, clear your browser cache in DevTools and reload Storybook and your tab to ensure they are applied\r\n* Check that the tag reset button appears upon loading Storybook with active tag filters, but not when loading it with default, config-driven filters\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\r\n## Summary by CodeRabbit\r\n\r\n* **New Features**\r\n  * Dynamic, persistent tag-filter system with built-in and user tag filters and updated default layout sizes.\r\n\r\n* **Refactor**\r\n  * Sidebar tag UI and panel reworked to use centralized API-driven filters for simpler state, counts, and accessibility.\r\n\r\n* **Tests**\r\n  * Expanded stories with a mock API wrapper and many story variants; added a non-persistent testing store factory.\r\n\r\n* **Chores**\r\n  * Storybook global mock added for more stable story rendering.\r\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "Sidnioulz",
+  "merged_at": "2026-03-13T16:41:01Z",
+  "base_ref": "next",
+  "merge_commit_sha": "828f6982a412dca54b3a6c889a2de390ccd58bc4",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "0e83b400580ebfbeb7a40f586f45b51345dabb9f",
+    "1fdeddfc63da78509e957e97176d1721ee07bdae"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6eIHj2",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Class component approach is reasonable for coordinating store and React state.**\n\nThe MockAPIWrapper correctly bridges the testing store with React's component lifecycle. However, there's a potential issue:\n\n**Potential state assignment issue on line 90**: `this.state` is assigned directly in the constructor, but it's not used as React component state. This is confusing because React class components use `this.state` for managed state. Since you're using `this.setState(newState)` in the store callback (line 48), React expects `this.state` to be initialized properly for the component's state management.\n\n\n\n<details>\n<summary>\ud83d\udd0e Suggested fix: Rename to avoid confusion with React's this.state</summary>\n\n```diff\n-    this.api = api as API;\n-    this.state = this.store.getState();\n+    this.api = api as API;\n+    // Note: We don't need to store this as the store already holds the state\n+    // and the component re-renders via setState callback in the store onChange\n```\n\nAlternatively, if you need the initial state for reference, use a different property name:\n\n```diff\n-    this.state = this.store.getState();\n+    this.initialStoreState = this.store.getState();\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/manager/components/sidebar/TagsFilter.stories.tsx around lines\n22 to 91, avoid assigning to React's this.state directly in the constructor;\ninstead rename that property to something non-React like this.storeState and\ninitialize it from the testing store (this.storeState = this.store.getState());\nremove the direct this.state assignment, keep the existing\nthis.setState(newState) store callback for React updates, and update any\ndownstream references to use this.storeState.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/sidebar/TagsFilter.stories.tsx",
+          "line_number": 91,
+          "start_line": null,
+          "commit_sha": "8b98617c1a401c317dafc74dad68b989b965d829",
+          "created_at": "2025-12-30T12:39:55Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Variable Handling",
+          "label_confidence": "high",
+          "label_reasoning": "The comment is about confusing use of `this.state` property name in a React class component, where it conflicts with React's managed state concept. The suggestion is to rename it to avoid confusion."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests renaming this.state to avoid confusion with React's managed state, with a specific code fix proposed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6hQx65",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Guard built\u2011in filter lookup against prototype keys.**\n\nLine 264 and Line 716 use `tag in BUILT_IN_FILTERS`, which also matches prototype keys (e.g., `toString`, `__proto__`) and can yield non\u2011filter functions or incorrect matches for user tags. Use `hasOwnProperty` to ensure only real built\u2011ins are treated as such.\n\n<details>\n<summary>\ud83d\udd27 Proposed fix</summary>\n\n```diff\n-          if (tag in BUILT_IN_FILTERS) {\n+          if (Object.prototype.hasOwnProperty.call(BUILT_IN_FILTERS, tag)) {\n             acc['built-in'].push(BUILT_IN_FILTERS[tag as keyof typeof BUILT_IN_FILTERS]);\n           } else {\n             acc.user.push(USER_TAG_FILTER(tag));\n           }\n```\n\n```diff\n-      if (tag in BUILT_IN_FILTERS) {\n+      if (Object.prototype.hasOwnProperty.call(BUILT_IN_FILTERS, tag)) {\n         return BUILT_IN_FILTERS[tag as keyof typeof BUILT_IN_FILTERS];\n       } else {\n         return USER_TAG_FILTER(tag);\n       }\n```\n</details>\n\n\n\nAlso applies to: 716-720\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/core/src/manager-api/modules/layout.ts` around lines 260 - 268, The code\nuses the loose check \"tag in BUILT_IN_FILTERS\" (seen in computeFilterFunctions\nand the other occurrence) which will match prototype keys; change these to a\nsafe own-property check such as\nObject.prototype.hasOwnProperty.call(BUILT_IN_FILTERS, tag) so only actual\nbuilt-in keys are treated as built-ins; update both occurrences (the block in\ncomputeFilterFunctions and the similar check around USER_TAG_FILTER usage) to\nuse this hasOwnProperty call and leave the existing push logic unchanged.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 35cabd8",
+          "file_path": "code/core/src/manager-api/modules/layout.ts",
+          "line_number": 268,
+          "start_line": null,
+          "commit_sha": "14ba070e549200f70908616d71628da7f872989d",
+          "created_at": "2026-01-19T16:53:14Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Using `tag in BUILT_IN_FILTERS` can incorrectly match prototype keys like `toString` or `__proto__`, leading to incorrect filter behavior. This is a logic error that could produce wrong results."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential prototype key collision bug and requests replacing 'in' checks with hasOwnProperty calls."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6hQx69",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Testing store can still read persisted state via `getInitialState`.**\n\n`createTestingStore` disables writes, but `Store.getInitialState()` always merges local/session storage. That can leak prior browser state into stories/tests, which defeats the \u201cin-memory store\u201d intent. Consider skipping reads when `upstreamPersistence` is false.  \n\n\n<details>\n<summary>\ud83d\udee0\ufe0f Proposed fix</summary>\n\n```diff\n  getInitialState(base: State) {\n+   if (!this.upstreamPersistence) {\n+     return { ...base };\n+   }\n    return { ...base, ...get(store.local), ...get(store.session) };\n  }\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/core/src/manager-api/store.ts` around lines 126 - 159,\ncreateTestingStore currently disables writes via upstream.allowPersistence=false\nbut Store.getInitialState still merges from local/session storage; update the\ncontract so getInitialState honors the upstream persistence flag: modify\nStore.getInitialState (or the Store constructor initialization) to check\nupstream.allowPersistence (or upstreamPersistence) and skip reading/merging from\nlocalStorage/sessionStorage when that flag is falsy, or alternatively have\ncreateTestingStore pass an explicit upstream property (e.g., allowPersistence:\nfalse or a no-op read function) that signals Store to avoid persisting reads so\nthe testing store remains purely in-memory.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 35cabd8",
+          "file_path": "code/core/src/manager-api/store.ts",
+          "line_number": 159,
+          "start_line": null,
+          "commit_sha": "14ba070e549200f70908616d71628da7f872989d",
+          "created_at": "2026-01-19T16:53:14Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The testing store is intended to be purely in-memory, but `getInitialState` still reads from localStorage/sessionStorage, leaking persisted browser state into tests. The code behavior does not match the intended in-memory store semantics."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6iJ5b7",
+          "author": "Sidnioulz",
+          "body": "@ghengeveld this is why you were seeing your localStorage persisted state pollute a sessionStorage setting (sidebar width). We'd need some declarative way to list the state contained in a store (alongside its persistence setting) so we can properly initialise stores without bundling in all of `localStorage`. Not a trivial task :/ ",
+          "file_path": "code/core/src/manager-api/store.ts",
+          "line_number": 159,
+          "start_line": null,
+          "commit_sha": "14ba070e549200f70908616d71628da7f872989d",
+          "created_at": "2026-01-23T09:52:10Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies that the testing store can still read persisted state and proposes a fix to skip storage reads when upstreamPersistence is false."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6iJ98P",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# First, verify the file exists and check its imports and current structure\ncat -n code/core/src/manager/components/sidebar/TagsFilterPanel.stories.tsx | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3794\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for global usage patterns in the file\nrg -n \"global\\.\" code/core/src/manager/components/sidebar/TagsFilterPanel.stories.tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 348\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check current imports in the file, especially for `@storybook/global`\nrg -n \"^import|^export\" code/core/src/manager/components/sidebar/TagsFilterPanel.stories.tsx | head -30\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 733\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check if `@storybook/global` is used elsewhere in manager-side code\nrg \"@storybook/global\" code/core/src/manager/ | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1979\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check how other manager stories handle global/globals\nfd -e stories.tsx code/core/src/manager/components/ --exec grep -l \"global\\.\" {} \\;\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 502\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check Sidebar.stories.tsx to see how it handles global\nhead -30 code/core/src/manager/components/sidebar/Sidebar.stories.tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1127\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Verify whether global is actually accessible without import in manager context\nrg -B5 -A2 \"global\\.TAGS_OPTIONS\" code/core/src/manager/components/sidebar/TagsFilterPanel.stories.tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 753\n\n---\n\n\n\n</details>\n\n**Import `global` from `@storybook/global` before using it.**\n\nThe file uses `global.TAGS_OPTIONS` at lines 160, 161, 167, 174, 175, and 181 but does not import `global`. This is inconsistent with other manager-side code in the repository (e.g., `Sidebar.stories.tsx` in the same directory). Add the import to ensure the code functions correctly:\n\n```diff\n import type { DocsIndexEntry, StoryIndexEntry } from 'storybook/internal/types';\n \n import type { Meta, StoryObj } from '@storybook/react-vite';\n \n import type { API } from 'storybook/manager-api';\n+\n+import { global } from '@storybook/global';\n \n import { MockAPIDecorator } from './TagsFilter.stories';\n```\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/core/src/manager/components/sidebar/TagsFilterPanel.stories.tsx` around\nlines 158 - 183, The stories DefaultSelection and DefaultSelectionModified\nreference global.TAGS_OPTIONS but never import global; add an import for global\nfrom '@storybook/global' at the top of the file so both beforeEach hooks can use\nglobal.TAGS_OPTIONS safely (locate the file symbols DefaultSelection,\nDefaultSelectionModified and the usage of global.TAGS_OPTIONS to add the\nimport).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/sidebar/TagsFilterPanel.stories.tsx",
+          "line_number": 183,
+          "start_line": null,
+          "commit_sha": "1dde4803e25643c08d80bb377f1ecad969480308",
+          "created_at": "2026-01-23T09:57:19Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Import Redundancy",
+          "label_confidence": "high",
+          "label_reasoning": "The file uses `global` from `@storybook/global` without importing it, which is a missing import defect that would cause runtime errors."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Points out a missing import for 'global' from '@storybook/global' and provides a specific diff to add it."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6iJ98f",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Select\u2011all should ignore hidden built\u2011in filters.**\n\nBuilt\u2011ins with `count === 0` are hidden, but `setAllFilters` still includes them. In projects without docs/play/test, \u201cSelect all\u201d can filter out every story unexpectedly.  \n\n<details>\n<summary>\ud83d\udc1b Proposed fix</summary>\n\n```diff\n-  const setAllFilters = useCallback(\n-    (selected: boolean) => {\n-      api.setAllTagFilters(selected ? Object.keys(filtersById) : [], []);\n-    },\n-    [api, filtersById]\n-  );\n+  const setAllFilters = useCallback(\n+    (selected: boolean) => {\n+      const selectableIds = Object.values(filtersById)\n+        .filter((filter) => filter.type !== 'built-in' || filter.count > 0)\n+        .map((filter) => filter.id);\n+      api.setAllTagFilters(selected ? selectableIds : [], []);\n+    },\n+    [api, filtersById]\n+  );\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/core/src/manager/components/sidebar/TagsFilterPanel.tsx` around lines\n142 - 146, setAllFilters currently passes all tag ids from\nObject.keys(filtersById) to api.setAllTagFilters, which erroneously includes\nhidden built\u2011in filters (those with count === 0); update setAllFilters so when\nselected is true it builds the id list by iterating filtersById and excluding\nfilters where filter.builtIn (or builtin) is true AND filter.count === 0, then\npass that filtered id array to api.setAllTagFilters (leave the else branch as\n[]). Reference: setAllFilters, filtersById, api.setAllTagFilters, and the filter\nobjects' count and built\u2011in flag.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/sidebar/TagsFilterPanel.tsx",
+          "line_number": 161,
+          "start_line": 157,
+          "commit_sha": "1fdeddfc63da78509e957e97176d1721ee07bdae",
+          "created_at": "2026-01-23T09:57:19Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The select-all functionality includes hidden built-in filters (count === 0), which can unexpectedly filter out all stories in projects without docs/play/test. This is an incorrect logic/edge case handling issue."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6iKKPG",
+          "author": "Sidnioulz",
+          "body": "This appears to be the same logic as before.",
+          "file_path": "code/core/src/manager/components/sidebar/TagsFilterPanel.tsx",
+          "line_number": 161,
+          "start_line": 157,
+          "commit_sha": "1fdeddfc63da78509e957e97176d1721ee07bdae",
+          "created_at": "2026-01-23T10:10:53Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where 'Select all' includes hidden built-in filters, and proposes a specific code fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6iKHGJ",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Missing `componentWillUnmount` and React state initialization.**\n\nThe `this.mounted` flag is set to `true` in `componentDidMount`, but it's never reset to `false` in `componentWillUnmount`. If the store's `onChange` callback fires after the component unmounts, `this.setState` will still be called (since `this.mounted` remains `true`), potentially causing a React warning or memory leak.\n\nAdditionally, `this.setState(newState)` is called in the store callback, but the component's `state` is never initialized. React class components should initialize `this.state` in the constructor when using `setState`.\n\n\n<details>\n<summary>\ud83d\udd27 Suggested fix</summary>\n\n```diff\n   constructor(props: {\n     children: React.ReactNode;\n     args: Record<string, unknown>;\n     initFn: ModuleFn<SubAPI, SubState>;\n     initOptions?: Partial<ModuleArgs>;\n     initialStoryState?: Partial<State>;\n   }) {\n     super(props);\n+    this.state = {};\n\n     // Set up store.\n     this.mounted = false;\n     this.store = createTestingStore({} as State, (newState) => {\n       if (this.mounted) {\n         this.setState(newState);\n       }\n     });\n```\n\nAnd add:\n\n```diff\n   componentDidMount() {\n     this.mounted = true;\n   }\n\n+  componentWillUnmount() {\n+    this.mounted = false;\n+  }\n+\n   render() {\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/core/src/manager/components/sidebar/TagsFilter.stories.tsx` around lines\n37 - 52, The constructor sets this.mounted and creates this.store but never\ninitializes this.state, and componentDidMount flips this.mounted true without\nany componentWillUnmount to reset it; initialize the component state in the\nconstructor (e.g., this.state = this.props.initialStoryState || {} / appropriate\nState shape) so setState calls are valid, and add a componentWillUnmount\nlifecycle that sets this.mounted = false (and if createTestingStore returns an\nunsubscribe, call it there) to prevent setState after unmount; update the\nmethods referenced (constructor, componentDidMount, componentWillUnmount,\nmounted, store, setState) accordingly.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/sidebar/TagsFilter.stories.tsx",
+          "line_number": 52,
+          "start_line": null,
+          "commit_sha": "cd39d132d768de4b1e59ab30d297a3bf17c412b3",
+          "created_at": "2026-01-23T10:07:08Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Resource Leakage",
+          "label_confidence": "high",
+          "label_reasoning": "Missing `componentWillUnmount` means the store's `onChange` callback can fire after the component unmounts, calling `setState` on an unmounted component \u2014 a classic memory leak / improper cleanup issue in React."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags missing componentWillUnmount and uninitialized React state, with a proposed fix to add both."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tnuwJ",
+          "author": "ghengeveld",
+          "body": "If this is for testing purposes, shouldn't this be in a tests file?",
+          "file_path": "code/core/src/manager-api/store.ts",
+          "line_number": 170,
+          "start_line": null,
+          "commit_sha": "14ba070e549200f70908616d71628da7f872989d",
+          "created_at": "2026-03-10T16:10:24Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "high",
+          "label_reasoning": "The reviewer questions whether testing-specific code belongs in the source file rather than a dedicated test file, which is a code organization/module boundary concern."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tpt0K",
+          "author": "Sidnioulz",
+          "body": "I'll isolate it in a `manager-api/test-utils/store.ts` file to make it clearer. I don't think we have an existing pattern for such files, do we?",
+          "file_path": "code/core/src/manager-api/store.ts",
+          "line_number": 170,
+          "start_line": null,
+          "commit_sha": "14ba070e549200f70908616d71628da7f872989d",
+          "created_at": "2026-03-10T17:37:35Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Implies the code should be moved to a tests file rather than staying in its current location."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6t2cxR",
+          "author": "ndelangen",
+          "body": "I'm curious why the initial state couldn't be correct to start.\r\n\r\nThe `init` method is really meant to set up listeners, not immediately change the initial state.",
+          "file_path": "code/core/src/manager-api/modules/layout.ts",
+          "line_number": 739,
+          "start_line": null,
+          "commit_sha": "14ba070e549200f70908616d71628da7f872989d",
+          "created_at": "2026-03-11T08:32:36Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The reviewer notes that using `init` to immediately change initial state deviates from the intended purpose of `init`, which is to set up listeners \u2014 a semantic/behavioral mismatch."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6t9ivU",
+          "author": "Sidnioulz",
+          "body": "Excellent call. Removing this solved a state corruption problem harming the other tag filter function sources.",
+          "file_path": "code/core/src/manager-api/modules/layout.ts",
+          "line_number": 739,
+          "start_line": null,
+          "commit_sha": "14ba070e549200f70908616d71628da7f872989d",
+          "created_at": "2026-03-11T14:05:15Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Implies the init method is being misused and that the initial state should be set correctly from the start rather than changed in init, suggesting a refactor."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6t2eM0",
+          "author": "ndelangen",
+          "body": "Let's add a JSdoc to explain what turning this on/off will do/allow.",
+          "file_path": "code/core/src/manager-api/store.ts",
+          "line_number": 35,
+          "start_line": null,
+          "commit_sha": "1fdeddfc63da78509e957e97176d1721ee07bdae",
+          "created_at": "2026-03-11T08:33:50Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "The reviewer requests a JSDoc comment to document the behavior of a flag, which is a missing documentation concern."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly requests adding a JSDoc comment to explain the flag's behavior."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6t24mn",
+          "author": "ndelangen",
+          "body": "I suggest we add the data to the state and pass it down from a container component instead of adding a new getter method.\r\n\r\nThat way, the UI is responsive to the state changes.\r\n\r\nAs implemented, if this component is memoized, it will not re-render unless either changes: \r\n- `api` (will never change)\r\n- `indexJson` (will likely change as a result of the filters-change) \r\n\r\nMy advice is to avoid using/creating state-getter functions, as we will end up depending on accidental re-render.\r\nAnd thus introduce state bugs when we fix those accidental re-renders.",
+          "file_path": "code/core/src/manager/components/sidebar/TagsFilter.tsx",
+          "line_number": 48,
+          "start_line": null,
+          "commit_sha": "1dde4803e25643c08d80bb377f1ecad969480308",
+          "created_at": "2026-03-11T08:55:33Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The reviewer identifies that using a getter method instead of state-driven data flow can cause the UI to not properly react to state changes, leading to subtle state bugs \u2014 the code's behavior deviates from the intended reactive design."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6uAC_O",
+          "author": "Sidnioulz",
+          "body": "So, rather than call the API, wrap into a ManagerContext consumer or prop-drill all the way from Sidebar?\r\n\r\nI don't like the level of prop drilling currently present in the sidebar code because it makes it really hard to test individual component logic in isolation, and so we have code where we only test display concerns and don't cover logic bugs.\r\n\r\nI'd be happy to refactor to using a consumer. Though, is it blocking for feature freeze from your POV?",
+          "file_path": "code/core/src/manager/components/sidebar/TagsFilter.tsx",
+          "line_number": 48,
+          "start_line": null,
+          "commit_sha": "1dde4803e25643c08d80bb377f1ecad969480308",
+          "created_at": "2026-03-11T15:41:28Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6uWt1G",
+          "author": "Sidnioulz",
+          "body": "@ndelangen I've pushed changes that should entirely remove the getters that return stateful content. LMK if that's better :) ",
+          "file_path": "code/core/src/manager/components/sidebar/TagsFilter.tsx",
+          "line_number": 48,
+          "start_line": null,
+          "commit_sha": "1dde4803e25643c08d80bb377f1ecad969480308",
+          "created_at": "2026-03-12T14:48:38Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a concrete architectural change: pass data via state and a container component instead of using a getter method, with reasoning about re-render reliability."
+    }
+  ],
+  "review_thread_count": 12,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6t2Zhx",
+            "author": "ndelangen",
+            "body": "Could you explain why this change was needed?",
+            "file_path": "code/core/src/manager-api/modules/layout.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "14ba070e549200f70908616d71628da7f872989d",
+            "created_at": "2026-03-11T08:29:36Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6t_964",
+            "author": "Sidnioulz",
+            "body": "This was removed, I could not find an explanation why it was needed.",
+            "file_path": "code/core/src/manager-api/modules/layout.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "14ba070e549200f70908616d71628da7f872989d",
+            "created_at": "2026-03-11T15:38:40Z",
+            "is_outdated": true
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "A pure question asking for explanation of why the change was needed, with no implied suggestion or request for a code change."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6t2fsp",
+            "author": "ndelangen",
+            "body": "Is this purely added for testing?",
+            "file_path": "code/core/src/manager-api/store.ts",
+            "line_number": 117,
+            "start_line": null,
+            "commit_sha": "1fdeddfc63da78509e957e97176d1721ee07bdae",
+            "created_at": "2026-03-11T08:35:04Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6t9mSv",
+            "author": "Sidnioulz",
+            "body": "Yes, this is how we can spawn a store in a story context without polluting external storage.",
+            "file_path": "code/core/src/manager-api/store.ts",
+            "line_number": 117,
+            "start_line": null,
+            "commit_sha": "1fdeddfc63da78509e957e97176d1721ee07bdae",
+            "created_at": "2026-03-11T14:07:39Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "A pure clarifying question with no implied suggestion or request for a change."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 12,
+    "stage1_kept": 12,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 2
+  }
+}

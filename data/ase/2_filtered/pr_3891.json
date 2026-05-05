@@ -1,0 +1,278 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3891,
+  "title": "Fixes and tweaks to Move and Rotate arrow key modes",
+  "body": "A number of fixes and small improvements are applied to how the Move and Rotate arrow key modes work in the GUI:\n\n1. Move and Rotate modes no longer turn on if no atoms are selected. Closes: ase/ase#1698\n2. An indicator is added to the bottom right corner that shows that a movement mode is active. This indicator also includes a contextual hint about Ctrl and Shift modifier keys as an attempt to address ase/ase#1662\n3. Modifier key handling is refactored to try and combat a bug where Num Lock would continuously register as a modifier key. (Fix tested on Ubuntu 24.04 and Windows 10/11 but not tested on Mac since I don't have one)\n4. Rotation vectors are transformed to give a more intuitive pitch/yaw/roll experience in rotate mode which is also consistent with mouse movements.\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [x] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [x] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [~] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)",
+  "author": "lempelto",
+  "merged_at": "2026-01-05T16:15:53.316Z",
+  "base_ref": "master",
+  "merge_commit_sha": "74ef5eaaa7f4e14bf821b89894b87e26f5f018b3",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2945756156",
+          "author": "askhl",
+          "body": "(remove commented code)\n\nCould you include a comment about the motivation for this function?  Could be same as the description in the merge request.\n\nThanks for working on fixes for these \"minor\" but extremely long-lived annoyances.  Very nice to get rid of those.",
+          "file_path": "ase/gui/gui.py",
+          "line_number": 300,
+          "commit_sha": "84149685c1d1f17a173da606421004fc0f53d038",
+          "base_sha": "bec94ede69ed3356089fdc72cd3d1b056f480c43",
+          "created_at": "2025-12-10T16:57:30.115Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removal of commented code and addition of a motivational comment to the function."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2945756192",
+          "author": "askhl",
+          "body": "The wrapper classes in `ase.gui.ui` generally exist because ase gui was ported from PyGTK to tkinter many years ago.  I think it would be cleaner if we use tkinter objects directly.  No need to change this but I'd recommend using pure tkinter objects rather than the wrapper classes.",
+          "file_path": "ase/gui/ui.py",
+          "line_number": 103,
+          "commit_sha": "e88ec41705ca1c03d6359b45d1c35fba9ae974ee",
+          "base_sha": "301c50f9b63c4ff955c3daafbc0b7323146d9664",
+          "created_at": "2025-12-10T16:57:30.882Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Recommends using pure tkinter objects instead of wrapper classes, suggesting a code style change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2945756203",
+          "author": "askhl",
+          "body": "Would it be difficult to add a test which calls this method?  Since it contains a lot of non-trivial stuff",
+          "file_path": "ase/gui/ui.py",
+          "line_number": 109,
+          "commit_sha": "e88ec41705ca1c03d6359b45d1c35fba9ae974ee",
+          "base_sha": "301c50f9b63c4ff955c3daafbc0b7323146d9664",
+          "created_at": "2025-12-10T16:57:31.060Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Asks whether a test could be added for the method, implying a missing test that should be written."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2945756216",
+          "author": "askhl",
+          "body": "No need for double `((` (it may also prevent gettext from parsing the `_()` call since it expects only a string literal",
+          "file_path": "ase/gui/view.py",
+          "line_number": 616,
+          "commit_sha": "84149685c1d1f17a173da606421004fc0f53d038",
+          "base_sha": "bec94ede69ed3356089fdc72cd3d1b056f480c43",
+          "created_at": "2025-12-10T16:57:31.308Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags unnecessary double parentheses and a potential gettext parsing issue, requesting a fix."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2983622328",
+          "author": "askhl",
+          "body": "This pattern is a kind of lazy initialization which we should probably do like this:\n\n```\n@functools.cached_property\ndef arrowkey_hint(self):\n    <just create and return it, no need for if-statements>\n```\n\n(in general let's set all attributes in the constructor so objects' namespaces do not change after the object was instantiated)",
+          "file_path": "ase/gui/gui.py",
+          "line_number": 174,
+          "commit_sha": "2633ddc2e320f933efe32adb68df6dbe71663588",
+          "base_sha": "301c50f9b63c4ff955c3daafbc0b7323146d9664",
+          "created_at": "2026-01-05T11:48:37.196Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2983758544",
+          "author": "lempelto",
+          "body": "Changed. This is indeed a much better way to do it. I honestly think I just forgot functools.cached_property was available.",
+          "file_path": "ase/gui/gui.py",
+          "line_number": 174,
+          "commit_sha": "2633ddc2e320f933efe32adb68df6dbe71663588",
+          "base_sha": "301c50f9b63c4ff955c3daafbc0b7323146d9664",
+          "created_at": "2026-01-05T12:50:31.444Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests refactoring using `functools.cached_property` and moving attribute initialization to the constructor."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2983622355",
+          "author": "askhl",
+          "body": "Thanks a lot @lempelto.  If you merge from master, the pipeline failure should go away.  After that I won't have more comments.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-01-05T11:48:38.209Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests merging from master to fix the pipeline failure, which is a concrete action needed."
+    }
+  ],
+  "review_thread_count": 10,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_inline": true,
+        "comments": [
+          {
+            "id": "2945756231",
+            "author": "askhl",
+            "body": "^",
+            "file_path": "ase/gui/view.py",
+            "line_number": 623,
+            "commit_sha": "84149685c1d1f17a173da606421004fc0f53d038",
+            "base_sha": "bec94ede69ed3356089fdc72cd3d1b056f480c43",
+            "created_at": "2025-12-10T16:57:31.474Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_too_short"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2945756246",
+            "author": "askhl",
+            "body": "Thanks a lot!  Very nice changes.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-12-10T16:57:31.854Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment and praise with no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2983628180",
+            "author": "askhl",
+            "body": "~~Actually wait, I should be able to see the nice tooltip when moving and rotating, but it does not show up on my machine.~~  Sorry the wrong branch was running due to funny python/pip behaviours :sweat_smile:",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-01-05T11:52:09.278Z",
+            "is_outdated": false
+          },
+          {
+            "id": "2983669998",
+            "author": "lempelto",
+            "body": "Alright, good. That would have been very baffling :grin:",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-01-05T12:10:39.105Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "A retracted concern followed by an apology; no code change is implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2984275811",
+            "author": "askhl",
+            "body": "I assume this is done so I'll merge.  Thanks again @lempelto!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-01-05T16:15:35.499Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure status/meta comment about merging; no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 10,
+    "stage1_kept": 9,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 1,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 3,
+    "stage3_cost_usd": 0.0200785
+  }
+}

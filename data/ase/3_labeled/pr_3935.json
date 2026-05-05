@@ -1,0 +1,52 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3935,
+  "title": "BUG: Fix bandstructure legend for figures with multiple axes",
+  "body": "Fixes issue whereby `Bandstructure.plot(...)` would not plot the legend in cases where `self.ax` belongs to a figure with multiple axes by explicitly calling `self.ax.legend(...)` instead of `plt.legend(...)`.\n\nAlso fixes a minor bug in an error message in `band_structure.py`.\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [~] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [~] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [x] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [~] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "elinscott",
+  "merged_at": "2026-01-13T09:12:48.611Z",
+  "base_ref": "master",
+  "merge_commit_sha": "1a58831a4ec171b58cac7ee439af878f0621970c",
+  "merge_commit_parent_count": 2,
+  "review_threads": [],
+  "review_thread_count": 1,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3001383248",
+            "author": "yuzie007",
+            "body": "Thank you @elinscott for the fix!\n\nI could reproduce the issue with the following script, which is fixed in the present MR.\n```python\nimport matplotlib.pyplot as plt\n\nfrom ase.build import bulk\nfrom ase.calculators.test import FreeElectrons\n\na = bulk('Cu')\na.calc = FreeElectrons(nvalence=1, kpts={'path': 'GXWLGK', 'npoints': 200})\na.get_potential_energy()\nbs = a.calc.band_structure()\nfig0, ax0 = plt.subplots()\nfig1, ax1 = plt.subplots()  # make another set of (fig, ax) plt refers\nbs.plot(ax=ax0, emin=0, emax=20, label=\"Cu\")  # We should have a legend on ax0.\nfig0.savefig(\"cu.png\")\n```\nI also found a similar issue for `filename`, so, taking this opportunity, I also added the fix for it. That issue is checked with:\n```python\nimport matplotlib.pyplot as plt\n\nfrom ase.build import bulk\nfrom ase.calculators.test import FreeElectrons\n\na = bulk('Cu')\na.calc = FreeElectrons(nvalence=1, kpts={'path': 'GXWLGK', 'npoints': 200})\na.get_potential_energy()\nbs = a.calc.band_structure()\nfig0, ax0 = plt.subplots()\nfig1, ax1 = plt.subplots()  # make another set of (fig, ax) plt refers\nbs.plot(ax=ax0, emin=0, emax=20, label=\"Cu\", filename=\"cu.png\")\n```\nFor normal cases we should add tests for these, but since testing of figure plotting is a bit tricky (although not impossible), I am going to merge.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-01-13T09:12:03.946Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "This is a meta-discussion comment acknowledging the fix, providing reproduction scripts for context, and announcing the merge decision. It does not suggest any code changes."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1,
+    "stage3_cost_usd": 0.013374500000000001
+  }
+}

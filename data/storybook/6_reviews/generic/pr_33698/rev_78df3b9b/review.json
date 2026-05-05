@@ -1,0 +1,54 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/bin/loader.ts",
+      "line_number": 57,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`existsSync` is never imported in this file. The existing imports from `node:fs` are `readdirSync` and `readFile`. Calling `existsSync(candidatePath)` will throw a `ReferenceError` at runtime. An import must be added: `import { existsSync, readdirSync } from 'node:fs';`. Additionally, the rest of `resolveWithExtension` already uses a `getDirectoryFiles` helper (backed by `readdirSync` with directory-level caching) rather than per-file `existsSync` calls. The new JS\u2192TS branch should follow the same pattern for consistency and to avoid redundant syscalls.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/bin/loader.ts",
+      "line_number": 57,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "The new branch calls `existsSync(candidatePath)` once per candidate extension (up to two calls for `.js` \u2192 `.ts`/`.tsx`). The existing extensionless resolution path in the same function reads the directory once with `getDirectoryFiles` (which caches `readdirSync` results in a `Set`) and then does in-memory `Set.has()` lookups. Introducing `existsSync` here is inconsistent with that established caching pattern and makes individual stat syscalls instead of a single bulk directory read. The TS-extension loop should use the same `getDirectoryFiles` + `Set.has()` approach for consistency and better performance under repeated calls.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/bin/loader.ts",
+      "line_number": 48,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The comment states `TypeScript Node16/NodeNext resolution order: .ts \u2192 .tsx \u2192 .d.ts \u2192 .js`, but the implementation does not check for `.d.ts` files at all. While intentionally omitting declaration files is correct for a build-time loader, the comment implies `.d.ts` is part of the implemented resolution strategy. A reader may expect `.d.ts` handling to be present. Consider rewording to something like: `// Check TypeScript source alternatives (.ts/.tsx), matching TS module resolution for .js imports`. This avoids listing steps that are not executed.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/bin/loader.ts",
+      "line_number": 45,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`const currentDir = path.dirname(currentFilePath)` is now computed unconditionally at the top of the function, even for the fast path at line 67\u201369 where a non-JS-extension import returns early without ever using `currentDir`. In the original code, `currentDir` was computed only in the extensionless branch where it was actually needed. Moving it back inside the branches that use it (the JS-extension block and the extensionless block) would restore that efficiency and make the data-flow clearer.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/bin/loader.ts",
+      "line_number": 52,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`jsToTsExtensionMap[extImportPath]` is typed as `readonly string[]` via the `Record<string, readonly string[]>` annotation, but under the `noUncheckedIndexedAccess` compiler option the inferred type would be `readonly string[] | undefined`, making the subsequent `for...of` loop on `tsExtensions` a type error. Although `noUncheckedIndexedAccess` is not currently enabled in the project's `tsconfig.json`, it is a common strict-mode addition. Guarding with `?? []` or using a non-null assertion (`!`) makes the intent explicit and future-proofs the code: `const tsExtensions = jsToTsExtensionMap[extImportPath] ?? [];`.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "No tests are added for the new `.js` \u2192 `.ts` resolution logic. The existing `loader.test.ts` has over 50 test cases covering the extensionless resolution path; the new JS-extension branch warrants equivalent coverage. At minimum, tests should cover: (1) `.js` import resolved to an existing `.ts` file, (2) `.js` import resolved to an existing `.tsx` file when no `.ts` exists, (3) `.mjs`/`.cjs`/`.jsx` variants, (4) fallback to the original `.js` import when no TypeScript alternative exists on disk, and (5) that non-relative bare specifier imports (e.g. `'some-package/utils.js'`) are not inadvertently rewritten.",
+      "index": 5
+    }
+  ],
+  "cost_usd": 0.3757971499999999,
+  "duration_seconds": 336.9204750061035
+}

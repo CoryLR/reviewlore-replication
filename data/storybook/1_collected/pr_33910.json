@@ -1,0 +1,127 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33910,
+  "title": "Telemetry: Add project age",
+  "body": "Closes N/A\r\n\r\n## What I did\r\n\r\nCollect the project age so we can understand whether Storybook is being installed into new projects\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n1. Run `create-storybook` in a project with `STORYBOOK_TELEMETRY_DEBUG=1` and verify the output\r\n\r\n### Documentation\r\n\r\nUpdated `telemetry.mdx` to include new data being collected\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Telemetry now captures the project's creation date and includes it as a projectSince value in the public telemetry context payload.\n\n* **Tests**\n  * Expanded test coverage for project creation date detection across successful, empty, and error scenarios; added deterministic mocks for command execution and setup.\n\n* **Documentation**\n  * Updated telemetry docs and example event payloads to show the new projectSince field.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "shilman",
+  "merged_at": "2026-02-24T09:42:53Z",
+  "base_ref": "next",
+  "merge_commit_sha": "036d55abdb87797a7a801094938d641306631c00",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "4556340f525e9821a2023c52b2784f619d13194d",
+    "35cc1333265693bfca67af97ae9738353664c698"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6pllus",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udf10 Web query:\n\n`Vitest vi.mock async factory with spy:true option syntax`\n\n\ud83d\udca1 Result:\n\n`spy: true` is an **alternative to providing a factory**\u2014you can\u2019t pass `{ spy: true }` *and* an async factory in the same `vi.mock()` call (the 2nd argument is either `MockOptions` **or** `MockFactory`). [1]\n\n### Auto-spy the whole module (no factory)\n```ts\nimport * as mod from './mod'\n\nvi.mock('./mod', { spy: true })\n```\nThis keeps original implementations but wraps exports so you can assert calls. [2][1]\n\n### If you need an async \u201cfactory-like\u201d partial mock, wrap originals as spies yourself\n```ts\nvi.mock('./mod', async (importOriginal) => {\n  const actual = await importOriginal<typeof import('./mod')>()\n  return {\n    ...actual,\n    someFn: vi.fn(actual.someFn), // spy that still calls through\n    // or override others as needed\n  }\n})\n```\nVitest allows async factories and gives you `importOriginal` to access the real module. [1]\n\n**Sources:**  \n[1] Vitest `vi.mock` API reference (types/overloads; async factory support)  \n[2] Vitest \u201cMocking Modules\u201d guide (`{ spy: true }` behavior and usage)\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nyarn lint:js:cmd code/core/src/telemetry/anonymous-id.test.ts 2>&1 || true\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 283\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/telemetry/anonymous-id.test.ts | head -150\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 5332\n\n---\n\n\n\n</details>\n\n**Move mock implementations to `beforeEach` blocks and stabilize git-dependent test.**\n\nThe current mock setup has inline mock implementations inside individual test cases (lines 125\u2013137), which violates Vitest patterns. Additionally, the first test relies on real git history and will fail on shallow clones. Move all mock behavior to `beforeEach`, use `vi.mocked()` to access the mock, and mock the git output for all cases. The async factory pattern is valid as-is; do not add `{ spy: true }` as that option is an alternative to the factory, not compatible with it.\n\n<details>\n<summary>Refactor mock setup</summary>\n\n```diff\n import { describe, expect, it, vi } from 'vitest';\n+import { beforeEach } from 'vitest';\n \n import { executeCommandSync } from 'storybook/internal/common';\n \n import { getProjectSince, normalizeGitUrl, unhashedProjectId } from './anonymous-id';\n \n vi.mock('storybook/internal/common', async (importOriginal) => {\n-  const actual = await importOriginal();\n+  const actual = await importOriginal<typeof import('storybook/internal/common')>();\n \n   return {\n     ...actual,\n     executeCommandSync: vi.fn(actual.executeCommandSync),\n   };\n });\n+\n+const mockedExecuteCommandSync = vi.mocked(executeCommandSync);\n+\n+beforeEach(() => {\n+  mockedExecuteCommandSync.mockReset();\n+  mockedExecuteCommandSync.mockReturnValue('2015-12-11T10:54:01.000Z');\n+});\n \n describe('getProjectSince', () => {\n   it('returns the Storybook creation date from git log output', () => {\n     expect(getProjectSince()).toEqual(new Date('2015-12-11T10:54:01.000Z'));\n   });\n \n   it('returns undefined if git log output is empty', () => {\n-    vi.mocked(executeCommandSync).mockReturnValue('');\n+    mockedExecuteCommandSync.mockReturnValue('');\n \n     expect(getProjectSince()).toBeUndefined();\n   });\n \n   it('returns undefined if git log fails', () => {\n-    vi.mocked(executeCommandSync).mockImplementation(() => {\n+    mockedExecuteCommandSync.mockImplementation(() => {\n       throw new Error('git not available');\n     });\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/telemetry/anonymous-id.test.ts` around lines 1 - 14, The tests\ncurrently set per-test inline mocks and rely on real git output; move the\nexecuteCommandSync mock setup into a beforeEach block and use\nvi.mocked(executeCommandSync) to set return values there so all tests get\ncontrolled, deterministic git output (mock the git command responses used by\ngetProjectSince/normalizeGitUrl/unhashedProjectId); remove per-test mock\nimplementations (lines 125\u2013137) and instead in beforeEach call\nvi.mocked(executeCommandSync).mockImplementation(...) or .mockReturnValue(...)\nto stabilize the git-dependent test \u2014 keep the async factory vi.mock(...) as-is\nand do not add the { spy: true } option.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/telemetry/anonymous-id.test.ts",
+          "line_number": 14,
+          "start_line": null,
+          "commit_sha": "bc5c582f907af88457db3c022d634fd1bab5333f",
+          "created_at": "2026-02-24T08:10:44Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6pllux",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Use a numeric value for `projectSince` in the example payload.**\n\nThe implementation sends `getTime()` (number), but the docs show a string. Adjust the example to avoid confusion.\n\n<details>\n<summary>\u270f\ufe0f Suggested edit</summary>\n\n```diff\n-    \"projectSince\": \"1717334400000\"\n+    \"projectSince\": 1717334400000\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  \"context\": {\n    \"isTTY\": true,\n    \"platform\": \"macOS\",\n    \"nodeVersion\": \"24.11.0\",\n    \"storybookVersion\": \"10.3.0-alpha.9\",\n    \"cliVersion\": \"10.3.0-alpha.9\",\n    \"projectSince\": 1717334400000\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@docs/configure/telemetry.mdx` around lines 65 - 71, The example payload's\n\"projectSince\" is shown as a string but the implementation sends a numeric\ntimestamp (Date.getTime()); update the example JSON so \"projectSince\" is a\nnumber (no quotes) and uses a representative numeric value (e.g. 1717334400000)\nto match the actual behavior and avoid confusion\u2014modify the JSON example\ncontaining \"context\" and the \"projectSince\" field accordingly.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 35cc133",
+          "file_path": "docs/configure/telemetry.mdx",
+          "line_number": 71,
+          "start_line": null,
+          "commit_sha": "30522069baffef3bce45188b7ad4377c852edecd",
+          "created_at": "2026-02-24T08:10:45Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6plvuZ",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The `projectSince` value should be a number, not a string. Since the code uses `getProjectSince()?.getTime()` which returns a number (or undefined), and this is serialized with `JSON.stringify`, the value will appear as a number in the JSON output. The documentation should show it as `\"projectSince\": 1717334400000` instead of `\"projectSince\": \"1717334400000\"`.\n```suggestion\n    \"projectSince\": 1717334400000\n```",
+          "file_path": "docs/configure/telemetry.mdx",
+          "line_number": 71,
+          "start_line": null,
+          "commit_sha": "30522069baffef3bce45188b7ad4377c852edecd",
+          "created_at": "2026-02-24T08:18:57Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6plvvN",
+          "author": "copilot-pull-request-reviewer",
+          "body": "Consider adding a test case to verify that when git log returns multiple lines, only the first line is parsed. This would ensure the implementation correctly handles the typical multi-commit scenario. For example:\n\n```\nvi.mocked(executeCommandSync).mockReturnValue('2015-12-11 10:54:01 +0000\\n2016-01-01 12:00:00 +0000');\nexpect(getProjectSince()).toEqual(new Date('2015-12-11T10:54:01.000Z'));\n```",
+          "file_path": "code/core/src/telemetry/anonymous-id.test.ts",
+          "line_number": 161,
+          "start_line": 130,
+          "commit_sha": "35cc1333265693bfca67af97ae9738353664c698",
+          "created_at": "2026-02-24T08:18:57Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6plvvo",
+          "author": "copilot-pull-request-reviewer",
+          "body": "Consider adding a test case for when git log returns an invalid date string to verify that the NaN check at line 69 properly handles this edge case. For example:\n\n```\nvi.mocked(executeCommandSync).mockReturnValue('not a valid date');\nexpect(getProjectSince()).toBeUndefined();\n```",
+          "file_path": "code/core/src/telemetry/anonymous-id.test.ts",
+          "line_number": 161,
+          "start_line": 130,
+          "commit_sha": "35cc1333265693bfca67af97ae9738353664c698",
+          "created_at": "2026-02-24T08:18:58Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6plvwJ",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The `getProjectSince` function runs a git command every time it's called, which could be inefficient if telemetry is sent multiple times during a session. Consider caching the result similar to how `getAnonymousProjectId` caches its result in the `anonymousProjectId` variable. This would improve performance by avoiding repeated git executions for the same information.",
+          "file_path": "code/core/src/telemetry/anonymous-id.ts",
+          "line_number": 86,
+          "start_line": 59,
+          "commit_sha": "35cc1333265693bfca67af97ae9738353664c698",
+          "created_at": "2026-02-24T08:18:58Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 6
+}

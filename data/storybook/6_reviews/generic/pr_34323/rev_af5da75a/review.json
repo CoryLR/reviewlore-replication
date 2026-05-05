@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 6,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`buildModuleGraph` is included in the import from `./index`, but `index.ts` only *imports* it internally \u2014 it never re-exports it. This will produce a TypeScript compile error and the `buildModuleGraph` describe block will fail to run. The fix is to import `buildModuleGraph` directly from `'./utils/build-module-graph'` in the test instead.",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 97,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`setInterval(async () => {...})` discards the Promise returned by the async callback. If `server.waitForRequestsIdle()` rejects, the error is silently swallowed \u2014 there is no catch path, no logging, and no way for listeners to learn that initialization failed. At minimum this should be wrapped in a try/catch that notifies listeners of the failure, or the async IIFE pattern `void (async () => { ... })()` should be used with proper error handling.",
+      "index": 1
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 97,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The polling interval has no upper bound. If `server.moduleGraph.fileToModulesMap.size` never exceeds 0 \u2014 for example due to a Vite configuration issue or an empty project \u2014 the interval will run indefinitely until `bail()` is called, but listeners will never receive an initial graph notification. A deadline (e.g. 30 seconds via `process.hrtime`) should stop the interval and signal an error to subscribers instead of silently looping forever.",
+      "index": 2
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/utils/build-module-graph.ts",
+      "line_number": 20,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `if (!file) return undefined` early-return check occurs *before* the WeakMap lookup on line 37. Consider the case where a module with `file: null` is in `fileToModulesMap` and was already created using the `fallbackFile` argument (and stored in `moduleNodeMap`). When that same Vite node is later encountered as an importer or importedModule of a different node \u2014 without a fallback \u2014 the function returns `undefined` without consulting the WeakMap, causing the relationship to be silently dropped even though a valid node already exists. Moving the WeakMap check before the `!file` guard would fix this: if the node is already cached, return it regardless of whether a file can be resolved this time.",
+      "index": 3
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 42,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`notifyListeners` iterates over `listeners` with `forEach` but has no error boundary. If any listener callback throws, the `forEach` will propagate the exception up and all subsequent listeners in the Set will be silently skipped. This means one badly-behaved consumer can block all others from receiving the update. Wrap each call in a `try/catch` (logging and continuing) to make the notification loop resilient.",
+      "index": 4
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 62,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`bail()` silently clears all registered listeners. A consumer who subscribed via `onModuleGraphChange` before a server restart (bail + start) will have their subscription dropped with no indication \u2014 the returned `unsubscribe` handle becomes a no-op and the callback is never called again. This non-obvious contract should be documented on the `onModuleGraphChange` export (e.g. in a JSDoc comment noting that subscriptions do not survive `bail()` and must be re-registered after each restart).",
+      "index": 5
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 91,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`buildModuleGraph` reconstructs the entire module graph from scratch on every debounced watcher event. For large projects, the `fileToModulesMap` iteration combined with rebuilding full `importers`/`importedModules` Sets for every node could be expensive at the 100 ms debounce cadence. Consider whether an incremental or dirty-flagged approach is feasible, or whether the graph should only be rebuilt when the set of tracked files actually changes.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/types/modules/core-common.ts",
+      "line_number": 279,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `onModuleGraphChange` callback receives only a raw `ModuleGraph`, so the API has no way to signal transient states \u2014 for example, when the graph is still initializing, when Vite has restarted and the graph is temporarily stale, or when an error prevents graph construction. An event-envelope pattern (e.g. `{ type: 'moduleGraph', moduleGraph: ModuleGraph } | { type: 'error', error: Error } | { type: 'unavailable', reason: string }`) would be more extensible and prevent consumers from having to guess what an empty map means.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "This PR adds four more module-level mutable variables (`listeners`, `debounce`, `watcherChangeHandler`, `waitForModuleGraph`) to `index.ts`, extending an already-present pattern with `server`. Module-level state makes the builder implicitly a singleton: multiple simultaneous instances (e.g. in a test suite that doesn't carefully call `bail()` between cases) will share and corrupt each other's state. Consider encapsulating all lifecycle state in a class or a factory function that returns a builder instance, which would make the ownership and cleanup surface explicit.",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `buildModuleGraph` function is a pure, independently testable utility, but its unit tests are placed in `index.test.ts` (the integration test file for the builder lifecycle) and the function is tested via an import that doesn't actually work (see the `./index` import defect above). Moving the `buildModuleGraph` tests into a dedicated `utils/build-module-graph.test.ts` file would improve discoverability, avoid the import issue, and keep the lifecycle tests focused on observable `start`/`bail`/`onModuleGraphChange` behavior.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.6030712,
+  "duration_seconds": 455.5007281303406
+}

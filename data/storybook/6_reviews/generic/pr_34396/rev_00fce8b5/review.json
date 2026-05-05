@@ -1,0 +1,52 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/create-storybook/src/generators/configure.ts",
+      "line_number": 113,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The new extension choice (`tsx`/`jsx`) is applied unconditionally to every TypeScript/JavaScript project, including Angular, Svelte, Vue (without JSX), and Web Components. Angular projects in particular are a concern: Angular's Storybook-specific `tsconfig.json` template typically hardcodes `\"include\": [\"./preview.ts\"]` and does not set the `jsx` compiler option. When TypeScript encounters a `.tsx` file and `jsx` is not configured, compilation will fail with TS17004. The PR does not include any changes to Angular (or Svelte/Vue) tsconfig templates to accommodate this rename. Consider either (a) adding framework-awareness so only JSX-based renderers (React, Preact, Solid, etc.) receive the `x` suffix, or (b) updating every affected framework's tsconfig template to cover `.tsx` and set a compatible `jsx` option.",
+      "index": 0
+    },
+    {
+      "file_path": "docs/_snippets/storybook-preview-use-global-type.md",
+      "line_number": 33,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The automated rename left a malformed filename here: `.storybook/preview.jsx|jsx`. The original was `.storybook/preview.js|jsx` (indicating the file could be either), and the replacement changed `preview.js` \u2192 `preview.jsx` without removing the now-redundant `|jsx` suffix. The result is not a valid filename and will be confusing in the rendered documentation. It should simply read `.storybook/preview.jsx`. The same artifact appears multiple times in this file: the `ts|tsx` \u2192 `tsx|tsx` pattern at the CSF 3 TypeScript block (~line 51) and again in the CSF Next TypeScript and JavaScript blocks further down (~lines 205 and 229). A search for `|jsx` and `|tsx` in this file will reveal all occurrences. Other snippet files (e.g. `mock-context-container-global.md`, `storybook-preview-auto-docs-custom-template-function.md`) handled the same pattern correctly by simply using `.jsx` / `.tsx`, so this file was missed.",
+      "index": 1
+    },
+    {
+      "file_path": "docs/_snippets/storybook-addons-preset-preview.md",
+      "line_number": 1,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "This snippet documents how to write a Storybook addon, and the preview file lives inside the addon package (`example-addon/src/preview.ts`), not in the user's `.storybook/` folder. Addon authors generally don't write JSX in their preview files, so renaming the example to `preview.tsx` adds no value and may mislead addon authors into thinking their addon preview must use the `.tsx` extension. The motivation for this PR (helping agents write JSX decorators in user-facing `.storybook/preview`) does not apply here.",
+      "index": 2
+    },
+    {
+      "file_path": "code/e2e-tests/storybook-hooks.spec.ts",
+      "line_number": 21,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `react-vite-default-ts` sandbox is the hardcoded default when `STORYBOOK_TEMPLATE_NAME` is unset. Changing `previewFilePath` to expect `preview.tsx` is correct for that sandbox, but if CI runs this test against a non-React sandbox (e.g. an Angular or Svelte template), the resolved path will point to a file that doesn't exist. Consider whether this test should be skipped for non-JSX templates or whether the path should be derived from the template name.",
+      "index": 3
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "After this PR, the documentation and guides consistently reference `preview.jsx|tsx` while still referring to `main.js|ts` (unchanged). Examples: `docs/api/csf/csf-next.mdx` reads \"upgrade your `.storybook/main.js|ts` and `.storybook/preview.jsx|tsx` files\", mixing two different conventions. Either both config files should get the `x` treatment or the documentation phrasing should acknowledge the deliberate asymmetry so readers aren't confused about why `main` didn't change.",
+      "index": 4
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description explicitly targets the use case of helping AI agents write JSX decorators in the preview file. This motivation applies specifically to JSX-based renderers (React, Preact, Solid, React Native). Applying the `.tsx`/`.jsx` extension universally to Angular, Svelte, Vue template-based, and Web Component projects conflates \"this file may contain JSX\" with \"this file is TypeScript/JavaScript\". For frameworks where JSX is never used in decorators, the extension change is at best neutral and at worst misleading for human developers who associate `.tsx` with React-style JSX. A framework-aware switch in `configure.ts` would make the intent clear and avoid the tsconfig concern for non-JSX frameworks.",
+      "index": 5
+    }
+  ],
+  "cost_usd": 1.1184497500000001,
+  "duration_seconds": 342.06717801094055
+}

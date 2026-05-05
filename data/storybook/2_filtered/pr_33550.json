@@ -1,0 +1,63 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33550,
+  "title": "CSF-Factories: Skip non-factory exports instead of throwing error",
+  "body": "Closes #33549\n\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\n\n<!--\n\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\n\n-->\n\n## What I did\n\nPreviously, CSF factory files would throw a `MixedFactoryError` if any named export was not a factory story. This caused issues when files had helper exports or utility functions alongside stories.\n\nNow, non-factory exports in factory files are simply skipped during indexing. This means:\n- Helper exports no longer need `excludeStories` to avoid errors\n- `excludeStories`/`includeStories` still work for factory stories\n- Only actual factory stories (`meta.story()` / `meta.extend()`) are indexed\n\n## Checklist for Contributors\n\n### Testing\n\n#### The changes in this PR are covered in the following automated tests:\n\n- [ ] stories\n- [x] unit tests\n- [ ] integration tests\n- [ ] end-to-end tests\n\n#### Manual testing\n\n1. Run `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\n2. Add non-factory exports to a story file:\n   ```ts\n   // In Button.stories.ts, add at the end:\n   export const mockData = { foo: 'bar' };\n   export const helperFunction = () => console.log('helper');\n   ```\n3. Run `yarn storybook`\n4. **Before fix**: Would fail with `CSF: expected factory story` error\n5. **After fix**: Storybook starts successfully, only factory stories are indexed\n\n### Documentation\n\n- [ ] Add or update documentation reflecting your changes\n- [ ] If you are deprecating/removing a feature, make sure to update\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\n\n## Checklist for Maintainers\n\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\n- [ ] Make sure this PR contains **one** of the labels below:\n   <details>\n     <summary>Available labels</summary>\n\n  - `bug`: Internal changes that fixes incorrect behavior.\n  - `maintenance`: User-facing maintenance tasks.\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\n  - `feature request`: Introducing a new feature.\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\n  - `other`: Changes that don't fit in the above categories.\n\n   </details>\n\n### \ud83e\udd8b Canary release\n\n<!-- CANARY_RELEASE_SECTION -->\nThis pull request has been released as version `0.0.0-pr-33550-sha-bd642744`. Try it out in a new sandbox by running `npx storybook@0.0.0-pr-33550-sha-bd642744 sandbox` or in an existing project with `npx storybook@0.0.0-pr-33550-sha-bd642744 upgrade`.\n<details>\n<summary>More information</summary>\n\n| | |\n| --- | --- |\n| **Published version** | [`0.0.0-pr-33550-sha-bd642744`](https://npmjs.com/package/storybook/v/0.0.0-pr-33550-sha-bd642744) |\n| **Triggered by** | @kasperpeulen |\n| **Repository** | [storybookjs/storybook](https://github.com/storybookjs/storybook) |\n| **Branch** | [`kasper/fix-csf-factories-exclude-stories`](https://github.com/storybookjs/storybook/tree/kasper/fix-csf-factories-exclude-stories) |\n| **Commit** | [`bd642744`](https://github.com/storybookjs/storybook/commit/bd642744949a786d071296306aabef8b3581aac7) |\n| **Datetime** | Thu Jan 15 13:53:17 UTC 2026 (`1768485197`) |\n| **Workflow run** | [21033721817](https://github.com/storybookjs/storybook/actions/runs/21033721817) |\n\nTo request a new release of this pull request, mention the `@storybookjs/core` team.\n\n_core team members can create a new canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=33550`_\n</details>\n<!-- CANARY_RELEASE_SECTION -->\n\n<!-- BENCHMARK_SECTION -->\n<!-- BENCHMARK_SECTION -->",
+  "author": "kasperpeulen",
+  "merged_at": "2026-01-16T16:41:38Z",
+  "base_ref": "next",
+  "merge_commit_sha": "8f5c777952dbf43a5633f0116b9fd1fb49b9e1e4",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "78877aa6c3941239b2ae0fce1d1ed79ab1efbbcd",
+    "bd642744949a786d071296306aabef8b3581aac7"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6gmrcr",
+          "author": "ghengeveld",
+          "body": "What happens if this is a CSF1 story, e.g.:\n```jsx\nexport const MyStory = () => <Component />\n```\nI suspect this means the story gets lost in the void (no longer indexed)?\n\nProbably we can't fix this without considering includeStories/excludeStories.",
+          "file_path": "code/core/src/csf-tools/CsfFile.test.ts",
+          "line_number": 3012,
+          "start_line": null,
+          "commit_sha": "bd642744949a786d071296306aabef8b3581aac7",
+          "created_at": "2026-01-15T13:56:24Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6gmwh2",
+          "author": "kasperpeulen",
+          "body": "In CSF4 this must be:\nexport const MyStory = meta.story(() => <Component />);",
+          "file_path": "code/core/src/csf-tools/CsfFile.test.ts",
+          "line_number": 3012,
+          "start_line": null,
+          "commit_sha": "bd642744949a786d071296306aabef8b3581aac7",
+          "created_at": "2026-01-15T14:02:02Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a potential bug (CSF1 stories getting lost/not indexed) and suggests a fix direction involving includeStories/excludeStories, making it actionable."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

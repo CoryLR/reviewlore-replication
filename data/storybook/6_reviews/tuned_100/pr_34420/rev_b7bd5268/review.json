@@ -1,0 +1,82 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 128,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "Both `watchFile(generation, 'head', gitDir, ...)` (this line) and `watchFile(generation, 'packedRefs', gitDir, ...)` (~line 132) pass the same path (`gitDir`) to `fs.watch`. This registers two independent OS-level watchers on the same directory inode, so every change to any file under `.git` fires BOTH callbacks and calls `emitGitStateChange()` twice per event. The `packedRefs` key name implies it watches the `packed-refs` file specifically, but it is just as broad as the `head` watcher. The double emission is absorbed by the debounce in `ChangeDetectionService`, but the two OS watch file descriptors are wasteful and the naming is misleading. Consider either (a) watching specific files (`join(gitDir, 'HEAD')` for `head`, `join(gitDir, 'packed-refs')` for `packedRefs`) to get targeted notifications, or (b) consolidating into a single directory watcher whose handler both emits the state change and reconfigures the branch watcher.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 145,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The third parameter of `watchFile` is named `filePath`, but both the `head` and `packedRefs` call-sites pass a directory path (`gitDir`). The parameter accepts either a file or a directory depending on what `fs.watch` is asked to observe, so the name `filePath` is inaccurate. Rename to `watchTarget` or `path` to reflect the actual usage.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 242,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`scheduleWatcherRebuild` has no maximum retry count. The delay caps at 1000 ms via `Math.min(1000, 50 * 2 ** this.watcherRebuildAttempts)` but `watcherRebuildAttempts` keeps growing and retries run indefinitely at 1-second intervals if watchers keep erroring (e.g., a filesystem that remains broken). Consider capping total attempts (e.g., bail after 20 attempts, ~34 s total backoff) and emitting a `logger.warn` at the cap so the failure surfaces rather than silently churning in the background.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.test.ts",
+      "line_number": 106,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The default mock implementation uses `void callback` to discard the unused `callback` parameter. The project-standard convention for intentionally unused parameters is to prefix with `_` (e.g., rename to `_callback`). `void expr` is more idiomatic for suppressing floating promise warnings, not for silencing unused-variable lint errors on function parameters.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 17,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`type WatcherKey = 'branch' | 'head' | 'packedRefs'` \u2014 the `'head'` and `'packedRefs'` keys are each assigned a watcher whose `filePath` is `gitDir` (the `.git` directory), not the individual `HEAD` or `packed-refs` files. The key names strongly imply the watched artifact but contradict the actual watch target. If both keys will remain directory-level watchers, consider more neutral names like `'gitDir'` and `'gitDirAux'`, or document the naming gap with an inline comment.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.test.ts",
+      "line_number": 1,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Three `import type` statements at lines 1\u20133 each import from `'node:fs'` or `'node:fs/promises'`. The two `node:fs` imports (`FSWatcher` from `'node:fs'` and `watch` from `'node:fs'`) can be merged into a single statement: `import type { FSWatcher, watch } from 'node:fs';`.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.ts",
+      "line_number": 145,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The return value of `this.getGitDiffProvider().onGitStateChange(...)` is not captured. In the diff, `onGitStateChange` returns an unsubscribe `() => void`, and the diff adds a `private unsubscribeGitState` field plus a matching `this.unsubscribeGitState?.()` call in `dispose()`. Without capturing and calling the unsubscribe, the git file-system watchers created inside `GitDiffProvider` will never be torn down when the service is disposed (e.g., after a `ChangeDetectionUnavailableError` triggers `this.dispose()`). This leaks OS watch handles. Make sure the returned unsubscribe function is stored and called from `dispose()`.",
+      "index": 6
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `options.gitDiffProvider` type was narrowed from `Pick<GitDiffProvider, 'getChangedFiles' | 'getRepoRoot'>` to the full `GitDiffProvider` class. This is necessary \u2014 `onGitStateChange` is now required \u2014 but it removes duck-typing flexibility: callers can no longer pass a plain object that satisfies only the two original methods. The tests are correctly migrated to `MockGitDiffProvider extends GitDiffProvider`, but any other consumer that passed a structural mock would now fail type-checking. Since the option is internal and optional (defaults to lazy-created `GitDiffProvider`), the practical impact is low, but the narrowing is worth noting if there are external callers in non-TypeScript contexts.",
+      "index": 7
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "In `getGitDir`, the gitdir pointer is resolved with `resolvePath(repoRoot, match[1])`. The git spec states the `gitdir:` path in a linked worktree's `.git` file is relative to the directory containing that file, which is `dirname(join(repoRoot, '.git'))` \u2014 which equals `repoRoot`. So `resolvePath(repoRoot, match[1])` and `resolvePath(dirname(join(repoRoot, '.git')), match[1])` are equivalent and the test passes, but the intent is clearer if written as `resolvePath(dirname(join(repoRoot, '.git')), match[1])` to make the relativity explicit and resilient if the `.git` path ever originates from somewhere other than `join(repoRoot, '.git')`.",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `MockGitDiffProvider` in `ChangeDetectionService.test.ts` extends the real `GitDiffProvider`, calling `super('/repo')` in its constructor. This means the mock inherits and silently initialises real internal state (`repoRoot`, `gitStateCallbacks`, watcher fields, etc.) that tests do not need. If `GitDiffProvider`'s constructor ever acquires a side effect, it will silently run in every test. A lighter alternative for `ChangeDetectionService` tests \u2014 where the provider is purely a collaborator \u2014 would be to type the option against a narrow interface and keep the mock as a plain object implementing that interface, eliminating the coupling to the real class.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 1.1813885499999999,
+  "duration_seconds": 871.3411781787872
+}

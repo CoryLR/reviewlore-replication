@@ -1,0 +1,163 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 5167,
+  "title": "xychart: support for multiple datasets added",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nCurrently the `xychart` does not support multiple datasets which is a very common requirement. I also need it myself for a software package which uses `mermaid`. Therefore I have implemented support for multiple datasets while staying compatible with existing usages.\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nThere were not really any design changes required. For changes to parser syntax please have a look at `demos/xychart.html`.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n- [x] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/docs/community/development.md#3-update-documentation) is used for all new features.\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "camueller",
+  "merged_at": "2024-02-05T07:36:46Z",
+  "base_ref": "xychart",
+  "merge_commit_sha": "90be8dedf6e6ad426c2f63c1968d0386388b0317",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "b043d79cc4ac3217c2e9388989098e333abac5a5",
+    "f1490ff679e8c90119ead5af230892e4c9226099"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85W4p6O",
+          "author": "sidharthv96",
+          "body": "Can you try if this works? It'll be more readable. \r\n```suggestion\r\n        `xychart-beta\r\n  x-axis xAxisName\r\n  y-axis yAxisName\r\n  bar \"barTitle1\" [23, 45, 56.6]\r\n  bar \"barTitle2\" [13, 42, 56.89]`;\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/xychart/parser/xychart.jison.spec.ts",
+          "line_number": 457,
+          "start_line": null,
+          "commit_sha": "f1490ff679e8c90119ead5af230892e4c9226099",
+          "created_at": "2024-01-18T16:23:32Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "The suggestion is about improving readability of a test string literal by reformatting it more clearly."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85XCijO",
+          "author": "camueller",
+          "body": "Done",
+          "file_path": "packages/mermaid/src/diagrams/xychart/parser/xychart.jison.spec.ts",
+          "line_number": 457,
+          "start_line": null,
+          "commit_sha": "f1490ff679e8c90119ead5af230892e4c9226099",
+          "created_at": "2024-01-20T07:44:59Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a specific code change via a code suggestion block to improve readability of a test string."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85XJcPh",
+          "author": "subhash-halder",
+          "body": "There is one issue if we remove the y-axis config then the y-axis should auto-calculate to the proper range. please check the below example, the plot is going above the chart canvas.\r\n![image](https://github.com/mermaid-js/mermaid/assets/7448177/791be919-309d-468c-bbb9-97af2e990f13)\r\n\r\n```xychart-beta\r\n      title \"Basic xychart with multiple datasets\"\r\n      x-axis \"Relevant categories\" [category1, \"category 2\", category3, category4]\r\n      bar \"dogs\" [40, 20, 40, 30]\r\n      bar \"cats\" [20, 40, 50, 30]\r\n      bar \"birds\" [30, 60, 50, 30]",
+          "file_path": "demos/xychart.html",
+          "line_number": 84,
+          "start_line": null,
+          "commit_sha": "f1490ff679e8c90119ead5af230892e4c9226099",
+          "created_at": "2024-01-22T16:14:29Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "When y-axis config is omitted, the auto-calculated range is incorrect, causing plot elements to render outside the chart canvas."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85XJ6rA",
+          "author": "camueller",
+          "body": "@subhash-halder This leads again to the topic discussed above: The axis crossing should be the start of the range - Zero in most cases or 20 in the diagram above. Can you state any reason why it is currently designed like this?\r\n\r\n- *developer perspective*: it makes the code a lot more complicated\r\n- *user perspective*: How this gap between the axis crossing and the range start (20 in the diagram above) has to be interpreted? If a categry has a value of 20 than the range should start at 15 or 18. It is not the task of an axis to make sure that minimum value can be displayed.",
+          "file_path": "demos/xychart.html",
+          "line_number": 84,
+          "start_line": null,
+          "commit_sha": "f1490ff679e8c90119ead5af230892e4c9226099",
+          "created_at": "2024-01-22T17:57:04Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85XMEG3",
+          "author": "subhash-halder",
+          "body": "@camueller We are using d3-axis to calculate the tick to display, and to get the scale we passed the min and max and the d3-axis decides which ticks to draw.\r\nI think how d3-axis decides is if it can create the tick with a multiple of 5 then it uses that as it is more easily relatable to humans.\r\n\r\nin this case, we need to update the setting of min max accordingly if there is multiple bar charts from here\r\nhttps://github.com/mermaid-js/mermaid/blob/05e17c0bf08d99810321b07710d62adff1be3673/packages/mermaid/src/diagrams/xychart/xychartDb.ts#L112",
+          "file_path": "demos/xychart.html",
+          "line_number": 84,
+          "start_line": null,
+          "commit_sha": "f1490ff679e8c90119ead5af230892e4c9226099",
+          "created_at": "2024-01-23T06:29:03Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85XV7xB",
+          "author": "camueller",
+          "body": "I fixed the range calculation.",
+          "file_path": "demos/xychart.html",
+          "line_number": 84,
+          "start_line": null,
+          "commit_sha": "f1490ff679e8c90119ead5af230892e4c9226099",
+          "created_at": "2024-01-24T18:18:10Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where removing y-axis config causes the plot to render beyond the chart canvas, implying the auto-calculation logic needs to be fixed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85XbNfA",
+          "author": "subhash-halder",
+          "body": "@camueller over here there is one edge case let say for this example\r\n```\r\nxychart-beta\r\n      title \"Basic xychart with multiple datasets\"\r\n      x-axis \"Relevant categories\" [category1, \"category 2\", category3, category4]\r\n      bar \"dogs\" [40, 20, 40, 130]\r\n      bar \"cats\" [20, 140, 50, 30]\r\n      bar \"birds\" [130, 60, 50, 30]\r\n```\r\nthe max value of the axis is computed as 400 ideally it should be 220 taking the values from the 2nd column\r\n![image](https://github.com/mermaid-js/mermaid/assets/7448177/86660f3a-9016-4d0e-a007-3bc3ed805dcb)\r\n\r\n",
+          "file_path": "packages/mermaid/src/diagrams/xychart/xychartDb.ts",
+          "line_number": 125,
+          "start_line": null,
+          "commit_sha": "f1490ff679e8c90119ead5af230892e4c9226099",
+          "created_at": "2024-01-25T18:07:17Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The max value computation for the y-axis is incorrect when multiple datasets are present \u2014 it computes 400 instead of the correct 220, indicating a bug in how per-column stacked/grouped values are aggregated."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Xh1E_",
+          "author": "camueller",
+          "body": "Using a different approach it seems to be working well.",
+          "file_path": "packages/mermaid/src/diagrams/xychart/xychartDb.ts",
+          "line_number": 125,
+          "start_line": null,
+          "commit_sha": "f1490ff679e8c90119ead5af230892e4c9226099",
+          "created_at": "2024-01-27T14:10:08Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a concrete bug where the max y-axis value is incorrectly computed (400 instead of 220), implying the aggregation/calculation logic needs to be corrected."
+    }
+  ],
+  "review_thread_count": 3,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 3,
+    "stage1_kept": 3,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "package.json",
+      "line_number": 47,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Using `oxfmt --check` here instead of bare `oxfmt` is a significant behavior change. The previous `code/package.json` lint-staged ran `oxfmt` (auto-formats staged files in place), which is the conventional lint-staged pattern. Switching to `--check` means the pre-commit hook will now *reject* commits when files aren't already formatted, instead of fixing them automatically. Developers will need to manually run `yarn fmt:write` before every commit. If check-only is intentional, it should be documented clearly; otherwise revert to `oxfmt` so it auto-fixes on commit.",
+      "index": 0
+    },
+    {
+      "file_path": "package.json",
+      "line_number": 55,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `scripts/**/*.{html,js,json,jsx,mjs,ts,tsx}` lint-staged entry only runs ESLint (`yarn --cwd scripts lint:js:cmd`) and does not include an `oxfmt --check` step, unlike the `code/**` patterns above it. Because the root `fmt:check` CI job runs `oxfmt --check .` which covers `scripts/` (it is not in ignorePatterns), a developer can commit unformatted `scripts/` files that pass the pre-commit hook but fail CI formatting validation. Add `oxfmt --check` (or `oxfmt`) to the `scripts/**` pattern for consistency.",
+      "index": 1
+    },
+    {
+      "file_path": "scripts/ci/common-jobs.ts",
+      "line_number": 73,
+      "dimension": "Performance Issue",
+      "importance": "major",
+      "comment": "`npm.install('.')` installs the entire monorepo (all workspaces), whereas the replaced `npm.installScripts()` installed only the scripts workspace via `yarn workspaces focus @storybook/scripts`. The `prettyDocs` CI job only needs `oxfmt` (a root devDependency) to run `yarn fmt:check`. Installing the full monorepo adds substantial CI overhead for what is now a simple formatting check. Consider a focused install \u2014 e.g. `yarn workspaces focus @storybook/root` \u2014 or add `oxfmt` as a direct dependency at the level where `fmt:check` runs.",
+      "index": 2
+    },
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 43,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The overrides entry for `[\"*.md\", \"*.mdx\"]` sets `importOrderSeparation` and `importOrderSortSpecifiers`, but these file extensions are already listed in `ignorePatterns` (lines 38\u201339), so oxfmt will never process them and this override block is dead configuration. Additionally, `importOrderSeparation` and `importOrderSortSpecifiers` appear to be options from Prettier import-sorting plugins, not native oxfmt options, so they would be ignored even if the files were processed. Remove this override to avoid confusion.",
+      "index": 3
+    },
+    {
+      "file_path": "code/package.json",
+      "line_number": 27,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `lint` script now does `yarn lint:js && cd .. && yarn fmt:check`, navigating from the `code/` sub-package up to the repo root to call a parent-level script. This creates an implicit coupling to the monorepo directory structure inside a sub-package's script. A cleaner approach is to keep this cross-package orchestration at the root level (e.g., in the root `lint` script) and have `code/lint` remain self-contained.",
+      "index": 4
+    },
+    {
+      "file_path": "code/builders/builder-vite/input/iframe.html",
+      "line_number": 68,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "With `embeddedLanguageFormatting: \"off\"` in the new oxfmt config, embedded JavaScript inside `<script>` tags is no longer formatted as JS \u2014 it is indented as plain HTML text. This results in the function body being pushed to ~12 spaces of indentation, which significantly reduces readability. Consider either enabling embedded language formatting for HTML files via an override, or manually normalizing the indentation if the formatter can't handle it.",
+      "index": 5
+    },
+    {
+      "file_path": ".vscode/extensions.json",
+      "line_number": 9,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "File is missing a trailing newline (`\\ No newline at end of file`). Most editors and linters expect files to end with a newline character. This should be added.",
+      "index": 6
+    },
+    {
+      "file_path": ".vscode/settings.json",
+      "line_number": 75,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "File is missing a trailing newline (`\\ No newline at end of file`). Add a newline at the end of the file to comply with POSIX standards and avoid noisy diffs in the future.",
+      "index": 7
+    },
+    {
+      "file_path": "scripts/project.json",
+      "line_number": 9,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Adding `\"{workspaceRoot}/docs/.oxfmtrc.json\"` as an explicit NX input is redundant \u2014 it is already matched by the preceding `\"{workspaceRoot}/docs/**/*\"` glob. Remove the duplicate to keep the inputs array clean.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`docs/.oxfmtrc.json` now duplicates several settings from the root `.oxfmtrc.json` (`tabWidth`, `trailingComma`, `arrowParens`, `sortPackageJson`, `embeddedLanguageFormatting`). If these values drift between the two files in the future, docs formatting will silently diverge from the rest of the project. Consider whether the docs config can omit the duplicated keys and rely on the root config as a base, or add a comment noting that these must stay in sync.",
+      "index": 9
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `iframe.html` diff contains a genuine bug fix bundled with the formatting changes: the original HTML had `<ul>` used as a closing tag (should be `</ul>`), which was silently producing invalid HTML. While the fix is welcome, mixing bug fixes with mechanical formatting changes makes the diff harder to review and audit. It is worth calling this out explicitly in the PR description.",
+      "index": 10
+    }
+  ],
+  "cost_usd": 0.5399645,
+  "duration_seconds": 375.39439392089844
+}

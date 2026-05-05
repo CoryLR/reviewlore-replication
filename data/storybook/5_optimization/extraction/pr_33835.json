@@ -1,0 +1,20 @@
+{
+  "pr_number": 33835,
+  "source_mr_date": "2026-03-03T14:54:38Z",
+  "candidates": [
+    "When a parameter is populated via optional chaining (e.g., `core?.channelOptions?.token`), reflect the resulting `string | undefined` type in the receiving function's signature rather than typing it as `string`. When the value is absent at runtime, emit an explicit `logger.warn` so the missing security-critical value is surfaced instead of silently failing downstream.",
+    "In server-side Node.js code under `code/core/**`, always use `logger` from `storybook/internal/node-logger` for diagnostic output. Never use `console.warn`, `console.error`, or other direct console methods; this applies equally to stub/placeholder transport callbacks in channel constructors.",
+    "Any `new URL(input)` call that operates on user-supplied, request-derived, or externally provided strings must be wrapped in a `try/catch` block. On parse failure, return a safe sentinel value (e.g., `false` or `null`) rather than letting the `TypeError` propagate.",
+    "Host/origin validation helpers should accept standard loopback addresses (`localhost`, `127.0.0.1`, `::1`) as implicitly valid even when `localAddress` and `networkAddress` are not provided. Do not rely solely on upstream code always populating those fields; add an explicit loopback fallback so regressions in callers cannot accidentally block local access.",
+    "Never commit developer-specific testing values \u2014 such as hardcoded ngrok/tunnel domains or personal service hostnames \u2014 into shared config files (e.g., `.storybook/main.ts`). Drive such values from environment variables or git-ignored local overrides instead.",
+    "When `allowedHosts: []` (an empty array) is semantically equivalent to 'no explicit restriction, fall back to permissive default', apply that semantic consistently across every location that branches on `allowedHosts`: vite-server config, build-dev warnings, host-validation middleware, and WebSocket origin validation. An empty array is truthy and will not be caught by a simple falsy check (`!allowedHosts`); use `Array.isArray(allowedHosts) && allowedHosts.length === 0` (or a shared helper) everywhere.",
+    "When asserting that a port number is present, use `invariant(port != null, ...)` rather than the truthy form `invariant(port, ...)`. Port `0` is a valid OS-assigned value and is falsy, so the truthy check incorrectly rejects it.",
+    "When writing stub or placeholder callbacks (e.g., for a channel that is not yet ready), ensure the diagnostic code executes immediately: use `() => logger.error('...')`, not `() => () => logger.error('...')`. The double-arrow form returns a new function without invoking it, so the message is never emitted.",
+    "In HTTP `upgrade` event handlers, construct the request URL using a fixed dummy base (e.g., `new URL(request.url, 'http://localhost')`) rather than `request.headers.origin` or any other request-derived value as the base. The origin header is absent for non-browser WebSocket clients and will cause a `TypeError` on relative paths. Validate the origin separately by passing `request.headers.origin` to the dedicated origin-validation helper after successful URL construction.",
+    "When security-sensitive configuration (such as `allowedHosts`) is loaded through the preset mechanism \u2014 which third-party addons can influence \u2014 log or display the fully resolved value at server startup so users can detect unexpected overrides introduced by addons.",
+    "Use nullish coalescing (`??`) rather than logical OR (`||`) when providing fallback defaults for configuration options. `||` silently replaces explicitly set falsy values like `false` or `''` with the default, masking invalid config. If those values are truly invalid, the code should fail explicitly with a clear error rather than substituting a default."
+  ],
+  "analysis": [],
+  "cost_usd": 0.21517100000000003,
+  "duration_seconds": 112.30457973480225
+}

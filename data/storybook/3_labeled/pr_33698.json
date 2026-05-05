@@ -1,0 +1,115 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33698,
+  "title": "Core: Resolve .js imports to .ts files in TypeScript loader",
+  "body": "Closes #32757 \r\n\r\n## What I did\r\n\r\nAdded support for resolving JavaScript extension imports to their TypeScript equivalents in the esbuild loader. \r\n                                                                                                                  \r\n**The Problem:**                                                                                                \r\nWhen using TypeScript with `moduleResolution: \"Node16\"` or `\"NodeNext\"`, it's standard practice to use `.js` extensions in imports even when source files are `.ts`. The loader was returning the `.js` path as-is without checking if a `.ts` file should be used instead, causing \"Cannot find module\" errors.                           \r\n                                                                                                                  \r\n**The Fix:**                                                                                                    \r\n- Added `jsToTsExtensionMap` to map JS extensions to TS equivalents                                             \r\n- Modified `resolveWithExtension()` to check if `.js` file exists; if not, try TypeScript alternatives          \r\n- Extension mappings: `.js` \u2192 `.ts/.tsx`, `.mjs` \u2192 `.mts`, `.cjs` \u2192 `.cts`, `.jsx` \u2192 `.tsx`                     \r\n                                                                                                                  \r\n**Example:**                                                                                                    \r\n```typescript                                                                                                   \r\n// .storybook/main.ts                                                                                           \r\nimport { config } from './vite-config.js';  // File is actually vite-config.ts                                  \r\n// Before: Error: Cannot find module './vite-config.js'                                                         \r\n// After: Successfully resolves to './vite-config.ts'     \r\n```\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n> [!CAUTION]\r\n> This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!\r\n\r\n<!-- Please include the steps to test your changes here. For example:\r\n\r\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Open Storybook in your browser\r\n3. Access X story\r\n\r\n-->\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\nThis pull request has been released as version `0.0.0-pr-33698-sha-b652f4b7`. Try it out in a new sandbox by running `npx storybook@0.0.0-pr-33698-sha-b652f4b7 sandbox` or in an existing project with `npx storybook@0.0.0-pr-33698-sha-b652f4b7 upgrade`.\n<details>\n<summary>More information</summary>\n\n| | |\n| --- | --- |\n| **Published version** | [`0.0.0-pr-33698-sha-b652f4b7`](https://npmjs.com/package/storybook/v/0.0.0-pr-33698-sha-b652f4b7) |\n| **Triggered by** | @valentinpalkovic |\n| **Repository** | [yatishgoel/storybook](https://github.com/yatishgoel/storybook) |\n| **Branch** | [`fix/32757-ts-loader-js-extension-resolution`](https://github.com/yatishgoel/storybook/tree/fix/32757-ts-loader-js-extension-resolution) |\n| **Commit** | [`b652f4b7`](https://github.com/yatishgoel/storybook/commit/b652f4b71201e17ec334d850d19781672d2ee954) |\n| **Datetime** | Fri Mar 20 08:36:05 UTC 2026 (`1773995765`) |\n| **Workflow run** | [23335156160](https://github.com/storybookjs/storybook/actions/runs/23335156160) |\n\nTo request a new release of this pull request, mention the `@storybookjs/core` team.\n\n_core team members can create a new canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=33698`_\n</details>\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Improvements**\n  * Import resolution now prefers TypeScript alternatives when a corresponding JavaScript-style import exists, falling back to the original when none are found.\n  * Extensionless imports are resolved by consulting cached directory listings to select explicit file extensions when available.\n  * Directory listings are cached for faster resolution, and a mechanism was added to clear that cache so file changes are picked up promptly.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "yatishgoel",
+  "merged_at": "2026-03-20T12:23:18Z",
+  "base_ref": "next",
+  "merge_commit_sha": "346d5d3815cba435ecafb47d104c0af5431728f4",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "3f97760ee579efc867b9609d4d7bf427a287443b",
+    "b652f4b71201e17ec334d850d19781672d2ee954"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6jJqbT",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udf10 Web query:\n\n`TypeScript Node16 NodeNext moduleResolution .js .ts file resolution order precedence`\n\n\ud83d\udca1 Result:\n\nIn **`moduleResolution: \"node16\"` / `\"nodenext\"`**, TypeScript follows Node\u2019s ESM/CJS rules (ESM `import` vs CJS `require`), but when a lookup would target a **runtime JavaScript file**, TS applies **file extension substitution** to prefer TS sources / typings first. ([typescriptlang.org](https://www.typescriptlang.org/docs/handbook/modules/reference))\n\n## File resolution order (extension substitution)\n\nWhen the runtime target is\u2026\n\n### `./mod.js`\nTypeScript tries, in order: ([typescriptlang.org](https://www.typescriptlang.org/docs/handbook/modules/reference))\n1. `./mod.ts`\n2. `./mod.tsx`\n3. `./mod.d.ts`\n4. `./mod.js`\n5. `./mod.jsx`\n\n### `./mod.mjs`\nTypeScript tries: ([typescriptlang.org](https://www.typescriptlang.org/docs/handbook/modules/reference))\n1. `./mod.mts`\n2. `./mod.d.mts`\n3. `./mod.mjs`\n\n### `./mod.cjs`\nTypeScript tries: ([typescriptlang.org](https://www.typescriptlang.org/docs/handbook/modules/reference))\n1. `./mod.cts`\n2. `./mod.d.cts`\n3. `./mod.cjs`\n\n## Node16/NodeNext-specific path rules that affect precedence\n\n- **Extensionless relative paths**\n  - **Not allowed for ESM `import` in Node**, so TS also won\u2019t accept `import \"./mod\"` under node16/nodenext ESM rules (you generally write `import \"./mod.js\"` in TS, and TS resolves it via the substitution order above). ([typescriptlang.org](https://www.typescriptlang.org/docs/handbook/modules/reference))\n  - Still allowed in contexts that model **CJS `require`** resolution. ([typescriptdocs.com](https://typescriptdocs.com/modules-reference/reference.html?utm_source=openai))\n\nCitations:\n\n- 1: https://www.typescriptlang.org/docs/handbook/modules/reference\n- 2: https://www.typescriptlang.org/docs/handbook/modules/reference\n- 3: https://www.typescriptlang.org/docs/handbook/modules/reference\n- 4: https://www.typescriptlang.org/docs/handbook/modules/reference\n- 5: https://www.typescriptlang.org/docs/handbook/modules/reference\n- 6: https://typescriptdocs.com/modules-reference/reference.html?utm_source=openai\n\n---\n\n\n\n</details>\n\n**Fix module resolution order to match TypeScript Node16/NodeNext specifications.**\n\nAccording to TypeScript's official documentation, when resolving a `.js` import, TypeScript tries in this order: `.ts` \u2192 `.tsx` \u2192 `.d.ts` \u2192 `.js` \u2192 `.jsx`. The current code does the opposite\u2014it checks for an existing `.js` file first and only then tries TS alternatives. This causes stale or incorrect JavaScript files to be loaded instead of their TypeScript sources.\n\nReverse the check order: look for TS alternatives first, and only fall back to `.js` if they don't exist. Apply the same pattern for `.mjs` (check `.mts` first) and `.cjs` (check `.cts` first).\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/core/src/bin/loader.ts` around lines 47 - 68, The resolution logic\naround extImportPath in loader.ts currently checks for the original JS file\nfirst; update the logic in the block using extImportPath, importPath,\ncurrentDir, jsToTsExtensionMap and existsSync so it first iterates tsExtensions\n= jsToTsExtensionMap[extImportPath] and checks each candidate\n`${basePath}${tsExt}` (resolved with path.resolve) for existence, returning the\nfirst match, and only if none exist fall back to checking the original\nimportPath (e.g., `${basePath}${extImportPath}`) / returning importPath; apply\nthe same ordering for .mjs\u2192.mts and .cjs\u2192.cts cases so TypeScript alternatives\nare preferred before the JS file.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 98b7c14",
+          "file_path": "code/core/src/bin/loader.ts",
+          "line_number": 82,
+          "start_line": 64,
+          "commit_sha": "b652f4b71201e17ec334d850d19781672d2ee954",
+          "created_at": "2026-01-28T15:34:08Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The resolution order is incorrect \u2014 the code checks for the existing .js file first before trying TS alternatives, which is the opposite of TypeScript's Node16/NodeNext specification. This causes incorrect files to be loaded, making it a logic error."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a specific bug in the module resolution order and explicitly requests fixing it to match TypeScript's Node16/NodeNext specification, with detailed instructions on how to reverse the check order."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6kLqY9",
+          "author": "ndelangen",
+          "body": "I wonder if there's a way to avoid a cascade of sync fs-api calls",
+          "file_path": "code/core/src/bin/loader.ts",
+          "line_number": 57,
+          "start_line": null,
+          "commit_sha": "78df3b9b8d7dc94029127cb80c506f24d24fb82a",
+          "created_at": "2026-02-02T14:07:35Z",
+          "is_outdated": true,
+          "dimension": "Performance Issue",
+          "category": "Computation Efficiency",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment raises a concern about multiple cascading synchronous filesystem API calls, which is an efficiency concern \u2014 synchronous fs calls block the event loop and a cascade of them is wasteful compared to a more optimal approach."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6kWojY",
+          "author": "yatishgoel",
+          "body": "Thanks for the feedback! To reduce the number of synchronous filesystem calls, I\u2019m considering caching directory contents with a single `readdirSync` per directory instead of making multiple `existsSync` calls per import.\r\n\r\n### Proposed Approach\r\n\r\n```ts\r\nconst directoryCache = new Map<string, Set<string>>();\r\n\r\nfunction getDirectoryFiles(dir: string): Set<string> {\r\n  if (!directoryCache.has(dir)) {\r\n    try {\r\n      directoryCache.set(dir, new Set(readdirSync(dir)));\r\n    } catch {\r\n      directoryCache.set(dir, new Set());\r\n    }\r\n  }\r\n  return directoryCache.get(dir)!;\r\n}\r\n````\r\n\r\nWith this in place, we can check for file existence using:\r\n\r\n```ts\r\ndirFiles.has(`${baseName}${tsExt}`)\r\n```\r\n\r\ninstead of calling `existsSync()` repeatedly.\r\n\r\n### Benefits\r\n\r\n* Reduces filesystem syscalls from **O(imports \u00d7 extensions)**\r\n  to **O(unique directories)**.\r\n* Keeps the logic synchronous and simple.\r\n\r\n### Alternative Option\r\n\r\nAlternatively, we could switch to a fully asynchronous approach. However, this would require refactoring `addExtensionsToRelativeImports`, since `String.replace()` requires a synchronous callback.",
+          "file_path": "code/core/src/bin/loader.ts",
+          "line_number": 57,
+          "start_line": null,
+          "commit_sha": "78df3b9b8d7dc94029127cb80c506f24d24fb82a",
+          "created_at": "2026-02-03T06:19:50Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6lRi1V",
+          "author": "valentinpalkovic",
+          "body": "@ndelangen WDYT?",
+          "file_path": "code/core/src/bin/loader.ts",
+          "line_number": 57,
+          "start_line": null,
+          "commit_sha": "78df3b9b8d7dc94029127cb80c506f24d24fb82a",
+          "created_at": "2026-02-06T08:04:54Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6qUyt9",
+          "author": "ndelangen",
+          "body": "Yes, that's a very smart solution indeed! Let's do that!\r\n\r\nI apologize for the late reply.",
+          "file_path": "code/core/src/bin/loader.ts",
+          "line_number": 57,
+          "start_line": null,
+          "commit_sha": "78df3b9b8d7dc94029127cb80c506f24d24fb82a",
+          "created_at": "2026-02-26T08:13:26Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment flags a performance concern about cascading synchronous filesystem API calls and implies the code should be refactored to avoid them."
+    }
+  ],
+  "review_thread_count": 2,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 2,
+    "stage1_kept": 2,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.ts",
+      "line_number": 264,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`nodes.forEach((node) => void existingNodes.add(node))` uses an expression-body callback where `Set.prototype.add` returns a non-void value (`Set<ModuleNode>`). The `void` operator suppresses it, but the project's Biome rule `lint/suspicious/useIterableCallbackReturn` targets exactly this pattern of expression-body forEach callbacks returning non-void values. Per the project-specific rule, use a block body: `nodes.forEach((node) => { existingNodes.add(node); })`, or replace the inner loop with `for (const node of nodes) { existingNodes.add(node); }`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 101,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "Both the `'head'` watcher (line 101) and the `'packedRefs'` watcher (line 105) are registered on the same `gitDir` path (e.g. `/repo/.git`). Because `fs.watch` on a directory fires for any file change within it, both watchers trigger on every `.git/` write \u2014 `git add` (updates `index`), commits (write `COMMIT_EDITMSG`, `HEAD`, branch ref), and garbage collection (updates `packed-refs`). This causes `emitGitStateChange()` to be called twice per event and `reconfigureBranchWatcher()` to fire unnecessarily on non-HEAD events. The debounce in `ChangeDetectionService` collapses duplicate notifications into a single scan, but the double-watcher setup still creates two OS-level file watchers for the same path and amplifies watcher load on every git operation. Consider watching specific files \u2014 `join(gitDir, 'HEAD')` for the head key and `join(gitDir, 'packed-refs')` for the packedRefs key \u2014 to keep each callback scoped to the events it actually cares about.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 115,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The method is named `watchFile` but all three of its call sites pass directory paths (`.git`, `refs/heads`, `refs/heads/<branch-dir>`). `fs.watch` works on both files and directories, but the name implies file-level watching and will confuse readers who see `watchFile('head', gitDir, \u2026)` \u2014 `gitDir` is a directory, not a file. Consider renaming to `watchPath` to accurately reflect that both files and directories are accepted.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 196,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`match[1]` captures everything after `gitdir:\\s+` up to the end of the line. `gitPointer.trim()` strips leading/trailing whitespace from the whole file string, not from individual lines, so a line like `gitdir: ../worktrees/main \\n` (trailing space before the newline) produces `match[1] = '../worktrees/main '` with a trailing space. `resolvePath(repoRoot, '../worktrees/main ')` resolves to a path with a trailing space that likely does not exist. Adding `.trim()` to the capture group \u2014 `match[1].trim()` \u2014 would be a safe defensive fix. The same applies to `match?.[1]` in `readHeadRef` at line 207, where a trailing space in the HEAD ref would corrupt the `join(gitDir, branchRef)` path used to locate the branch directory.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.test.ts",
+      "line_number": 1,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`FSWatcher` and `watch` are both type-only imports from `node:fs` but arrive in two separate `import type` statements (lines 1 and 3). Per the project's import formatting conventions these should be merged into a single statement: `import type { FSWatcher, watch } from 'node:fs';`.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.test.ts",
+      "line_number": 86,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`void callback;` as a statement is used to silence the \"unused parameter\" warning inside `onGitStateChangeMock`'s default implementation. The conventional TypeScript / project pattern for an intentionally unused parameter is to prefix its name with an underscore: `(_callback) => { return vi.fn(); }`. This avoids the non-standard `void expr` statement form while still communicating intent to readers and to the compiler.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `MockGitDiffProvider` class in `ChangeDetectionService.test.ts` extends the real `GitDiffProvider` and calls `super('/repo')`, which means the real constructor runs and attaches the real `{ watch, readFile, stat }` file-system. Because all three public methods are overridden the real file system is never reached, so this is currently safe. However, as `GitDiffProvider`'s constructor or private methods evolve (e.g. if constructor-time side-effects are added), the silent inheritance could become surprising. An alternative that removes the coupling entirely is to extract an interface or abstract base, then have `MockGitDiffProvider` implement only that interface rather than subclassing the concrete implementation.",
+      "index": 6
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `headReads.shift() ?? headReads[0] ?? 'ref: refs/heads/main\\n'` expression in `setupGitWatchProvider`'s `mockReadFile` is non-obvious: after the array is exhausted `shift()` returns `undefined`, `headReads[0]` is also `undefined` (the array is now empty), so the final fallback fires. A comment explaining the intent \u2014 \"consume entries in order, then repeat the last one, then fall back to `main`\" \u2014 would help future test authors understand why `headReads[0]` is read after a failing `shift()` rather than using a simpler pattern like keeping the last entry in a variable.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.8765540499999999,
+  "duration_seconds": 603.482085943222
+}

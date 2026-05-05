@@ -1,0 +1,52 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.tsx",
+      "line_number": 200,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The assertive/polite decision only checks `errorCount` (component test errors), but `a11yErrorCount` is declared inside the `if (hasA11yAddon)` block above and is out of scope here. The PR description explicitly states the announcement should be `assertive` when component test errors **or** accessibility errors are present, but a run with only a11y errors will incorrectly produce a `polite` announcement.\n\nFix by hoisting (or recomputing) `a11yErrorCount` before the block:\n```typescript\nconst a11yErrorCount = hasA11yAddon\n  ? a11yStatusValueToStoryIds['status-value:error'].length\n  : 0;\n// \u2026\nannounce(message, (errorCount > 0 || a11yErrorCount > 0) ? 'assertive' : 'polite');\n```",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/toHaveLiveRegion.ts",
+      "line_number": 18,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The JSDoc says `text` performs an **exact match** for strings, but the implementation on line 59 uses `content.includes(text)`, which is a **substring match**. This means `expect(el).toHaveLiveRegion({ text: 'passed' })` would match a region containing `'3 tests passed, 0 failed'`, potentially producing false-positive test results.\n\nEither correct the documentation to say \"substring match\", or change the implementation to use `content === text` (or `content.trim() === text`) for true exact matching.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/toHaveLiveRegion.ts",
+      "line_number": 70,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The failure diagnostic only reads the raw `aria-live` attribute, showing `[aria-live=\"(implicit)\"]` for elements whose live-region behaviour comes from a role (e.g. `role=\"alert\"` \u2192 assertive, `role=\"status\"` \u2192 polite). This hides the effective politeness level and makes it harder to debug failures.\n\nConsider reusing the same `effectiveLevel` inference logic already present in the matching loop to produce a richer label such as `[role=\"alert\" (assertive)]`.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/components/index.ts",
+      "line_number": 126,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`toHaveLiveRegion` is a Vitest custom matcher \u2014 a test-only utility that is meaningful only when called inside `expect.extend()`. Exporting it from the production `storybook/internal/components` module (and, consequently, registering it as a manager global in `exports.ts`) bundles test code into the production Storybook manager. At minimum this increases the production bundle size unnecessarily; if the matcher is tree-shaken away in practice it is still a leaky abstraction.\n\nConsider moving it to a dedicated test-utilities package (e.g. `storybook/internal/test-utils` or alongside the vitest addon's test helpers) and importing it from there in stories and unit tests, keeping the production components module free of test-only exports.",
+      "index": 3
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The three new stories (`AnnouncesTestRunStart`, `AnnouncesTestRunFinished`, `AnnouncesTestRunCrashed`) are not tagged with `'vitest'`, despite the PR description explicitly stating they are \"Tagged with `vitest` for vitest-only test execution.\" Without the tag, these stories will be picked up by all test runners and may behave unexpectedly in environments that do not support the `announce` / DOM live-region mechanics (e.g. the browser-based test runner). Add `tags: ['vitest']` to each story (or to the meta if appropriate).",
+      "index": 4
+    },
+    {
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`code/core/src/components/components/LiveRegion/LiveRegion.tsx` contains no JSX \u2014 it is purely re-exports of imperative functions and a type alias. The `.tsx` extension signals to both the compiler and readers that the file contains React elements, which is misleading. Renaming it to `LiveRegion.ts` aligns the extension with the actual content and avoids unnecessary JSX transform overhead.",
+      "index": 5
+    }
+  ],
+  "cost_usd": 0.6416964999999999,
+  "duration_seconds": 382.68293285369873
+}

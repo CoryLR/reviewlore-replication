@@ -1,0 +1,44 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/docs/src/blocks/components/Toolbar.tsx",
+      "line_number": 78,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`key=\"reload\"` has no effect here. React only uses `key` for reconciliation of dynamically-generated lists (arrays). Elements inside a static `<>` Fragment are never reordered by React, so this key is meaningless. Note the existing zoom buttons (lines 88, 100, 112) follow the same anti-pattern, but the PR adds another instance of it. Remove `key=\"reload\"` to avoid misleading future readers about the intent.",
+      "index": 0
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/components/Preview.tsx",
+      "line_number": 35,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`onReloadStory` is added to an exported public type without a JSDoc comment. `PreviewProps` is consumed by external story authors and addon developers; a brief `/** If provided, renders a reload button in the toolbar that remounts the inline story via FORCE_REMOUNT. Only meaningful for inline stories. */` comment would make the prop's purpose and constraint discoverable in IDE hover tooltips without requiring a doc lookup.",
+      "index": 1
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/blocks/Canvas.tsx",
+      "line_number": 99,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The restriction to inline stories is non-obvious without explanation. An iframed docs story embeds an independent `<iframe>` that hosts its own preview and channel bridge; emitting `FORCE_REMOUNT` on the outer docs channel would not reach the iframe's preview listener. A short inline comment\u2014e.g., `// Reload is only supported for inline stories; iframed stories manage their own preview channel`\u2014would save future maintainers from having to rediscover this.",
+      "index": 2
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "No stories covering the new reload button behavior were added, and none of the existing toolbar stories were extended to exercise it. The project rule requires that interactive components have story `play` functions that programmatically trigger the interaction so the open/active state is captured in visual regression tests. Concretely: `Preview.stories.tsx` should gain a `WithReloadButton` story (passing an `onReloadStory` callback) with a `play` function that clicks the button and asserts the callback was invoked; `Canvas.stories.tsx` should add a story that verifies `FORCE_REMOUNT` is emitted with the correct `storyId` payload when the button is clicked. The PR description's test checklist has all boxes unchecked, which confirms this gap.",
+      "index": 3
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "There are no unit tests verifying the core behavior: that clicking the reload button emits `FORCE_REMOUNT` with the correct `{ storyId }` payload on the channel. Without this, a future refactor that breaks the event emission (e.g., wrong event name, missing storyId) would pass silently. A focused unit test for `Canvas.tsx` \u2014 mocking `docsContext.channel.emit` and asserting it is called with `FORCE_REMOUNT` and the story's `id` \u2014 would provide this regression protection.",
+      "index": 4
+    }
+  ],
+  "cost_usd": 0.4193003,
+  "duration_seconds": 227.59198093414307
+}

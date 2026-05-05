@@ -1,0 +1,67 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34274,
+  "title": "Builder-Vite: Use djb2 hash to prevent variable name collisions in builder-vite",
+  "body": "Closes #34270\n\n## What I did\n\nReplaced the naive character-code-sum hash function in `codegen-project-annotations.ts` with the [djb2 hash algorithm](http://www.cse.yorku.ca/~oz/hash.html).\n\n### Background\n\nThe existing implementation summed character codes without considering position:\n\n```ts\nvalue.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);\n```\n\nThis means different strings containing the same characters (anagrams) produce identical hashes.\n\nWith npm/yarn, preview paths are short and collisions don't occur. However, with **pnpm**, peer dependency hash suffixes (hex strings) are included in paths, causing different packages to produce the same hash value \u2014 resulting in duplicate `preview_XXXX` variable names and a build error:\n\n```\n[vite:build-html] The symbol \"preview_19913\" has already been declared\n```\n\n### Fix\n\nReplaced with djb2 hash (seed 5381, `hash * 33 + c`), which incorporates character position into the computation, eliminating the collision.\n\n## Checklist for Contributors\n\n### Testing\n\n#### The changes in this PR are covered in the following automated tests:\n\n- [ ] stories\n- [ ] unit tests\n- [ ] integration tests\n- [ ] end-to-end tests\n\n#### Manual testing\n\n1. Create a pnpm project with multiple addons that produce long paths with hex suffixes\n2. Run `storybook build`\n3. Verify no `The symbol \"preview_XXXX\" has already been declared` error occurs\n\n### Documentation\n\n- [ ] Add or update documentation reflecting your changes\n- [ ] If you are deprecating/removing a feature, make sure to update [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Refactor**\n  * Updated internal preview-annotation generation. This changes how generated preview identifiers are computed and emitted, affecting the naming of generated preview artifacts while preserving public APIs and behavior.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "chida09",
+  "merged_at": "2026-03-25T18:25:28Z",
+  "base_ref": "next",
+  "merge_commit_sha": "1c38a364f36ed149a33ddbc61e8e545a4898d8ff",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "db1ddc8e390e80df62a3cf2a92d0b92faab2c3f4",
+    "f4adf649878add5c2ad9f44f9bbb6d5d5be33f49"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6xUzOx",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Apply `>>> 0` per iteration to ensure correct 32-bit unsigned behavior.**\n\nThe current implementation applies `>>> 0` only at the end. In JavaScript, while `acc << 5` truncates to 32-bit, the subsequent `+ acc` re-adds the potentially large accumulator value. For file paths (which are much longer than ~11 characters), the accumulator can exceed JavaScript's safe integer limit (2^53), causing precision loss and potentially inconsistent hash results.\n\nThe linked issue `#34270` explicitly suggests applying `>>> 0` inside the loop:\n> `hash = ((hash << 5) + hash + charCode) >>> 0`\n\n\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n /** djb2 hash \u2014 http://www.cse.yorku.ca/~oz/hash.html */\n function hash(value: string) {\n   let acc = 5381;\n   for (let i = 0; i < value.length; i++) {\n-    acc = (acc << 5) + acc + value.charCodeAt(i);\n+    acc = ((acc << 5) + acc + value.charCodeAt(i)) >>> 0;\n   }\n-  return acc >>> 0;\n+  return acc;\n }\n```\n\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n/** djb2 hash \u2014 http://www.cse.yorku.ca/~oz/hash.html */\nfunction hash(value: string) {\n  let acc = 5381;\n  for (let i = 0; i < value.length; i++) {\n    acc = ((acc << 5) + acc + value.charCodeAt(i)) >>> 0;\n  }\n  return acc;\n}\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/builders/builder-vite/src/codegen-project-annotations.ts` around lines\n108 - 115, The djb2 implementation in function hash currently applies >>> 0 only\non return; change the loop so the accumulator is forced to 32-bit unsigned on\neach iteration by updating acc as ((acc << 5) + acc + value.charCodeAt(i)) >>> 0\ninside the for loop (use the acc variable and value.charCodeAt(i) as shown) and\nkeep the final return as acc (no extra >>> 0 needed).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 8863f78",
+          "file_path": "code/builders/builder-vite/src/codegen-project-annotations.ts",
+          "line_number": 115,
+          "start_line": 108,
+          "commit_sha": "f4adf649878add5c2ad9f44f9bbb6d5d5be33f49",
+          "created_at": "2026-03-23T13:25:13Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The comment identifies a logical error in the djb2 hash implementation where >>> 0 is only applied at the end instead of per iteration, causing potential precision loss for long strings due to exceeding JavaScript's safe integer limit."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6xVEhs",
+          "author": "chida09",
+          "body": "Fixed.",
+          "file_path": "code/builders/builder-vite/src/codegen-project-annotations.ts",
+          "line_number": 115,
+          "start_line": 108,
+          "commit_sha": "f4adf649878add5c2ad9f44f9bbb6d5d5be33f49",
+          "created_at": "2026-03-23T13:37:31Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a concrete bug (potential integer precision loss for long strings) and provides a specific code fix: apply `>>> 0` inside the loop on each iteration rather than only at the end."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

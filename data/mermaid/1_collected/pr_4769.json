@@ -1,0 +1,106 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4769,
+  "title": "chore: Preview PRs with mermaid-live-editor on Netlify",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nWe will now deploy a live editor preview for develop, next, master branches and all PRs.\r\nThis should make reviews easier for the maintainers.\r\n\r\nImplements https://github.com/mermaid-js/mermaid/issues/3348\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nWe can try adding live editor as a git submodule. \r\nBut I would rather not make any changes to the mermaid repo right now, apart from adding one file. \r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [ ] :computer: have added necessary unit/e2e tests.\r\n- [ ] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/docs/community/development.md#3-update-documentation) is used for all new features.\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "sidharthv96",
+  "merged_at": "2023-08-25T03:05:41Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "f553fa5eb8a5c986a387568f46ed38d9f6df2610",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "c3160b2693533a2d694256dda341e98a4b0cd68f",
+    "c3939d3fb328eb020e6cff033a7f1428a80dca75"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NxzbE",
+          "author": "aloisklink",
+          "body": "By the way, if you add a `set -euxo pipefail` to the front of your bash script, it will automatically exit the bash script if any command fails (so we don't need any `|| exit` bits)!\r\n\r\n- `set -e`: Exits the bash script if any command fails.\r\n- `set -x`: print out each line before running it (helping for debugging GitHub Actions, although I wouldn't do this in an users facing scripts)\r\n- `set -u`: Exit the script trying to use unset variables, e.g. `$NON_EXISTANT_VARIABLE`.\r\n- `set -o pipefail`: if any command in a pipe fails, make the whole pipe return an error code.\r\n\r\n```suggestion\r\nset -euxo pipefail\r\n\r\n# We have to use npm instead of yarn because it causes trouble in netlify\r\n\r\n# Link local mermaid to npm\r\npushd packages/mermaid\r\nnpm link\r\npopd\r\n\r\n# Clone the Mermaid Live Editor repository\r\ngit clone https://github.com/mermaid-js/mermaid-live-editor.git\r\n\r\n# Change to the repository directory\r\ncd mermaid-live-editor\r\n```",
+          "file_path": "scripts/editor.sh",
+          "line_number": 14,
+          "start_line": null,
+          "commit_sha": "c3939d3fb328eb020e6cff033a7f1428a80dca75",
+          "created_at": "2023-08-24T21:44:01Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Nx0BN",
+          "author": "aloisklink",
+          "body": "Should we rename this file `.bash` if it's explicitly a bash script?\r\n\r\nIt's just so we don't run this under another POSIX shell, like `dash` (default `/bin/sh` shell on Ubuntu).",
+          "file_path": "scripts/editor.sh",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "54de763a663520ba975f8ff2c30cbde1316c53cc",
+          "created_at": "2023-08-24T21:47:08Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Nx2-j",
+          "author": "Yokozuna59",
+          "body": "As far as I know, the first line would make it execute in bash no matter what the file extension is.\r\n",
+          "file_path": "scripts/editor.sh",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "54de763a663520ba975f8ff2c30cbde1316c53cc",
+          "created_at": "2023-08-24T21:59:39Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Nx4sg",
+          "author": "aloisklink",
+          "body": "> As far as I know, the first line would make it execute in bash no matter what the file extension is.\r\n\r\nNot necessarily.\r\n\r\nIf you do try to execute the file directly (e.g. with `./scripts/editor.sh`), then it will run in `bash` using the shebang. But if you do `sh ./scripts/editor.sh` (or `. ./scripts/editor.sh` from a non-bash shell) , then it will still run in `sh` (and if you do `node ./scripts/editor.sh`, it will try to run in `node`, and fail!).\r\n\r\nI've had to do a lot of POSIX shell scripting on platforms like OpenWRT and Alpine Linux, where `bash` isn't available (and even on Ubuntu, `dash` is preferred over `bash` for performance reasons), so it's good to know what's a POSIX shell script and what's a bash script from the filename.",
+          "file_path": "scripts/editor.sh",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "54de763a663520ba975f8ff2c30cbde1316c53cc",
+          "created_at": "2023-08-24T22:09:36Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Nx_YZ",
+          "author": "nirname",
+          "body": "Very likely it is not necessary at all, but exit have 0 as default status. If any other script on top of that is relying on that, it can be misleading, because it masks its behavior:\r\n```\r\n./editor.sh && echo \"success\"\r\n```\r\nIf it is exactly what is needed let it be as it is.\r\n\r\nJust in case, `$?` returns exit code of previous command",
+          "file_path": "scripts/editor.sh",
+          "line_number": 8,
+          "start_line": null,
+          "commit_sha": "c3939d3fb328eb020e6cff033a7f1428a80dca75",
+          "created_at": "2023-08-24T22:58:45Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NydJL",
+          "author": "sidharthv96",
+          "body": "The `|| exit`s were auto-added by my shellcheck extension. I've removed them based on @aloisklink's suggestion. ",
+          "file_path": "scripts/editor.sh",
+          "line_number": 8,
+          "start_line": null,
+          "commit_sha": "c3939d3fb328eb020e6cff033a7f1428a80dca75",
+          "created_at": "2023-08-25T02:51:04Z",
+          "is_outdated": true
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 3
+}

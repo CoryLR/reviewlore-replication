@@ -1,0 +1,39 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/cli-storybook/src/bin/run.ts",
+      "line_number": 309,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `--output` option is registered on the parent `ai` command instead of on the `prepare` subcommand. Commander.js binds option parsing to the command they're declared on: once `prepare` is recognized as a subcommand, remaining tokens are handed to `prepare` for parsing. Because `prepare` has no `-o` option, running `storybook ai prepare -o file.md` (as shown in the PR description) will fail at runtime with `error: unknown option '-o'`. The correct invocation with this implementation would be `storybook ai -o file.md prepare`, which is unintuitive and contradicts the documented usage.\n\nThe fix is to move the `.option('-o, --output <path>', ...)` call to the `prepare` subcommand's chain (alongside `-c, --config-dir`), which eliminates both the option-placement bug and the `cmd.parent?.opts()` workaround.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/bin/run.ts",
+      "line_number": 321,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `cmd.parent?.opts()` access and the `mergedOptions` spread on lines 321\u2013322 exist solely to retrieve the `output` option from the parent command. This is a symptom of the option being registered on the wrong command (see comment on line 309). If `--output` is moved to the `prepare` subcommand, this entire block can be reverted to the original `options` directly, keeping the action handler consistent with every other subcommand in this file.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/index.ts",
+      "line_number": 64,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`writeFile` is called without a try/catch. If the user supplies a path whose parent directory does not yet exist (e.g., `-o reports/ai/prompt.md` in a fresh project), Node.js will throw `ENOENT` with a raw system error message that gives no hint about what went wrong at the Storybook level. Wrapping this block in try/catch and re-emitting a user-friendly message (e.g., `logger.error(\\`Failed to write prompt to ${outputPath}: ${err.message}\\`)`) would match the error-handling style already used in the same function (see lines 44\u201350).",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/index.ts",
+      "line_number": 62,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`if (output)` uses a truthiness check on an `output?: string` field. The project convention (and the project-specific rule for optional string props) is to use an explicit `output != null` (or `output !== undefined`) guard rather than a truthiness check, to avoid silently treating a falsy-but-potentially-valid value as absent. While an empty-string path is unlikely here due to Commander's `<path>` required-argument syntax, the explicit form is clearer and consistent with the codebase style.",
+      "index": 3
+    }
+  ],
+  "general_comments": [],
+  "cost_usd": 0.42236335,
+  "duration_seconds": 304.95137667655945
+}

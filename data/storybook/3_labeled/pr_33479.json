@@ -1,0 +1,56 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33479,
+  "title": "Addon Vitest: Add component to test transformer",
+  "body": "Closes #\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\nThis PR introduces a Vite transformer which transforms a component code directly to a test code, using portable stories. This is useful to quickly detect whether a component turned into a story would be successful. It also uses the `experimental_getArgTypesData` preset to generate correct args for required props.\r\n\r\nThis will only be used internally as there's no use case for user usage at the moment.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n1. Go to the `code` directory\r\n2. Open a component like `code/core/src/components/components/Badge/Badge.tsx`\r\n3. Add a console log to the props it receives, make some of the props required.\r\n4. run `STORYBOOK_COMPONENT_PATHS=core/src/components/components/Badge/Badge.tsx y test:watch Badge.tsx`\r\n5. Notice that the test executes correctly, and the generated props are shown in the logs.\r\n6. If you throw an error, the test should fail.\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Automatic component test generation for Vitest with optional path-based selection via env config.\n  * Improved component test metadata (ArgTypes-driven props) and safer test execution guarding to avoid duplicate runs.\n\n* **Tests**\n  * Added comprehensive tests covering named, default, and re-exported components and generated test scaffolding.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "yannbf",
+  "merged_at": "2026-01-09T11:50:20Z",
+  "base_ref": "yann/ghost-stories-research",
+  "merge_commit_sha": "16580854492e717d5594f2e257f103ae6c51c4af",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "15bc7d2916e2c2ad6ff5e756130797dc87915790",
+    "cf4298cb4426c9268465770de35b559a2bd6ac84"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fJSSR",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Edge case: Result starting with a digit is an invalid identifier.**\n\nIf `value` is something like `123Component`, the result would be `123Component` which is not a valid JavaScript identifier.\n\n<details>\n<summary>\ud83d\udd27 Proposed fix</summary>\n\n```diff\n const sanitizeIdentifier = (value: string) => {\n   const sanitized = value.replace(/[^a-zA-Z0-9_$]+/g, '');\n+  // Ensure the identifier doesn't start with a digit\n+  if (/^\\d/.test(sanitized)) {\n+    return '_' + sanitized;\n+  }\n   return sanitized || 'Component';\n };\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/csf-tools/vitest-plugin/component-transformer.ts around lines\n24 - 27, The sanitizeIdentifier function can return strings that start with a\ndigit (e.g., \"123Component\") which are invalid JS identifiers; modify\nsanitizeIdentifier to, after stripping invalid chars and ensuring a non-empty\nfallback, check whether the first character is a digit and if so prefix the\nresult with a safe character (e.g., '_' or 'C') so the returned value is always\na valid identifier; ensure this uses the existing sanitizeIdentifier symbol and\npreserves the current fallback ('Component') behavior.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/csf-tools/vitest-plugin/component-transformer.ts",
+          "line_number": 31,
+          "start_line": 28,
+          "commit_sha": "cf4298cb4426c9268465770de35b559a2bd6ac84",
+          "created_at": "2026-01-07T20:42:21Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The sanitizeIdentifier function fails to handle the edge case where the result starts with a digit, producing an invalid JavaScript identifier. This is a logic error due to a missing edge case check."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a specific bug (invalid JS identifier when value starts with a digit) and provides a concrete code fix to address it."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

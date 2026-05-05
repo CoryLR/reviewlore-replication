@@ -1,0 +1,48 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33982,
+  "title": "Angular: Use Story ID for renderer IDs (including standalone stories)",
+  "body": "### Summary\r\nAngular renderer ID generation (target selector and story UID) now uses the **story ID from the story context** instead of the target DOM node\u2019s `id`. \r\n\r\nThe previous behavior implicitly relied on the target DOM node's `id` being the story id. \r\n\r\nThis fixes standalone stories when using Angular.\r\n\r\n### Changes\r\n\r\n- **`render.ts`**  \r\n  - Reads `id: storyId` from `storyContext` and passes `storyId` into the renderer\u2019s `render()` call.\r\n\r\n- **`AbstractRenderer.ts`**  \r\n  - `render()` now takes an explicit `storyId` and uses it to build the target selector via `generateTargetSelectorFromStoryId(storyId)` instead of `targetDOMNode.id`.  \r\n  - `initAngularRootElement()` is updated to accept `storyId` so the override in `DocsRenderer` can use it\r\n\r\n- **`DocsRenderer.ts`**  \r\n  - Override of `initAngularRootElement()` passes `storyId` through and uses it when setting the story UID: `getNextStoryUID(storyId)` instead of `getNextStoryUID(targetDOMNode.id)`.\r\n\r\n### Why\r\n\r\nUsing the story context ID ensures that:\r\n- Selectors and UIDs are driven by Storybook\u2019s story identity.\r\n- **Standalone stories work correctly with Angular** (previously broke because the DOM node id didn\u2019t match the story id).\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Refactor**\n  * Improved Angular rendering pipeline to consistently associate rendered content with specific stories, reducing cross-story collisions and improving stability across Canvas and Docs views.\n* **Bug Fixes**\n  * Made story-specific rendering deterministic so forced and parallel renders target the correct output root.\n* **Tests**\n  * Updated tests to validate the new story-targeting behavior.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ValentinFunk",
+  "merged_at": "2026-03-19T19:54:33Z",
+  "base_ref": "next",
+  "merge_commit_sha": "cc5f09300bba6e9fc3c04bc11aa80c6f9e48f154",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "466e8755e4916ea680cfa2be54b925f2c5cd24dd",
+    "a8b2c770bde73278c3ba8fb1abad9656f0caaddf"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6wXq6n",
+          "author": "ValentinFunk",
+          "body": "This worked before because the story would take the `targetDOMNode.id` as story id, so it rendered as `body > #storybook-root > storybook-root`. Now it renders as `body > #storybook-root > my-story`, which is correct so the test needed updating. The alternative would be to pass  `\"storybook-root\"` as storyId to make the test work with the existing assertion but imo that's a bit confusing and not what the storyIds look like inside of the \"real\" storybook.",
+          "file_path": "code/frameworks/angular/src/client/angular-beta/RendererFactory.test.ts",
+          "line_number": 76,
+          "start_line": null,
+          "commit_sha": "a8b2c770bde73278c3ba8fb1abad9656f0caaddf",
+          "created_at": "2026-03-19T10:03:32Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6wYLqG",
+          "author": "valentinpalkovic",
+          "body": "Thank you for elaborating. The change sounds reasonable to me!",
+          "file_path": "code/frameworks/angular/src/client/angular-beta/RendererFactory.test.ts",
+          "line_number": 76,
+          "start_line": null,
+          "commit_sha": "a8b2c770bde73278c3ba8fb1abad9656f0caaddf",
+          "created_at": "2026-03-19T10:31:10Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 1
+}

@@ -1,0 +1,82 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 111,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Event name mismatch: the handler is registered with `server.watcher.on('all', watcherChangeHandler)` inside `start()`, but deregistered here with `server?.watcher.off('change', watcherChangeHandler)`. Because these are different event keys, the handler is never actually removed from the watcher's `'all'` listener set. After `bail()` runs, the watcher still holds a reference to the old handler. In production this is masked by the immediately following `server?.close()`, but if the server is somehow reused, or if `start()` is called again, a new handler is added on top of the still-registered old one. Fix: change `'change'` to `'all'` to match the registration.",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 151,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`waitForModuleGraph` is a local `const` inside `start()` and is never stored at module scope, so `bail()` has no way to cancel it. If `bail()` is called before `server.moduleGraph.fileToModulesMap.size` ever becomes non-zero (e.g. the server is shut down during startup), the interval continues firing every second on an already-closed server. Subsequent ticks will call `server.waitForRequestsIdle()` on a closed server, and `watcherChangeHandler?.()` is safe only because it was set to `undefined` in `bail()`, but the server interactions remain problematic. Fix: store the interval ID at module scope alongside `debounce` and `watcherChangeHandler`, and `clearInterval` it in `bail()`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 153,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `setInterval` callback is `async` but its returned Promise is silently discarded by `setInterval`. If `server.waitForRequestsIdle()` rejects (e.g. because the server was closed between the size check and the await), the rejection becomes an unhandled promise rejection and crashes or silently swallows the error. Wrap the body in a try/catch and at minimum log the error, or restructure so the async work is not inside `setInterval`.",
+      "index": 2
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 149,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Registering on the `'all'` chokidar event causes `watcherChangeHandler` to fire for directory events (`addDir`, `unlinkDir`) in addition to file events (`change`, `add`, `unlink`). Directory additions/removals do not change any module's content or graph membership, so these events trigger unnecessary debounced rebuilds of the entire module graph. Consider subscribing to `'change'`, `'add'`, and `'unlink'` separately (as done in `vite-mock/plugin.ts` and `vite-inject-mocker/plugin.ts` elsewhere in this package) to avoid spurious notifications.",
+      "index": 3
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 332,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This assertion checks that `watcher.off` was called with `'change'`, but the implementation registers the handler with `'all'` (`server.watcher.on('all', watcherChangeHandler)`). The deregistration should therefore use `'all'` as well. The test currently validates the buggy behavior rather than catching it: because the fake watcher tracks listeners by event key, `off('change', handler)` tries to remove from the `'change'` set while the handler lives in the `'all'` set \u2014 meaning the handler is never actually removed. The test still passes only because `listeners.clear()` in `bail()` prevents callbacks from firing even though the watcher handler is still registered. Fix the assertion to `toHaveBeenCalledWith('all', expect.any(Function))` \u2014 and fix the implementation too (see corresponding `index.ts` comment).",
+      "index": 4
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 9,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`vi.mock('./vite-server', () => ({ ... }))` is missing the `{ spy: true }` option required by this project's Vitest conventions. All `vi.mock()` calls throughout the codebase must include `{ spy: true }`. Update to `vi.mock('./vite-server', { spy: true }, () => ({ createViteServer: vi.fn() }))`.",
+      "index": 5
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 307,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "There is no test covering the initial module-graph emission path: the `setInterval`-based logic that waits for `fileToModulesMap.size > 0`, then calls `server.waitForRequestsIdle()` and fires `watcherChangeHandler`. This is a non-trivial startup behavior with its own cleanup concern; a test should advance fake timers by 1000 ms with a non-empty `fileToModulesMap` and verify that the callback fires once (and that the interval is cancelled).",
+      "index": 6
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `bail()` / `start()` watcher lifecycle has a compound correctness problem: (1) the handler is registered on `'all'` but deregistered on `'change'`, leaving the handler alive after bail; (2) the `waitForModuleGraph` interval is a local variable in `start()` and cannot be cleared by `bail()`. Together, these mean bail does not fully tear down the state set up by `start()`. The module-level variable pattern used for `server`, `debounce`, and `watcherChangeHandler` is the right approach \u2014 the `waitForModuleGraph` interval ID should follow the same pattern: store it in a module-level variable and `clearInterval` + `undefined` it in `bail()` alongside the other cleanup.",
+      "index": 7
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`onModuleGraphChange` can be called at any time \u2014 before `start()`, after `start()`, and even after `bail()`. When `bail()` is called it silently clears all registered listeners via `listeners.clear()`, so callers that hold onto an unsubscribe function will silently stop receiving events without any indication that the subscription was torn down. This contract is nowhere documented. Add a JSDoc block to `onModuleGraphChange` explaining the lifecycle: subscriptions are cleared when `bail()` is called, so callers must re-subscribe after a restart.",
+      "index": 8
+    },
+    {
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`buildModuleGraph` traverses and converts the entire Vite module graph on every debounced file-change event, regardless of which file changed. For large projects with thousands of modules this rebuild is O(n) per event. Since Vite's `ModuleGraph` is mutable and already tracks changed nodes, consider passing the changed file path(s) through and rebuilding only the affected subtree, or exposing an incremental update API, to avoid a full scan on every hot-reload event.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.530386,
+  "duration_seconds": 369.20658707618713
+}

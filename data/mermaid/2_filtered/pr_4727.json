@@ -1,0 +1,1887 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4727,
+  "title": "feat: add `@mermaid-js/parser` package and `info` langium parser",
+  "body": "## :bookmark_tabs: Summary\r\n\r\n- Create the `parser` package inside `packages/parser`.\r\n- Create `info` langium parser and integrate it in `packages/mermaid`.\r\n- add `title`, `accTitle`, and `accDesrc` to `info` grammar.\r\n- ignore yaml, comments, and directives in `info` grammar\r\n\r\n### Benchmark (Vitest)\r\n\r\nJISON commit: 99978da55b5a3c383272343c4c92bb1d42cc8cbf\r\nLangium commit: 6fa82944f58b0c512e0b29008dfb2d9ceb82e583 (langium has more possible hidden rules and attributes)\r\n\r\n| name | hz | min | max | mean | p75 | p99 | p995 | p999 | rme | samples |\r\n|------|----|-----|-----|------|-----|-----|------|------|-----|---------|\r\n| JISON | 476,910.58 | 0.0012 | 5.7337 | 0.0021 | 0.0028 | 0.0044 | 0.0058 | 0.0158 | \u00b10.64% | 1000000 |\r\n| Langium | 307,517.52 | 0.0025 | 0.7103 | 0.0033 | 0.0030 | 0.0069 | 0.0092 | 0.0194 | \u00b10.29% | 1000000 |\r\n\r\n### BREAKING CHANGES\r\n\r\n- Remove `showInfo` from `infoDb`.\r\n\r\n### Issues\r\n\r\n- Resolves #4\r\n- Partially #4401\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nHow langium parser works?\r\n\r\n```mermaid\r\nsequenceDiagram\r\nactor Package\r\nparticipant Module\r\nparticipant TokenBuilder\r\nparticipant Lexer\r\nparticipant Parser\r\nparticipant ValueConverter\r\n\r\nPackage --> Module: Create services\r\nNote left of TokenBuilder: When to override? For keywords<br>and rules needs custom function\r\nNote left of TokenBuilder: When to reorder? When langium makes<br>rules at the begging because of performance\r\nTokenBuilder --> Module: Override or/and reorder rules (if needed)\r\nTokenBuilder --> Lexer: Read string and transform it to token stream\r\nLexer --> Parser: Parse token stream into AST\r\nNote left of ValueConverter: For example: remove double<br>whitespace and double quotes\r\nParser --> ValueConverter: Clean/modify tokenized<br>rules returned value (if needed)\r\nValueConverter --> Package: Return AST\r\n```\r\n\r\n> From https://github.com/mermaid-js/mermaid/pull/4727#issuecomment-1683825997\r\n\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n",
+  "author": "Yokozuna59",
+  "merged_at": "2023-08-28T08:10:30Z",
+  "base_ref": "next",
+  "merge_commit_sha": "44b93c039a10c1130b56ac48dd6c2a1e7e4d540a",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "60ed7d327306c3dd54d4591e0c0d7ffb5463cccd",
+    "4d5313699ed595cefaf72d87a117e4aae4c1312b"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NDaoq",
+          "author": "sidharthv96",
+          "body": "Why do we need both langium and mermaid-parser?\r\n\r\nIf we have mermaid-parser, ideally, any parsing related implementation should be contained within that package.",
+          "file_path": "packages/mermaid/package.json",
+          "line_number": 74,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T09:58:13Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDfEq",
+          "author": "Yokozuna59",
+          "body": "Just for types, we could remove it.\r\n",
+          "file_path": "packages/mermaid/package.json",
+          "line_number": 74,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T11:13:01Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDfdD",
+          "author": "Yokozuna59",
+          "body": "But we also need `EmptyFileSystem` from langium. But we could just get that code from langium and add it somewhere.\r\n",
+          "file_path": "packages/mermaid/package.json",
+          "line_number": 74,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T11:18:40Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDgEs",
+          "author": "sidharthv96",
+          "body": "That means we're leaking abstraction. \r\nThere is no reason for the mermaid package to even know about `EmptyFileSystem`. Only the parser package needs to know that right?",
+          "file_path": "packages/mermaid/package.json",
+          "line_number": 74,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T11:27:00Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDgiM",
+          "author": "Yokozuna59",
+          "body": "Yes, it's the result of `generator-langium`. But we could change the parameter to be optional and if it's `undefined` we could use `EmptyFileSystem` in parser itself.",
+          "file_path": "packages/mermaid/package.json",
+          "line_number": 74,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T11:36:12Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDh8D",
+          "author": "Yokozuna59",
+          "body": "Fixed f9c6b119dff38799f2d19d47355cf3d888c98250",
+          "file_path": "packages/mermaid/package.json",
+          "line_number": 74,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T11:57:47Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests consolidating parsing logic into one package, implying code restructuring is needed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NDarT",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n  \"version\": \"0.1.0\",\r\n```",
+          "file_path": "packages/parser/package.json",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T09:59:16Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDfKB",
+          "author": "Yokozuna59",
+          "body": "But the latest one is `v0.2.0`: https://www.npmjs.com/package/mermaid-parser?activeTab=versions",
+          "file_path": "packages/parser/package.json",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T11:14:15Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDgFz",
+          "author": "sidharthv96",
+          "body": "Oh, you did release this. Then no problem. ",
+          "file_path": "packages/parser/package.json",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T11:27:19Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Direct code suggestion to change the version string."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NDatZ",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n    \"directory\": \"packages/parser\"\r\n```",
+          "file_path": "packages/parser/package.json",
+          "line_number": 26,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T10:00:01Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Direct code suggestion to change the directory field."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NDa3Z",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\nimport { DefaultValueConverter } from 'langium';\r\nimport type { CstNode, GrammarAST, ValueType } from 'langium';\r\n```",
+          "file_path": "packages/parser/src/language/common/commonValueConverters.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T10:03:04Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Direct code suggestion to restructure imports."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NDbNh",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n    if (regex === undefined) {\r\n      return null;\r\n    }\r\n    const match = regex.exec(input);\r\n    if (match === null) {\r\n      return null;\r\n    }\r\n    // single line title, accTitle, accDescr\r\n    if (match[1] !== undefined) {\r\n      return match[1].trim().replaceAll(/[\\t ]{2,}/gm, ' ');\r\n    }\r\n    // multi line accDescr\r\n    if (match[2] !== undefined) {\r\n      return match[2]\r\n        .replaceAll(/^\\s*/gm, '')\r\n        .replaceAll(/\\s+$/gm, '')\r\n        .replaceAll(/[\\t ]{2,}/gm, ' ')\r\n        .replaceAll(/[\\n\\r]{2,}/gm, '\\n');\r\n    }\r\n```",
+          "file_path": "packages/parser/src/language/common/commonValueConverters.ts",
+          "line_number": 65,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T10:06:40Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDbQx",
+          "author": "sidharthv96",
+          "body": "Can you replace all the `null`s with undefined? Our convention is to always use undefined unless it's a return type from an external function. ",
+          "file_path": "packages/parser/src/language/common/commonValueConverters.ts",
+          "line_number": 65,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T10:07:40Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDiuz",
+          "author": "Yokozuna59",
+          "body": "It's just a custom function to allow use the return type of `CustomValueConverter` since we can't extend multiple classes. I'll change them to `undefined`.",
+          "file_path": "packages/parser/src/language/common/commonValueConverters.ts",
+          "line_number": 65,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T12:13:10Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDi6g",
+          "author": "Yokozuna59",
+          "body": "Done b01f30e3b7e00bb9005e454d5f95cdb787b4d379",
+          "file_path": "packages/parser/src/language/common/commonValueConverters.ts",
+          "line_number": 65,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T12:16:43Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Direct code suggestion with a rewrite of the function body."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NDbVz",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n    (parseResult.value as Info).version = version;\r\n```",
+          "file_path": "packages/parser/src/language/info/infoParser.ts",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T10:09:11Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Direct code suggestion to change a type cast."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NDbXi",
+          "author": "sidharthv96",
+          "body": "Can these generic types be replaced with specific ones?",
+          "file_path": "packages/parser/src/language/info/infoParser.ts",
+          "line_number": 12,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T10:09:54Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDfrJ",
+          "author": "Yokozuna59",
+          "body": "I tried but it didn't work, I'll give it another try.\r\n",
+          "file_path": "packages/parser/src/language/info/infoParser.ts",
+          "line_number": 12,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T11:22:03Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDgG8",
+          "author": "sidharthv96",
+          "body": "Don't worry about it now. ",
+          "file_path": "packages/parser/src/language/info/infoParser.ts",
+          "line_number": 12,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T11:27:49Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Asks whether generic types can be replaced with specific ones, implying a code change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NDcCo",
+          "author": "sidharthv96",
+          "body": "Info needs a more descriptive name. ",
+          "file_path": "packages/parser/src/language/info/infoModule.ts",
+          "line_number": 65,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T10:23:47Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDdZL",
+          "author": "sidharthv96",
+          "body": "Fix casing too.",
+          "file_path": "packages/parser/src/language/info/infoModule.ts",
+          "line_number": 65,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T10:50:08Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDf58",
+          "author": "Yokozuna59",
+          "body": "It's the structure was generated by `generator-langium`, but not sure what to rename it to.",
+          "file_path": "packages/parser/src/language/info/infoModule.ts",
+          "line_number": 65,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T11:23:35Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NGcKi",
+          "author": "Yokozuna59",
+          "body": "The `Info` here should matches the grammar name in the `info.langium`:\r\n\r\n<https://github.com/mermaid-js/mermaid/blob/c54df6e1f0885f1c11cabdcffc1a70bf912ffb2e/packages/parser/src/language/info/info.langium#L1>\r\n",
+          "file_path": "packages/parser/src/language/info/infoModule.ts",
+          "line_number": 65,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-14T14:21:50Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests a rename to a more descriptive name."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NDcPR",
+          "author": "sidharthv96",
+          "body": "Please add an explanation here.",
+          "file_path": "packages/parser/src/language/info/infoTokenBuilder.ts",
+          "line_number": 19,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T10:28:59Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDgVT",
+          "author": "Yokozuna59",
+          "body": "We must change the match of `info` to `/info(?!\\S)/` so the user mustn't have any non-whitespace character, without it the following code is valid:\r\n\r\n```\r\ninfotitle\r\n```\r\n",
+          "file_path": "packages/parser/src/language/info/infoTokenBuilder.ts",
+          "line_number": 19,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T11:32:56Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDghW",
+          "author": "sidharthv96",
+          "body": "Sorry, I meant, as a comment in the code. ",
+          "file_path": "packages/parser/src/language/info/infoTokenBuilder.ts",
+          "line_number": 19,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T11:35:41Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NPEMV",
+          "author": "sidharthv96",
+          "body": "@Yokozuna59 please add the comment in code. ",
+          "file_path": "packages/parser/src/language/info/infoTokenBuilder.ts",
+          "line_number": 19,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T12:04:10Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NPXUM",
+          "author": "Yokozuna59",
+          "body": "It's already there \r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/d5fc64a4ba35dc0145a0bb2e5d9a4f1923b36914/packages/parser/src/language/info/infoTokenBuilder.ts#L13-L15",
+          "file_path": "packages/parser/src/language/info/infoTokenBuilder.ts",
+          "line_number": 19,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T13:09:08Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding an explanation/comment to the code."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NDdNy",
+          "author": "sidharthv96",
+          "body": "```suggestion\n// Avoid the direct dependency on chevrotain.\ntype TokenType = ReturnType<DefaultTokenBuilder['buildKeywordTokens']>[number];\n```",
+          "file_path": "packages/parser/src/language/info/infoTokenBuilder.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T10:46:41Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDdOg",
+          "author": "sidharthv96",
+          "body": "Move below imports.",
+          "file_path": "packages/parser/src/language/info/infoTokenBuilder.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T10:47:00Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDiBg",
+          "author": "Yokozuna59",
+          "body": "Why do need to avoid that? So we could remove it from deps?",
+          "file_path": "packages/parser/src/language/info/infoTokenBuilder.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T11:59:29Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDj_G",
+          "author": "Yokozuna59",
+          "body": "Maybe we should create a wrapper file contains all needed `chevrotain` types? This type used in all diagrams `TokenBuilder`s.\r\n\r\nAlthough it hard if we tried to import new type after we remove `chevrotain` from deps.\r\n",
+          "file_path": "packages/parser/src/language/info/infoTokenBuilder.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T12:35:35Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NScVe",
+          "author": "Yokozuna59",
+          "body": "@sidharthv96 We will need `chevrotain` again for `mindmap` diagram:\r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/1fa9dd7a1ba7b6ac229a8ecf9ce4d1068a6ec21c/packages/parser/src/language/mindmap/mindmapTokenBuilder.ts#L18-L22\r\n\r\nBut let's just go with the current approach for now.",
+          "file_path": "packages/parser/src/language/info/infoTokenBuilder.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-17T05:07:07Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Direct code suggestion with a replacement type definition and comment."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NDdUH",
+          "author": "sidharthv96",
+          "body": "We should only explicitly export things we need. Otherwise the surface area of the library is too much to handle and every minor change might end up becoming a breaking change. ",
+          "file_path": "packages/parser/src/language/index.ts",
+          "line_number": 7,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T10:48:31Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDiMx",
+          "author": "Yokozuna59",
+          "body": "I think each diagrams modules, `mermaid` and `common` dir is a must, but not sure other services, e.g., each diagram other services.",
+          "file_path": "packages/parser/src/language/index.ts",
+          "line_number": 7,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T12:02:24Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDrHQ",
+          "author": "sidharthv96",
+          "body": "I think I picked the wrong file. I don't mind the exports in /src/language honestly. \r\nI mean exporting stuff from the main file. Whatever we are exposing from the library.",
+          "file_path": "packages/parser/src/language/index.ts",
+          "line_number": 7,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T15:09:04Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85ND4BG",
+          "author": "Yokozuna59",
+          "body": "Yeah, I know. These are most what we're exporting, unless you're suggesting export explicit stuff from `generated` dir.",
+          "file_path": "packages/parser/src/language/index.ts",
+          "line_number": 7,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T21:57:58Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85ND4IN",
+          "author": "Yokozuna59",
+          "body": "Both `grammar.ts` and `module.ts` exported stuff are essential, but `ast.ts` has some unnecessary exported stuff from mermaid package perspective, but sure some are important when trying to add other services for LSP.",
+          "file_path": "packages/parser/src/language/index.ts",
+          "line_number": 7,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T22:02:35Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests limiting exported symbols to reduce the public API surface area."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NDdh3",
+          "author": "sidharthv96",
+          "body": "\n```suggestion\nimport type {\n  DefaultSharedModuleContext,\n  LangiumServices,\n  LangiumSharedServices,\n  Module,\n  PartialLangiumServices,\n  LangiumParser\n} from 'langium';\nimport {\n  createDefaultModule,\n  createDefaultSharedModule,\n  inject,\n} from 'langium';\n```",
+          "file_path": "packages/parser/src/language/info/infoModule.ts",
+          "line_number": 7,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T10:51:10Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDdjr",
+          "author": "sidharthv96",
+          "body": "Similar changes everywhere else. ",
+          "file_path": "packages/parser/src/language/info/infoModule.ts",
+          "line_number": 7,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T10:51:25Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Direct code suggestion to restructure imports."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NDej7",
+          "author": "sidharthv96",
+          "body": "I think we should remove all these from `mermaid` package, and encapsulate all langium related logic inside the other package. \r\n\r\n```mermaid\r\nflowchart TD\r\n    JISON[\"Current\"] --> Text[\"Text\"] --> B(Loop through detectors)\r\n    B --> C{Does it match?}\r\n    C -->|No| B\r\n    C -->|Yes| E(\"new Diagram()\")\r\n    E --> P(Parse)\r\n    P --> DB(Update DB)\r\n    DB --> R(Render)\r\n\r\n    Langium --> Text2[\"Text\"] --> Par(\"const {type, ast} = mermaid-parser.parse(text)\")\r\n    Par --> ND(\"new Diagram({type, ast})\")\r\n    ND --> PDB(\"populateDB(ast)\")\r\n    PDB --> R\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T11:07:04Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDez8",
+          "author": "sidharthv96",
+          "body": "So, the only things exported from the new package should be the `parse` function and the AST types. ",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T11:10:03Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDnp6",
+          "author": "Yokozuna59",
+          "body": "It make sense to have the logic in the other package, then I'll export that `parse` function, but how to handle errors? I don't think we should make it throw an error it has lexer or parse errors.\r\n\r\nAnd also should we remove other attributes in the AST? for example `endColumn` and `startColumn` of each field ...etc.\r\n\r\nBut seeing that removed the detector in langium path then I'm assuming you're referring to `MermaidRegistryServices`. I'm sure how it's works yet, so we still need the more modification and testing to make its working as expected.\r\n",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T13:52:13Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDojx",
+          "author": "sidharthv96",
+          "body": "> I don't think we should make it throw an error it has lexer or parse errors.\r\n\r\nWhy not?\r\n\r\nWe can use a try catch when calling `parse` to handle those errors no?",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T14:12:47Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDoun",
+          "author": "sidharthv96",
+          "body": "The detectors don't necessarily need to go away, we can use that inside the parser. \r\n\r\nAlso, the lazy loading is something we need to keep in mind. Although not the priority now.",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T14:16:57Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDo0T",
+          "author": "sidharthv96",
+          "body": "> And also should we remove other attributes in the AST? for example endColumn and startColumn of each field ...etc.\r\n\r\nWhat all info is there in the AST now?",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T14:19:21Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDppZ",
+          "author": "Yokozuna59",
+          "body": "> Why not?\r\n> \r\n> We can use a try catch when calling `parse` to handle those errors no?\r\n\r\nNot sure why :)\r\n\r\n> The detectors don't necessarily need to go away, we can use that inside the parser.\r\n\r\n\r\nI think the `MermaidRegistryServices` is doing the same thing here, but not sure how to use it yet.\r\n\r\n> Also, the lazy loading is something we need to keep in mind. Although not the priority now.\r\n\r\nAll services are already lazy loaded.\r\n\r\n> What all info is there in the AST now?\r\n\r\nActual value (with other values):\r\n\r\n```ts\r\ninterface Info {\r\n  $type: 'Info';\r\n  title?: string;\r\n  accTitle?: string;\r\n  accDescr?: string;\r\n  version?: string;\r\n}\r\n```\r\n\r\nYou might ask why we need title and accessibilities, langium entry rule must have an assignment, so we can't have empty AST, that's why I added those.\r\n",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T14:37:05Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDrad",
+          "author": "sidharthv96",
+          "body": "> Not sure why :)\r\n\r\nBecause that's how errors should generally be handled. (Unless there is a need to return without throwing)\r\nPseudo code below. \r\n\r\n```ts\r\n// somewhere inside mermaid\r\nimport { parse } from 'mermaid-parser';\r\nconst parseText = (text: string) => {\r\n  try {\r\n    const { ast, type } = await parse(text);\r\n//    log(Got type with ast);\r\n    return { ast, type };\r\n  } catch (error) {\r\n// Type check here. \r\n    const { parserErrors, lexerErrors } = error.details;\r\n    log.error(\r\n      error.details,\r\n      'Error parsing diagram'\r\n    );\r\n    throw new MermaidParsingError(parserErrors, lexerErrors);\r\n  }\r\n}",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T15:15:20Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDrc2",
+          "author": "sidharthv96",
+          "body": "> All services are already lazy loaded.\r\n\r\nAre they in different chunks now to be downloaded when necessary?",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T15:16:17Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDr0E",
+          "author": "sidharthv96",
+          "body": "@Yokozuna59 to make your life easier (for now), we can do this.\r\n\r\n- Don't change existing detection logic\r\n- Make the parse in `parser` accept the type of diagram, along with text. `parse('info', text)`\r\n- Use switch to call necessary service inside the parse function. \r\n\r\n",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T15:26:12Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NDszR",
+          "author": "Yokozuna59",
+          "body": "> Because that's how errors should generally be handled. (Unless there is a need to return without throwing)\r\n\r\nOkay.\r\n\r\n---\r\n\r\n> Are they in different chunks now to be downloaded when necessary?\r\n\r\n> Additionally, all services within the DI container are lazy loaded, so there's no runtime overhead unless you actually call these services.\r\n> https://github.com/mermaid-js/mermaid/pull/4450#issuecomment-1586103778\r\n\r\n> If you take a look at the code you will see that it only generates a small reflection layer for your grammar types. The actual grammars are stored elsewhere and are lazy loaded.\r\n> https://github.com/mermaid-js/mermaid/pull/4450#issuecomment-1642441133\r\n\r\n---\r\n\r\n> @Yokozuna59 to make your life easier (for now), we can do this.\r\n> \r\n>     * Don't change existing detection logic\r\n> \r\n>     * Make the parse in `parser` accept the type of diagram, along with text. `parse('info', text)`\r\n> \r\n>     * Use switch to call necessary service inside the parse function.\r\n\r\nI'll ask langium team about that service to the best approach here.\r\n",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T15:52:35Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removing langium-related logic from the mermaid package and encapsulating it in the parser package."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NDiwm",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\nexport function createInfoServices(context: DefaultSharedModuleContext = EmptyFileSystem): {\r\n  shared: LangiumSharedServices;\r\n  Info: InfoServices;\r\n} {\r\n```",
+          "file_path": "packages/parser/src/language/info/infoModule.ts",
+          "line_number": 67,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-13T12:13:58Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Direct code suggestion to change function signature."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NGz56",
+          "author": "sidharthv96",
+          "body": "Let's not add the detection logic in two places. \r\nI know we will need this for creating the final version with the LSP and all, but for now, let the mermaid library to the detection, accept the type as a parameter, and handle it. \r\n\r\nOnce we have the grammars ported here, we can move the detection logic.",
+          "file_path": "packages/parser/src/detector.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "eb463f78c250b2885505ed2ec486ef4d96fb97d8",
+          "created_at": "2023-08-14T15:28:20Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removing detection logic from the parser package for now and deferring to the mermaid library."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NG0GD",
+          "author": "sidharthv96",
+          "body": "Don't export these now. Only export the parse function and any related errors and AST types. ",
+          "file_path": "packages/parser/src/index.ts",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-14T15:28:59Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests limiting exports to only the parse function, errors, and AST types."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NG1Eg",
+          "author": "sidharthv96",
+          "body": "Remove if possible. \r\n",
+          "file_path": "packages/parser/src/language/info/index.ts",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-14T15:31:05Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NG29J",
+          "author": "Yokozuna59",
+          "body": "as I said before, we need module (or at least part of it), but the other services are removable.",
+          "file_path": "packages/parser/src/language/info/index.ts",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-14T15:37:44Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NG40P",
+          "author": "sidharthv96",
+          "body": "Where is the module used?",
+          "file_path": "packages/parser/src/language/info/index.ts",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-14T15:44:21Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NG6Hg",
+          "author": "Yokozuna59",
+          "body": "In creating services to get parser, we need it for `tests` dir.",
+          "file_path": "packages/parser/src/language/info/index.ts",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-14T15:48:54Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removing the file if possible."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NG1ZC",
+          "author": "sidharthv96",
+          "body": "Can we remove this for now? \r\nIs this used by the CLI for generation?",
+          "file_path": "packages/parser/src/language/mermaid/mermaidModule.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "eb463f78c250b2885505ed2ec486ef4d96fb97d8",
+          "created_at": "2023-08-14T15:32:12Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NG2hU",
+          "author": "Yokozuna59",
+          "body": "we're currently using it in `tests` dir, but we could remove it for now and use each diagram service.\r\n",
+          "file_path": "packages/parser/src/language/mermaid/mermaidModule.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "eb463f78c250b2885505ed2ec486ef4d96fb97d8",
+          "created_at": "2023-08-14T15:36:11Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Asks whether the file can be removed, implying it should be if not needed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NNfl4",
+          "author": "sidharthv96",
+          "body": "This should be inside the individual diagram folders. This will remove the need for `isInfo` function as we already know what type the diagram is (as it will be called after the parse function)\r\nThe common functions can be in a common file. \r\n\r\n```\r\n  ast.accDescr && db.setAccDescription?.(ast.accDescr);\r\n  ast.accTitle && db.setAccTitle?.(ast.accTitle);\r\n  ast.title && db.setDiagramTitle?.(ast.title);\r\n```",
+          "file_path": "packages/mermaid/src/populateDb.ts",
+          "line_number": 15,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T05:05:44Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NOqop",
+          "author": "Yokozuna59",
+          "body": "But why `commonDb` is inside `packages/mermaid/src/commonDb.ts`",
+          "file_path": "packages/mermaid/src/populateDb.ts",
+          "line_number": 15,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T10:22:06Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NOsRg",
+          "author": "sidharthv96",
+          "body": "I didn't understand the question \ud83d\ude05 ",
+          "file_path": "packages/mermaid/src/populateDb.ts",
+          "line_number": 15,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T10:28:44Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NOsjg",
+          "author": "Yokozuna59",
+          "body": "And I'm thinking of setting some default values to `undefined`. I think it would make sense (that's what actually happens in langium):\r\n\r\n\r\n- undefined === not parsed\r\n- empty string === parsed but ignored in setting values\r\n- string === set values",
+          "file_path": "packages/mermaid/src/populateDb.ts",
+          "line_number": 15,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T10:30:01Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NOs0Z",
+          "author": "Yokozuna59",
+          "body": "> I didn't understand the question \ud83d\ude05\r\n\r\nI mean why it's inside `src` instead of `stc/diagrams/common`.",
+          "file_path": "packages/mermaid/src/populateDb.ts",
+          "line_number": 15,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T10:31:05Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NOvqK",
+          "author": "sidharthv96",
+          "body": "I don't know. Maybe the diagrams/common didn't exist back when it was introduced. \r\n\r\n---\r\n\r\nBtw, by `the individual diagram folders`, I meant `diagrams/info/populateDB.ts`. \r\nThe populateDB function inside `diagrams/info` will have the logic to populate the infoDB from the info AST. \r\nNo need to use `  if (isInfo(ast)) {` at all. \r\n\r\nYou can call a common `populateCommonDB` with the AST to set the 3 common values to the common db. \r\n\r\n",
+          "file_path": "packages/mermaid/src/populateDb.ts",
+          "line_number": 15,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T10:42:49Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NO5BT",
+          "author": "Yokozuna59",
+          "body": "> I don't know. Maybe the diagrams/common didn't exist back when it was introduced.\r\n\r\nShould we move it there? Or in another PR? It might need some refactoring also.\r\n\r\n> Btw, by `the individual diagram folders`, I meant `diagrams/info/populateDB.ts`. The populateDB function inside `diagrams/info` will have the logic to populate the infoDB from the info AST. No need to use ` if (isInfo(ast)) {` at all.\r\n> \r\n> You can call a common `populateCommonDB` with the AST to set the 3 common values to the common db.\r\n\r\nBut in that case we will have two DB files in the same diagram. And I think we follow naming convention in diagram files, the diagram word as prefix, naming it `populateDB` isn't following that. \r\n\r\n",
+          "file_path": "packages/mermaid/src/populateDb.ts",
+          "line_number": 15,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T11:22:52Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NPBSe",
+          "author": "sidharthv96",
+          "body": "> Should we move it there? Or another PR? It might need some refactoring also.\r\n\r\nNot now. \r\n\r\n> But in that case we will have two DB files in the same diagram. And I think we follow naming convention in diagram files, the diagram word as prefix, naming it populateDB isn't following that.\r\n\r\nYou can add the populateDB function in the diagramParser.ts file (in mermaid package) then? As the previous parser was doing the parsing and population of DB.\r\n",
+          "file_path": "packages/mermaid/src/populateDb.ts",
+          "line_number": 15,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T11:55:25Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NPEId",
+          "author": "Yokozuna59",
+          "body": "Done f5c33c3f1",
+          "file_path": "packages/mermaid/src/populateDb.ts",
+          "line_number": 15,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T12:03:57Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests moving logic into individual diagram folders and provides a code example."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NOtTp",
+          "author": "sidharthv96",
+          "body": "This should not be removed. \r\nDiagrams with `showInfo` should not throw error. Simply skip `showInfo` ?",
+          "file_path": "demos/info.html",
+          "line_number": 25,
+          "start_line": 22,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T10:33:10Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NO0oa",
+          "author": "Yokozuna59",
+          "body": "I don't think there is someone uses it, actually most users don't even know about `info` diagram.",
+          "file_path": "demos/info.html",
+          "line_number": 25,
+          "start_line": 22,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T11:03:35Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NO3WX",
+          "author": "sidharthv96",
+          "body": "Sadly, that doesn't matter. We should not intentionally break backwards compatibility in the grammar. That is a core principle of mermaid. ",
+          "file_path": "demos/info.html",
+          "line_number": 25,
+          "start_line": 22,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T11:15:37Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests restoring a removed file and suggests a specific fix (skip showInfo instead of throwing error)."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NOuKV",
+          "author": "sidharthv96",
+          "body": "Please add this back. ",
+          "file_path": "packages/mermaid/src/diagrams/info/info.spec.ts",
+          "line_number": 21,
+          "start_line": 18,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T10:36:40Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests restoring a removed test file."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NOwSO",
+          "author": "sidharthv96",
+          "body": "Attach the actual errors to the error object as fields. Stringifying might not be the best option. ",
+          "file_path": "packages/parser/src/parse.ts",
+          "line_number": 41,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T10:45:29Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NPC2z",
+          "author": "sidharthv96",
+          "body": "I meant making the `lexerErrors` and `parserError` as public properties on the Error object, so we can access them in the mermaid project as actual objects. ",
+          "file_path": "packages/parser/src/parse.ts",
+          "line_number": 41,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T12:00:00Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests attaching errors as fields on the error object rather than stringifying."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NOw5-",
+          "author": "sidharthv96",
+          "body": "Shouldn't this be in info.test.ts as there's nothing common here?",
+          "file_path": "packages/parser/tests/test-utils.ts",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T10:47:59Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NO0Mp",
+          "author": "Yokozuna59",
+          "body": "It was taken from the common function `createMermaidServices`, so I placed in common place.",
+          "file_path": "packages/parser/tests/test-utils.ts",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T11:01:39Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests moving test utilities into the info-specific test file."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NPBa8",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\nexport function populateCommonDb(ast: DiagramAST, db: DiagramDB) {\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/common/populateCommonDb.ts",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T11:55:48Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Direct code suggestion to rename the function."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NPDSF",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n  constructor(public result: ParseResult<DiagramAST>) {\r\n    super(`Parsing failed: ${result.lexerErrors} ${result.parserErrors}`);\r\n```\r\n\r\nHow does `Parsing failed: ${result.lexerErrors} ${result.parserErrors}` show up in the console?\r\nIt's useless if it's just `[Object object]`",
+          "file_path": "packages/parser/src/parse.ts",
+          "line_number": 41,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T12:01:13Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NPFEy",
+          "author": "Yokozuna59",
+          "body": "```\r\n12.447 : ERROR :  Error parsing Error: Parsing failed: [object Object] \r\n```",
+          "file_path": "packages/parser/src/parse.ts",
+          "line_number": 41,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T12:07:48Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NPIIh",
+          "author": "Yokozuna59",
+          "body": "Should we `JSON.stringify`?",
+          "file_path": "packages/parser/src/parse.ts",
+          "line_number": 41,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T12:19:28Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NPbiR",
+          "author": "sidharthv96",
+          "body": "We could use it. Or, we could use something like `lexerErrors.map(err => err.message).join(\"\\n\")`, so it's rendered nicely. ",
+          "file_path": "packages/parser/src/parse.ts",
+          "line_number": 41,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T13:21:41Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Direct code suggestion plus a question about how errors display, implying the error formatting needs improvement."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NPbx-",
+          "author": "sidharthv96",
+          "body": "Can you add a failure case also, to verify the error messages. ",
+          "file_path": "packages/mermaid/src/diagrams/info/info.spec.ts",
+          "line_number": 11,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T13:22:25Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NPpkl",
+          "author": "Yokozuna59",
+          "body": "How deep should we verify? I wouldn't recommend to match exact error message because when updating `chevrotain` or `langium` might have some differences.",
+          "file_path": "packages/mermaid/src/diagrams/info/info.spec.ts",
+          "line_number": 11,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T13:48:44Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NQJ9Z",
+          "author": "Yokozuna59",
+          "body": "Let's match it for now and modify it if has been changed.",
+          "file_path": "packages/mermaid/src/diagrams/info/info.spec.ts",
+          "line_number": 11,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T15:23:29Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding a failure test case to verify error messages."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NPc7I",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n  \"contributors\": [\r\n    \"Yokozuna59\",\r\n    \"Sidharth Vinod (https://sidharth.dev)\"\r\n  ],\r\n```\r\n\r\nWould you mind sharing credit :) ?",
+          "file_path": "packages/parser/package.json",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T13:25:51Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NPjuP",
+          "author": "Yokozuna59",
+          "body": "Sure :)\r\n",
+          "file_path": "packages/parser/package.json",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-16T13:40:45Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Direct code suggestion to add a contributor entry."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NSMY_",
+          "author": "sidharthv96",
+          "body": "@Yokozuna59 I had to do this to fix a TS error. Are you not getting that error?\r\n\r\n<img width=\"346\" alt=\"image\" src=\"https://github.com/mermaid-js/mermaid/assets/10703445/e12034ee-6e81-4853-8682-0f8cfafbe8b2\">\r\n",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 19,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-17T02:45:56Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NSOvp",
+          "author": "Yokozuna59",
+          "body": "Maybe you haven't rebuilt the parser, because the return value from exported `parse` function return the AST only.\r\n\r\nMaybe we should rename the variable to `ast` instead of `result`? Since `result` could indicate the type of `ParseResult<T>`, whereas `ast` should  type of `DiagramAST` which might be more specific.",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 19,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-17T03:08:28Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NSiZ8",
+          "author": "sidharthv96",
+          "body": "Yeah, you can rename it. \r\nThe issue is fixed in the latest version, maybe after the rebuild. But I did try rebuilding and installing few times earlier. ",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 19,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-17T05:49:02Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Points out a TS error that should be addressed, asking if the reviewer is seeing it."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NXjXo",
+          "author": "sidharthv96",
+          "body": "The AST would not have the correct version. And we won't (most probably) release a new package of parser with every mermaid release. So the infoParser should always set the version from mermaid's package.json. \r\n\r\n```suggestion\r\n  import { verison } from '../../../../package.json';\r\n  // inside populateDB\r\n  db.setVersion(verison);\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 12,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-18T05:29:15Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NYPnj",
+          "author": "knsv",
+          "body": "I suspect that releasing the parser will be commonplace with the mermaid release. Odds are that some diagram changes/updates the grammar but I like the sentiment to have them decoupled so that a purse small rendering update would not need a new version of the parser.\r\n\r\nWe would need to setup up versioning in package.json, so that is is apparent for users when a new parser is required.",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 12,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-18T09:00:52Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NYytC",
+          "author": "sidharthv96",
+          "body": "> We would need to setup up versioning in package.json, so that is is apparent for users when a new parser is required.\r\n\r\nThe parser version is not a concern for users as the right one will be included as part of mermaid automatically. \r\n\r\nThe only subset of users who might be concerned about parser version is someone who is planning to use the AST or LSP separately, outside of mermaid. Linters, Code highlighting, etc. ",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 12,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-18T11:29:57Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NY65y",
+          "author": "Yokozuna59",
+          "body": "Then should we just remove `version` from AST? It has no use right now.\r\n",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 12,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-18T12:10:45Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NacLH",
+          "author": "Yokozuna59",
+          "body": "Done 6134f57118598cfde3f983d43e7ec14d33ea8c22",
+          "file_path": "packages/mermaid/src/diagrams/info/infoParser.ts",
+          "line_number": 12,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-18T19:10:16Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Direct code suggestion to import and use the version from mermaid's package.json instead of the parser package."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NXkAW",
+          "author": "sidharthv96",
+          "body": "There is no need to import this package.json. It's extra size, that's not gonna be used.  ",
+          "file_path": "packages/parser/src/language/info/infoParser.ts",
+          "line_number": 6,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-18T05:33:57Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removing an unnecessary package.json import."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Nc9hS",
+          "author": "aloisklink",
+          "body": "Please use `execFileSync` instead: https://nodejs.org/api/child_process.html#child_processexecfilefile-args-options-callback to avoid shell injection bugs.\r\n\r\n(e.g., if somebody has a folder called \"/usr/home/FirstName LastName\", this command won't work).\r\n\r\nIdeally we should use langium's JavaScript API, instead of going through the CLI.\r\n\r\n",
+          "file_path": ".build/generateLangium.ts",
+          "line_number": 4,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-20T21:31:00Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NdBou",
+          "author": "Yokozuna59",
+          "body": "> Ideally we should use langium's JavaScript API, instead of going through the CLI.\r\n\r\nI asked langium team to [export `langium-cli` internal](https://github.com/eclipse-langium/langium/issues/1150#issue-1850357159) and they have in https://github.com/eclipse-langium/langium/commit/24a9ebaf442b22a0cfaba2a0fccad2d94c65a2b7, but it appears that it has [an issue](https://github.com/eclipse-langium/langium/issues/1150#issuecomment-1685121389) and we're currently waiting for this PR https://github.com/eclipse-langium/langium/pull/1160 to be merged.\r\n",
+          "file_path": ".build/generateLangium.ts",
+          "line_number": 4,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-20T23:43:06Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NdB8L",
+          "author": "Yokozuna59",
+          "body": "switch to `execFileSync` 83e47a7216cdb82373df1efc14ca630bb5b0c644.\r\n",
+          "file_path": ".build/generateLangium.ts",
+          "line_number": 4,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-20T23:51:14Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NkpBQ",
+          "author": "Yokozuna59",
+          "body": "generate using `langium-cli` API 8d0ca2c87604fd8cdae97799d72c6f3dba9ecf5e",
+          "file_path": ".build/generateLangium.ts",
+          "line_number": 4,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-22T10:40:31Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests using execFileSync instead of exec to avoid shell injection bugs."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Nc9li",
+          "author": "aloisklink",
+          "body": "Is this change on purpose? It feels like it might be due to a bad merge/rebase conflict fix due to conflicts with commit https://github.com/mermaid-js/mermaid/commit/b68f45ef597e35e228677e2c8409405122a1796c.\r\n\r\nIf it is on purpose, we might want to add a comment on why we're building these packages sequentially, instead of in parallel.",
+          "file_path": ".esbuild/build.ts",
+          "line_number": 62,
+          "start_line": 60,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-20T21:32:57Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NdAkb",
+          "author": "Yokozuna59",
+          "body": "> Is this change on purpose?\r\n\r\nYes, with the old approach it tries to build `mermaid` before `parser` finishes which throws error:\r\n\r\n![4ECF5452-035E-464F-8B67-154DD6D08AF6](https://github.com/mermaid-js/mermaid/assets/87622592/08e64312-1979-49de-a48a-c5aca3672378)\r\n\r\n> If it is on purpose, we might want to add a comment on why we're building these packages sequentially, instead of in parallel.\r\n\r\nWill do \ud83d\udc4d.\r\n",
+          "file_path": ".esbuild/build.ts",
+          "line_number": 62,
+          "start_line": 60,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-20T23:11:47Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NdCRX",
+          "author": "Yokozuna59",
+          "body": "Added a comment in 984a0e6d06826a449789284ceb9e5744ffcb9772",
+          "file_path": ".esbuild/build.ts",
+          "line_number": 62,
+          "start_line": 60,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-20T23:58:56Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potentially unintentional change and requests a comment if intentional."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Nc9st",
+          "author": "aloisklink",
+          "body": "```suggestion\r\n    \"mermaid-parser\": \"workspace:^\",\r\n```\r\n\r\nThis probably should be `^` in case `mermaid-parser` ever has a **BREAKING CHANGE**, see https://pnpm.io/workspaces for more info.",
+          "file_path": "packages/mermaid/package.json",
+          "line_number": 74,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-20T21:37:01Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NdB6s",
+          "author": "Yokozuna59",
+          "body": "Done 1d64549ccebec90db1623e59b97670735dcd687c",
+          "file_path": "packages/mermaid/package.json",
+          "line_number": 74,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-20T23:50:29Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Direct code suggestion to change workspace dependency specifier."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Nc9vY",
+          "author": "aloisklink",
+          "body": "This looks strange to me, if `.yy` exists, overwrite it?\r\n\r\nIf this is right, it might need a comment explaining what we're doing here.",
+          "file_path": "packages/mermaid/src/Diagram.ts",
+          "line_number": 55,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-20T21:38:09Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NdCvR",
+          "author": "Yokozuna59",
+          "body": "No, it's a typo. Fixed 205360c10.\r\n",
+          "file_path": "packages/mermaid/src/Diagram.ts",
+          "line_number": 55,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-21T00:09:54Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags confusing logic and requests a comment explaining the behavior."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Nc90M",
+          "author": "aloisklink",
+          "body": "nitpick: we should probably use `if()` statements here, since using `&&` like this is pretty unusual in JavaScript.\r\n\r\n```suggestion\r\n  if(ast.accDescr) {\r\n    db.setAccDescription?.(ast.accDescr);\r\n  }\r\n  if(ast.accTitle) {\r\n    db.setAccTitle?.(ast.accTitle);\r\n  }\r\n  if(ast.title) {\r\n    db.setDiagramTitle?.(ast.title);\r\n  }\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/common/populateCommonDb.ts",
+          "line_number": 8,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-20T21:40:32Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NdCYf",
+          "author": "Yokozuna59",
+          "body": "Done eb63568ce",
+          "file_path": "packages/mermaid/src/diagrams/common/populateCommonDb.ts",
+          "line_number": 8,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-21T00:01:37Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Nitpick with direct code suggestion to use if statements instead of &&."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Nc-CC",
+          "author": "aloisklink",
+          "body": "Two things:\r\n\r\n- Before merging, we should rename this into the `@mermaid-js` NPM organization.\r\n- We might want to make the version `1.0.0` so that we can make MAJOR, MINOR, and PATCH releases.\r\n\r\n```suggestion\r\n  \"name\": \"@mermaid-js/parser\",\r\n  \"version\": \"1.0.0\",\r\n```",
+          "file_path": "packages/parser/package.json",
+          "line_number": 3,
+          "start_line": 2,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-20T21:48:37Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NdDRY",
+          "author": "Yokozuna59",
+          "body": "When should we rename it and deprecate the old one?\r\n",
+          "file_path": "packages/parser/package.json",
+          "line_number": 3,
+          "start_line": 2,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-21T00:18:01Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NdekN",
+          "author": "sidharthv96",
+          "body": "> We might want to make the version 1.0.0 so that we can make MAJOR, MINOR, and PATCH releases.\r\n\r\nKeeping it `0.` will allow us to make breaking changes easily, as it might be required when adding new diagrams. \r\nI think we should delay the v1 release until we're sure it's stable. ",
+          "file_path": "packages/parser/package.json",
+          "line_number": 3,
+          "start_line": 2,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-21T03:56:40Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Nde8E",
+          "author": "sidharthv96",
+          "body": "> When should we rename it and deprecate the old one?\r\n\r\nI'll publish it to the org before merging. Then you can deprecate the old one. \r\n",
+          "file_path": "packages/parser/package.json",
+          "line_number": 3,
+          "start_line": 2,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-21T03:59:32Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85N4xDl",
+          "author": "aloisklink",
+          "body": "> I'll publish it to the org before merging. Then you can deprecate the old one.\r\n\r\nSounds good! Remember to also update the `mermaid-parser` links in the README.md!",
+          "file_path": "packages/parser/package.json",
+          "line_number": 3,
+          "start_line": 2,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-27T21:39:24Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Direct code suggestion to rename package and change version."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Nc-Dr",
+          "author": "aloisklink",
+          "body": "The mermaid parser package needs it's own README.md, even if it's really basic.",
+          "file_path": "packages/parser/package.json",
+          "line_number": 10,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-20T21:49:15Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NdDcx",
+          "author": "Yokozuna59",
+          "body": "Should I set the branch to `develop`? \r\n\r\n```\r\nhttps://github.com/mermaid-js/mermaid/tree/develop/packages/mermaid/parser/#readme\r\n```\r\n\r\nAnd I'm not sure what should I add in the README.md",
+          "file_path": "packages/parser/package.json",
+          "line_number": 10,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-21T00:20:21Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NdesN",
+          "author": "sidharthv96",
+          "body": "> And I'm not sure what should I add in the README.md\r\n\r\nFor starters, an overview of how the package works, with the diagram that was added in the PR by `msujew` would be fine. \r\n",
+          "file_path": "packages/parser/package.json",
+          "line_number": 10,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-21T03:58:11Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NmrWB",
+          "author": "Yokozuna59",
+          "body": "Done 24c8e575f, but still not sure about it, have a look.",
+          "file_path": "packages/parser/package.json",
+          "line_number": 10,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-22T17:40:16Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding a README.md to the parser package."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Nc-GY",
+          "author": "aloisklink",
+          "body": "```suggestion\r\n    }\r\n```\r\n\r\nI'd recommend removing the `./*` bit so that we don't need to worry about breaking backwards compatibility as much (assuming everything is exported via the public `import {xxx} from \"mermaid-parser\";` API).",
+          "file_path": "packages/parser/package.json",
+          "line_number": 18,
+          "start_line": null,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-20T21:50:56Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Direct code suggestion to remove the ./* export entry."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85N4xMx",
+          "author": "aloisklink",
+          "body": "I'm a still a bit confused why we're doing this. Can you add a comment?\r\n\r\nMy current guess is that if `this.parser.parser` is `undefined`, then it's the new Langium parser, but I'm not 100% sure.",
+          "file_path": "packages/mermaid/src/Diagram.ts",
+          "line_number": 55,
+          "start_line": 53,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-27T21:44:34Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85N6HBC",
+          "author": "sidharthv96",
+          "body": "Yes. The `parser.parser` is only present in JISON. For any other parsers, like external diagrams, that would be undefined. So, we'll only set if present. ",
+          "file_path": "packages/mermaid/src/Diagram.ts",
+          "line_number": 55,
+          "start_line": 53,
+          "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+          "created_at": "2023-08-28T07:59:38Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding a comment to explain the confusing conditional logic."
+    }
+  ],
+  "review_thread_count": 42,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85NOwpO",
+            "author": "sidharthv96",
+            "body": "add showInfo ",
+            "file_path": "packages/parser/tests/info.test.ts",
+            "line_number": 31,
+            "start_line": null,
+            "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+            "created_at": "2023-08-16T10:46:47Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_too_short"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85NPB0l",
+            "author": "sidharthv96",
+            "body": "Nice!",
+            "file_path": "packages/parser/src/index.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+            "created_at": "2023-08-16T11:57:00Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_too_short"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85NSWrt",
+            "author": "Yokozuna59",
+            "body": "@sidharthv96 How to handle `\"./tests/**/*.ts\"`?\r\nRemoving it would make TS server to throw errors since it can't import `langium`.\r\nAnd leaving it here would make `tsc` compile and add them to `dist`.",
+            "file_path": "packages/parser/tsconfig.json",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+            "created_at": "2023-08-17T04:18:58Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85NSjhW",
+            "author": "sidharthv96",
+            "body": "Why is tsc used to compile? Isn't esbuild the recommended tool?",
+            "file_path": "packages/parser/tsconfig.json",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+            "created_at": "2023-08-17T05:56:22Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85NSkG3",
+            "author": "Yokozuna59",
+            "body": "I was using at the beginning just to get the parser running. If you have time, feel free to configure it since I'm sure how to :)",
+            "file_path": "packages/parser/tsconfig.json",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+            "created_at": "2023-08-17T05:59:49Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85NVeE2",
+            "author": "Yokozuna59",
+            "body": "@sidharthv96 I've used `esbuild`, please review it and check if it's correct.\r\n\r\nBut we are missing `package.json` in `packages/parser/dist`, and still `tests` types are generated.",
+            "file_path": "packages/parser/tsconfig.json",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "4d5313699ed595cefaf72d87a117e4aae4c1312b",
+            "created_at": "2023-08-17T16:36:14Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 42,
+    "stage1_kept": 39,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 1,
+    "stage1_filtered_too_short": 2,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

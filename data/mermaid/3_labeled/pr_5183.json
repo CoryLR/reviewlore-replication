@@ -1,0 +1,108 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 5183,
+  "title": "Flowchart: Apply `nodeSpacing`/`rankSpacing` config to subgraphs",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nThis commit resolves the issues with subgraph configuration, specifically for `nodeSpacing` and `rankSpacing`. This commit additionally adds an example graph to the `flowchart.html` to demonstrate this resolution.\r\n\r\nResolves #3258\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nThis is a fairly simple modification that applies the configuration held in the label for the overall graph to the configuration for the cluster/subgraph in order to ensure they have matching configurations. This is done right before `recursiveRender` begins to render each cluster. The reason this needs to be done is that the label for the subgraphs do not contain the correct `nodeSpacing` and `rankSpacing` based on the mermaid configuration. Therefore if one overwrites the graph label right before rendering it resolves the mismatch of configurations.\r\n\r\nSome potential improvements for this commit would be to allow subgraphs to have there own customization labels. This would be fairly trivial (presumably) by just replacing `graph.graph()` with whatever settings you want from whatever configurations you want.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [X] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n:computer: have added necessary unit/e2e tests. (Not necessary to my knowledge though I'm open to alternative opinions)\r\n:notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/docs/community/development.md#3-update-documentation) is used for all new features. (Not necessary to my knowledge as this is a bugfix)\r\n- [X] :bookmark: targeted `develop` branch\r\n",
+  "author": "rowanfr",
+  "merged_at": "2024-03-23T12:09:25Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "12bf13970828af020f58e1e4422d6e6d1fc276aa",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "223f339682bc07a3acd1e7ca84553a84a84478b0",
+    "dbb69ad7cd0d14c9b2f1d97caf7ce535286ffd63"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85WiKFN",
+          "author": "nirname",
+          "body": "Avoid directives configuration, which is obsolete, use frontmatter\r\n```suggestion\r\n      ---\r\n      title: Subgraph nodeSpacing and rankSpacing example\r\n      config:\r\n        flowchart:\r\n          nodeSpacing: 1\r\n          rankSpacing: 1\r\n      ---\r\n```",
+          "file_path": "demos/flowchart.html",
+          "line_number": 1547,
+          "start_line": null,
+          "commit_sha": "dbb69ad7cd0d14c9b2f1d97caf7ce535286ffd63",
+          "created_at": "2024-01-14T20:05:30Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "high",
+          "label_reasoning": "The comment points out the use of an obsolete directives configuration syntax and suggests using the newer frontmatter approach, which is a project/language-specific convention."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests replacing obsolete directives configuration with frontmatter syntax, includes a concrete code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85ZyqVe",
+          "author": "aloisklink",
+          "body": "I think I've found the issue that was causing the screenshots of the E2E tests to fail.\r\n\r\nThe issue is that we were updating `marginy` for subgraphs to use their parent value, and that was causing the positioning to shift very slightly.\r\n\r\nIf we instead only copy over the `ranksep` (i.e. the [`rankSpacing`](https://mermaid.js.org/config/schema-docs/config-defs-flowchart-diagram-config.html#rankspacing)) and the `nodesep` (i.e. the [`nodeSpacing`](https://mermaid.js.org/config/schema-docs/config-defs-flowchart-diagram-config.html#nodespacing)), it seems to work fine.\r\n\r\nIn the real world, however, it should would slightly modify the subgraphs of anybody that has set `rankSpacing`/`nodeSpacing`, so IMO, this should be in a MINOR release, not a PATCH release.\r\n\r\n```suggestion\r\n        const { ranksep, nodesep } = graph.graph();\r\n        node.graph.setGraph({\r\n          ...node.graph.graph(),\r\n          ranksep,\r\n          nodesep,\r\n        });\r\n```",
+          "file_path": "packages/mermaid/src/dagre-wrapper/index.js",
+          "line_number": 59,
+          "start_line": null,
+          "commit_sha": "dbb69ad7cd0d14c9b2f1d97caf7ce535286ffd63",
+          "created_at": "2024-02-28T19:05:03Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The comment identifies a bug where copying `marginy` to subgraphs causes incorrect positioning. The fix is to only copy `ranksep` and `nodesep`, correcting the logic of which graph properties are propagated."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug causing E2E test failures and provides a concrete code suggestion to fix it by only copying ranksep and nodesep instead of marginy."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Zyrwx",
+          "author": "aloisklink",
+          "body": "Awesome for adding a demo!\r\n\r\nCan you also add this demo (or another diagram) to the [`cypress/integration/rendering/flowchart-v2.spec.js`](https://github.com/mermaid-js/mermaid/blob/d6e738ac4cf2e208326b0ca3a8702d940cb846ec/cypress/integration/rendering/flowchart-v2.spec.js) file? This is just so we get some automated screenshots of the new feature you added :)\r\n\r\nIt should look something like:\r\n\r\n```ts\r\n  it('Should render subgraphs with different nodeSpacing', () => {\r\n    imgSnapshotTest(`---\r\ntitle: Subgraph nodeSpacing and rankSpacing example\r\n---\r\nflowchart LR\r\n  X --> Y\r\n  subgraph X\r\n    direction LR\r\n    A\r\n    C\r\n  end\r\n  subgraph Y\r\n    direction LR\r\n    B\r\n    D\r\n  end\r\n`,\r\n      { flowchart: { nodeSpacing: 1, rankSpacing: 1 } }\r\n    );\r\n  });\r\n```",
+          "file_path": "demos/flowchart.html",
+          "line_number": 1617,
+          "start_line": 1595,
+          "commit_sha": "dbb69ad7cd0d14c9b2f1d97caf7ce535286ffd63",
+          "created_at": "2024-02-28T19:11:51Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment requests adding automated test coverage (E2E snapshot tests) for the new feature, which relates to ensuring the feature is properly validated and documented through tests. This is closest to a structural/maintainability concern about missing test coverage."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding a new test case to the cypress integration spec file, with a concrete example of what the test should look like."
+    }
+  ],
+  "review_thread_count": 3,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 3,
+    "stage1_kept": 3,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

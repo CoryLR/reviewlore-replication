@@ -1,0 +1,157 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3894,
+  "title": "Set self.rng inside LangevinBAOAB when not supplied.",
+  "body": "This shows up as this error\n\n```\nline 435, in _BAOAB_OU\n    * (self.rng.normal(size=vel_shape).T / np.sqrt(masses)).T\n       ^^^^^^^^\nAttributeError: 'LangevinBAOAB' object has no attribute 'rng'\n```\n\nwhen one actually runs the dynamics after setting it up without explicitly supplying an RNG. It comes from a tiny typo that sets rng instead of self.rng. This MR fixes that.\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [ ] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [ ] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [ ] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [ ] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [ ] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "Chronum94",
+  "merged_at": "2026-01-22T21:40:41.421Z",
+  "base_ref": "master",
+  "merge_commit_sha": "b1c2aeb85a27e1805c201e89babc200be06e14c9",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2916771760",
+          "author": "ajjackson",
+          "body": "Argh, good find! This logic went through quite a few review iterations, not surprising that something like that would happen.\n\nIt would be better to test this code path somehow, but for obvious reasons the tests use fixed random seeds.\n\nWe could have a very short test that initializes the MD object and checks the warning was raised?\n\n(I'd like to factor out this logic and make it more universal across the stochastic MD routines at some point...)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-11-26T21:47:09.477Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment identifies a bug where self.rng is not set when not supplied, and discusses testing the code path to catch such logic errors."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding a test that initializes the MD object and checks the warning was raised."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2950150150",
+          "author": "ajjackson",
+          "body": "@Chronum94 can you add a unit test such as\n\n```python\ndef test_LangevinBAOAB_default_rng(atoms, calc):\n    \"\"\"Test LangevinBAOAB can be initialised with rng=None\"\"\"\n    atoms.calc = calc\n\n    with pytest.warns(UserWarning, match=\"No rng provided, generated one with seed\"):\n        dyn = LangevinBAOAB(\n            atoms,\n            timestep=timestep,\n            temperature_K=300,\n            T_tau=50 * timestep,\n            rng=None)\n\n    dyn.run(n_steps)\n\n```\n\nwhich reproduces the error with no fix and passes with the fix.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-12-12T09:22:50.940Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "medium",
+          "label_reasoning": "The reviewer is requesting a unit test to reproduce the bug (missing rng assignment) and verify the fix, directly related to the logic error in the original code."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly requests adding a specific unit test with provided code example."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2953774597",
+          "author": "askhl",
+          "body": "I still think we should make the rng keyword identical to other rng keywords, i.e.,\n\n```\ndef myfunc(rng=np.random):\n    ...\n```\n\nMaybe we'll want something other than that, but if we do, then we *always* want something other than that, and then that's a separate issue.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-12-15T10:27:51.331Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Function Consistency",
+          "label_confidence": "high",
+          "label_reasoning": "The comment asks for the rng keyword default to be made consistent with other rng keywords across the codebase, which is a function signature consistency concern."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests making the rng keyword default to np.random to be consistent with other rng keywords."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2966046704",
+          "author": "ajjackson",
+          "body": "@Chronum94 would you be able to add that test, or should one of us take over the branch? Would streamline review process a bit if you do it ;-)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-12-19T13:57:14.806Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "low",
+          "label_reasoning": "This is a process/collaboration comment asking the contributor to add a test. It does not directly point to a code issue, but is closest to maintainability concerns around test coverage and code clarity."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests that the author add the previously specified test, implying a concrete change is needed."
+    }
+  ],
+  "review_thread_count": 5,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2953868458",
+            "author": "ajjackson",
+            "body": "Better to fix the bug here and then look at consistent behaviour later, I think.\n\nI tried applying something like the approach you suggested here in another project: https://github.com/pace-neutrons/Euphonic/pull/437 There is a quasi-global `rng` instance used as the default value, so the type is always some kind of Generator. Seems nice, although it lacks the \"here is your seed\" feature of LangevinBAOAB. As we discussed in maintainer meeting that sort of information should probably exist at a different logging level and we need to make wider decisions about logging anyway.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-12-15T11:02:36.087Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Meta-discussion about approach and priorities; no concrete code change requested for this PR."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 5,
+    "stage1_kept": 5,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1,
+    "stage3_cost_usd": 0.01715
+  }
+}

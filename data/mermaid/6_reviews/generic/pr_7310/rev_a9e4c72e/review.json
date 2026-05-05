@@ -1,0 +1,54 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/parser/src/language/architecture/valueConverter.ts",
+      "line_number": 16,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Using `/[\"'[\\]]/g` strips ALL quote characters globally, which corrupts titles that legitimately contain apostrophes or embedded quotes. For example, `[\"It's ready\"]` (a double-quoted string containing an apostrophe) would be parsed correctly by the grammar but the converter would yield `Its ready` \u2014 the apostrophe is silently dropped. Similarly, `['He said \"hi\"']` yields `He said hi`. The converter should strip only the outer brackets and the outer quote pair, not every quote character in the string. A correct implementation:\n```ts\nconst inner = input.slice(1, -1); // strip [ and ]\nconst q = inner[0];\nif (q === '\"' || q === \"'\") {\n  return inner.slice(1, -1).replace(/\\\\(.)/g, '$1').trim();\n}\nreturn inner.trim();\n```",
+      "index": 0
+    },
+    {
+      "file_path": "packages/parser/src/language/architecture/valueConverter.ts",
+      "line_number": 16,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Escape sequences supported by the grammar are never unescaped. The updated `ARCH_TITLE` regex allows `\\.` inside quoted strings, meaning `[\"say \\\"hello\\\"\"]` is a grammatically valid title. However, the converter only strips quote characters; it does not translate `\\\"` \u2192 `\"`, `\\\\'` \u2192 `'`, or `\\\\` \u2192 `\\`. As a result a user who writes an escaped quote in their label will see a raw backslash in the rendered output (or the wrong text). The escape processing step `replace(/\\\\(.)/g, '$1')` must be added when the label was quoted.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/parser/tests/architecture.test.ts",
+      "line_number": 89,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The outer `describe` is named `'should handle service titles with quotes'` but the last test case inside it (line 129) tests a *group* title, not a service title. Rename to something like `'should handle quoted labels'` or `'quoted ARCH_TITLE values'` to accurately reflect the full scope of the block.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/parser/tests/architecture.test.ts",
+      "line_number": 90,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "All four test cases use simple single-word labels (`\"Database\"`, `\"API\"`) that were already valid *unquoted* with the old grammar (`[Database]`). They do not exercise the newly enabled capability \u2014 characters outside `[\\w ]`, such as hyphens, commas, periods, or apostrophes \u2014 so the correctness bugs in the value converter (global quote stripping, missing escape processing) are completely invisible to the test suite. Add cases such as `[\"Hello, World!\"]` \u2192 `Hello, World!`, `[\"It's ready\"]` \u2192 `It's ready`, and `[\"say \\\"hi\\\"\"]` \u2192 `say \"hi\"` to both document the intended behavior and guard against regressions.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/parser/src/language/architecture/arch.langium",
+      "line_number": 2,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The quoted-string branches inside the regex use plain capturing groups \u2014 `\"([^\"\\\\]|\\\\.)*\"` and `'([^'\\\\]|\\\\.)*'` \u2014 but these groups are unnecessary: Langium uses the whole terminal match as the token value, so the captured sub-groups are never referenced. Using non-capturing groups `(?:...)` instead would make the intent clearer and avoid any confusion about whether those groups are meaningful.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The architecture grammar (per the `architecture.langium` grammar rules) applies `ARCH_TITLE` to edge labels as well as service and group labels. The test suite adds no coverage for quoted edge titles. Since the grammar change and the converter bug both apply equally to edge titles, at least one edge-title test (e.g., `A -[\"connects to\"]-> B`) should be added to ensure the feature works end-to-end for all diagram elements that use `ARCH_TITLE`.",
+      "index": 5
+    }
+  ],
+  "cost_usd": 0.37661274999999994,
+  "duration_seconds": 253.8815519809723
+}

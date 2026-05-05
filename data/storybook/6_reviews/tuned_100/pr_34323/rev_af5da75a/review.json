@@ -1,0 +1,128 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 7,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`buildModuleGraph` is imported from `'./index'`, but `index.ts` in the diff only imports it (`import { buildModuleGraph } from './utils/build-module-graph'`) \u2014 it never re-exports it. TypeScript will reject this import with a 'has no exported member' error and the tests will fail to compile. Either add `export { buildModuleGraph } from './utils/build-module-graph'` to `index.ts`, or change this import to `'./utils/build-module-graph'` directly.",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 37,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`debounce` names a behavior pattern rather than the variable's actual content (a `setTimeout` timer ID). Readers may confuse it with a debounce utility function. Prefer `debounceTimer` or `debounceTimerId` to make the type clear at a glance.",
+      "index": 1
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 39,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`waitForModuleGraph` reads like a Promise rather than an interval handle. It stores a `setInterval` ID, so a name like `moduleGraphPollIntervalId` would clarify the variable's role and avoid confusion.",
+      "index": 2
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 64,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`bail()` calls `listeners.clear()`, silently invalidating every active subscription. Callers hold an unsubscribe closure (returned by `onModuleGraphChange`) that deletes from this same `Set` \u2014 after `bail()` the closure is a no-op against an already-empty set, and the subscriber's callback will never fire again even though they never called unsubscribe. In Storybook's lifecycle, `bail()` is called on config-triggered restarts, meaning addon-level subscribers lose their registrations with no way to detect it. Consider NOT clearing `listeners` in `bail()` and instead just tearing down the watcher and interval, then re-attaching them in the next `start()` call so existing subscribers survive restarts.",
+      "index": 3
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 42,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`notifyListeners` iterates `listeners` with `.forEach` but has no per-listener error isolation. If one callback throws, the remaining listeners in the `Set` are skipped silently. Wrap each `listener(moduleGraph)` call in a `try/catch` (logging the error) so that a misbehaving subscriber cannot block others from being notified.",
+      "index": 4
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 93,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`server.watcher.on('all', watcherChangeHandler)` is registered immediately when `start()` runs, before the module graph is ready. Any file change during the warm-up period will fire `notifyListeners(buildModuleGraph(...))` with a partial or empty graph, which could mislead consumers into making decisions based on incomplete data. The watcher should only be attached after the module graph is confirmed non-empty and `waitForRequestsIdle()` has resolved (i.e., inside the interval callback after those checks pass).",
+      "index": 5
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 95,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "The `setInterval` starts with a hard 1-second delay before the first check. If the module graph is already populated when `start()` runs (common in fast environments or on restart), consumers wait a full second for the initial notification. Consider running an immediate check before setting the interval so the common case has no delay: call the polling body once synchronously (or with a `queueMicrotask`), then fall back to the interval for the slow-start case.",
+      "index": 6
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/utils/build-module-graph.ts",
+      "line_number": 50,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`getOrCreateModuleNode(importer)` is called without a `fallbackFile`. In Vite, a module node can have `file: null` when it is a URL-only module (e.g., an HMR boundary or virtual module that Vite tracks by URL rather than filesystem path), yet it can still be present in `fileToModulesMap` under a resolved key. Without a fallback, any such importer is silently dropped from the graph, producing an incomplete dependency tree. A lookup against `fileToModulesMap` for the importer is needed as a second attempt \u2014 the committed version of this file adds exactly this via a `getModuleFileFromMap` helper. The same issue applies to `importedModules` at the analogous call-site below.",
+      "index": 7
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/utils/build-module-graph.ts",
+      "line_number": 56,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Same `file: null` fallback issue as the `importers` loop above: `getOrCreateModuleNode(importedModule)` drops imported module nodes whose `file` is null even when the module can be resolved via `fileToModulesMap`. These nodes should receive the same secondary `getModuleFileFromMap` lookup applied to importers.",
+      "index": 8
+    },
+    {
+      "file_path": "code/core/src/types/modules/core-common.ts",
+      "line_number": 291,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`ModuleNode.type` includes `'asset'`, but Vite's `ModuleNode.type` is typed as `'js' | 'css'` only \u2014 no Vite module ever carries `type: 'asset'`. Consumers deriving the Storybook type from Vite data will never produce this variant, making the union member dead code in builder-vite. If `'asset'` is intentional future-proofing for non-Vite builders, add a JSDoc comment explaining this so readers don't assume it maps to Vite's type system.",
+      "index": 9
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 103,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `createStartArgs` helper sets `options: {} as Options`, but the actual `start` implementation calls `options.presets.apply(...)` via `startChangeDetection`. This means any test that exercises the full `start` \u2192 change-detection path with this helper will crash (or need the test-as-written to be carefully avoided). The helper should stub `options.presets` with a minimal mock, as the committed test version does, so test authors aren't surprised by unexpected runtime errors when they add new test cases.",
+      "index": 10
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 278,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test \"removes the all-event watcher during bail to avoid leaks across restarts\" asserts `expect(cb).not.toHaveBeenCalled()` after bail+restart, but this passes because `bail()` called `listeners.clear()` \u2014 the subscription was lost, not merely paused. The test description focuses on the watcher cleanup while the more significant behavior (silent subscription loss) is tested implicitly without documentation. This important contract deserves its own dedicated test case with a name that makes the semantics explicit.",
+      "index": 11
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The interaction between `onModuleGraphChange` and `bail()` creates a broken subscription contract at the API level. `onModuleGraphChange` returns an unsubscribe function, which implies the subscription is stable until explicitly cancelled by the caller. However, `bail()` silently clears all listeners, making every outstanding unsubscribe closure operate on an empty set and rendering the subscription dead. Because Storybook calls `bail()` on config-triggered hot restarts \u2014 events that addon authors cannot easily intercept \u2014 any long-lived consumer (e.g., an addon that calls `onModuleGraphChange` once at startup) loses its subscription with no notification and no mechanism to re-subscribe. At minimum, document this constraint prominently in the JSDoc for `onModuleGraphChange`. A stronger fix is to preserve the listeners Set across bail/restart cycles: tear down only the watcher and interval in `bail()`, and re-attach them in `start()` so existing subscribers automatically resume without re-subscribing.",
+      "index": 12
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The module-level `server` variable is overwritten on each `start()` call without guarding against concurrent invocations. If `start()` is called a second time before `bail()` completes (or before a prior `start()` resolves), `watcherChangeHandler` is reassigned and then registered on the new server, but the old handler is still attached to the old server's watcher \u2014 leaking an event listener. The new `watcherChangeHandler` assignment in `start()` should be preceded by an explicit `server?.watcher.off('all', watcherChangeHandler)` to clean up any previously registered handler.",
+      "index": 13
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `describe('buildModuleGraph')` test block in `index.test.ts` imports the function from `'./index'` (a module boundary), framing an internal utility as part of the builder's public API. Since `buildModuleGraph` is a conversion detail specific to Vite's representation, it should be tested from `'./utils/build-module-graph'` directly so the import path reflects the function's actual scope and callers aren't misled about what `index.ts` exports.",
+      "index": 14
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "There are no test cases covering the `start()` \u2192 watcher-fires-before-module-graph-ready path. Given that the watcher is attached immediately in `start()` (before `waitForRequestsIdle`), a test should verify that consumers do not receive a notification with an empty graph during warm-up, or \u2014 if that scenario is intentional \u2014 document the expected behavior explicitly with an assertion.",
+      "index": 15
+    }
+  ],
+  "cost_usd": 0.80983335,
+  "duration_seconds": 814.3659508228302
+}

@@ -1,0 +1,459 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4927,
+  "title": "Bug/4912 GitGraph routing and colouring for merges and cherry-picks",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nFixes issues with colouring and routing of merges in GitGraph.\r\n\r\nResolves #4912 \r\n\r\n## :straight_ruler: Design Decisions\r\n\r\n- Changed commit variable names `commit1` and `commit2` to `commitA` and `commitB` respectively, to prevent confusion with `seq` property values (which are also numbers and used to ID the commits).\r\n- Refactored `hasOverlappingCommits` function to be easier to read and renamed it `shouldRerouteArrow`:\r\n  - Used `Array.some()` instead of `Array.filter()` (should increase performance with larger graphs, if needed)\r\n  - Swapped out `Object.keys()` for `Object.values()`\r\n  - It takes a new argument: the name of the branch which would receive the arrow's curve and thereby causing issues for overlapping commits.\r\n- Introduced branch colour assignments to each conditional check for routing.\r\n- New e2e tests (many based on reviews by @nirname and @mathbraga)\r\n- Added more sample diagrams to demo folder show how the graphs should look in different situations.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n- [x] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/docs/community/development.md#3-update-documentation) is used for all new features.\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "guypursey",
+  "merged_at": "2023-11-15T21:06:21Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "d7f59c1091ffb062883a54e24fa9943c6132a127",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "e8ee5f548fdda51f246802473992e479c4cd82ee",
+    "3df7cf226675709f159f485f68f73a208da8dcdf"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Qvdr9",
+          "author": "nirname",
+          "body": "I do not know if it is intended change, or is there any difference which one to use, I would have to debug the code to say that, but previously it was\r\n```\r\ncommit.branch === commit2.branch\r\n```\r\nand now it has turned into\r\n```\r\ncommit.branch === commitA.branch\r\n```\r\nwhich basically means\r\n```\r\ncommit.branch === commit1.branch // used to be commit2\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 357,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-11T10:12:53Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85QwRs6",
+          "author": "guypursey",
+          "body": "Thanks for comments so far -- great feedback.\r\n\r\nThat change to the choice of commit branch was deliberate -- here is [the commit in which I correct from `commit2` to `commit1`](https://github.com/mermaid-js/mermaid/pull/4927/commits/fe0555f9d7f1fa85728ca3a04a92d453332559e3) from before I renamed the variables. It solves the particular bug I was focused on.\r\n\r\nHowever, I did find there may be another (slightly separate) bug which is live right now but that this PR does not address, but it would be part of the same line of code. So, while I'm checking your other feedback, I'll take a look to see if it makes sense to address it here.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 357,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-11T11:46:17Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Q8c21",
+          "author": "guypursey",
+          "body": "I rewrote (and renamed) this function to make it clearer as well as fixing the issues. Hope this makes more sense now.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 357,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-13T09:29:52Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential bug where a variable name change (commit2.branch to commitA.branch) may have introduced unintended behavior, implying the code should be reviewed and possibly reverted or corrected."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Qvd2j",
+          "author": "nirname",
+          "body": "We need more integration tests to cover this case",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 410,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-11T10:13:30Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Q8dDL",
+          "author": "guypursey",
+          "body": "This line has now gone and the `colorClassNum` is defined within existing conditions to make sure `TB` cases are accounted for. So I think it's covered by existing integration tests.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 410,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-13T09:30:34Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly requests that more integration tests be added to cover a specific case."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85QxL5R",
+          "author": "mathbraga",
+          "body": "Hi, I believe `commitX.branch` returns `undefined`. `Object.entries()` returns arrays containing the pair `[key, value]`, so calling `commitX.branch` is like doing `[key, value].branch` which should return `undefined`.\r\n\r\nOne solution could be:\r\n\r\n```\r\nallCommits[commitX[0]].branch\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 357,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-11T14:07:42Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85QymWS",
+          "author": "guypursey",
+          "body": "I think you're right re `Object.entries()`. It should have been `Object.values()`.\r\n\r\nYour fix would also work but I don't think we need the key for anything, so grabbing just the values saves us having to make a second look-up (and with any luck, makes the function clearer).\r\n\r\nGood catch \ud83d\udc4d ",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 357,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-11T17:30:57Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Q8dUZ",
+          "author": "guypursey",
+          "body": "I've rewritten and renamed this function now so that its purpose should be clearer. Let me know if you spot anything or have any questions or please resolve the conversation if you are happy.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 357,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-13T09:31:39Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where commitX.branch returns undefined and suggests a concrete fix: allCommits[commitX[0]].branch."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85QxPeY",
+          "author": "mathbraga",
+          "body": "Also, I was wondering if the updated boolean statement will ever be true in the context of what this piece of code is trying to do.\r\n\r\nThe statement might need further testing.\r\n\r\nIf it is never true, then the `hasOverlappingCommits` function can be deprecated, along with its following conditional piece of code on line 404. This might be a valid point of discussion.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 357,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-11T14:17:35Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85QyqBB",
+          "author": "guypursey",
+          "body": "@mathbraga Thanks for the review of this. It took me a while to understand the original code (which is partly why I rewrote it to try and make it clearer, and marginally more performant).\r\n\r\n`hasOverlappingCommits` should return true when two commits that are being connected have other commits between them on the source branch (i.e, the same branch as `commitA` in my rewrite). This being the case, the arrow's path then needs to be diverted so as to avoid running over the other commits and making the graph unclear.\r\n\r\nHope this makes sense but do keep asking questions if you have any, as it may be that I've missed something.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 357,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-11T17:40:44Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85QzL0k",
+          "author": "mathbraga",
+          "body": "Yes it makes sense. I was unaware of how the cherry-pick feature works exactly, and that is one of the situations where this case would occur.\r\n\r\n(the code you provided in the new demos, with the above proposed change in `hasOverlappingCommits`)\r\n![image](https://github.com/mermaid-js/mermaid/assets/31048764/c8b39c9e-1d77-49a4-b385-a82b8f138e2d)\r\n\r\nSorry for the confusion.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 357,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-11T18:44:57Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Q8de3",
+          "author": "guypursey",
+          "body": "Could you resolve this conversation if you are happy with the outcome? Thanks!",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 357,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-13T09:32:17Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a concern that the boolean statement may never be true, suggests further testing, and implies potential deprecation of hasOverlappingCommits and related code \u2014 all of which are actionable suggestions."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85RiOLZ",
+          "author": "nirname",
+          "body": "We have to cover these lines with tests (not only this one, there are a couple more)",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 430,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-22T15:34:48Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85RjyOX",
+          "author": "guypursey",
+          "body": "Thanks @nirname. I can see [lines 423-424](https://app.codecov.io/gh/mermaid-js/mermaid/pull/4927/blob/packages/mermaid/src/diagrams/git/gitGraphRenderer.js#L423) and [lines 439-440](https://app.codecov.io/gh/mermaid-js/mermaid/pull/4927/blob/packages/mermaid/src/diagrams/git/gitGraphRenderer.js#L439) are not covered so I'll write tests for those. (I thought they would be covered already because the conditions are not new. When I write the new tests, they should increase coverage overall.)\r\n\r\nI can see other areas of the file still need coverage but I think these should be a separate PR/issue so I'll leave them for now. Let me know if you think I've missed any though.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 430,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-23T08:52:50Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85RkOiK",
+          "author": "nirname",
+          "body": "No need to meet all the demands of code analyzers in one approach. Should we need to fix everything we could before applying other incoming improvements the development would stop. Focus on those lines that are the heart of this change. Don't do extra job.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 430,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-23T10:23:51Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85RvSio",
+          "author": "guypursey",
+          "body": "@nirname I think I've resolved this issue now (I hope). There's info in the commit messages about reasoning. I've also increased e2e test coverage slightly and updated the PR description.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 430,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-25T08:22:25Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly requests that lines be covered with tests."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85R4fqg",
+          "author": "nirname",
+          "body": "Should not this code be a part of `shouldRerouteArrow` function? It is not used anywhere else. Would not comparison of `seq` do effectively the same as comparison of x / y?",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 409,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-26T20:12:16Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85R6nev",
+          "author": "guypursey",
+          "body": "Hi, thanks for taking a look.\r\n\r\n - Re the `shouldRerouteArrow` function: I originally wanted to keep the number of new arguments passed to `shouldRerouteArrow` to a minimum. But you're right: I could pass it `p1` and `p2` and do the calculation for `branchToGetCurve` inside `shouldRerouteArrow`. I can try that out.\r\n\r\n - Re `seq`: I don't think comparing `seq` would do what's needed -- it would only tell you whether one commit comes *before or after* the other in sequence. But here we need to know whether one commit is *above or below* the other (or, in case of `dir === TB`, to the *left or right*). This then tells us if the normal branch curve will be okay or will cause a conflict that requires rerouting.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 409,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-27T09:34:54Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85R61rL",
+          "author": "guypursey",
+          "body": "I've made that change now although the coverage is decreased again, and I can't work out why. It seems to be arbitrary... :thinking: ",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 409,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-27T10:32:25Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85R7JAG",
+          "author": "guypursey",
+          "body": "@nirname I just can't understand why coverage seems to drop randomly...\r\n\r\nThe number of files and the % change seems to be different each time I push a commit here and have no relation to my changes. Sometimes it is up, sometimes it is down...\r\n\r\nAny ideas?\r\n\r\n![Coverage decrease across indirectly affected files](https://github.com/mermaid-js/mermaid/assets/1826451/ee553adc-f05b-42a6-b241-adfbe2b783cc)\r\n",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 409,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-27T11:48:03Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85R8KKC",
+          "author": "nirname",
+          "body": "No worries about coverage. We will have to investigate it further, but not withing this task. The main idea is that your code is covered by tests.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 409,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-27T15:17:35Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85R8Qir",
+          "author": "nirname",
+          "body": "@guypursey Why would not seq tell us the order of commits? I mean, whether the go left to right, is there any situation when we have 2 commits with the same position? My thoughts that x and y coordinates are simply the reflection of seq...",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 409,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-27T15:37:51Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85R8RSS",
+          "author": "nirname",
+          "body": "I have not debugged it personally, so I can only imply that x and y depend on seq. Also we can get positions from within the function itself, so your initial idea of keeping minimum amount of arguments is still present.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 409,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-27T15:40:50Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85R9BKl",
+          "author": "guypursey",
+          "body": "This is how I've understood it:\r\n\r\n- When `dir === 'TB'`, `seq` will give you the order of commits going from top to bottom on the `y` axis. But we need to know where they are on the `x` axis, going to left to right, to know how the curve might be drawn and whether we need to reroute.\r\n\r\n- When `dir === 'LR'`, `seq` will give you the order of commits going from left to right on the `x` axis. But we need to know where the commits are on the `y` axis, going to top to bottom, to know how the curve might be drawn and whether we need to reroute.\r\n\r\nHope that makes sense.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 409,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-27T19:01:59Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests refactoring by moving code into the shouldRerouteArrow function and questions whether comparing seq would be equivalent, implying a code restructuring change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85R8LOx",
+          "author": "nirname",
+          "body": "It would be more portable if a function would not have side effects and closures like `dir`, but since it is only for this files and other anonymous functions do the same, that is ok.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 362,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-27T15:21:26Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85R8SML",
+          "author": "guypursey",
+          "body": "Yes, I agree. This is was my reasoning for putting `branchToGetCurve` check outside this function originally -- to try to keep this function pure.\r\n\r\nBecause it calls on `dir`, I thought it would be better alongside the other `dir` checks in `drawArrow` which is already impure. But I moved it inside based on your last review comment.\r\n\r\nThere are lots of messy/impure functions in this page, I think -- I would like to rewrite in a separate PR sometime.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 362,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-27T15:44:18Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85SDRvQ",
+          "author": "guypursey",
+          "body": "@nirname The alternative would be to have `commitBIsFurthest` (which relies on `dir`) calculated in `drawArrow` first, and then passed to `shouldRerouteArrow` instead of `p1, p2`. What do you think?",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 362,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-30T17:35:12Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85SD-4p",
+          "author": "nirname",
+          "body": "I see. I don't know which approach is the right one, I would simply do:\r\n```\r\nconst shouldRerouteArrow = (commitA, commitB, allCommits) => {\r\n  const p1 = commitPos[commitA.id];\r\n  const p2 = commitPos[commitB.id];\r\n  const commitBIsFurthest = dir === 'TB' ? p1.x < p2.x : p1.y < p2.y;\r\n  ...\r\n```\r\nsimply because of arity reduction.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 362,
+          "start_line": null,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-30T20:39:28Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Notes that the function has side effects and closures (like dir) and suggests it would be more portable without them, though the author concedes it's acceptable. Still implies a possible improvement."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85R8PT-",
+          "author": "nirname",
+          "body": "I feel like this function signature can be simplified down to\r\n```\r\nshouldRerouteArrow(commitA, commitB, allCommits);\r\n```\r\nI know that it may seem redundant to get p1 and p2 inside the function once again but the access time of commitPos is O(1) and there is no cases when we have to pass positions independently from commits.\r\n\r\nWhat do you think?",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 406,
+          "start_line": 404,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-27T15:33:06Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85R8SpU",
+          "author": "guypursey",
+          "body": "Yes, this is another reason I had originally put `branchToGetCurve` outside the `shouldRerouteArrow` function -- to keep the signature for `shouldRerouteArrow` as simple as possible.\r\n\r\nI also thought about recalculating `p1` and `p2` inside `shouldRerouteArrow` as you suggest. But I felt it was redundant/repetitive (violating DRY principle) so decided to pass them as arguments. I was thinking less about performance (which is minimal as you say) and more about confusion/readability.\r\n\r\nI think a lot more refactoring could be done overall but I don't want to get too much scope creep for this issue/PR.\r\n\r\nSome of things I will rewrite in a fix for #4932 (which I have already started working on locally).",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 406,
+          "start_line": 404,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-27T15:45:52Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85SD9jt",
+          "author": "nirname",
+          "body": "`shouldRerouteArrow` function violates DRY anyway, because it uses `dir` property. In case we consider this function as a method or instance-related function it can use all object attributes without referencing the object directly (this, self ...etc). In case we consider this function as a pure one, we have to pass everything as arguments including `dir`. Right now this is neither of these two. That is why I have suggested to stick to previous signature.\r\n\r\nBtw, I am ok with how it looks now. Simply looking for better options.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 406,
+          "start_line": 404,
+          "commit_sha": "3df7cf226675709f159f485f68f73a208da8dcdf",
+          "created_at": "2023-10-30T20:33:35Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests simplifying the function signature to shouldRerouteArrow(commitA, commitB, allCommits) by removing p1 and p2 parameters, which is a concrete refactoring suggestion."
+    }
+  ],
+  "review_thread_count": 8,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 8,
+    "stage1_kept": 8,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

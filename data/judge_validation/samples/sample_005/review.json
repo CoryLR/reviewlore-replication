@@ -1,0 +1,76 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 49,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Using `Set<object>` for `importers` and `importedModules` erases too much type information. When each element is later extracted via `forEach`, its inferred type is `object`, and passing it to `getOrCreateModuleNode(importer)` (which expects `{ file: string | null; type: ...; importers: Set<object>; importedModules: Set<object> }`) is a structural type mismatch \u2014 TypeScript should reject this since `object` does not satisfy that shape. The motivation was clearly to avoid depending on Vite's `ModuleNode` import directly, but `Set<object>` is too permissive. A local recursive interface (e.g. `interface ViteModuleNodeShape { file: string | null; type: ModuleNode['type']; importers: Set<ViteModuleNodeShape>; importedModules: Set<ViteModuleNodeShape>; }`) would preserve type safety without the Vite import dependency.",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 162,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`setInterval` ignores the return value of its callback, so when an `async` function is passed, any rejected promise is silently dropped. If `server.waitForRequestsIdle()` rejects (e.g. because the server was torn down), the error will go unhandled and the process may emit an `unhandledRejection` event. Wrap the body in `try/catch` or chain `.catch()`: `setInterval(() => { (async () => { ... })().catch(/* log or ignore */); }, 1000)`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 124,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`bail()` silently removes every registered listener. A caller who received an explicit `unsubscribe()` function from `onModuleGraphChange()` reasonably expects that to be the only way their subscription ends \u2014 but a server restart (which calls `bail()`) will discard their callback with no notification. Any subsequent `start()` will set up a new watcher that notifies no one. Consider either (a) preserving listeners across `bail()` so they continue working after the next `start()`, or (b) invoking each listener with a terminal signal (e.g. `listener(null)` or a typed `{ type: 'closed' }` event) before clearing, so callers can react.",
+      "index": 2
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 153,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The debounce delay `100` is a magic number. Extract it to a named module-level constant (e.g. `const WATCHER_DEBOUNCE_MS = 100`) to make its intent explicit and allow adjustment from a single place.",
+      "index": 3
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 165,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The polling interval `1000` is a magic number. Extract it to a named constant (e.g. `const MODULE_GRAPH_POLL_INTERVAL_MS = 1000`) alongside the debounce constant.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/types/modules/core-common.ts",
+      "line_number": 279,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The callback type `(moduleGraph: ModuleGraph) => void` gives subscribers no way to learn about failures or shutdown. For example: what should a subscriber do if Vite's server errors before the first graph snapshot is available? A discriminated-union event type \u2014 e.g. `{ type: 'moduleGraph'; moduleGraph: ModuleGraph } | { type: 'error'; error: Error }` \u2014 would allow the builder to communicate these states without a breaking change later. This is a good extension point to design in now, while the API is being established.",
+      "index": 5
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 305,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test description says \"removes the all-event watcher during bail\", but the test body actually confirms that a *new* `'all'` watcher is registered after the subsequent `start()` (the `listenerCount('all') === 1` assertion on line 314). The description would be more accurate as something like \"removes the previous watcher on bail and registers a fresh one on the next start, so cleared listeners are not re-invoked\".",
+      "index": 6
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "All the new state (`listeners`, `debounce`, `watcherChangeHandler`, `waitForModuleGraph`) is stored as module-level mutable variables, making `builder-vite/src/index.ts` a process-wide singleton. This is a common Node.js pattern, but it means only one Vite server can be tracked at a time and that tests must rely on `bail()` in `afterEach` to reset the module. If Storybook ever needs to run multiple dev servers (e.g. for multi-project workspaces), this design would require significant refactoring. Encapsulating this state in a class or a factory function would make the contract explicit and improve testability.",
+      "index": 7
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "There are no tests for the initial module-graph notification that fires via the polling interval (`waitForModuleGraph`). The suite covers debounced file-change events thoroughly, but the specific code path \u2014 where `fileToModulesMap.size > 0` is first detected, `waitForRequestsIdle()` resolves, and `watcherChangeHandler?.()` is invoked \u2014 is not exercised by any positive-case test. The \"clears the module-graph polling interval during bail\" test only validates *cleanup*, not the successful notification itself.",
+      "index": 8
+    }
+  ],
+  "cost_usd": 0.8379435000000002,
+  "duration_seconds": 568.0625789165497
+}

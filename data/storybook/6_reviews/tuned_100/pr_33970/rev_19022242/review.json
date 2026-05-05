@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.tsx",
+      "line_number": 200,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `announce` politeness level only checks `errorCount > 0`, but the PR description explicitly states it should be `assertive` when component test errors **or** accessibility errors are present. `a11yErrorCount` is scoped inside the `if (hasA11yAddon)` block above and is inaccessible at the call site, so when there are a11y errors but no component errors the announcement is incorrectly `polite` instead of `assertive`.\n\nFix: hoist `a11yErrorCount` out of the `if (hasA11yAddon)` block and include it in the level condition:\n```tsx\nlet a11yErrorCount = 0;\nif (hasA11yAddon) {\n  a11yErrorCount = a11yStatusValueToStoryIds['status-value:error'].length;\n  // ... push to parts as before\n}\nannounce(message, errorCount > 0 || a11yErrorCount > 0 ? 'assertive' : 'polite');\n```\nNote: the new story `AnnouncesTestRunFinished` doesn't cover this case (it always has a component error), so this bug goes untested.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+      "line_number": 24,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "No TypeScript module augmentation is declared for this custom Vitest matcher. Without it, calls like `expect(container).toHaveLiveRegion(...)` will produce a TypeScript type error (`Property 'toHaveLiveRegion' does not exist on type 'Assertion'`). The standard fix is to add a declaration either in this file or in a companion `.d.ts`:\n```ts\ndeclare module 'vitest' {\n  interface Assertion<R = any> {\n    toHaveLiveRegion(options: LiveRegionMatcherOptions): R;\n  }\n  interface AsymmetricMatchersContaining {\n    toHaveLiveRegion(options: LiveRegionMatcherOptions): void;\n  }\n}\n```\nThis is needed in both `toHaveLiveRegion.ts` (for test-file consumers) and wherever `expect.extend` is called in story files.",
+      "index": 1
+    },
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.stories.tsx",
+      "line_number": 341,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `toHaveLiveRegion` assertion runs immediately after the second `mount()` call without wrapping in `waitFor`. The `announce()` call happens inside a `useEffect`, which runs asynchronously after the render commit. Additionally, `@react-aria/live-announcer`'s `announce()` commonly defers its DOM update via a small `setTimeout` to ensure assistive technologies detect the mutation \u2014 so the live region content may not yet be in the DOM when this assertion executes, causing intermittent failures.\n\nWrap each assertion in `waitFor`:\n```tsx\nawait waitFor(() =>\n  expect(document.body).toHaveLiveRegion({ text: 'Test run started.', level: 'polite' })\n);\n```\nThe same applies to the assertions in `AnnouncesTestRunFinished` (line ~370) and `AnnouncesTestRunCrashed` (line ~398).",
+      "index": 2
+    },
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.stories.tsx",
+      "line_number": 12,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "This import crosses package boundaries via a deep relative path (`../../../../core/src/manager/utils/toHaveLiveRegion`) rather than through a public or internal export of `@storybook/core`. Per the project's own guidelines, inter-package imports should go through the package's declared export surface. `toHaveLiveRegion` should be exported from an internal entry point (e.g., `storybook/internal/manager-utils` or similar) so callers import it as `import { toHaveLiveRegion } from 'storybook/internal/manager-utils'`.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+      "line_number": 18,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The JSDoc comment says \"string for exact match\", but the implementation on line 59 uses `content.includes(text)`, which is a **substring** match, not an exact match. Either change the comment to \"string for substring match\" or switch the implementation to `content === text` / `content.trim() === text` to honour the documented contract. Since announcement messages are predictable strings, exact matching is usually safer to avoid false positives.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/manager/utils/toHaveLiveRegion.test.ts",
+      "line_number": 35,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "There is a test that `role=\"log\"` matches by text, but unlike `role=\"status\"` (line 55) and `role=\"alert\"` (line 62), there is no test asserting that `role=\"log\"` correctly infers `polite` when filtering by level. The implementation at `toHaveLiveRegion.ts:44` treats `log` as polite \u2014 add a matching test case to prevent regressions:\n```ts\nit('infers polite level from role=\"log\"', () => {\n  const container = document.createElement('div');\n  container.innerHTML = '<div role=\"log\">Log entry</div>';\n  expect(container).toHaveLiveRegion({ text: 'Log entry', level: 'polite' });\n  expect(() => {\n    expect(container).toHaveLiveRegion({ text: 'Log entry', level: 'assertive' });\n  }).toThrow();\n});\n```",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`code/addons/vitest/src/components/TestProviderRender.tsx` directly imports `announce` from `@react-aria/live-announcer` (a production runtime import \u2014 used in a `useEffect` that fires during normal Storybook UI usage), but `code/addons/vitest/package.json` does not list `@react-aria/live-announcer` as a dependency. The package is only declared in `code/core/package.json`. While Yarn workspaces hoisting may make this work at development time, it creates an undeclared peer dependency that can break in isolated or non-hoisted install scenarios. The vitest addon should declare `@react-aria/live-announcer` in its own `package.json` dependencies (or consume the functionality through a re-exported wrapper from core) so its dependency graph is self-contained.",
+      "index": 6
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description states that `extend-to-be-announced` was added as a devDependency in `code/core/package.json` and registered in `code/.storybook/storybook.setup.ts` via `import 'extend-to-be-announced/vitest'`, and that stories use `toBeAnnounced` for assertions. In practice, neither `extend-to-be-announced` nor `toBeAnnounced` appears in the codebase \u2014 the implementation instead introduces a custom `toHaveLiveRegion` DOM-querying matcher. The description should be updated to accurately reflect what was shipped. It is also worth documenting (in code comments or the description) why a custom matcher was preferred over `extend-to-be-announced`, since the two approaches have different fidelity characteristics: `extend-to-be-announced` captures virtual announcements at the ARIA computation layer, while `toHaveLiveRegion` queries physical DOM nodes and will silently pass if the live region element is cleared before the assertion runs.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.7458081999999999,
+  "duration_seconds": 394.2920570373535
+}

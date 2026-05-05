@@ -1,0 +1,56 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34249,
+  "title": "CLI: Fix Next.js Vite automigration corrupting configs already using `@storybook/nextjs-vite`",
+  "body": "## What does this PR do?\n\nFixes a bug in the `nextjs-to-nextjs-vite` automigration where the regex `/@storybook\\/nextjs/g` matches as a substring inside `@storybook/nextjs-vite`, rewriting it to `@storybook/nextjs-vite-vite`.\n\n## How to reproduce\n\nProjects that had both `@storybook/nextjs` and `@storybook/nextjs-vite` installed simultaneously in SB9 (valid \u2014 some projects installed both transitionally) would already have `@storybook/nextjs-vite` as the framework name in `main.ts`. Running `storybook@10 upgrade` on such a project corrupts the config:\n\n```diff\n- framework: { name: '@storybook/nextjs-vite' }\n+ framework: { name: '@storybook/nextjs-vite-vite' }   \u2190 broken, package doesn't exist\n```\n\n## Fix\n\nAdd a negative lookahead to the regex so only bare `@storybook/nextjs` (not already `@storybook/nextjs-vite`) is replaced:\n\n```diff\n- content.replace(/@storybook\\/nextjs/g, '@storybook/nextjs-vite')\n+ content.replace(/@storybook\\/nextjs(?!-vite)/g, '@storybook/nextjs-vite')\n```\n\nA regression test is included that verifies a config already using `@storybook/nextjs-vite` is left untouched by the migration.\n\n## Checklist\n\n- [x] The fix is covered by a unit test\n- [x] No existing tests broken\n- [x] Targets `next` branch\n\n> This is a bugfix that affects users running `storybook@10 upgrade` from SB9. It would be great if it could be patched into the next stable release.\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Bug Fixes**\n  * Migration now only updates non-migrated Next.js references, preventing accidental re-modification or corruption of configurations that already use the Next.js Vite framework.\n\n* **Tests**\n  * Added a regression test ensuring the migration tool leaves already-correct configuration files unchanged and performs no unnecessary writes.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "nathanjessen",
+  "merged_at": "2026-03-26T11:45:04Z",
+  "base_ref": "next",
+  "merge_commit_sha": "d19270e3b5ba8c384efff62ebd81f8af85575a05",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "544d8c93795b4e49cce0b6d08b566f776de338bb",
+    "382d78b85467533c038cd6ecf8b1d83128970fc6"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6w2qOz",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\nwc -l code/lib/cli-storybook/src/automigrate/fixes/nextjs-to-nextjs-vite.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 143\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nsed -n '230,270p' code/lib/cli-storybook/src/automigrate/fixes/nextjs-to-nextjs-vite.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1427\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nhead -100 code/lib/cli-storybook/src/automigrate/fixes/nextjs-to-nextjs-vite.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3064\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nsed -n '100,180p' code/lib/cli-storybook/src/automigrate/fixes/nextjs-to-nextjs-vite.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2559\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nsed -n '180,250p' code/lib/cli-storybook/src/automigrate/fixes/nextjs-to-nextjs-vite.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2652\n\n---\n\n\n\n</details>\n\n**Move mock setup into a `beforeEach` block for consistency.**\n\nLine 250 defines mock behavior inline inside the test. This violates the test mocking convention that mock behaviors should be set up in `beforeEach` blocks. Consider creating a nested `describe` + `beforeEach` block for tests that require vite to be installed, since multiple tests in this suite need `getDependencyVersion` to return a non-null version.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/lib/cli-storybook/src/automigrate/fixes/nextjs-to-nextjs-vite.test.ts`\nat line 250, Move the inline mock setup\nvi.mocked(mockPackageManager.getDependencyVersion).mockReturnValue('7.0.0') into\na beforeEach so all tests that require Vite installed share the same setup;\ncreate a nested describe block (e.g., \"when vite is installed\") around those\ntests and add a beforeEach that calls\nvi.mocked(mockPackageManager.getDependencyVersion).mockReturnValue('7.0.0'), and\nremove the inline mock from individual tests to keep mocking consistent and DRY.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/lib/cli-storybook/src/automigrate/fixes/nextjs-to-nextjs-vite.test.ts",
+          "line_number": 250,
+          "start_line": null,
+          "commit_sha": "382d78b85467533c038cd6ecf8b1d83128970fc6",
+          "created_at": "2026-03-20T17:42:24Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Duplication",
+          "label_confidence": "high",
+          "label_reasoning": "The comment flags repeated inline mock setup across multiple tests that should be consolidated into a beforeEach block, which is a DRY/code duplication concern in test structure."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment requests a concrete refactor: move inline mock setup into a beforeEach block within a nested describe block, and remove the inline mock from individual tests to follow DRY conventions."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

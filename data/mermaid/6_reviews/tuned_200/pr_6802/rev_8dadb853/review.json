@@ -1,0 +1,138 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/render.ts",
+      "line_number": 54,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`Promise.all` is used here to call `insertNode` on every node concurrently. The project architectural rule (issue #3577) prohibits parallel render/insert calls because diagram DB modules rely on module-level mutable state, and concurrent execution corrupts each other's output. The same issue appears for the edge `insertEdgeLabel` / `insertEdge` loop further down (~line 126). Both loops must be converted to sequential `for...of` / `await` rather than `Promise.all`.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/package.json",
+      "line_number": 44,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The peer dependency on `mermaid` is pinned to `\"^11.0.2\"` instead of using the `\"workspace:^\"` protocol. Per project rules, all monorepo packages that are consumed alongside an existing package must declare the peer dependency with `workspace:^` so that `pnpm publish` resolves it to the correct released version. Change this to `\"mermaid\": \"workspace:^\"`.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 13,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "`_drawNodes` is defined here but is never called anywhere in the new `draw` function. This is dead code from an earlier draft that was not cleaned up. It should be removed. (The same applies to `_updateNodeDimensions` on line ~33, which is also defined but never invoked.)",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/createGraph.ts",
+      "line_number": 1,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "This is a brand-new file implementing `createGraphWithElements`, but it does not appear to be imported or invoked by any other file changed in this PR. Adding an unreachable module increases maintenance burden without benefit. Either wire it up to an actual caller or remove it.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/docs/config/tidy-tree.md",
+      "line_number": 36,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The CDN `import` hardcodes `mermaid@11`. Per project rules, source files under `packages/mermaid/src/docs/` that are processed by the `docs.mts` build transform must use the `<MERMAID_VERSION>` placeholder instead of a hardcoded version. The hardcoded value will silently point to the wrong major version when mermaid is bumped to v12. Replace `mermaid@11` with `mermaid@<MERMAID_VERSION>`.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid-layout-elk/src/render.ts",
+      "line_number": 588,
+      "dimension": "Performance Issue",
+      "importance": "major",
+      "comment": "`JSON.stringify(elkGraph, null, 2)` is called unconditionally on what can be a very large graph object. Even if the logger discards the output, the serialization work still occurs on every render. Beyond the performance concern, the entire block of `log.debug('APA01...')` statements (including per-edge and per-node loops lower in the file) appears to be debugging scaffolding that was not removed before raising the PR. Per project rules, excessive or purely diagnostic logging must be cleaned up before merging. Remove or consolidate these calls.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/types.ts",
+      "line_number": 43,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`isGroup` has been changed from required (`isGroup: boolean`) to optional (`isGroup?: boolean`). This collapses the discriminated union `Node = ClusterNode | NonClusterNode`; TypeScript can no longer narrow a `Node` to `ClusterNode` (where `isGroup: true`) or `NonClusterNode` (where `isGroup: false`) simply by checking the field. Any existing code that relies on this narrowing now silently loses type safety. The field should remain required; call sites that construct bare node objects without specifying `isGroup` should be fixed to provide the value explicitly.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/preprocess.ts",
+      "line_number": 21,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`detectType(text)` is called inside `processFrontmatter` solely to inject a default `layout` for mindmap diagrams. This creates unexpected coupling: `processFrontmatter` is a generic helper that parses YAML, and adding diagram-type awareness to it means any change to mindmap detection (regex, new keyword) must be tracked here too. Additionally, `detectType` can throw an `UnknownDiagramError` if diagram registration has not yet completed, which would silently break all frontmatter processing. The mindmap default layout should instead be handled at the renderer level (e.g., in `mindmapRenderer.ts` via `getRegisteredLayoutAlgorithm`'s `fallback` option, which already defaults to `cose-bilkent`), so this block can be removed.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+      "line_number": 1371,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Changing `box Aqua` to `box aqua` also changes the expected `boxes[0].fill` assertion from `'Aqua'` to `'aqua'`. If users or downstream consumers currently match the color string returned by `getBoxes()` \u2014 for example, to pass it directly to a CSS `background-color` \u2014 this change silently alters the public API. Before landing, confirm whether the color string returned by the sequence diagram DB is externally observable; if it is, this is a breaking change that must be deferred to the next major release.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layout.ts",
+      "line_number": 32,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`intersectionShift` is initialized to `50` here but is unconditionally overwritten to `30` on line ~50 inside the `try` block, so the initial value `50` is never actually used. The declaration should use the final value directly (`let intersectionShift = 30;`), or better yet, promote it to a named constant at the top of the file so the magic number is documented: `const INTERSECTION_SHIFT = 30;`.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layout.test.ts",
+      "line_number": 314,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`rootNode!.x` and `rootNode!.y` use the TypeScript `!` non-null assertion operator on the result of `.find()`. Per project rules, test assertions should use optional chaining (`?.`) for safe property access on `.find()` results. The preceding `expect(rootNode).toBeDefined()` does not narrow the type at runtime, so `rootNode!` is a unsafe assertion. Use `rootNode?.x` (or refactor to guard the block with a type assertion that TypeScript respects). This pattern recurs on lines 320\u2013327 for `child1`, `child2`, `child3`, and `child4`.",
+      "index": 10
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/question.ts",
+      "line_number": 77,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`// @ts-ignore TODO fix this (KNSV)` should be replaced with `// @ts-expect-error: <reason>` per project rules. A bare `@ts-ignore` silently suppresses all TypeScript errors on the next line, including future regressions; `@ts-expect-error` fails the build if the error disappears (signalling the workaround can be removed). Provide a brief description of the root type mismatch so future maintainers understand why it was needed.",
+      "index": 11
+    },
+    {
+      "file_path": "cypress/integration/rendering/mindmap-tidy-tree.spec.js",
+      "line_number": 6,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The template literal starts with `` ` ---`` \u2014 there is a leading space before the YAML frontmatter delimiter. Per project conventions (also visible in the updated `mindmap.spec.ts`), diagram strings should start immediately after the opening backtick with no leading whitespace. The same pattern repeats in every test in this file. Additionally, the closing backtick (e.g., on line 14) appears on its own indented line, violating the project rule that the backtick should appear directly after the last content character.",
+      "index": 12
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/render.ts",
+      "line_number": 126,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "A second `Promise.all` is used here to render edges concurrently. Beyond the shared-state concern flagged for the node loop above, `insertEdgeLabel` and `insertEdge` write to the same SVG `edgeLabels` / `edgePaths` containers. Parallel SVG mutations can produce unpredictable z-ordering and corrupt edge state. Replace with a sequential `for...of` loop.",
+      "index": 13
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The PR introduces two separate, potentially conflicting configuration surfaces for mindmap layout selection: (1) the top-level `config.layout` field (set by `preprocess.ts` defaulting to `cose-bilkent` for all mindmaps), and (2) the new `mindmap.layoutAlgorithm` field added to the config schema. `mindmapRenderer.ts` reads from `getConfig().layout`, while the schema field `mindmap.layoutAlgorithm` appears to be unused at runtime. This duplication creates confusion for users (which field takes effect?), makes documentation harder to write accurately, and means the schema default has no actual effect. Decide on a single source of truth \u2014 likely `config.layout` backed by the frontmatter `layout:` key, as is already the convention for ELK \u2014 and remove or wire up the other field accordingly.",
+      "index": 14
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `Promise.all` pattern for parallel `insertNode` calls appears in both new renderer files (`packages/mermaid-layout-tidy-tree/src/render.ts` and `packages/mermaid/src/rendering-util/layout-algorithms/cose-bilkent/render.ts`) and also in the dead-code `_drawNodes` helper in `mindmapRenderer.ts`. The project architectural rule (issue #3577) requires sequential `await` for all rendering operations because shape handlers read and write shared module-level state in the diagram DB. All three locations must be converted to sequential iteration before this PR can be merged safely.",
+      "index": 15
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The new demo file `cypress/platform/mindmap-layouts.html` is not linked from any index page (`demos/index.html` or equivalent). Per project rules, new demo pages should be registered with a link in the demo index so they are discoverable. Additionally, several `<pre id=\"diagram4\">` elements in the modified `cypress/platform/knsv2.html` duplicate an ID that already existed many times in that file \u2014 while this is a pre-existing pattern, the PR adds significantly more duplicate-ID elements to a development-only file, making the page harder to debug.",
+      "index": 16
+    }
+  ],
+  "cost_usd": 2.0544555,
+  "duration_seconds": 383.51549887657166
+}

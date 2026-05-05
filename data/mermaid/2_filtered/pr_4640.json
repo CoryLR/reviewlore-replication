@@ -1,0 +1,74 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4640,
+  "title": "Fix the \"Edit this page on GitHub\" link in Vitepress documentation for the Mermaid Config pages",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nFix the \"Edit this page on GitHub\" link for the Mermaid Config Schema http://localhost:3333/config/schema-docs/config.html.\r\n\r\n### Before (edit link points to file that doesn't exist)\r\n\r\nEdit Link points to `packages/mermaid/src/docs/config/schema-docs/config.md`, **which doesn't exist**: https://github.com/mermaid-js/mermaid/edit/develop/packages/mermaid/src/docs/config/schema-docs/config.md\r\n\r\n![image](https://github.com/mermaid-js/mermaid/assets/19716675/66b36d88-03fa-4d2e-8d0c-a89c73730506)\r\n\r\n### After (edit link points to correct file)\r\n\r\nEdit Link correctly points to `packages/mermaid/src/schemas/config.schema.yaml`: https://github.com/mermaid-js/mermaid/edit/develop/packages/mermaid/src/schemas/config.schema.yaml\r\n\r\n![image](https://github.com/mermaid-js/mermaid/assets/19716675/a0cc9517-7df3-4575-b9b9-3ad031e53ac5)\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\n[Vitepress 1.0.0-beta.53](https://github.com/vuejs/vitepress/blob/main/CHANGELOG.md#100-alpha53-2023-03-13) allowed the `editLink` parameter in the Vitepress config to accept a function, instead of just a pattern. I've changed this Vitepress config function to then accept a custom edit link in the YAML frontmatter of Markdown files, which is created by `transformMarkdownAst`.\r\n\r\nSo essentially:\r\n  - `transformMarkdownAst({originalFilename, addEditLink: true})` now adds the following YAML frontmatter to a markdown file:\r\n    ```markdown\r\n    ---\r\n    editLink: \"https://github.com/mermaid-js/mermaid/edit/develop/packages/mermaid/src/schemas/config.schema.yaml\"\r\n    ---\r\n    \r\n    Here is my markdown file!\r\n    ```\r\n  - Our custom `.vitepress/config.ts` `editLink.pattern` function will then use the `frontmatter.editLink` as the edit link, if it exists.\r\n   \r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added unit/e2e tests (if appropriate)\r\n- [x] :notebook: have added documentation (if appropriate)\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "aloisklink",
+  "merged_at": "2023-07-20T07:06:00Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "1b2340ba7522b9166281389a5c60af711e4d0159",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "477bb4308d96785842e0f482c732719c6c5d50ca",
+    "4d2d790cc8de03adde3fb5b820e1da7f4fd29bae"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85LZ8oz",
+          "author": "sidharthv96",
+          "body": "Maybe @remcohaszing could provide some insights on the TODO.\r\n\r\n---\r\n\r\n@aloisklink why do we need the `JSON.stringify`? Handling spaces?",
+          "file_path": "packages/mermaid/src/docs.mts",
+          "line_number": 292,
+          "start_line": null,
+          "commit_sha": "4d2d790cc8de03adde3fb5b820e1da7f4fd29bae",
+          "created_at": "2023-07-17T09:23:37Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85LaGeX",
+          "author": "remcohaszing",
+          "body": "I\u2019m going to read _\u201cparsing\u201d_ as _\u201cstringifying\u201d_, because I see YAML being generated here, not parsed.\r\n\r\nYAML 1.2 (latest and greatest) with the recommended schema (I mention the schema for correctness, but it\u2019s not relevant for this simple case) is a strict superset of JSON. This means you can generate valid YAML using `JSON.stringify()`. It\u2019s just not super pretty, although it\u2019s really just fine to properly quote a string as is done here.\r\n\r\nEdit: I just now notice the `+=`. This is not safe. This is valid YAML:\r\n\r\n```yaml\r\n{ foo: bar }\r\n```\r\nThis is not:\r\n```yaml\r\n{ foo: bar }\r\neditLink: \"https://github.com/mermaid-js/mermaid/edit/develop/whatever\"\r\n```\r\n\r\nI don\u2019t know what this is for. If it\u2019s part of the public API, you\u2019ll have to use a proper parser, which unfortunately means an additional dependency. If this is for something internal, by all means, use the simplest solution, though an additional dev dependency isn\u2019t so bad.\r\n\r\nI recommend the [`yaml`](https://eemeli.org/yaml) library for all YAML handling. `js-yaml` is more popular, but has many quirks a lot of people don\u2019t understand. I recommend to modify YAML on the AST level:\r\n\r\n```ts\r\nimport { parseDocument, Document } from 'yaml'\r\n\r\n// \u2026\r\n\r\nlet yamlFrontMatter: YAML;\r\nlet doc: Document\r\nif (astWithTransformedBlocks.children[0].type === 'yaml') {\r\n  yamlFrontMatter = astWithTransformedBlocks.children[0];\r\n  doc = parseDocument(yamlFrontMatter.value)\r\n} else {\r\n  yamlFrontMatter = {\r\n    type: 'yaml',\r\n    value: '',\r\n  };\r\n  astWithTransformedBlocks.children.unshift(yamlFrontMatter);\r\n  doc = new Document()\r\n}\r\nyamlDoc.set('editLink', `https://github.com/mermaid-js/mermaid/edit/develop/packages/mermaid/${originalFilename}`)\r\nyamlFrontMatter.value = String(yamlDoc)\r\n```\r\n\r\nNote that an empty document in YAML is equivalent to null. So the `Document` constructor is used to create a document if no frontmatter is found originally.",
+          "file_path": "packages/mermaid/src/docs.mts",
+          "line_number": 292,
+          "start_line": null,
+          "commit_sha": "4d2d790cc8de03adde3fb5b820e1da7f4fd29bae",
+          "created_at": "2023-07-17T10:02:00Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Ln8Id",
+          "author": "aloisklink",
+          "body": "> Edit: I just now notice the +=. This is not safe.\r\n\r\n:facepalm: I should have realized that! Thanks for the catch!\r\n\r\nIt's not part of a public API, it's only used to create some YAML frontmatter keys in our documentation folder: https://github.com/mermaid-js/mermaid/tree/develop/packages/mermaid/src/docs. But still, it's better to do it properly now, so we can avoid future bugs.\r\n\r\nI've fixed this in https://github.com/mermaid-js/mermaid/pull/4640/commits/4d2d790cc8de03adde3fb5b820e1da7f4fd29bae. I know you recommended using [`yaml`](https://www.npmjs.com/package/yaml), but since we've already got [`js-yaml`](https://www.npmjs.com/package/js-yaml) as a `devDependency`, I've gone ahead and reused the same package. (maybe it's worth replacing `js-yaml` completely with `yaml` in another PR, though) We were even using `js-yaml` in the same file that I edited.\r\n\r\nI've given you `Reported-by: ` credit in a git commit message, but my patch is pretty similar to your proposed patch, so I'd be happy to give you a [`Co-authored-by: `](https://docs.github.com/en/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/creating-a-commit-with-multiple-authors) credit too :smile:",
+          "file_path": "packages/mermaid/src/docs.mts",
+          "line_number": 292,
+          "start_line": null,
+          "commit_sha": "4d2d790cc8de03adde3fb5b820e1da7f4fd29bae",
+          "created_at": "2023-07-19T22:58:33Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "The comment asks why JSON.stringify is needed, which implies it may be unnecessary and should be removed or justified \u2014 this is an implied suggestion to revisit or change the code."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

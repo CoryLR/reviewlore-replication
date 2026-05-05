@@ -1,0 +1,92 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "scripts/ci/common-jobs.ts",
+      "line_number": 78,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `prettyDocs` CI job now runs `yarn fmt:check` (root command: `oxfmt --check .`), but `\"docs\"` is listed in the root `.oxfmtrc.json` `ignorePatterns`. This means the docs directory is entirely excluded from the check, so the job no longer validates docs formatting at all. Previously it ran `scripts/package.json docs:fmt:check` \u2192 `cd ../docs && oxfmt --check ./_snippets`, which explicitly checked docs snippets. The docs formatting CI check has been silently dropped. Either remove the `\"docs\"` exclusion from ignorePatterns (and handle docs formatting in the same pass), or restore the docs snippet check as a distinct step. Additionally, `prettyDocs` and the `lint` job both now run the identical `yarn fmt:check` command, making one of them redundant.",
+      "index": 0
+    },
+    {
+      "file_path": "package.json",
+      "line_number": 46,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The lint-staged config uses `\"oxfmt --check\"` (check/dry-run mode) rather than `\"oxfmt\"` (write mode). lint-staged is a pre-commit auto-fixer, not a CI validation script \u2014 its purpose is to format staged files before they are committed, not to reject them. Using check mode means the pre-commit hook will fail whenever a file isn't already formatted, forcing every contributor to manually run the formatter before every commit. The previous `code/package.json` lint-staged correctly used write mode (`\"oxfmt\"`). Change this to `\"oxfmt\"` so staged files are automatically formatted on commit.",
+      "index": 1
+    },
+    {
+      "file_path": "scripts/project.json",
+      "line_number": 9,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `pretty-docs` Nx target now runs `yarn fmt:check` from `{workspaceRoot}` (which resolves to `oxfmt --check .` across the entire repo), but its `inputs` still only track `{workspaceRoot}/docs/**/*`. Since `docs` is excluded from the root `.oxfmtrc.json` via ignorePatterns, the command doesn't actually touch docs files \u2014 yet non-docs code changes also don't invalidate the cache. Nx will serve a stale cached pass for this target even when code files have formatting violations. The `inputs` should either reflect all files the formatter actually checks (the entire repo minus ignorePatterns), or the command should be scoped back to just docs snippets with matching inputs.",
+      "index": 2
+    },
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 43,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `overrides` block defines options for `[\"*.md\", \"*.mdx\"]`, but these same patterns are listed in `ignorePatterns` (lines 38\u201339). oxfmt will never process these files because ignorePatterns takes precedence, making this override block dead code. Remove the `*.md`/`*.mdx` override entry, or \u2014 if the intent is to format them in future \u2014 remove them from `ignorePatterns` and keep the override. Similarly, the third override targets `**/frameworks/angular/template/**/*.ts`, but `code/frameworks/angular/template/**` is already excluded by ignorePatterns (line 33), making the template half of that glob unreachable.",
+      "index": 3
+    },
+    {
+      "file_path": "code/package.json",
+      "line_number": 27,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`\"lint\": \"yarn lint:js && cd .. && yarn fmt:check\"` uses shell `cd` inside an npm script. This is fragile: it assumes a Unix-like shell and a particular working directory at invocation time. The idiomatic, portable approach is `yarn --cwd .. fmt:check`, which is consistent with how other cross-directory calls are written in this monorepo (e.g., `\"i\": \"yarn --cwd .. i\"`). Additionally, running `yarn lint` from within `code/` now triggers a format check over the entire repository (not just `code/`), which is surprising for a package-scoped script.",
+      "index": 4
+    },
+    {
+      "file_path": "scripts/ci/common-jobs.ts",
+      "line_number": 68,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The function is still exported as `prettyDocs` and the CircleCI job is still described as `'Prettify docs'`, but the job now performs a general-purpose format check over the entire codebase (and, as noted above, doesn't actually touch docs at all). The naming is misleading. Either rename this to something like `formatCheck` / `'Format validation'`, or rethink the split between this job and the `lint` job's format-check step, which is now identical.",
+      "index": 5
+    },
+    {
+      "file_path": "code/builders/builder-vite/input/iframe.html",
+      "line_number": 91,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "This diff contains a functional bug fix bundled into a formatting-only PR: the closing `<ul>` tag was `<ul>` (missing the `/`) in the original, producing invalid HTML with an unclosed list. The formatter caught it and the new code correctly renders `</ul></p>`. This fix is valid and welcome, but it should be called out explicitly in the PR description since it is a behavioural change, not merely a whitespace reformatting.",
+      "index": 6
+    },
+    {
+      "file_path": ".vscode/extensions.json",
+      "line_number": 7,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The file is missing a newline at the end (`\\ No newline at end of file`). Most editors and linters expect a trailing newline in text files; this should be added.",
+      "index": 7
+    },
+    {
+      "file_path": ".vscode/settings.json",
+      "line_number": 75,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The file is missing a newline at the end (`\\ No newline at end of file`). Please add a trailing newline.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `scripts/package.json` `fmt:check` script (formerly `docs:fmt:check`) no longer includes the helpful fallback message: `|| echo 'Please run \"docs:fmt:write\" in the \"scripts\" directory to fix the issues'`. While this is a minor UX regression in isolation, combined with the CI job no longer checking docs at all (see inline comment on `common-jobs.ts`), doc contributors lose both the CI safety net and the actionable fix hint.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "After this PR, both the `lint` CI job and the `prettyDocs` CI job run the identical `yarn fmt:check` command (`oxfmt --check .` from the repo root). This duplication means format violations will appear in two separate CI jobs with no differentiation. Consider either removing the format-check step from `prettyDocs` (leaving it only in `lint`) or repurposing `prettyDocs` to specifically handle docs validation (e.g. calling `scripts/package.json`'s `fmt:check` which scopes to `docs/_snippets`).",
+      "index": 10
+    }
+  ],
+  "cost_usd": 0.6387134,
+  "duration_seconds": 416.5509262084961
+}

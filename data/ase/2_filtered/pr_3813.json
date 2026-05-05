@@ -1,0 +1,186 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3813,
+  "title": "STY/DOC: implement UP (pyupgrade) suggestions to doc/tutorials",
+  "body": "Modernise the tutorial scripts a bit, using the ruff UP (pyupgrade) rules. These are enabled in pyproject.toml but just for those files: if we apply this to more files the `per-file-ignores` can be updated.\n\nIt would be a good idea for a reviewer to try running the updated tutorials, I'm not sure if they run in CI?\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [X] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [~] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [~] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [~] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [~] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "ajjackson",
+  "merged_at": "2025-09-15T08:42:54.004Z",
+  "base_ref": "master",
+  "merge_commit_sha": "74214c2f8d621ef85a46761439858cbb21b0b748",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2748483231",
+          "author": "yuzie007",
+          "body": "This looks a fancy update for ASE styling!\n\nI ran the updated scripts manually.\nThere are no errors related to the style update itself, while I found the following:\n\n1. For `ga_bulk_relax.py`\n```\n% python ga_bulk_run.py\nTraceback (most recent call last):\n  File \"/Users/ikeda/codes/ase/doc/tutorials/ga/ga_bulk_run.py\", line 1, in <module>\n    from ga_bulk_relax import relax\n  File \"/Users/ikeda/codes/ase/doc/tutorials/ga/ga_bulk_relax.py\", line 3, in <module>\n    from ase.constraints import ExpCellFilter\nImportError: cannot import name 'ExpCellFilter' from 'ase.constraints' (/Users/ikeda/codes/ase/ase/constraints.py)\n```\nwhere we should update as\n```\nfrom ase.filters import ExpCellFilter\n```\n\n2. Since !3733, [this line in `ga_bulk_relax.py`](https://gitlab.com/ase/ase/-/blob/b448a2f091f6a02bfe8cfd52816769696722acae/doc/tutorials/ga/ga_bulk_relax.py#L49) does not work. `maxmove` should also be updated as `maxstep`.\nSo, we need to modify this part e.g. as\n```python\n        ecf = ExpCellFilter(atoms)\n        dyn = FIRE(ecf, maxstep=0.2, logfile=None, trajectory=None)\n        dyn.run(fmax=1e-3, steps=100)\n\n        converged = dyn.converged(ecf.get_forces().ravel())\n        niter += 1\n```\n\n3. `md/moldyn4.py` shows the following error\n```\nAttributeError: 'MPI' object has no attribute 'sum_scalar'\n```\nwhich is probably because Asap3 MPI does not have `sum_scalar`.\nFor a quick fix, we can do\n```python\nuse_asap = False\n```\n\nThese also show that the tutorial scripts are not tested on pipelines.\nIt would be ideal in future to auto-test these somehow like other `*.py` in `doc` via `ase/utils/sphinx.py`, but I am not immediately sure how:)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-09-12T20:01:05.958Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies multiple concrete bugs and suggests specific code fixes: updating the import from ase.constraints to ase.filters, changing maxmove to maxstep in ga_bulk_relax.py, and setting use_asap=False in moldyn4.py."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2749668117",
+          "author": "askhl",
+          "body": "Very good idea to use pyupgrade.\n\nWe are extracting `ase.ga` to a separate project, so those tutorials will go elsewhere.  It would nevertheless be a Good Thing if asap had the same MPI interface.  @schiotz do you think we could get `comm.sum_scalar()` in asap?  GPAW implements it.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-09-14T16:29:56.989Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2750423246",
+          "author": "schiotz",
+          "body": "> do you think we could get `comm.sum_scalar()` in asap? GPAW implements it.\n\nIn my opinion, the MPI interface of GPAW and Asap should be as identical as possible.  Asap issue number 73.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-09-15T08:33:52.675Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment requests that asap implement comm.sum_scalar() to match GPAW's MPI interface, directed at a specific person (@schiotz)."
+    }
+  ],
+  "review_thread_count": 6,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2749707125",
+            "author": "ajjackson",
+            "body": "Great! I'll apply Yuji's suggestions then invite people to re-review/merge.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-09-14T18:41:22.623Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2749750349",
+            "author": "ajjackson",
+            "body": "```        converged = dyn.converged(ecf.get_forces().ravel())```\n\nAs raised in #1744 , this was not a very user-friendly change and in this case makes the tutorial code a bit mysterious. \n\nLooking more closely at `run`/`irun`, it returns True if convergence was reached.\n\nSo we can combine the lines into\n```python\n        converged = dyn.run(fmax=1e-3, steps=100)\n```",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-09-14T20:13:41.939Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2749702892",
+            "author": "askhl",
+            "body": "The diff looks good generally speaking.\n\nI would also be fine with applying this to other files.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-09-14T18:27:30.474Z",
+            "is_outdated": false
+          },
+          {
+            "id": "2749706834",
+            "author": "ajjackson",
+            "body": "Right, I had in mind that this would be a modest starting point. If it goes well then try an MR to apply to rest of docs, then to chunks of main code.\n\nIt seemed a good time to try it: now we are on Py 3.10 we can replace Union with | \ud83d\ude01",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-09-14T18:40:08.812Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "This is a general approval comment with a mild suggestion to apply the same changes to other files, but no specific files or changes are identified \u2014 it reads more as an optional open-ended note than a concrete request."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2749703512",
+            "author": "askhl",
+            "body": "Nobody knows how to run the tutorials in general, since they require different codes.  We hope to rectify that during the upcoming sprint.  Since the changes don't *look* broken, and since we'll check all the tutorials during documentation sprint, I think we can live with the 1% chance of something breaking now.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-09-14T18:30:16.537Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "This is a meta-discussion about review/merge strategy and process context. No specific code change is requested or implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 6,
+    "stage1_kept": 4,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 2,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 2,
+    "stage3_cost_usd": 0.01863475
+  }
+}

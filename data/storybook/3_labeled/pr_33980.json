@@ -1,0 +1,766 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33980,
+  "title": "A11y: Make resize handles for addon panel and sidebar accessible",
+  "body": "## Testing\r\n\r\n#### UI Review\r\nhttps://www.chromatic.com/review?appId=635781f3500dd2c49e189caf&number=33980&type=linked\r\n\r\n#### Manual testing\r\n1. Run Storybook UI locally\r\n2. Tab to right after the sidebar until you reach the resize handle\r\n3. Press ArrowLeft, ArrowRight, Shift+ArrowLeft, Shift+ArrowRight, Home and End\r\n4. When the sidebar is 0px, press Shift+Tab to ensure kb focus does not go into the sidebar\r\n5. Same as 2-4 for the addon panel resize handle\r\n6. Verify that closing/reopening the sidebar does not cause the drag handle to bug out\r\n7. Verify that closing/reopening the addon panel does not cause the drag handle to bug out\r\n8. Verify that dragging the resize handles doesn't interfere with positions used by the keyboard handler\r\n\r\n\r\n-----\r\n\r\n## Copilot stream of consciousness\r\n\r\n\r\nResize handles for the sidebar and addon panel lack semantic ARIA attributes and keyboard interaction, making them invisible to assistive technologies per the <a href=\"https://www.w3.org/TR/wai-aria-1.2/#separator\">WAI-ARIA separator role spec</a>.\r\n\r\n### `Drag.tsx` component\r\n\r\nExtracted `Drag` into its own React component (`Drag.tsx`) that automatically sets `role=\"separator\"`, `tabIndex={0}`, and `aria-valuemin={0}`, reducing ARIA boilerplate at call sites. Callers only need to provide:\r\n\r\n- `aria-orientation` \u2014 `vertical` for sidebar/right panel, `horizontal` for bottom panel\r\n- `aria-label` \u2014 \"Sidebar resize handle\" / \"Addon panel resize handle\"\r\n- `aria-valuenow` / `aria-valuemax` \u2014 current size in px, max viewport dimension\r\n\r\nA `TooltipProvider` with `triggerOnFocusOnly` wraps the handle, showing arrow key hints on focus (`\u2190 \u2192 to resize` for vertical, `\u2191 \u2193 to resize` for horizontal). The tooltip uses `TooltipNote` for consistent formatting and skips injecting `aria-describedby` (redundant with the separator role and label).\r\n\r\nFocus-visible styles apply `outline: 2px solid transparent` with `boxShadow: inset 0 0 0 4px ${theme.color.secondary}`, and conditionally `height: 7` when horizontal or `width: 7` when vertical. A `@media (forced-colors: active)` fallback renders `outline: 2px solid Highlight` so the focus indicator remains visible in Windows High Contrast mode.\r\n\r\n```tsx\r\n<Drag\r\n  ref={sidebarResizerRef}\r\n  position=\"left\"\r\n  aria-label=\"Sidebar resize handle\"\r\n  aria-valuenow={navSize}\r\n  aria-valuemax={maxWidth}\r\n/>\r\n```\r\n\r\n### `SidebarContainer.tsx`\r\n\r\nExtracted `SidebarContainer` into its own file, mirroring `PanelContainer`. When the sidebar is collapsed (`navSize === 0`), sidebar content is hidden from keyboard and assistive technologies via `hidden` and `aria-hidden`. The drag handle is always rendered outside the hidden slot so users can reopen the sidebar.\r\n\r\n### `PanelContainer.tsx` and `MainAreaContainer.tsx`\r\n\r\nExtracted `PanelContainer` and `MainAreaContainer` into separate files to match the `next` branch structure. `PanelContainer` encapsulates the addon panel's `Drag` handle with all ARIA attributes and hides collapsed panel content from assistive technologies via `hidden` and `aria-hidden`. The `position` prop is normalized once as `resolvedPosition` to ensure consistent fallback behavior across all position-dependent logic.\r\n\r\n### Effective `aria-valuemax` and keyboard resize limits\r\n\r\nThe CSS grid reserves `MINIMUM_CONTENT_WIDTH_PX` (100px) for the content column, so using raw `window.innerWidth` / `window.innerHeight` overstates the actual available space. Both containers and `useDragging.ts` now compute effective maximum sizes that account for the grid constraint and the space occupied by other layout regions:\r\n\r\n- **Sidebar**: `window.innerWidth - 100 - rightPanelWidth` (when panel is right)\r\n- **Right panel**: `window.innerWidth - 100 - navSize`\r\n- **Bottom panel**: `window.innerHeight`\r\n\r\n`MINIMUM_CONTENT_WIDTH_PX` is defined in a shared `constants.ts` file to avoid circular imports.\r\n\r\n### Keyboard interaction (`useDragging.ts`)\r\n\r\n- Unified `applyResizeKeyboard` helper with a `position` parameter (`left` / `right` / `bottom` / `top`) per the Window Splitter APG pattern\r\n- Arrow keys resize in the expected direction (10px step, 50px with Shift held):\r\n  - Sidebar (`left`): `ArrowRight` increases / `ArrowLeft` decreases\r\n  - Bottom panel (`bottom`): `ArrowUp` increases / `ArrowDown` decreases\r\n  - Right panel (`right`): `ArrowLeft` increases / `ArrowRight` decreases\r\n- `Home` \u2192 minimum size (0), `End` \u2192 maximum size (effective viewport dimension)\r\n\r\n### Focus management on sidebar/panel toggle\r\n\r\nWhen the sidebar or addon panel is closed via a global keyboard shortcut and focus was inside the region, focus moves to the corresponding \"Show sidebar\" / \"Show addon panel\" toolbar button (with fallback to `document.body`). When either toolbar button is activated via keyboard (`Enter` / `Space`), the region opens, focus is polled into the region element, and a landmark animation highlights the target area.\r\n\r\n- Added `sidebarRegion` and `showSidebar` to `focusableUIElements` in `layout.ts`\r\n- Updated `menu.tsx` toolbar button with ID, `focusOnUIElement` polling, and `useRegionFocusAnimation` (matching the existing `addons.tsx` pattern)\r\n- Updated `shortcuts.ts` `toggleNav` handler with focus rescue logic (matching the existing `togglePanel` pattern)\r\n\r\n### Layout changes\r\n\r\n- Sidebar slot rendered before the drag handle for better keyboard navigation order (search and nav links are reached first)\r\n- Layout.tsx simplified to use the extracted `SidebarContainer`, `PanelContainer`, and `MainAreaContainer` components\r\n\r\n<!-- START COPILOT ORIGINAL PROMPT -->\r\n\r\n\r\n\r\n<details>\r\n\r\n<summary>Original prompt</summary>\r\n\r\n> \r\n> ----\r\n> \r\n> *This section details on the original issue you should resolve*\r\n> \r\n> <issue_title>[A11y]: Resize handles for addon panel and sidebar are not accessible</issue_title>\r\n> <issue_description>### Describe the bug\r\n> \r\n> Quoting the spec:\r\n> \r\n> > ## separator role\r\n> > A divider that separates and distinguishes sections of content or groups of menuitems.\r\n> > \r\n> > There are two types of separators: a static [structure](https://www.w3.org/TR/wai-aria-1.2/#structure) that provides only a visible boundary and a focusable, interactive [widget](https://www.w3.org/TR/wai-aria-1.2/#widget) that is also moveable. If a separator is not focusable, it is revealed to [assistive technologies](https://www.w3.org/TR/wai-aria-1.2/#dfn-assistive-technology) as a static structural element. For example, a static separator can be used to help visually divide two groups of menu items in a menu or to provide a horizontal rule between two sections of a page.\r\n> > \r\n> > Authors MAY make a separator focusable to create a [widget](https://www.w3.org/TR/wai-aria-1.2/#widget) that both provides a visible boundary between two sections of content and enables the user to change the relative size of the sections by changing the position of the separator. A variable separator widget can be moved continuously within a range, whereas a fixed separator widget supports only two discrete positions. Typically, a fixed separator widget is used to toggle one of the sections between expanded and collapsed states.\r\n> > \r\n> > If the separator is focusable, authors MUST set the value of [aria-valuenow](https://www.w3.org/TR/wai-aria-1.2/#aria-valuenow) to a [number](https://www.w3.org/TR/wai-aria-1.2/#valuetype_number) reflecting the current position of the separator and update that value when it changes. Authors SHOULD also provide the value of [aria-valuemin](https://www.w3.org/TR/wai-aria-1.2/#aria-valuemin) if it is not 0 and the value of [aria-valuemax](https://www.w3.org/TR/wai-aria-1.2/#aria-valuemax) if it is not 100. If missing or not a number, the implicit values of these attributes are as follows:\r\n> > \r\n> > * The implicit value of aria-valuemin is 0.\r\n> > * The implicit value of aria-valuemax is 100.\r\n> > * In applications where there is more than one focusable separator, authors SHOULD provide an accessible name for each one.\r\n> > \r\n> > Elements with the role separator have an implicit [aria-orientation](https://www.w3.org/TR/wai-aria-1.2/#aria-orientation) value of horizontal.\r\n> \r\n> For us, it means the\r\n> * drag handle must communicate an orientation (for sidebar, always horizontal; for addon panel, depends if panel is on the bottom or on the right)\r\n> * we must communicate min/max values (min always 0, max depends on space available in viewport)\r\n> * we must use aria-valuenow to communicate the current size as exposed in the layout submodule of the manager API\r\n> * we must provide aria labels so users know if they're resizing the sidebar or addon panel\r\n> \r\n> Once the Drag component is improved, we must\r\n> * add stories to cover all relevant props\r\n> * change the addon panel and sidebar callee code to pass the new props\r\n> \r\n> ### Reproduction link\r\n> \r\n> yarn && yarn task compile -s compile && yarn storybook:ui\r\n> \r\n> ### Reproduction steps\r\n> \r\n> _No response_\r\n> \r\n> ### System\r\n> \r\n> ```bash\r\n> N/A\r\n> ```\r\n> \r\n> ### Additional context\r\n> \r\n> _No response_</issue_description>\r\n> \r\n> ## Comments on the Issue (you are @copilot in this section)\r\n> \r\n> <comments>\r\n> </comments>\r\n> \r\n\r\n\r\n</details>\r\n\r\n\r\n\r\n<!-- START COPILOT CODING AGENT SUFFIX -->\r\n\r\n- Fixes storybookjs/storybook#33979\r\n\r\n<!-- START COPILOT CODING AGENT TIPS -->\r\n---\r\n\r\n\ud83d\udd12 GitHub Advanced Security automatically protects Copilot coding agent pull requests. You can protect all pull requests by enabling Advanced Security for your repositories. [Learn more about Advanced Security.](https://gh.io/cca-advanced-security)\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\r\n## Summary by CodeRabbit\r\n\r\n* **New Features**\r\n  * Resizable sidebar and panel now support keyboard and mouse resizing (arrow keys, Shift for larger steps, Home/End).\r\n  * Show Sidebar action focuses the sidebar and can trigger a landmark animation for keyboard users.\r\n\r\n* **Accessibility**\r\n  * Resize handles include ARIA attributes, focus indicators, and contextual tooltips.\r\n  * New landmark IDs for sidebar and panel regions to improve screen-reader navigation.\r\n\r\n* **Bug Fixes / UI**\r\n  * Collapsed sidebar/panel content is hidden from assistive tech while preserving DOM/layout state.\r\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "copilot-swe-agent",
+  "merged_at": "2026-03-13T15:50:32Z",
+  "base_ref": "next",
+  "merge_commit_sha": "0e83b400580ebfbeb7a40f586f45b51345dabb9f",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "89e203f1602be9d3305585c7900f624d07433805",
+    "b7c8a370852d118790d45e3363d7312d78086708"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r4VrZ",
+          "author": "Sidnioulz",
+          "body": "Home should make the item as small as possible; End as large as possible (as per the window splitter APG).\n\nRefactor the on*KeyDown functions to use the same code logic, with a position (top,left,right,bottom) parameter. Use the position param to decide which arrow does what (e.g. if position is bottom, ArrowUp increases size).",
+          "file_path": "code/core/src/manager/components/layout/useDragging.ts",
+          "line_number": 310,
+          "start_line": 308,
+          "commit_sha": "b7c8a370852d118790d45e3363d7312d78086708",
+          "created_at": "2026-03-04T13:01:08Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Home/End key behavior is incorrect (should map to min/max sizes per APG spec), and the onKeyDown functions have duplicated logic that should be refactored with a position parameter."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6r4-z6",
+          "author": "Sidnioulz",
+          "body": "Also add support for Shift. If Shift is pressed, apply 5x the step.",
+          "file_path": "code/core/src/manager/components/layout/useDragging.ts",
+          "line_number": 310,
+          "start_line": 308,
+          "commit_sha": "b7c8a370852d118790d45e3363d7312d78086708",
+          "created_at": "2026-03-04T13:36:00Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6r5HX9",
+          "author": "copilot-swe-agent",
+          "body": "Refactored both handlers to use a shared `applyResizeKeyboard(state, position, key, step)` function with `position` parameter (`'left' | 'right' | 'bottom' | 'top'`). The sidebar passes `'left'`, the panel passes `state.panelPosition` dynamically. Added Shift key support with 5x multiplier. Commit: 9716901",
+          "file_path": "code/core/src/manager/components/layout/useDragging.ts",
+          "line_number": 310,
+          "start_line": 308,
+          "commit_sha": "b7c8a370852d118790d45e3363d7312d78086708",
+          "created_at": "2026-03-04T13:43:09Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests specific refactoring: implement Home/End key behavior and consolidate onKeyDown functions with a position parameter."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r4-TD",
+          "author": "Sidnioulz",
+          "body": "Besides that, add:\n\n```css\n    outline: none,\n    height: 7,\n    boxShadow: `inset 0 0 0 4px ${theme.color.secondary}`,\n```\n\nWe'll make further changes later.\n",
+          "file_path": "code/core/src/manager/components/layout/Layout.tsx",
+          "line_number": 340,
+          "start_line": null,
+          "commit_sha": "9716901d3243d4d27ad5ac3da653f45ba1027f47",
+          "created_at": "2026-03-04T13:35:32Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "low",
+          "label_reasoning": "Reviewer is adding missing CSS style properties for focus state; closest fit is a code style/structural addition request."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6r5HbU",
+          "author": "copilot-swe-agent",
+          "body": "Added `outline: 'none'`, `height: 7`, and `boxShadow: \\`inset 0 0 0 4px ${theme.color.secondary}\\`` to the `&:focus-visible` styles. Commit: 9716901",
+          "file_path": "code/core/src/manager/components/layout/Layout.tsx",
+          "line_number": 340,
+          "start_line": null,
+          "commit_sha": "9716901d3243d4d27ad5ac3da653f45ba1027f47",
+          "created_at": "2026-03-04T13:43:12Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding specific CSS properties (outline, height, boxShadow) to the component."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r4_fp",
+          "author": "Sidnioulz",
+          "body": "Move the slot before the Drag for sidebar. We want to ensure quick content nav links / search remain fast to reach",
+          "file_path": "code/core/src/manager/components/layout/Layout.tsx",
+          "line_number": 187,
+          "start_line": null,
+          "commit_sha": "9f3d90bed492cdb3151a6694306e747a8e3dd88c",
+          "created_at": "2026-03-04T13:36:32Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "high",
+          "label_reasoning": "Reviewer requests reordering DOM elements (slot before Drag) for accessibility/UX reasons \u2014 a structural/organization concern."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6r5HgH",
+          "author": "copilot-swe-agent",
+          "body": "Moved `{slots.slotSidebar}` before the `<Drag>` component in the sidebar container so sidebar content (search, nav links) comes first in tab order. Commit: 9716901",
+          "file_path": "code/core/src/manager/components/layout/Layout.tsx",
+          "line_number": 187,
+          "start_line": null,
+          "commit_sha": "9f3d90bed492cdb3151a6694306e747a8e3dd88c",
+          "created_at": "2026-03-04T13:43:15Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests moving the slot element before the Drag component in the sidebar."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r8i5G",
+          "author": "Sidnioulz",
+          "body": "Woops, this should be height when horizontal, but width when vertical.",
+          "file_path": "code/core/src/manager/components/layout/Layout.tsx",
+          "line_number": 342,
+          "start_line": null,
+          "commit_sha": "9716901d3243d4d27ad5ac3da653f45ba1027f47",
+          "created_at": "2026-03-04T16:25:45Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Wrong dimension property used: height should be used when horizontal, width when vertical \u2014 an incorrect conditional logic bug."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tE9Yx",
+          "author": "copilot-swe-agent",
+          "body": "Fixed in commit d1409a8. The `&:focus-visible` style now conditionally applies `height: 7` when horizontal and `width: 7` when vertical:\n\n```ts\n...(orientation === 'horizontal' ? { height: 7 } : { width: 7 }),\n```",
+          "file_path": "code/core/src/manager/components/layout/Layout.tsx",
+          "line_number": 342,
+          "start_line": null,
+          "commit_sha": "9716901d3243d4d27ad5ac3da653f45ba1027f47",
+          "created_at": "2026-03-09T07:54:22Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags a bug: the dimension property should be height when horizontal and width when vertical."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r80jp",
+          "author": "Sidnioulz",
+          "body": "Create a Drag.tsx component and adjust the code accordingly.\n\nWhat I'm hoping is to reduce the size of the markup here. role, tabIndex and aria-valuemin can be hidden.\n\nThen, add a TooltipProvider that triggers on focus only. Use the InteractiveTooltipProvider as we want to properly format keyboard shortcuts and to skip injecting aria-describedby (redundant with role, aria-label and aria-orientation). Only advertise the Arrow* keys, not Home/End or shift combos.",
+          "file_path": "code/core/src/manager/components/layout/Layout.tsx",
+          "line_number": 183,
+          "start_line": null,
+          "commit_sha": "8048680739f596cec70e3ce8302fff13f6d4da34",
+          "created_at": "2026-03-04T16:38:36Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "high",
+          "label_reasoning": "Reviewer requests extracting a Drag.tsx component to reduce markup size and improve code organization."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tE9ag",
+          "author": "copilot-swe-agent",
+          "body": "Implemented in commit d1409a8. Created `Drag.tsx` as a React component that:\n\n- Automatically sets `role=\"separator\"`, `tabIndex={0}`, `aria-valuemin={0}` (hidden from callers)\n- Wraps with `TooltipProvider` (`triggerOnFocusOnly`) showing `\u2190 \u2192 to resize` or `\u2191 \u2193 to resize` based on `aria-orientation`\n- Uses `TooltipNote` for consistent formatting; the `TooltipProvider` already nullifies `aria-describedby` to avoid redundancy\n\nThe sidebar Drag markup in Layout.tsx is now reduced to:\n```tsx\n<Drag\n  ref={sidebarResizerRef}\n  aria-orientation=\"vertical\"\n  aria-label=\"Sidebar resize handle\"\n  aria-valuenow={navSize}\n  aria-valuemax={...}\n/>\n```\n\nThe addon panel Drag is fully inside `PanelContainer.tsx`.",
+          "file_path": "code/core/src/manager/components/layout/Layout.tsx",
+          "line_number": 183,
+          "start_line": null,
+          "commit_sha": "8048680739f596cec70e3ce8302fff13f6d4da34",
+          "created_at": "2026-03-09T07:54:24Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests creating a Drag.tsx component, reducing markup, and adding a TooltipProvider with specific configuration."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tHmCc",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/manager/components/layout/Drag.tsx | head -120 | tail -30\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1206\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Get the full context around lines 104-111\nsed -n '95,125p' code/core/src/manager/components/layout/Drag.tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1047\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if the file exists\nls -la code/core/src/manager/components/layout/Drag.tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 162\n\n---\n\n\ud83c\udf10 Web query:\n\n`forced-colors media query box-shadow accessibility focus outline`\n\n\ud83d\udca1 Result:\n\nIn **Forced Colors Mode** (e.g., Windows High Contrast), browsers commonly **suppress `box-shadow`**, so a focus style implemented *only* with `box-shadow` may disappear\u2014an accessibility failure for keyboard users. ([w3.org](https://www.w3.org/WAI/WCAG21/Techniques/css/C40?utm_source=openai))\n\n### What to do\n1. **Don\u2019t remove outlines globally** (`outline: none`) unless you replace them with something that still renders in forced colors. ([accessabilly.com](https://accessabilly.com/accessibility-issues-concerning-windows-high-contrast-mode/?utm_source=openai))  \n2. Prefer **`outline` (or `border`) as the primary focus indicator**, and (optionally) layer `box-shadow` for non-forced-colors environments. In forced colors, the outline will remain even if shadows are removed. ([joshtumath.uk](https://www.joshtumath.uk/posts/2024-08-02-stripes-the-border-function-you-never-knew-you-needed/?utm_source=openai))  \n3. Use `@media (forced-colors: active)` to ensure a reliable focus ring using **system colors**.\n\n### Practical CSS pattern\n\n```css\n/* Default (non-forced-colors): enhanced ring */\n:focus-visible {\n  outline: 2px solid currentColor;     /* reliable baseline */\n  outline-offset: 2px;\n  box-shadow: 0 0 0 4px color-mix(in oklab, currentColor 30%, transparent);\n}\n\n/* Forced Colors: rely on outline + system color keywords */\n`@media` (forced-colors: active) {\n  :focus-visible {\n    outline: 2px solid Highlight;\n    outline-offset: 2px;\n    box-shadow: none;                  /* typically ignored anyway */\n  }\n}\n```\n\nThis matches established guidance: **don\u2019t rely on `box-shadow` alone for focus**, especially for forced-colors users. ([w3.org](https://www.w3.org/WAI/WCAG21/Techniques/css/C40?utm_source=openai))\n\nCitations:\n\n- 1: https://www.w3.org/WAI/WCAG21/Techniques/css/C40?utm_source=openai\n- 2: https://accessabilly.com/accessibility-issues-concerning-windows-high-contrast-mode/?utm_source=openai\n- 3: https://www.joshtumath.uk/posts/2024-08-02-stripes-the-border-function-you-never-knew-you-needed/?utm_source=openai\n- 4: https://www.w3.org/WAI/WCAG21/Techniques/css/C40?utm_source=openai\n\n---\n\n\ud83c\udf10 Web query:\n\n`Windows High Contrast mode box-shadow CSS accessibility`\n\n\ud83d\udca1 Result:\n\nIn **Windows High Contrast / Forced Colors mode** (`@media (forced-colors: active)`), browsers commonly **suppress `box-shadow` (it computes to `none`)**, so UI cues that rely on shadows (focus rings, elevation, boundaries) can disappear. Use **`outline`/`border`** (preferably with **system colors**) as the fallback, and don\u2019t rely on `box-shadow` alone for accessibility. [1][2][3]\n\n**Recommended pattern (focus + component boundaries):**\n```css\n/* Default */\n.button:focus-visible{\n  box-shadow: 0 0 0 3px rgba(0,120,212,.6);\n}\n\n/* Windows High Contrast / Forced Colors */\n`@media` (forced-colors: active){\n  .button{\n    /* if you used shadow as \u201celevation\u201d, add a real boundary */\n    border: 1px solid ButtonText;\n  }\n  .button:focus-visible{\n    outline: 2px solid ButtonText;  /* stays visible in forced colors */\n    outline-offset: 2px;\n    box-shadow: none;               /* explicit, since it won\u2019t render anyway */\n  }\n}\n```\n\n**Why this matters (a11y):**\n- If you replaced the default focus indicator (e.g., `outline: none`) with a custom **`box-shadow` focus ring**, it may vanish in High Contrast, breaking visible focus. [2][3]\n- WCAG guidance notes that UAs often suppress `box-shadow` in forced-color modes, so authors should avoid relying on it alone for focus indicators. [3]\n\n**Sources**\n1. MDN: `forced-colors` (notes `box-shadow` is forced to none; suggests using borders in forced-colors) [1]  \n2. WordPress accessibility issue: Windows High Contrast removes CSS `box-shadow`; suggests outline replacement [2]  \n3. W3C WAI technique C40: `box-shadow` may be suppressed in forced-color modes; don\u2019t rely on it alone [3]\n\n---\n\n\ud83c\udf10 Web query:\n\n`CSS forced-colors active outline fallback focus visible`\n\n\ud83d\udca1 Result:\n\nIn **Forced Colors Mode** (e.g., Windows High Contrast), **`box-shadow` focus rings can disappear**, so your `:focus-visible` styling should **fall back to `outline`** inside `@media (forced-colors: active)`. ([blogs.windows.com](https://blogs.windows.com/msedgedev/2020/09/17/styling-for-windows-high-contrast-with-new-standards-for-forced-colors/?utm_source=openai))\n\n### Recommended pattern (custom ring normally, outline in forced-colors)\n```css\n/* Normal mode: use your preferred focus ring */\n:where(a, button, input, select, textarea):focus-visible {\n  outline: none;\n  box-shadow: 0 0 0 3px rgba(0, 120, 255, .6);\n}\n\n/* Forced Colors Mode: use outline with system colors */\n`@media` (forced-colors: active) {\n  :where(a, button, input, select, textarea):focus-visible {\n    box-shadow: none;                 /* may not render in forced-colors */\n    outline: 2px solid Highlight;     /* system color */\n    outline-offset: 2px;\n  }\n}\n```\n\nNotes:\n- `forced-colors` has values `active | none` and is specifically meant for these modes. ([firefox-source-docs.mozilla.org](https://firefox-source-docs.mozilla.org/accessible/HCMMediaQueries.html?utm_source=openai))  \n- Using `:focus-visible` avoids showing focus rings for mouse clicks while keeping keyboard focus visible. ([developer.mozilla.org](https://developer.mozilla.org/en-US/docs/Web/CSS/%3Afocus-visible?utm_source=openai))  \n- Only use `forced-color-adjust` if you *must* opt specific elements out of forced colors (often discouraged for accessibility). ([developer.mozilla.org](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/forced-color-adjust?utm_source=openai))\n\nCitations:\n\n- 1: https://blogs.windows.com/msedgedev/2020/09/17/styling-for-windows-high-contrast-with-new-standards-for-forced-colors/?utm_source=openai\n- 2: https://firefox-source-docs.mozilla.org/accessible/HCMMediaQueries.html?utm_source=openai\n- 3: https://developer.mozilla.org/en-US/docs/Web/CSS/%3Afocus-visible?utm_source=openai\n- 4: https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/forced-color-adjust?utm_source=openai\n\n---\n\n\n\n</details>\n\n**Add a forced-colors fallback for the focus indicator.**\n\nThis focus treatment relies on `boxShadow` after setting `outline: none`. In Windows High Contrast mode (`forced-colors: active`), `box-shadow` is typically suppressed by the browser, making the focused separator invisible to keyboard users. Provide an `outline`-based fallback inside a `@media (forced-colors: active)` rule.\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n  ({ theme, $orientation = 'vertical' }) => ({\n    '&:focus-visible': {\n      opacity: 1,\n-     outline: 'none',\n+     outline: `2px solid ${theme.color.secondary}`,\n+     outlineOffset: -2,\n      ...($orientation === 'horizontal' ? { height: 7 } : { width: 7 }),\n      boxShadow: `inset 0 0 0 4px ${theme.color.secondary}`,\n    },\n+   '@media (forced-colors: active)': {\n+     '&:focus-visible': {\n+       outline: '2px solid CanvasText',\n+       boxShadow: 'none',\n+     },\n+   },\n  }),\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  ({ theme, $orientation = 'vertical' }) => ({\n    '&:focus-visible': {\n      opacity: 1,\n      outline: `2px solid ${theme.color.secondary}`,\n      outlineOffset: -2,\n      ...($orientation === 'horizontal' ? { height: 7 } : { width: 7 }),\n      boxShadow: `inset 0 0 0 4px ${theme.color.secondary}`,\n    },\n    '@media (forced-colors: active)': {\n      '&:focus-visible': {\n        outline: '2px solid CanvasText',\n        boxShadow: 'none',\n      },\n    },\n  }),\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager/components/layout/Drag.tsx` around lines 104 - 111, The\nfocus style for the separator (in the styled callback using theme and\n$orientation, specifically the '&:focus-visible' rule) relies on boxShadow which\nis suppressed in Windows High Contrast; add a forced-colors fallback by nesting\na `@media` (forced-colors: active) rule inside the same styled object that removes\nthe boxShadow fallback and instead sets a visible outline (e.g., a solid/system\ncolor outline) so keyboard focus remains visible in forced-colors mode while\nkeeping the existing boxShadow behavior for normal modes.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/layout/Drag.tsx",
+          "line_number": 109,
+          "start_line": 98,
+          "commit_sha": "b7c8a370852d118790d45e3363d7312d78086708",
+          "created_at": "2026-03-09T10:09:26Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "Focus indicator relies solely on box-shadow which is suppressed in Windows High Contrast/forced-colors mode, causing invisible focus for keyboard users \u2014 the code's behavior deviates from accessibility intent."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tJ3w6",
+          "author": "Sidnioulz",
+          "body": "@copilot implement this suggestion",
+          "file_path": "code/core/src/manager/components/layout/Drag.tsx",
+          "line_number": 109,
+          "start_line": 98,
+          "commit_sha": "b7c8a370852d118790d45e3363d7312d78086708",
+          "created_at": "2026-03-09T12:11:38Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tLTad",
+          "author": "copilot-swe-agent",
+          "body": "Implemented in commit 206ee64. Changed `outline: none` to `outline: 2px solid transparent` with a `@media (forced-colors: active)` fallback that renders `outline: 2px solid Highlight`, ensuring the focus indicator remains visible in Windows High Contrast mode where `box-shadow` is suppressed.",
+          "file_path": "code/core/src/manager/components/layout/Drag.tsx",
+          "line_number": 109,
+          "start_line": 98,
+          "commit_sha": "b7c8a370852d118790d45e3363d7312d78086708",
+          "created_at": "2026-03-09T13:27:02Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags an accessibility bug with box-shadow being suppressed in forced-colors mode and provides a concrete fix with a @media fallback."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tHmCp",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Normalize the fallback `position` once before deriving the ARIA state.**\n\nOnly `Drag.position` gets the `?? 'bottom'` fallback here. `overlapping`, `aria-valuenow`, and `aria-valuemax` still branch on the raw `position`, so the defaulted path can report a bottom separator with the right-panel size/range.  \n\n\n<details>\n<summary>\u267b\ufe0f Proposed fix</summary>\n\n```diff\n const PanelContainer = React.memo<PanelContainerProps>(function PanelContainer(props) {\n   const { children, bottomPanelHeight, rightPanelWidth, panelResizerRef, position } = props;\n+  const resolvedPosition = position ?? 'bottom';\n \n   const shouldHidePanelContent =\n-    position === 'bottom' ? bottomPanelHeight === 0 : rightPanelWidth === 0;\n+    resolvedPosition === 'bottom' ? bottomPanelHeight === 0 : rightPanelWidth === 0;\n \n   return (\n-    <Container position={position}>\n+    <Container position={resolvedPosition}>\n       <Drag\n         ref={panelResizerRef}\n-        position={position ?? 'bottom'}\n-        overlapping={position === 'bottom' ? !!bottomPanelHeight : !!rightPanelWidth}\n+        position={resolvedPosition}\n+        overlapping={resolvedPosition === 'bottom' ? !!bottomPanelHeight : !!rightPanelWidth}\n         aria-label=\"Addon panel resize handle\"\n-        aria-valuenow={position === 'bottom' ? bottomPanelHeight : rightPanelWidth}\n+        aria-valuenow={resolvedPosition === 'bottom' ? bottomPanelHeight : rightPanelWidth}\n         aria-valuemax={\n           typeof window !== 'undefined'\n-            ? position === 'bottom'\n+            ? resolvedPosition === 'bottom'\n               ? window.innerHeight\n               : window.innerWidth\n             : undefined\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager/components/layout/PanelContainer.tsx` around lines 43 -\n53, Normalize the fallback for position once and use that normalized value when\ncomputing overlapping, aria-valuenow, and aria-valuemax: create a local const\n(e.g., normalizedPosition = position ?? 'bottom') at the top of the\nPanelContainer render logic and replace direct uses of position in the\noverlapping, aria-valuenow and aria-valuemax expressions with\nnormalizedPosition, keeping references to bottomPanelHeight and rightPanelWidth\nfor the bottom/right branches.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 206ee64 to 3748c2f",
+          "file_path": "code/core/src/manager/components/layout/PanelContainer.tsx",
+          "line_number": 53,
+          "start_line": null,
+          "commit_sha": "c0dc60266f016a9b56a5c3ff95b8f445400987ff",
+          "created_at": "2026-03-09T10:09:26Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The null fallback for position is only applied in one place but raw position is used in other branches (overlapping, aria-valuenow, aria-valuemax), causing inconsistent state derivation."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tJ5lT",
+          "author": "Sidnioulz",
+          "body": "@copilot and this",
+          "file_path": "code/core/src/manager/components/layout/PanelContainer.tsx",
+          "line_number": 53,
+          "start_line": null,
+          "commit_sha": "c0dc60266f016a9b56a5c3ff95b8f445400987ff",
+          "created_at": "2026-03-09T12:13:17Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tLTfq",
+          "author": "copilot-swe-agent",
+          "body": "Implemented in commit 206ee64. Extracted `const resolvedPosition = position ?? 'bottom'` once and used it consistently for `shouldHidePanelContent`, `Container`, `Drag.position`, `overlapping`, `aria-valuenow`, and `aria-valuemax`.",
+          "file_path": "code/core/src/manager/components/layout/PanelContainer.tsx",
+          "line_number": 53,
+          "start_line": null,
+          "commit_sha": "c0dc60266f016a9b56a5c3ff95b8f445400987ff",
+          "created_at": "2026-03-09T13:27:05Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags a bug where position fallback is inconsistently applied and provides a concrete fix using a normalized variable. (Marked as already addressed.)"
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tHmCt",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Apply the existing snap/min-width rules to keyboard resize.**\n\n`applyResizeKeyboard()` only clamps to `[0, viewport]`, so Arrow keys can leave `navSize` / `rightPanelWidth` at small non-zero values that the mouse path never allows. `onDragEnd()` snaps those states back to `SIDEBAR_MIN_WIDTH_PX` / `RIGHT_PANEL_MIN_WIDTH_PX`, so keyboard users can end up in below-minimum layouts and need extra keystrokes to recover. Please reuse the same open/collapse thresholds here.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager/components/layout/useDragging.ts` around lines 32 - 82,\napplyResizeKeyboard currently only clamps sizes to [0, viewport], allowing\nkeyboard-driven sizes to land between 0 and the component minimums; update it to\napply the same snap/open-collapse thresholds used in onDragEnd so keyboard\nbehavior matches mouse dragging. In applyResizeKeyboard, after computing the\nclamped new size for sizeKey (navSize or rightPanelWidth or bottomPanelHeight),\napply the same snap logic used in onDragEnd: compare against\nSIDEBAR_MIN_WIDTH_PX and RIGHT_PANEL_MIN_WIDTH_PX (and the bottom panel min if\napplicable) and the same threshold used for collapsing/expanding (use the same\ncomparisons used in onDragEnd) so values below the threshold snap to 0\n(collapsed) or to the min width/height; return the snapped size for the relevant\nkeys (navSize, rightPanelWidth, bottomPanelHeight) instead of the raw clamped\nvalue.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 206ee64 to 3748c2f",
+          "file_path": "code/core/src/manager/components/layout/useDragging.ts",
+          "line_number": 107,
+          "start_line": 82,
+          "commit_sha": "b7c8a370852d118790d45e3363d7312d78086708",
+          "created_at": "2026-03-09T10:09:26Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Keyboard resize doesn't apply the same snap/min-width rules as mouse drag, allowing keyboard users to set invalid below-minimum layout sizes."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tLTVB",
+          "author": "Sidnioulz",
+          "body": "@copilot fix this",
+          "file_path": "code/core/src/manager/components/layout/useDragging.ts",
+          "line_number": 107,
+          "start_line": 82,
+          "commit_sha": "b7c8a370852d118790d45e3363d7312d78086708",
+          "created_at": "2026-03-09T13:26:58Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that keyboard resize doesn't apply snap/min-width rules that mouse dragging uses, and requests applying the same thresholds. (Marked as already addressed.)"
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tLH1W",
+          "author": "Sidnioulz",
+          "body": "One small issue to fix here.\n\nWhen testing the behaviour, I see the valueMax is set to window width but in practice, there's a CSS rule in Layout (likely the grid dimensions) that imposes a smaller value than the window width. So we end up with the JS value being too big and ArrowLeft presses seem to do nothing for a while (until the value catches up with the actual CSS-derived max width).\n\nFind a way to more reliably declare the actual max width (within a margin of errors of a few PX)",
+          "file_path": "code/core/src/manager/components/layout/SidebarContainer.tsx",
+          "line_number": 50,
+          "start_line": null,
+          "commit_sha": "c0dc60266f016a9b56a5c3ff95b8f445400987ff",
+          "created_at": "2026-03-09T13:17:45Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "aria-valuemax is set to window.innerWidth but actual CSS-constrained max is smaller, causing Arrow key presses to appear non-functional until the value catches up."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tLTkV",
+          "author": "copilot-swe-agent",
+          "body": "Fixed in commit 206ee64. The CSS grid has `minmax(100px, 1fr)` for the content column, so the effective max for the sidebar is `window.innerWidth - MINIMUM_CONTENT_WIDTH_PX - rightPanelWidth` (when panel is right) rather than raw `window.innerWidth`. Applied the same logic to `PanelContainer` (right panel subtracts navSize + min content) and `applyResizeKeyboard` in `useDragging.ts` so keyboard resizing stays consistent. Moved `MINIMUM_CONTENT_WIDTH_PX` to `constants.ts` to avoid circular imports.",
+          "file_path": "code/core/src/manager/components/layout/SidebarContainer.tsx",
+          "line_number": 50,
+          "start_line": null,
+          "commit_sha": "c0dc60266f016a9b56a5c3ff95b8f445400987ff",
+          "created_at": "2026-03-09T13:27:08Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags that aria-valuemax uses window width which is larger than the CSS-derived max, causing Arrow key issues, and requests a more reliable max width calculation."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tP_Wn",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Pass the rendered panel visibility into `useDragging()`.**\n\nThe layout uses `customisedShowPanel`, but the drag logic still gets raw `isPanelShown`. When a customization hides the addon panel while staying in story mode, `computeSidebarMaxWidth()` keeps subtracting the hidden panel footprint, so `aria-valuemax`, `End`, and Arrow resizing stop early. This call should use the same visibility flag as the rendered grid.\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n   const { panelResizerRef, sidebarResizerRef, sidebarMaxWidth, panelMaxSize } = useDragging({\n     setState: setInternalDraggingSizeState,\n-    isPanelShown,\n+    isPanelShown: customisedShowPanel,\n     isDesktop,\n     navSize: customisedNavSize,\n     rightPanelWidth,\n     panelPosition: managerLayoutState.panelPosition,\n   });\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  const { panelResizerRef, sidebarResizerRef, sidebarMaxWidth, panelMaxSize } = useDragging({\n    setState: setInternalDraggingSizeState,\n    isPanelShown: customisedShowPanel,\n    isDesktop,\n    navSize: customisedNavSize,\n    rightPanelWidth,\n    panelPosition: managerLayoutState.panelPosition,\n  });\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager/components/layout/Layout.tsx` around lines 120 - 127,\nThe drag logic is still receiving raw isPanelShown causing sizing to subtract a\nhidden panel; update the useDragging call to pass the rendered visibility flag\ncustomisedShowPanel instead of isPanelShown so the dragging logic (useDragging)\nand helpers like computeSidebarMaxWidth use the same visibility state as the\nrendered grid (change the property named isPanelShown in the useDragging call to\ncustomisedShowPanel).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/layout/Layout.tsx",
+          "line_number": 127,
+          "start_line": 120,
+          "commit_sha": "b7c8a370852d118790d45e3363d7312d78086708",
+          "created_at": "2026-03-09T16:46:22Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "Raw isPanelShown is passed to useDragging instead of customisedShowPanel, causing the drag/sizing logic to use a different visibility state than what is actually rendered."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tQSzI",
+          "author": "Sidnioulz",
+          "body": "@copilot+claude-opus-4.6 fix this",
+          "file_path": "code/core/src/manager/components/layout/Layout.tsx",
+          "line_number": 127,
+          "start_line": 120,
+          "commit_sha": "b7c8a370852d118790d45e3363d7312d78086708",
+          "created_at": "2026-03-09T16:59:15Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a bug where isPanelShown should be replaced with customisedShowPanel in the useDragging call, with a concrete fix provided."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tP_Wz",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Clamp the computed max sizes to `>= 0`.**\n\nAfter a viewport shrink, persisted `navSize` / `rightPanelWidth` can exceed the newly available space. These helpers then return negative maxima, and the later `clamp(..., 0, maxSize)` calls propagate negative sizes into layout state and `aria-valuemax`. Guard both return values with `Math.max(0, ...)`.\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n function computeSidebarMaxWidth(\n   panelPosition: API_Layout['panelPosition'],\n   rightPanelWidth: number,\n   isPanelShown: boolean\n ): number {\n   const panelWidth = !isPanelShown\n     ? 0\n     : panelPosition === 'right'\n       ? rightPanelWidth\n       : MINIMUM_HORIZONTAL_PANEL_WIDTH_PX;\n-  return window.innerWidth - MINIMUM_CONTENT_WIDTH_PX - panelWidth;\n+  return Math.max(0, window.innerWidth - MINIMUM_CONTENT_WIDTH_PX - panelWidth);\n }\n \n function computePanelMaxSize(panelPosition: API_Layout['panelPosition'], navSize: number): number {\n   if (panelPosition === 'bottom') {\n-    return window.innerHeight - TOOLBAR_HEIGHT_PX;\n+    return Math.max(0, window.innerHeight - TOOLBAR_HEIGHT_PX);\n   }\n-  return window.innerWidth - MINIMUM_CONTENT_WIDTH_PX - navSize;\n+  return Math.max(0, window.innerWidth - MINIMUM_CONTENT_WIDTH_PX - navSize);\n }\n```\n</details>\n\n\n\n\nAlso applies to: 56-60\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager/components/layout/useDragging.ts` around lines 37 - 48,\nThe computed max widths can be negative after viewport shrink; update\ncomputeSidebarMaxWidth to clamp its return with Math.max(0, ...) around the\ncurrent expression (i.e., Math.max(0, window.innerWidth -\nMINIMUM_CONTENT_WIDTH_PX - panelWidth)), and apply the same fix to the other\nhelper that computes the nav/max width (the function in lines ~56-60) so both\nfunctions never return negative values and downstream clamp/aria-valuemax use\nnon-negative maxima.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/layout/useDragging.ts",
+          "line_number": 53,
+          "start_line": 38,
+          "commit_sha": "b7c8a370852d118790d45e3363d7312d78086708",
+          "created_at": "2026-03-09T16:46:22Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "computeSidebarMaxWidth and computePanelMaxSize can return negative values after viewport shrink, which propagates negative sizes into layout state and aria-valuemax."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tQS9e",
+          "author": "Sidnioulz",
+          "body": "@copilot+claude-opus-4.6 fix this",
+          "file_path": "code/core/src/manager/components/layout/useDragging.ts",
+          "line_number": 53,
+          "start_line": 38,
+          "commit_sha": "b7c8a370852d118790d45e3363d7312d78086708",
+          "created_at": "2026-03-09T16:59:22Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that computed max sizes can be negative and requests wrapping return values with Math.max(0, ...)."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tddDT",
+          "author": "JReinhold",
+          "body": "could this be simplified?\n```suggestion\n          const wasFocusInSidebar = sidebarElement?.contains(document?.activeElement);\n```",
+          "file_path": "code/core/src/manager-api/modules/shortcuts.ts",
+          "line_number": 390,
+          "start_line": null,
+          "commit_sha": "057673147423c149f7b41dae735ad88c0284ebbb",
+          "created_at": "2026-03-10T08:35:59Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Redundancy Handling",
+          "label_confidence": "high",
+          "label_reasoning": "Reviewer suggests simplifying overly complex code to a cleaner equivalent expression."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests simplifying the code with a specific code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tdmrx",
+          "author": "JReinhold",
+          "body": "Nit: The perf overhead of using `useMemo` probably negates the perf cost of re-calculating that single if-condition. This is not an expensive computation, and perf wise it's exactly like the un-memoized `orientation` computation above.",
+          "file_path": "code/core/src/manager/components/layout/Drag.tsx",
+          "line_number": 57,
+          "start_line": null,
+          "commit_sha": "4cc32b668ed47c95436c13b38de26f0515194a89",
+          "created_at": "2026-03-10T08:44:01Z",
+          "is_outdated": true,
+          "dimension": "Performance Issue",
+          "category": "Computation Efficiency",
+          "label_confidence": "high",
+          "label_reasoning": "useMemo overhead likely exceeds cost of the trivial computation it wraps, making it a net performance negative."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that useMemo is unnecessary overhead for a simple computation, implying it should be removed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tdwXZ",
+          "author": "JReinhold",
+          "body": "I'm confused here. Using `Math.min` with `0` will always be `0`, unless you expect the computed content size to be negative? Which sounds strange to me? Did you mean `Math.max` instead?",
+          "file_path": "code/core/src/manager/components/layout/useDragging.ts",
+          "line_number": 51,
+          "start_line": null,
+          "commit_sha": "4cc32b668ed47c95436c13b38de26f0515194a89",
+          "created_at": "2026-03-10T08:52:13Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Math.min with 0 will always return 0 or negative \u2014 reviewer suspects Math.max was intended, indicating a clear logic error."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tdxD1",
+          "author": "JReinhold",
+          "body": "same goes for the similar instances below",
+          "file_path": "code/core/src/manager/components/layout/useDragging.ts",
+          "line_number": 51,
+          "start_line": null,
+          "commit_sha": "4cc32b668ed47c95436c13b38de26f0515194a89",
+          "created_at": "2026-03-10T08:52:47Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tjPMC",
+          "author": "Sidnioulz",
+          "body": "Every. single. time. I always reverse them. Wanted to do this to make CodeRabbit happy and of course I introduced complete nonsense in my last commit. Thanks!",
+          "file_path": "code/core/src/manager/components/layout/useDragging.ts",
+          "line_number": 51,
+          "start_line": null,
+          "commit_sha": "4cc32b668ed47c95436c13b38de26f0515194a89",
+          "created_at": "2026-03-10T13:19:38Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a likely bug where Math.min should be Math.max, implying a code change is needed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tdyov",
+          "author": "huang-julien",
+          "body": "nitpick comment:\nresolvedPosition is always defined in types. Is there a reason position can be nullish ?",
+          "file_path": "code/core/src/manager/components/layout/PanelContainer.tsx",
+          "line_number": 37,
+          "start_line": null,
+          "commit_sha": "4cc32b668ed47c95436c13b38de26f0515194a89",
+          "created_at": "2026-03-10T08:54:08Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Variable Handling",
+          "label_confidence": "medium",
+          "label_reasoning": "Reviewer questions whether position can be nullish given its type definition, pointing to unnecessary nullable handling or a type mismatch."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tjHXv",
+          "author": "Sidnioulz",
+          "body": "Nah it's a silly oversight from me. Thanks!",
+          "file_path": "code/core/src/manager/components/layout/PanelContainer.tsx",
+          "line_number": 37,
+          "start_line": null,
+          "commit_sha": "4cc32b668ed47c95436c13b38de26f0515194a89",
+          "created_at": "2026-03-10T13:14:02Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions whether the nullish check is necessary given the type, implying the code may need simplification or the type needs adjustment."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6td42m",
+          "author": "huang-julien",
+          "body": "Math.min with a 0 as argument would either result in 0 or a negative value ? \ud83e\udd14 ",
+          "file_path": "code/core/src/manager/components/layout/useDragging.ts",
+          "line_number": 51,
+          "start_line": null,
+          "commit_sha": "4cc32b668ed47c95436c13b38de26f0515194a89",
+          "created_at": "2026-03-10T08:58:59Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Math.min with 0 always results in 0 or negative, likely the wrong function \u2014 same logic error as comment 13."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6td5oU",
+          "author": "huang-julien",
+          "body": "Same at L65 68",
+          "file_path": "code/core/src/manager/components/layout/useDragging.ts",
+          "line_number": 51,
+          "start_line": null,
+          "commit_sha": "4cc32b668ed47c95436c13b38de26f0515194a89",
+          "created_at": "2026-03-10T08:59:33Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6td9AX",
+          "author": "huang-julien",
+          "body": "oh, closing this @JReinhold is much faster than me \ud83d\ude04 !",
+          "file_path": "code/core/src/manager/components/layout/useDragging.ts",
+          "line_number": 51,
+          "start_line": null,
+          "commit_sha": "4cc32b668ed47c95436c13b38de26f0515194a89",
+          "created_at": "2026-03-10T09:02:10Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a likely bug with Math.min(0, ...) always producing 0 or negative, implying a code change is needed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6t2qTP",
+          "author": "JReinhold",
+          "body": "1. Use `canvas` directly instead of via `within`\n2. `getBy` queries throws if not found, so it should be inside the `step` here for it to make sense. the `expect` doesn't do much except readability? (Personally I wouldn't use `step` for a small thing here, but that's totally up to you\n\n\n```suggestion\n  play: async ({ canvas, step }) => {\n    await step('Has role=\"separator\"', async () => {\n      const handle = canvas.getByRole('separator');\n      expect(handle).toBeInTheDocument();\n    });\n  },\n```\n\n(this comment applies to multiple stories here)",
+          "file_path": "code/core/src/manager/components/layout/Drag.stories.tsx",
+          "line_number": 164,
+          "start_line": null,
+          "commit_sha": "54f2e48c55aab81768fa80185a697d328c76b82c",
+          "created_at": "2026-03-11T08:43:48Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "high",
+          "label_reasoning": "Incorrect use of Testing Library API: canvas accessed via within unnecessarily, and getBy query placed outside of step where it should be to make the test meaningful."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests specific code changes: use canvas directly, move getBy inside step, and provides a code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6t25un",
+          "author": "JReinhold",
+          "body": "All the stories above this, that don't have Interaction Tests, they all render the same thing, that isn't really interactive for me either, except if you hover you'll see it on different sides of the square.\n\nI'd say this could just be a single Playground/Default story, I'm not sure what the value is in having all these states as different stories.",
+          "file_path": "code/core/src/manager/components/layout/Drag.stories.tsx",
+          "line_number": 138,
+          "start_line": null,
+          "commit_sha": "b7c8a370852d118790d45e3363d7312d78086708",
+          "created_at": "2026-03-11T08:56:26Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Duplication",
+          "label_confidence": "high",
+          "label_reasoning": "Multiple stories render the same thing with minimal differentiation; reviewer suggests consolidating into a single story to reduce duplication."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6t6qRM",
+          "author": "Sidnioulz",
+          "body": "I'm adding play functions to the earlier stories so we end up on the focused state for VRT and verify positioning. Deleting individual prop stories and cleaning up the other play functions.",
+          "file_path": "code/core/src/manager/components/layout/Drag.stories.tsx",
+          "line_number": 138,
+          "start_line": null,
+          "commit_sha": "b7c8a370852d118790d45e3363d7312d78086708",
+          "created_at": "2026-03-11T11:44:45Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests consolidating multiple stories into a single Playground/Default story."
+    }
+  ],
+  "review_thread_count": 19,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6tdp-t",
+            "author": "JReinhold",
+            "body": "Is prefixing props with a `$` a new convention we've adopted? If it is I'm fine with it, I just have never seen it before, neither in our code base or elsewhere - which might just be me being behind on this stuff.",
+            "file_path": "code/core/src/manager/components/layout/Drag.tsx",
+            "line_number": 63,
+            "start_line": 61,
+            "commit_sha": "b7c8a370852d118790d45e3363d7312d78086708",
+            "created_at": "2026-03-10T08:46:47Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6tjNpo",
+            "author": "Sidnioulz",
+            "body": "It's usually recommended for Emotion props because Emotion will never forward `$*` props to the underlying HTML element. We've had incidents in the past where an Emotion prop matched an attr name, and had side effects (e.g. inert or hidden). It's not a convention we've adopted though, just something I've been doing on my UI PRs. I think we discussed it only with Gert.",
+            "file_path": "code/core/src/manager/components/layout/Drag.tsx",
+            "line_number": 63,
+            "start_line": 61,
+            "commit_sha": "b7c8a370852d118790d45e3363d7312d78086708",
+            "created_at": "2026-03-10T13:18:36Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6t2u4x",
+            "author": "JReinhold",
+            "body": "SGTM \ud83d\ude42",
+            "file_path": "code/core/src/manager/components/layout/Drag.tsx",
+            "line_number": 63,
+            "start_line": 61,
+            "commit_sha": "b7c8a370852d118790d45e3363d7312d78086708",
+            "created_at": "2026-03-11T08:47:39Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure question asking about a convention with no implied change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 19,
+    "stage1_kept": 19,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1
+  }
+}

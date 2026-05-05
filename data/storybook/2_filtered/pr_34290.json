@@ -1,0 +1,52 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34290,
+  "title": "CLI: Add automigrate check for 'storybook' package name conflict",
+  "body": "When a project's package.json name is 'storybook', it shadows the real\r\nstorybook package in node_modules within npm/pnpm/yarn workspaces,\r\ncausing 'Cannot find module storybook/internal/...' errors.\r\n\r\nThis adds a notification-type automigrate fix that warns users and\r\nsuggests renaming their package.\r\n\r\nRelated to #28725 \r\n\r\nCloses #28725\r\n\r\n## What I did\r\n\r\nAdded a new `notification`-type automigrate fix (`storybookPackageNameConflict`) that detects when a project's `package.json` `\"name\"` field is set to `\"storybook\"`.\r\n\r\nIn npm/pnpm/yarn workspaces, this creates a symlink at `node_modules/storybook` that shadows the real Storybook package, causing `Cannot find module 'storybook/internal/...'` errors. This was identified by @daaashley in #28725 and @shilman suggested adding a CLI check.\r\n\r\nThe fix warns the user and suggests renaming their package, but does not make automatic changes.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\nNo manual testing is strictly necessary \u2014 the check reads the `name` field from `package.json` via `packageManager.primaryPackageJson` and returns a notification prompt. The logic is fully covered by unit tests (4 test cases: name is `\"storybook\"`, name is something else, name is undefined, and prompt content verification).\r\n\r\n### Documentation\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\nN/A \u2014 this is a CLI diagnostic check, no user-facing docs needed.\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Detects when a project's package.json name is \"storybook\" and warns to avoid module resolution conflicts.\n  * Adds an automated migration fix to guide renaming the package name.\n\n* **Tests**\n  * Adds tests covering detection and user-facing prompt messaging for the package-name conflict.\n\n* **Documentation**\n  * Standardized quote formatting in ESLint plugin and integration docs.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "whdjh",
+  "merged_at": "2026-03-27T08:45:06Z",
+  "base_ref": "next",
+  "merge_commit_sha": "88a1f4a40a8719e4e0b3f1d5f34c2373320c835d",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "810093c3d87f1a68d0f0eaf2a6720a46c0b598e1",
+    "cad2ca17a39a092895e787d0e8c8223e9a53956b"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6yBvTG",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Expectation after refactor: no direct expect(logger.warn) usages in this test file.\nrg -nP --type=ts 'expect\\(logger\\.warn\\)' code/lib/create-storybook/src/commands/PreflightCheckCommand.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 172\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/lib/create-storybook/src/commands/PreflightCheckCommand.test.ts | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2269\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/lib/create-storybook/src/commands/PreflightCheckCommand.test.ts | sed -n '100,135p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1544\n\n---\n\n\n\n</details>\n\n**Use `vi.mocked(logger.warn)` for type-safe mock assertions.**\n\nThe assertions access `logger.warn` directly instead of wrapping with `vi.mocked(...)`, inconsistent with the rest of the test file and the repository's Vitest mocking convention.\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n-      expect(logger.warn).toHaveBeenCalledWith(\n+      expect(vi.mocked(logger.warn)).toHaveBeenCalledWith(\n         expect.stringContaining('Your package.json \"name\" field is set to \"storybook\"')\n       );\n     });\n\n     it('should not warn when package.json name is not \"storybook\"', async () => {\n       vi.mocked(scaffoldModule.currentDirectoryIsEmpty).mockReturnValue(false);\n       mockPackageManager.primaryPackageJson = { packageJson: { name: 'my-project' } };\n\n       await command.execute({ force: false } as any);\n\n-      expect(logger.warn).not.toHaveBeenCalledWith(\n+      expect(vi.mocked(logger.warn)).not.toHaveBeenCalledWith(\n         expect.stringContaining('Your package.json \"name\" field is set to \"storybook\"')\n       );\n```\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/lib/create-storybook/src/commands/PreflightCheckCommand.test.ts` around\nlines 116 - 129, The test uses direct access to logger.warn in assertions which\nis not type-safe; update the two assertions to use vi.mocked(logger.warn) so\nthey follow the project's Vitest mocking convention and allow proper mock typing\n\u2014 locate the expectations in PreflightCheckCommand.test.ts that reference\nlogger.warn (around the tests for package.json name) and replace those\nexpect(logger.warn)... and expect(logger.warn).not... calls with\nexpect(vi.mocked(logger.warn))... while keeping the same expect.stringContaining\nchecks; no other behavior changes are needed (other related mocks like\nscaffoldModule.currentDirectoryIsEmpty and mockPackageManager.primaryPackageJson\nremain as-is).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/lib/create-storybook/src/commands/PreflightCheckCommand.test.ts",
+          "line_number": 129,
+          "start_line": null,
+          "commit_sha": "613cf9cdf0501cd40efcd6b5529e647cffd4fe43",
+          "created_at": "2026-03-25T09:04:09Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment requests a specific code change: replacing `expect(logger.warn)` with `expect(vi.mocked(logger.warn))` in two test assertions to follow the project's Vitest mocking convention. A concrete diff is even provided."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

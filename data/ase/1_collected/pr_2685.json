@@ -1,0 +1,91 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 2685,
+  "title": "Fix bug: make the energy got by vasprun.xml same as OUTCAR",
+  "body": "For more please see about [issue 916](https://gitlab.com/ase/ase/-/issues/916)\nI am not sure it is a bug or a feature... But I think the results of 'get_potential_energy()' should be the same between vasprun.xml and OUTCAR\n\n(EDIT: 2026-01-14: YI) closes #916",
+  "author": "bigd4",
+  "merged_at": "2026-01-14T22:32:47.912Z",
+  "base_ref": "master",
+  "merge_commit_sha": "49029836405e7c1d2ab28ae7b927c42c3fc12715",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "922453252",
+          "author": "patrickmelix",
+          "body": "I think !2026 is a conflicting fix for the same problem.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2022-04-25T08:30:58.701Z",
+          "is_outdated": false
+        },
+        {
+          "id": "922830555",
+          "author": "bigd4",
+          "body": "Sorry for missing that\ud83d\ude02 I also found this problem one year ago and I made a mistake because of it reacently so I mistakenly assumed that the bug has not been noticed...  \nSo if I tested the vdw calculation the request could be merged? I can do this job tomorrow",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2022-04-25T13:04:23.481Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "924044077",
+          "author": "bigd4",
+          "body": "Now I try to directly minus the PV in the free energy.  However, the PV I calculated is a little bit different (about 1e-6) with that of OUTCAR in my test. I am confused about where this error comes from. QAQ",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2022-04-26T07:51:54.620Z",
+          "is_outdated": false
+        },
+        {
+          "id": "924322111",
+          "author": "bigd4",
+          "body": "OK, this is becuase of eV2J is 1.60217733E-19 in vasp and 1.6021766208E-19 in ase.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2022-04-26T10:37:24.431Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3006666606",
+          "author": "yuzie007",
+          "body": "Thank you @bigd4 for the MR (while it has opened 4 years ago)! I confirmed the issue still exists in the present master. I have now rebased the MR, while I take essentially the same approach as yours. The major change is that, since `PSTRESS` is always found in `vasprun.xml` in the `parameters/ionic` section, I now rely on it (rather than the `incar` section, where `PSTRESS` exists only when users specify it explicitly in `INCAR`), which can avoid an additional if statement.\n\nI have tested the MR with the attached sample VASP calculations for C ([2685.zip](/uploads/80d6d7879bf2dc46e08967234f0d698c/2685.zip)). Before the MR, we obtain\n```\nforce_consistent = False\nread_vasp_out: -20.24720095\nread_vasp_xml: -20.24010135\ndiff         : 0.007099600000000095\nforce_consistent = True\nread_vasp_out: -20.24695937\nread_vasp_xml: -20.23985977\ndiff         : 0.007099600000000095\n```\nwhile after the MR, the energy values are essentially the same as those in OUTCAR as\n```\nforce_consistent = False\nread_vasp_out: -20.24720095\nread_vasp_xml: -20.247200953169394\ndiff         : -3.169393636426321e-09\nforce_consistent = True\nread_vasp_out: -20.24695937\nread_vasp_xml: -20.246959373169393\ndiff         : -3.169393636426321e-09\n```\nI now also added a test based on the above results and would like to merge.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-01-14T22:13:48.703Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 3
+}

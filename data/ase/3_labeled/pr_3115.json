@@ -1,0 +1,210 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3115,
+  "title": "Made two tests for potential mapping with the 'setups' parameter and pulled out a function from the huge GenerateVaspInput class.",
+  "body": "# Checklist\n\n- [x] I have read the [contribution guidelines](https://wiki.fysik.dtu.dk/ase/development/contribute.html).\n- [x] [**Unit tests have been added for any new or changed code, and the test suite passes.**](https://wiki.fysik.dtu.dk/ase/development/tests.html) Note: Your request will likely not be merged without the appropriate tests.\n\n# Summary\n\nIn an effort to tackle #1340 I tried to refactor POTCAR writing. Did not get very far before it was decided that there are probably more worthy tasks. However, I added a couple of tests which deal with potential mapping via the `setups` key in the Vasp calculator.\n\nI also added some future warnings for the usage of the PW91 pseudopotentials. They are very old, no longer supported and should not be used!\nThis is also an issue in the [documentation](https://wiki.fysik.dtu.dk/ase/ase/calculators/vasp.html#pseudopotentials) where the setup described  to make potentials available for ASE speaks about 3 pseudopotential libraries (potpaw for LDA, potpaw_GGA for PW91, and potpaw_PBE for PBE). This has been outdated since 2012 with the release of potpaw.52. The current potential set (potpaw.64) includes only potpaw_LDA and potpaw_PBE.\nI think the documentation should be updated.",
+  "author": "mwolloch",
+  "merged_at": "2023-11-02T10:36:45.504Z",
+  "base_ref": "master",
+  "merge_commit_sha": "019e7cf427c2c7aec63469c8a4a79a0c853bfd7a",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "1630245213",
+          "author": "AndrewRosen",
+          "body": "Might as well add in a `setup: str | dict[int | str, str]` although I think we have to use `Union` instead of `|`.",
+          "file_path": "ase/calculators/vasp/create_input.py",
+          "line_number": 35,
+          "commit_sha": "3caa0c75f0a40324a0e17b249eb35046933c43bf",
+          "base_sha": "aa7947ecd52c21695ef60ccae56cf55810cb2e6b",
+          "created_at": "2023-11-01T16:22:41.817Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment points out incorrect use of the `|` union type syntax which may not be supported in the Python version used; the correct approach is to use `Union` from the `typing` module."
+        },
+        {
+          "id": "1630257104",
+          "author": "mwolloch",
+          "body": "I tried that with `Union[str, dict[str, str]]`, but that did not pass mypy, and after a short research I gave up :disappointed: \n\nCan you advise on the proper way to do it? Would `Union[str, dict[Union[int, str], str]]` work?",
+          "file_path": "ase/calculators/vasp/create_input.py",
+          "line_number": 35,
+          "commit_sha": "3caa0c75f0a40324a0e17b249eb35046933c43bf",
+          "base_sha": "aa7947ecd52c21695ef60ccae56cf55810cb2e6b",
+          "created_at": "2023-11-01T16:32:09.361Z",
+          "is_outdated": false
+        },
+        {
+          "id": "1630262489",
+          "author": "AndrewRosen",
+          "body": "I'd try:\n\n- `Union[str, dict[Union[int, str], str]]`\n- `Union[str, dict[str, str], dict[int, str]]`\n\nIf neither works, we give up and move on :sweat_smile:",
+          "file_path": "ase/calculators/vasp/create_input.py",
+          "line_number": 35,
+          "commit_sha": "3caa0c75f0a40324a0e17b249eb35046933c43bf",
+          "base_sha": "aa7947ecd52c21695ef60ccae56cf55810cb2e6b",
+          "created_at": "2023-11-01T16:36:52.747Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding a type annotation `setup: str | dict[int | str, str]` and notes the syntax constraint of using `Union` instead of `|`."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "1630249537",
+          "author": "AndrewRosen",
+          "body": "Since it's the same message in both places, perhaps it'd be best to define the warning message string as a variable.",
+          "file_path": "ase/calculators/vasp/create_input.py",
+          "line_number": 1221,
+          "commit_sha": "39e3c8436fa4d8061e92bab43d0d41bafc106289",
+          "base_sha": "79318193441eda2e4abab7511a749c598830f77c",
+          "created_at": "2023-11-01T16:26:19.696Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Duplication",
+          "label_confidence": "high",
+          "label_reasoning": "The comment identifies duplicated warning message strings in two places and suggests extracting them into a shared variable to avoid repetition."
+        },
+        {
+          "id": "1630257541",
+          "author": "mwolloch",
+          "body": "makes sense, will do.",
+          "file_path": "ase/calculators/vasp/create_input.py",
+          "line_number": 1221,
+          "commit_sha": "39e3c8436fa4d8061e92bab43d0d41bafc106289",
+          "base_sha": "79318193441eda2e4abab7511a749c598830f77c",
+          "created_at": "2023-11-01T16:32:33.606Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests a refactor: extract the repeated warning message string into a variable to avoid duplication."
+    }
+  ],
+  "review_thread_count": 5,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "1630134914",
+            "author": "AndrewRosen",
+            "body": "Thank you very much, @mwolloch! I will review this shortly given that I am a heavy user of the VASP calculator. If I forget, please feel free to tag me.\n\nI also agree with your comments about the pseudos. I actually thought I had made an issue about updating the docs, but it looks like I never saved it! Linking this to !3115 now.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2023-11-01T15:03:46.594Z",
+            "is_outdated": false
+          },
+          {
+            "id": "1630221589",
+            "author": "mwolloch",
+            "body": "Always happy to have your input! I actually think that the doc update is the most important thing discussed here. The actual code changes are quite minimal...",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2023-11-01T16:05:53.644Z",
+            "is_outdated": false
+          },
+          {
+            "id": "1630234201",
+            "author": "AndrewRosen",
+            "body": "I agree, especially for new users. I remember being so confused as a young grad student trying to figure out how to map the VASP pseudos to those wanted from ASE (and then being paranoid I was screwing it up for weeks... mismatched pseudos... one's worst nightmare!).",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2023-11-01T16:14:30.444Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Meta-discussion about review logistics and linking issues. No code change suggested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "1630250778",
+            "author": "AndrewRosen",
+            "body": "@mwolloch: Thanks again for this cleanup. Looks good to me! I left two minor comments. Happy to merge afterwards.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2023-11-01T16:27:26.076Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Approval/acknowledgment comment summarizing the review outcome. References the two minor comments already classified separately."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "1631406053",
+            "author": "askhl",
+            "body": "Thank you @mwolloch and @AndrewRosen!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2023-11-02T10:22:09.329Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure social acknowledgment with no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 5,
+    "stage1_kept": 5,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 3,
+    "stage3_cost_usd": 0.01581575
+  }
+}

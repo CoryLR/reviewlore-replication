@@ -1,0 +1,174 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/dev-server.ts",
+      "line_number": 10,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`CHANGE_DETECTION_STATUS_TYPE_ID` is imported from `'./change-detection'`, but the change-detection barrel (`change-detection/index.ts`) does not export that constant \u2014 it only re-exports from `./errors`, `./git-diff-provider`, `./readiness`, and `./service`, none of which re-export `CHANGE_DETECTION_STATUS_TYPE_ID`. `service.ts` only *imports* it from `storybook/internal/types`; it does not re-export it. This will cause a TypeScript compile error. Fix by either (a) adding `export { CHANGE_DETECTION_STATUS_TYPE_ID } from 'storybook/internal/types';` in `change-detection/index.ts`, or (b) importing it directly in `dev-server.ts` from `storybook/internal/types`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.test.ts",
+      "line_number": 11,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`CHANGE_DETECTION_STATUS_TYPE_ID` is imported from `'./service'`, but `service.ts` does not export this symbol \u2014 it only exports `ChangeDetectionService`. `CHANGE_DETECTION_STATUS_TYPE_ID` is imported (not re-exported) inside `service.ts` from `storybook/internal/types`. This is a compile error in the test file. Either `service.ts` must add `export { CHANGE_DETECTION_STATUS_TYPE_ID } from 'storybook/internal/types'` or the test should import it from `storybook/internal/types` directly.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 43,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Debugging artifact: `// logger.info(\\`Story ${entry.id} absolute path: ${absolutePath}\\`);` must be removed before merging. Per project rules, no commented-out debug blocks should reach main.",
+      "index": 2
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 129,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`startChangeDetection(options)` is intentionally not awaited but also has no `.catch()` handler. If `options.presets.apply(...)`, `indexGenerator.getIndex()`, or `server.warmupRequest(...)` rejects, the error is silently discarded as an unhandled promise rejection. Add a `.catch((error) => logger.error('Change detection setup failed:', error))` to make failures visible.",
+      "index": 3
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 92,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `setInterval` callback is `async`, but `setInterval` does not await the returned promise. If `server.waitForRequestsIdle()` (line 97) rejects, the error is silently swallowed and the watcher listener may never be attached. Additionally, if the interval fires while a previous async invocation is still in flight (unlikely here due to the early-clear logic, but possible under slow I/O), two concurrent executions could both call `server.watcher.on('all', watcherChangeHandler)`, registering the listener twice. Wrap the body in try/catch with error logging, and add a `let running = false` guard.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 210,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`changedFile.replace(\\`${repoRoot}/\\`, '')` is fragile: (1) it only replaces the first occurrence, though that happens to be correct here; (2) on Windows, `resolve()` produces backslash-separated paths, so `${repoRoot}/` (forward slash) will never match and the full absolute path gets stored in `changedFiles`. Use `path.relative(repoRoot, changedFile)` instead, which is OS-aware and correct for all platforms.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 155,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`getGitDiffProvider()` creates a new `GitDiffProvider` instance on every call to `buildStatuses()`. The instance-level `repoRoot` cache in `GitDiffProvider` is therefore completely ineffective \u2014 each scan calls `git rev-parse --show-toplevel` twice (once inside `getChangedFiles()` and once for the top-level `getRepoRoot()` call in `buildStatuses`). Store the provider instance as a private field, initialised lazily once in the constructor or on first use.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/core-server/dev-server.ts",
+      "line_number": 117,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`changeDetectionService` is created and started inside the `if (!options.ignorePreview)` block but is never disposed on the graceful-shutdown (SIGINT) path. The `dispose()` call only appears in the `.catch()` handler for preview startup failures. Any pending `debounceTimer` inside the service will keep the Node.js event loop alive after SIGINT, delaying process exit. Call `await changeDetectionService.dispose()` in the SIGINT/shutdown handler.",
+      "index": 7
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.test.ts",
+      "line_number": 127,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Multiple `ChangeDetectionService` instances are constructed across test cases and each constructor calls `resetChangeDetectionReadiness()`, which resets module-level singleton state. However, the `afterEach` hook also calls `internal_resetChangeDetectionReadiness()`. If any test creates two services (even inadvertently), the second constructor will reset readiness mid-test, invalidating the first service's promises. This is a sign that the module-level singleton pattern in `readiness.ts` is fragile under test parallelism or multiple-instance scenarios.",
+      "index": 8
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 37,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`isSameStatus` uses `JSON.stringify(a.data) === JSON.stringify(b.data)` for deep equality. This is order-sensitive for object keys and non-deterministic for objects whose key insertion order varies. For `data.changedFiles` (an array), the entries are already `.sort()`ed before being assigned, so this is safe in practice \u2014 but an inline comment explaining why the sorted array makes stringify-equality reliable would help future readers.",
+      "index": 9
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 185,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`Math.min(...Array.from(affectedStoryFiles.values(), ({ distance }) => distance))` uses spread into `Math.min`. If `affectedStoryFiles` is very large (hundreds of story files), this spread can exceed the JS call-stack argument limit and throw a `RangeError`. Prefer `Array.from(...).reduce((min, { distance }) => Math.min(min, distance), Infinity)`.",
+      "index": 10
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/trace-changed.ts",
+      "line_number": 30,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`queue.shift()` on a plain `Array` is O(n) because it shifts all remaining elements. For large module graphs this makes the BFS O(n\u00b2). Consider using a `head` index pointer and iterating with `queue[head++]`, or use a proper FIFO queue. At typical module-graph sizes (hundreds to low thousands of nodes) this is unlikely to be observable, but it is worth noting.",
+      "index": 11
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/git-diff-provider.test.ts",
+      "line_number": 14,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Both `beforeEach` and `afterEach` call `vi.clearAllMocks()`. This is redundant \u2014 clearing in `beforeEach` is sufficient and is the project convention. Remove the `afterEach` block.",
+      "index": 12
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.test.ts",
+      "line_number": 127,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`} as never)` is used to cast the mock `StoryIndexGenerator` to satisfy the type of `storyIndexGeneratorPromise`. The project rules prohibit `as never` casts as they silence real type errors. Use `as unknown as StoryIndexGenerator` (the explicit double-cast is clearer about the bypass) or preferably define a properly-typed partial mock using `Partial<StoryIndexGenerator>`.",
+      "index": 13
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 13,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`import type { StoryIndexGenerator } from 'storybook/internal/core-server'` \u2014 before merging, confirm that `StoryIndexGenerator` is actually exported from the `storybook/internal/core-server` entry point (i.e., listed in `code/core/package.json`'s `exports` field and re-exported from `code/core/src/core-server/index.ts`). If the symbol is only available as an internal type and not part of the public/semi-public surface, the import may resolve in the monorepo build but fail for consumers.",
+      "index": 14
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 139,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `readiness.ts` module uses a module-level deferred promise and a singleton `readinessState`. The `ChangeDetectionService` constructor calls `resetChangeDetectionReadiness()` as a side effect, which is unconventional. If a second `ChangeDetectionService` is ever instantiated (e.g., during server reload), the constructor silently resets global readiness state that another service may have already resolved. Consider whether readiness tracking should live inside the service instance rather than as module-level singletons.",
+      "index": 15
+    },
+    {
+      "file_path": "code/core/src/core-server/index.ts",
+      "line_number": 31,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`ChangeDetectionService` is exported twice from `core-server/index.ts`: once directly (`export { ChangeDetectionService } from './change-detection/service'`) and once indirectly via the `./change-detection` barrel which also exports `ChangeDetectionService`. This creates a duplicate public export. Remove the direct export and rely solely on the barrel re-export, or remove it from the barrel and keep only the direct export.",
+      "index": 16
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `CHANGE_DETECTION_STATUS_TYPE_ID` symbol is defined in `code/core/src/shared/status-store/index.ts` and re-exported from `storybook/internal/types`. Inside `service.ts` it is imported but **not re-exported**. Both `dev-server.ts` (importing from `'./change-detection'`) and `service.test.ts` (importing from `'./service'`) rely on being able to import it from those local paths, but neither path actually exports the symbol. This is a multi-file compile error that will block the build. The cleanest fix is to add `export { CHANGE_DETECTION_STATUS_TYPE_ID } from 'storybook/internal/types';` in `service.ts`, then ensure `change-detection/index.ts` re-exports it from `./service`.",
+      "index": 17
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `enabled` parameter in `ChangeDetectionService.start()` is typed `boolean | undefined`, and the service is only disabled when `enabled === false`. In `dev-server.ts`, `features?.changeDetection` is passed as `enabled`. If `features` is `{}` (the common case when users do not set this flag), `features?.changeDetection` is `undefined`, which causes the service to **run by default**. This contradicts the `StorybookConfigRaw` JSDoc which marks the default as `false` ('TODO: Turn to true before 10.4 release'). Verify that the common preset explicitly sets `changeDetection: false` so that `undefined` is never reached in production without a user opt-in.",
+      "index": 18
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The module-level singleton readiness state in `readiness.ts` (`readinessDeferred` / `readinessState`) is reset by the `ChangeDetectionService` constructor via `resetChangeDetectionReadiness()`. This design couples the service lifetime to module-level state in a non-obvious way and makes the module difficult to test in isolation (requiring `internal_resetChangeDetectionReadiness` to be called before every test). Consider moving the deferred/state inside the service instance and exposing a `getReadiness(): Promise<ChangeDetectionReadiness>` method directly on the service, eliminating the global singleton.",
+      "index": 19
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Several tests in `service.test.ts` recreate nearly identical `statusStore` + `gitDiffProvider` + `builder` boilerplate. Extracting a shared `createTestHarness()` helper that returns all collaborators would reduce duplication, make the test intent clearer, and make future collaborator additions (e.g., a new option on `ChangeDetectionService`) easier to apply uniformly across all tests.",
+      "index": 20
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `trace-changed.ts` BFS uses `importer.file` directly without any guard. While `ModuleNode.file` is typed as `string` in Storybook's abstraction, the upstream Vite `ModuleNode.file` is `string | null`. The `buildModuleGraph` utility in builder-vite must filter null-file nodes before constructing the `ModuleGraph`. If that filter is ever incomplete (e.g., for CSS virtual modules), a `null` file could reach `storyIdsByFile.has(null)`, silently failing the map lookup rather than throwing. An explicit `if (!importer.file) return;` guard in `findAffectedStoryFiles` would make the assumption explicit and prevent subtle bugs.",
+      "index": 21
+    }
+  ],
+  "cost_usd": 1.71432495,
+  "duration_seconds": 1385.6579220294952
+}

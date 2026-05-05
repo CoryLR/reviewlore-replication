@@ -1,0 +1,524 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33490,
+  "title": "Core: Add Ghost stories flow",
+  "body": "Closes #\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\nAI summary for now, I will write this properly soon\r\n\r\n<!-- Briefly describe what your PR does -->\r\nThis pull request introduces the foundation for \"Ghost Stories,\" an experimental feature for automated story discovery and testing, primarily targeting React projects using the Vitest addon. The changes add a new event-driven channel for orchestrating story discovery and testing, update the test plugin logic to support this flow, and introduce error categorization utilities with comprehensive tests. Additionally, new core events and wiring are added to support the feature.\r\n\r\n**Ghost Stories feature integration:**\r\n\r\n* Added a new `ghost-stories-channel` (`initGhostStoriesChannel`) that listens for `GHOST_STORIES_REQUEST` events, discovers component candidates, runs tests on generated stories, records telemetry, and emits a response event. This is currently gated to React projects with the Vitest addon. (`code/core/src/core-server/server-channel/ghost-stories-channel.ts`)\r\n* Registered the new Ghost Stories channel in the server initialization logic, ensuring it is set up alongside other server channels. (`code/core/src/core-server/presets/common-preset.ts`) [[1]](diffhunk://#diff-6f9af3b0651245cd00c4c837f2a699d9a14353d6c8f8281432f658e518475288R35) [[2]](diffhunk://#diff-6f9af3b0651245cd00c4c837f2a699d9a14353d6c8f8281432f658e518475288R264)\r\n\r\n**Core events and plugin wiring:**\r\n\r\n* Added new core events: `GHOST_STORIES_REQUEST` and `GHOST_STORIES_RESPONSE`, and exported them for use in the system. (`code/core/src/core-events/index.ts`) [[1]](diffhunk://#diff-6a200b958b24141a32f13ee1454fdb0f81dfee469f6da8abe898c63ae8c9ddc7R91-R93) [[2]](diffhunk://#diff-6a200b958b24141a32f13ee1454fdb0f81dfee469f6da8abe898c63ae8c9ddc7R165-R166)\r\n* Updated the Vitest plugin to recognize when Ghost Stories is enabled via environment variables, and to set a `ghostStories` global. This disables certain tests when Ghost Stories are running and ensures only relevant files are transformed. (`code/addons/vitest/src/vitest-plugin/index.ts`, `code/addons/a11y/src/preview.tsx`) [[1]](diffhunk://#diff-0b850fef5ef3e7b1f898b7559fb2bdfbdc757ecdf933ec31ab175038816af7ceL104-L130) [[2]](diffhunk://#diff-0b850fef5ef3e7b1f898b7559fb2bdfbdc757ecdf933ec31ab175038816af7ceL345-R334) [[3]](diffhunk://#diff-0b850fef5ef3e7b1f898b7559fb2bdfbdc757ecdf933ec31ab175038816af7ceL369-R369) [[4]](diffhunk://#diff-5f51b6995a8edbc26c94cfcb8ef84c961ef0e6e4b17c5a9f626432159354eaa5R20-R23)\r\n\r\n**Error analysis utilities:**\r\n\r\n* Added a utility and comprehensive test suite for categorizing and aggregating errors from automated story tests, enabling better diagnostics and telemetry for common provider and render errors. (`code/core/src/core-server/utils/ghost-stories/categorize-render-errors.test.ts`)\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n> [!CAUTION]\r\n> This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!\r\n\r\n<!-- Please include the steps to test your changes here. For example:\r\n\r\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Open Storybook in your browser\r\n3. Access X story\r\n\r\n-->\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\nThis pull request has been released as version `0.0.0-pr-33490-sha-0cda5ae0`. Try it out in a new sandbox by running `npx storybook@0.0.0-pr-33490-sha-0cda5ae0 sandbox` or in an existing project with `npx storybook@0.0.0-pr-33490-sha-0cda5ae0 upgrade`.\n<details>\n<summary>More information</summary>\n\n| | |\n| --- | --- |\n| **Published version** | [`0.0.0-pr-33490-sha-0cda5ae0`](https://npmjs.com/package/storybook/v/0.0.0-pr-33490-sha-0cda5ae0) |\n| **Triggered by** | @yannbf |\n| **Repository** | [storybookjs/storybook](https://github.com/storybookjs/storybook) |\n| **Branch** | [`yann/ghost-stories-flow`](https://github.com/storybookjs/storybook/tree/yann/ghost-stories-flow) |\n| **Commit** | [`0cda5ae0`](https://github.com/storybookjs/storybook/commit/0cda5ae0b6e08b2c7fc16b4073c3746b515e7d3c) |\n| **Datetime** | Thu Jan  8 22:43:15 UTC 2026 (`1767912195`) |\n| **Workflow run** | [20834295679](https://github.com/storybookjs/storybook/actions/runs/20834295679) |\n\nTo request a new release of this pull request, mention the `@storybookjs/core` team.\n\n_core team members can create a new canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=33490`_\n</details>\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Ghost Stories: automated component discovery, test runs, and a discovery channel for React + Vitest projects\n  * In-preview empty-render detection and story-level test reporting\n\n* **Improvements**\n  * Smarter candidate selection via component complexity analysis\n  * Vitest integration now reads component paths from environment\n  * Telemetry enriched with known-package ecosystem analysis\n\n* **Tests**\n  * Extensive new tests covering Ghost Stories flows, error categorization, candidate selection, and telemetry utilities\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "yannbf",
+  "merged_at": "2026-01-09T11:53:57Z",
+  "base_ref": "yann/ghost-stories-research",
+  "merge_commit_sha": "5bb62fd5a76d9fdf468c61fdd5a4c504c631455f",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "16580854492e717d5594f2e257f103ae6c51c4af",
+    "340ecece7ebaf53f28d34dacfeb9bcbfb7f98020"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fVc4l",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Critical: Mock path does not match the import path.**\n\nThe mock targets `'../utils/ghost-stories/story-generation'` but the actual module imported at line 67 is `'../utils/ghost-stories/get-candidates'`. This mismatch means `getComponentCandidates` won't be mocked, causing tests to call the real implementation.\n\n\n<details>\n<summary>\ud83d\udc1b Proposed fix</summary>\n\n```diff\n-vi.mock('../utils/ghost-stories/story-generation', async (importOriginal) => {\n+vi.mock('../utils/ghost-stories/get-candidates', async (importOriginal) => {\n   const actual = await importOriginal<typeof import('../utils/ghost-stories/get-candidates')>();\n   return {\n     ...actual,\n     getComponentCandidates: vi.fn(),\n   };\n });\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/server-channel/ghost-stories-channel.test.ts\naround lines 32 - 38, The test mock targets the wrong module, so\ngetComponentCandidates isn't being mocked; update the vi.mock call to target the\nsame module that's imported in the test and use the same module type in\nimportOriginal, then return a mock implementation for getComponentCandidates.\nSpecifically, change the vi.mock target to the module that exports\ngetComponentCandidates, adjust the importOriginal generic to that same module,\nand keep returning {...actual, getComponentCandidates: vi.fn()} so tests use the\nmocked getComponentCandidates.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit fabaa0d",
+          "file_path": "code/core/src/core-server/server-channel/ghost-stories-channel.test.ts",
+          "line_number": 38,
+          "start_line": null,
+          "commit_sha": "0cda5ae0b6e08b2c7fc16b4073c3746b515e7d3c",
+          "created_at": "2026-01-08T17:15:50Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "high",
+          "label_reasoning": "The vi.mock call targets the wrong module path, meaning the mock won't intercept the actual import, which is incorrect use of the mocking API."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a critical bug where the mock targets the wrong module path, with a specific fix provided."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fVc4r",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Duplicate error entry in `uniqueErrors` expectation.**\n\nThe expectation includes `'Expected button to be disabled'` twice (lines 288 and 290), which appears to be a copy-paste error. If this is intentional behavior, please add a comment explaining why.\n\n\n<details>\n<summary>\ud83d\udc1b Suggested fix</summary>\n\n```diff\n             uniqueErrors: expect.arrayContaining([\n               expect.stringContaining('Expected button to be disabled'),\n               expect.stringContaining('TypeError: Cannot read properties of undefined'),\n-              expect.stringContaining('Expected button to be disabled'),\n             ]),\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n            uniqueErrors: expect.arrayContaining([\n              expect.stringContaining('Expected button to be disabled'),\n              expect.stringContaining('TypeError: Cannot read properties of undefined'),\n            ]),\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/server-channel/ghost-stories-channel.test.ts\naround lines 287 - 291, The expectation for uniqueErrors contains a duplicate\nstring 'Expected button to be disabled' inside expect.arrayContaining; remove\nthe duplicate entry so each expected error appears only once (update the array\nin the test that references uniqueErrors/expect.arrayContaining) or\nalternatively keep both but add an inline comment next to the duplicated string\nexplaining why the duplicate is intentional.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit fabaa0d",
+          "file_path": "code/core/src/core-server/server-channel/ghost-stories-channel.test.ts",
+          "line_number": 291,
+          "start_line": null,
+          "commit_sha": "0cda5ae0b6e08b2c7fc16b4073c3746b515e7d3c",
+          "created_at": "2026-01-08T17:15:50Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Duplicate entry in test expectation array is a copy-paste/logic error that may cause incorrect test assertions."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a duplicate entry in a test expectation array and suggests removing it."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fVc4w",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n**Remove or resolve commented-out code before merging.**\n\nThe commented-out code with \"for debugging purposes\" should be addressed before merging. Either enable the first-run check or remove the commented code if it's no longer needed.\n\n\n\nThis commented-out logic appears to be a safeguard to ensure ghost stories only runs on initial Storybook setup. If this check is still needed, uncomment and test it. If not, remove it entirely.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/server-channel/ghost-stories-channel.ts around\nlines 28 - 34, Restore the first-run guard by uncommenting and wiring up the\ncheck: call getLastEvents(), read lastEvents['preview-first-load'] into\nlastPreviewFirstLoad, and if truthy log via logger.debug('Skipping discovery\nrun', { lastEvents }) and return from the handler (symbols: getLastEvents,\nlastPreviewFirstLoad, logger.debug). Ensure you handle and surface errors from\ngetLastEvents (don\u2019t swallow exceptions) and add/adjust a test or local run to\nverify the discovery run is skipped on repeat loads; alternatively, if the\nsafeguard is no longer needed, remove the entire commented block to avoid dead\ncode.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/server-channel/ghost-stories-channel.ts",
+          "line_number": 34,
+          "start_line": 28,
+          "commit_sha": "340ecece7ebaf53f28d34dacfeb9bcbfb7f98020",
+          "created_at": "2026-01-08T17:15:50Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Dead-Code Related Issues",
+          "label_confidence": "high",
+          "label_reasoning": "Commented-out code with a 'for debugging purposes' note that should be resolved before merging."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests that commented-out code be either restored or removed before merging."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fVc4x",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n**Add `spy: true` option to mocks.**\n\nAccording to coding guidelines, all `vi.mock()` calls should include the `spy: true` option for consistent mocking patterns.\n\n\n\nAs per coding guidelines for `**/*.test.{ts,tsx,js,jsx}`.\n\n<details>\n<summary>\u267b\ufe0f Proposed fix</summary>\n\n```diff\n-vi.mock('node:fs/promises');\n-vi.mock('glob');\n-vi.mock('storybook/internal/node-logger');\n-vi.mock('./component-analyzer');\n+vi.mock('node:fs/promises', { spy: true });\n+vi.mock('glob', { spy: true });\n+vi.mock('storybook/internal/node-logger', { spy: true });\n+vi.mock('./component-analyzer', { spy: true });\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nvi.mock('node:fs/promises', { spy: true });\nvi.mock('glob', { spy: true });\nvi.mock('storybook/internal/node-logger', { spy: true });\nvi.mock('./component-analyzer', { spy: true });\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/get-candidates.test.ts around\nlines 8 - 11, The test file uses vi.mock calls without the required spy option;\nupdate each vi.mock invocation for 'node:fs/promises', 'glob',\n'storybook/internal/node-logger', and './component-analyzer' to include the\noption { spy: true } so the mocks follow the repository's testing guidelines;\nensure you pass the option as the second argument to vi.mock in\nget-candidates.test.ts for all four mock declarations.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/get-candidates.test.ts",
+          "line_number": 11,
+          "start_line": 8,
+          "commit_sha": "340ecece7ebaf53f28d34dacfeb9bcbfb7f98020",
+          "created_at": "2026-01-08T17:15:50Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "high",
+          "label_reasoning": "Missing project-specific `spy: true` option in vi.mock calls, violating repository testing conventions."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags missing `spy: true` option in vi.mock calls per coding guidelines, with specific fix provided."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fVc47",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Misleading debug log message.**\n\nThe log message says \"candidates files:\" but logs `files.length` instead of `candidates.length`.\n\n\n<details>\n<summary>\ud83d\udc1b Proposed fix</summary>\n\n```diff\n-    logger.debug('candidates files:' + files.length);\n+    logger.debug('candidates found: ' + candidates.length);\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    logger.debug('candidates found: ' + candidates.length);\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/get-candidates.ts at line 151,\nThe debug log incorrectly reports \"candidates files:\" but prints files.length;\nupdate the logger.debug call (the invocation of logger.debug in\nget-candidates.ts) to log candidates.length (and adjust the message text if\ndesired) so the message reflects the actual variable being measured (candidates)\ninstead of files.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/get-candidates.ts",
+          "line_number": 151,
+          "start_line": null,
+          "commit_sha": "0cda5ae0b6e08b2c7fc16b4073c3746b515e7d3c",
+          "created_at": "2026-01-08T17:15:50Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The log message says 'candidates files:' but logs `files.length` instead of `candidates.length`, misrepresenting the actual data being reported."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a misleading log message that logs the wrong variable, with a specific fix proposed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fVc5D",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Replace empty catch block with error logging.**\n\nThe empty catch block on Line 37 silently swallows all errors, making debugging difficult. Even for non-critical telemetry code, consider logging errors to aid development and troubleshooting.\n\n\n\n<details>\n<summary>\ud83d\udcdd Proposed fix to add error logging</summary>\n\n```diff\n-  } catch {}\n+  } catch (error) {\n+    // Ghost Stories analysis is non-critical; log but don't throw\n+    if (typeof console !== 'undefined') {\n+      console.warn('[Ghost Stories] Error during render analysis:', error);\n+    }\n+  }\n```\n\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nconst afterEach: AfterEach = async ({ reporting, canvasElement, globals }) => {\n  try {\n    // We only run this through ghost stories runs\n    if (!globals.ghostStories) {\n      return;\n    }\n\n    const emptyRender = isEmptyRender(canvasElement.firstChild ?? canvasElement);\n\n    if (emptyRender) {\n      reporting.addReport({\n        type: 'render-analysis',\n        version: 1,\n        result: {\n          emptyRender,\n        },\n        status: 'warning',\n      });\n    }\n  } catch (error) {\n    // Ghost Stories analysis is non-critical; log but don't throw\n    logger.warn('[Ghost Stories] Error during render analysis:', error);\n  }\n};\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/test-annotations.ts around\nlines 18 - 38, The empty catch in the afterEach function swallows errors; change\nit to catch the error (e.g., catch (err)) and log/report it instead of doing\nnothing: use the existing reporting object to call reporting.addReport with a\nclear type (e.g., 'internal-error' or 'annotation-error'), include version, a\nmessage and the error details/stack (safely stringifying unknown errors), and\nstatus (e.g., 'error'); if reporting may be undefined, fall back to\nconsole.error with the same information so failures in ghost-stories annotation\nare visible for debugging.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/test-annotations.ts",
+          "line_number": 38,
+          "start_line": 18,
+          "commit_sha": "340ecece7ebaf53f28d34dacfeb9bcbfb7f98020",
+          "created_at": "2026-01-08T17:15:50Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Unchecked Return",
+          "label_confidence": "medium",
+          "label_reasoning": "Empty catch block silently swallows errors, preventing any error information from being surfaced or logged."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests replacing an empty catch block with error logging to improve debuggability."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fVc5G",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Remove debug code before merging.**\n\nThis debug code disables all telemetry functionality and uses `console.log` directly, which violates the coding guidelines. The TODO comment confirms this should not be merged.\n\n\n\n<details>\n<summary>\ud83d\udd27 Proposed fix</summary>\n\nRemove the debug code to restore telemetry:\n\n```diff\n-  // TODO: DO NOT MERGE WITH THIS! IT'S FOR DEBUGGING PURPOSES ONLY!\n-  console.log('telemetry ', { eventType, payload, options });\n-  return;\n   // Don't notify on boot since it can lead to double notification in `sb init`.\n```\n\n</details>\n\nAs per coding guidelines, for files matching `**/*.{ts,tsx,js,jsx}`: \"Do not use `console.log`, `console.warn`, or `console.error` directly\" and for `code/{core,lib,addons,builders,frameworks,presets}/**/*.{ts,tsx,js,jsx}`: \"Use `logger` from `storybook/internal/node-logger` for server-side logging.\"\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/telemetry/index.ts around lines 36 - 38, Remove the temporary\ndebug early-return that logs telemetry and short-circuits functionality: delete\nthe console.log('telemetry ', { eventType, payload, options }) and the following\nreturn so the telemetry function resumes its normal flow; if any server-side\nlogging is needed, replace direct console calls with the shared logger\n(storybook/internal/node-logger) and log contextual error/info messages instead\nrather than using console.log.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/telemetry/index.ts",
+          "line_number": 38,
+          "start_line": null,
+          "commit_sha": "fabaa0de53cbdf1a04c9d02aef61462365a617bc",
+          "created_at": "2026-01-08T17:15:50Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Dead-Code Related Issues",
+          "label_confidence": "high",
+          "label_reasoning": "Debug code with a TODO 'DO NOT MERGE' comment that disables telemetry functionality and uses console.log directly."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags debug code with console.log and an early return that disables telemetry, requesting removal before merging."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fW5mO",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Inconsistent return value when telemetry is disabled.**\n\nWhen `coreOptions.disableTelemetry` is true, the function returns `undefined` instead of the `channel`. This is inconsistent with the return at line 114 and may cause issues for callers expecting a channel.\n\n\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n export function initGhostStoriesChannel(\n   channel: Channel,\n   options: Options,\n   coreOptions: CoreConfig\n ) {\n   if (coreOptions.disableTelemetry) {\n     logger.debug('Skipping discovery run - telemetry disabled');\n-    return;\n+    return channel;\n   }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nexport function initGhostStoriesChannel(\n  channel: Channel,\n  options: Options,\n  coreOptions: CoreConfig\n) {\n  if (coreOptions.disableTelemetry) {\n    logger.debug('Skipping discovery run - telemetry disabled');\n    return channel;\n  }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/server-channel/ghost-stories-channel.ts around\nlines 13 - 21, The function initGhostStoriesChannel returns undefined when\ncoreOptions.disableTelemetry is true but returns the channel later, causing\ninconsistency; change the early exit to return the provided channel instead of\nnothing. Specifically, in the branch guarded by coreOptions.disableTelemetry\n(where logger.debug('Skipping discovery run - telemetry disabled') is called),\nupdate the return to return channel so callers of initGhostStoriesChannel always\nreceive the Channel object.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit fabaa0d",
+          "file_path": "code/core/src/core-server/server-channel/ghost-stories-channel.ts",
+          "line_number": 21,
+          "start_line": 13,
+          "commit_sha": "340ecece7ebaf53f28d34dacfeb9bcbfb7f98020",
+          "created_at": "2026-01-08T19:18:53Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Function Consistency",
+          "label_confidence": "high",
+          "label_reasoning": "Inconsistent return value \u2014 function returns `undefined` in one branch but returns `channel` in another, breaking the expected return type contract."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies inconsistent return value (undefined vs channel) and suggests returning channel in the early exit branch."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fW5mc",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Empty files check occurs after processing.**\n\nThe `files.length === 0` check at line 159 happens after `getCandidatesForStorybook` has already been called at line 156. Move the check before processing to avoid unnecessary work.\n\n\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n     matchCount = files.length;\n\n+    if (files.length === 0) {\n+      logger.warn(`No files found matching glob pattern: ${globPattern}`);\n+      return {\n+        candidates: [],\n+        matchCount,\n+      };\n+    }\n+\n     const candidates = await getCandidatesForStorybook(files, sampleSize);\n-    logger.debug('candidates files:' + files.length);\n-\n-    if (files.length === 0) {\n-      logger.warn(`No files found matching glob pattern: ${globPattern}`);\n-      return {\n-        candidates: [],\n-        matchCount,\n-      };\n-    }\n+    logger.debug(`Found ${candidates.length} candidates from ${files.length} files`);\n\n     return {\n       candidates,\n```\n</details>\n\n\n> Committable suggestion skipped: line range outside the PR's diff.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/get-candidates.ts around lines\n156 - 165, The empty-files check currently happens after calling\ngetCandidatesForStorybook; move the files.length === 0 check to occur\nimmediately after obtaining files (before invoking getCandidatesForStorybook) so\nwe return early with { candidates: [], matchCount } and avoid calling\ngetCandidatesForStorybook with an empty files array; reference the\nvariables/functions files, getCandidatesForStorybook(files, sampleSize),\nsampleSize, logger.warn and globPattern when making the change.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit fabaa0d",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/get-candidates.ts",
+          "line_number": 165,
+          "start_line": null,
+          "commit_sha": "0cda5ae0b6e08b2c7fc16b4073c3746b515e7d3c",
+          "created_at": "2026-01-08T19:18:53Z",
+          "is_outdated": true,
+          "dimension": "Performance Issue",
+          "category": "Computation Efficiency",
+          "label_confidence": "high",
+          "label_reasoning": "The empty files check occurs after calling `getCandidatesForStorybook`, performing unnecessary work that could be avoided with an early return."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests moving the empty files check before processing to avoid unnecessary work, with a specific code fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fW5mf",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Using `path/posix` may cause path issues on Windows.**\n\n`path/posix` always uses forward slashes, which may not work correctly when paths are passed to file system operations or external commands on Windows. Consider using `path` (platform-aware) instead.\n\n\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n-import { join } from 'path/posix';\n+import { join } from 'path';\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nimport { join } from 'path';\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/run-story-tests.ts at line 5,\nThe import uses join from 'path/posix' which forces POSIX separators and can\nbreak on Windows; change the import to use the platform-aware module (import {\njoin } from 'path') or otherwise use path.join so path joins use the OS-specific\nseparators; update any usage of join in run-story-tests.ts accordingly to avoid\nhardcoded POSIX behavior.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit fabaa0d",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/run-story-tests.ts",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "0cda5ae0b6e08b2c7fc16b4073c3746b515e7d3c",
+          "created_at": "2026-01-08T19:18:54Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Using `path/posix` forces POSIX-style forward slashes which can cause incorrect path handling on Windows systems."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags potential Windows compatibility issue with `path/posix` and suggests switching to platform-aware `path`."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fW5ml",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Duration is discarded when output file is missing.**\n\nThe actual `duration` was calculated at line 52, but the return at line 58 hardcodes `duration: 0`. Consider using the calculated duration to accurately report how long the test attempt took.\n\n\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n     if (!existsSync(outputFile)) {\n       return {\n         success: false,\n-        duration: 0,\n+        duration,\n         error: testFailureMessage,\n       };\n     }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    // Read and parse the JSON results\n    if (!existsSync(outputFile)) {\n      return {\n        success: false,\n        duration,\n        error: testFailureMessage,\n      };\n    }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/run-story-tests.ts around\nlines 54 - 61, The early return when the output file is missing is discarding\nthe previously computed duration by hardcoding duration: 0; update the return in\nthe existsSync(outputFile) false branch to use the calculated duration variable\n(e.g., duration) instead of 0 so the failure report reflects the actual elapsed\ntime; locate the failing return in runStoryTests/run-story-tests (the block\nchecking existsSync(outputFile) and returning success:false) and replace\nduration: 0 with the previously computed duration variable.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit fabaa0d",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/run-story-tests.ts",
+          "line_number": 61,
+          "start_line": null,
+          "commit_sha": "fabaa0de53cbdf1a04c9d02aef61462365a617bc",
+          "created_at": "2026-01-08T19:18:54Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Calculated `duration` value is discarded and hardcoded as 0 in the error return, losing accurate timing information."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where a calculated duration variable is discarded and hardcoded as 0 in a return statement."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fZGp2",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Fix describe block name to match the function being tested.**\n\nThe describe block is named `extractUniqueCategorizedErrors`, but the function being tested is `extractCategorizedErrors`. This mismatch can cause confusion when reading test output.\n\n\n\n<details>\n<summary>\ud83d\udc1b Proposed fix</summary>\n\n```diff\n-  describe('extractUniqueCategorizedErrors', () => {\n+  describe('extractCategorizedErrors', () => {\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  describe('extractCategorizedErrors', () => {\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn\n@code/core/src/core-server/utils/ghost-stories/categorize-render-errors.test.ts\nat line 11, The test describe block is misnamed: it uses\n\"extractUniqueCategorizedErrors\" while the tests exercise\nextractCategorizedErrors; rename the describe string to\n\"extractCategorizedErrors\" so test output matches the actual function under test\n(update the describe declaration in categorize-render-errors.test.ts that wraps\nthe extractCategorizedErrors tests).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit fabaa0d",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/categorize-render-errors.test.ts",
+          "line_number": 11,
+          "start_line": null,
+          "commit_sha": "0cda5ae0b6e08b2c7fc16b4073c3746b515e7d3c",
+          "created_at": "2026-01-08T22:47:17Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "high",
+          "label_reasoning": "The describe block is named after the wrong function (`extractUniqueCategorizedErrors` instead of `extractCategorizedErrors`), causing confusion in test output."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a mismatch between the describe block name and the function being tested, requesting a rename."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fZGqB",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Replace `console.error` with logger from `storybook/internal/node-logger`.**\n\nDirect use of `console.error` violates the coding guidelines for server-side code. Use the logger from `storybook/internal/node-logger` instead.\n\n\n\nAs per coding guidelines, server-side Node.js code should use the structured logger.\n\n<details>\n<summary>\ud83d\udc1b Proposed fix</summary>\n\nAdd the import at the top of the file:\n\n```diff\n import { executeCommand, resolvePathInStorybookCache } from 'storybook/internal/common';\n+import { logger } from 'storybook/internal/node-logger';\n```\n\nThen replace the console.error call:\n\n```diff\n-    console.error('Error running story tests:', error);\n+    logger.error('Error running story tests:', error);\n```\n</details>\n\n\n> Committable suggestion skipped: line range outside the PR's diff.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/run-story-tests.ts at line\n140, Replace the direct console.error call with the structured server logger:\nadd an import for the logger from 'storybook/internal/node-logger' (e.g., import\n{ logger } from 'storybook/internal/node-logger') at the top of the file, then\nreplace the console.error('Error running story tests:', error) invocation with a\nlogger.error usage that logs the same message and the error object (e.g.,\nlogger.error(...) so the server-side structured logger is used instead of\nconsole.error).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/run-story-tests.ts",
+          "line_number": 140,
+          "start_line": null,
+          "commit_sha": "fabaa0de53cbdf1a04c9d02aef61462365a617bc",
+          "created_at": "2026-01-08T22:47:18Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "high",
+          "label_reasoning": "Direct use of `console.error` violates the project's coding guidelines for server-side code, which requires using the structured logger from `storybook/internal/node-logger`."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags use of console.error which violates coding guidelines, requests replacing with structured logger."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fZjHp",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Add error logging in catch block.**\n\nThe catch block (lines 79-81) silently swallows all errors when reading or validating candidate files. This makes debugging difficult when files fail to process. At minimum, log the error at debug level to help troubleshoot issues.\n\n\n\n<details>\n<summary>\ud83d\udccb Add error logging</summary>\n\n```diff\n     try {\n       source = await readFile(file, 'utf-8');\n       // filter out non-React code or files without exports\n       if (!isValidCandidate(source)) {\n         continue;\n       }\n-    } catch {\n+    } catch (error) {\n+      logger.debug(`Skipping file ${file}: ${error instanceof Error ? error.message : String(error)}`);\n       continue;\n     }\n```\n</details>\n\n\n> Committable suggestion skipped: line range outside the PR's diff.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/get-candidates.ts around lines\n71 - 81, The catch block in the loop that reads candidate files is silently\nswallowing errors; update the catch to log the error at debug level including\nthe file path (variable \"file\") and the caught error so failures in readFile or\nisValidCandidate are visible; specifically, inside the catch after the\nreadFile/isValidCandidate try, call a debug logger (e.g., console.debug or the\nmodule's logger) with a clear message referencing \"file\" and the caught error\nbefore continuing.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/get-candidates.ts",
+          "line_number": 81,
+          "start_line": 71,
+          "commit_sha": "340ecece7ebaf53f28d34dacfeb9bcbfb7f98020",
+          "created_at": "2026-01-08T23:46:32Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Unchecked Return",
+          "label_confidence": "medium",
+          "label_reasoning": "Empty catch block silently swallows file reading and validation errors, making it impossible to diagnose failures when files fail to process."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding error logging in a silent catch block to improve debuggability."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fZjHs",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n**Add logger import for proper server-side logging.**\n\nThe function uses `console.error` on line 141, which violates the coding guideline. Server-side code should use `logger` from `storybook/internal/node-logger`.\n\n\n\n<details>\n<summary>\u267b\ufe0f Add logger import</summary>\n\n```diff\n import { existsSync } from 'node:fs';\n import { mkdir, readFile } from 'node:fs/promises';\n\n-import { executeCommand, resolvePathInStorybookCache } from 'storybook/internal/common';\n+import { executeCommand, resolvePathInStorybookCache } from 'storybook/internal/common';\n+import { logger } from 'storybook/internal/node-logger';\n\n import { join } from 'pathe';\n```\n</details>\n\nAs per coding guidelines, use `logger` from `storybook/internal/node-logger` for server-side logging in Node.js code.\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nimport { existsSync } from 'node:fs';\nimport { mkdir, readFile } from 'node:fs/promises';\n\nimport { executeCommand, resolvePathInStorybookCache } from 'storybook/internal/common';\nimport { logger } from 'storybook/internal/node-logger';\n\nimport { join } from 'pathe';\n\nimport { extractCategorizedErrors } from './categorize-render-errors';\nimport { type GhostStoriesResponsePayload, type StoryTestResult } from './types';\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/run-story-tests.ts around\nlines 1 - 9, In run-story-tests.ts replace the console.error call (currently\nused around line 141) with the server-side logger: add an import \"logger\" from\n'storybook/internal/node-logger' at the top of the file and change the\nconsole.error invocation(s) to logger.error (preserving the same message and any\nerror object), ensuring server-side logging follows the project's node-logger\nusage.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/run-story-tests.ts",
+          "line_number": 9,
+          "start_line": 1,
+          "commit_sha": "340ecece7ebaf53f28d34dacfeb9bcbfb7f98020",
+          "created_at": "2026-01-08T23:46:32Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "high",
+          "label_reasoning": "Missing logger import for server-side logging; direct console.error usage violates project conventions requiring `storybook/internal/node-logger`."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding a logger import and replacing console.error with the structured server-side logger."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fZjH0",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Add timeout to prevent indefinite hanging.**\n\nThe `executeCommand` call for vitest has no timeout configured. If vitest hangs or encounters an infinite loop, this will block indefinitely. Consider adding a timeout parameter to the command execution.\n\n\n\n<details>\n<summary>\u23f1\ufe0f Recommended timeout configuration</summary>\n\nCheck if `executeCommand` supports a timeout option, or wrap the execution in a Promise.race with a timeout:\n\n```typescript\nconst VITEST_TIMEOUT = 60000; // 60 seconds\n\nconst timeoutPromise = new Promise((_, reject) => \n  setTimeout(() => reject(new Error('Vitest execution timed out')), VITEST_TIMEOUT)\n);\n\ntry {\n  await Promise.race([testProcess, timeoutPromise]);\n} catch (error) {\n  // ... error handling\n}\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/run-story-tests.ts around\nlines 29 - 50, The vitest invocation via executeCommand (variable testProcess in\nrun-story-tests.ts) can hang indefinitely; add a timeout (e.g. VITEST_TIMEOUT)\nand ensure the run is bounded either by passing a timeout option to\nexecuteCommand if it supports it or by wrapping testProcess in a Promise.race\nwith a timeoutPromise that rejects after VITEST_TIMEOUT (and handle that\nrejection in the existing catch to set testFailureMessage). Reference\nexecuteCommand, testProcess, and set a named constant VITEST_TIMEOUT for the\nduration.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/run-story-tests.ts",
+          "line_number": 54,
+          "start_line": 29,
+          "commit_sha": "340ecece7ebaf53f28d34dacfeb9bcbfb7f98020",
+          "created_at": "2026-01-08T23:46:32Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "No timeout on the vitest execution means the process can hang indefinitely, blocking the function without any recovery mechanism."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a missing timeout on an executeCommand call that could hang indefinitely, with a suggested fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fZjH2",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Add error handling for JSON parsing.**\n\nLine 65 uses `JSON.parse` without a try-catch block. If the vitest output file is malformed or truncated (e.g., due to process termination), this will throw an unhandled error and crash the function.\n\n\n\n<details>\n<summary>\ud83d\udee1\ufe0f Wrap JSON.parse in try-catch</summary>\n\n```diff\n   const resultsJson = await readFile(outputFile, 'utf8');\n-  const testResults = JSON.parse(resultsJson);\n+  let testResults;\n+  try {\n+    testResults = JSON.parse(resultsJson);\n+  } catch (parseError) {\n+    logger.error('Failed to parse vitest results JSON', parseError);\n+    return {\n+      success: false,\n+      duration,\n+      error: 'Failed to parse test results: malformed JSON output',\n+    };\n+  }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    if (!existsSync(outputFile)) {\n      return {\n        success: false,\n        duration,\n        error: testFailureMessage,\n      };\n    }\n\n    const resultsJson = await readFile(outputFile, 'utf8');\n    let testResults;\n    try {\n      testResults = JSON.parse(resultsJson);\n    } catch (parseError) {\n      logger.error('Failed to parse vitest results JSON', parseError);\n      return {\n        success: false,\n        duration,\n        error: 'Failed to parse test results: malformed JSON output',\n      };\n    }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/run-story-tests.ts around\nlines 56 - 66, The code calls JSON.parse on resultsJson without error handling;\nwrap the parse in a try-catch around JSON.parse(resultsJson) (identifying\nresultsJson, testResults, outputFile) and on catch return the same failure shape\n(success: false, duration, error) but set error to a descriptive message\nincluding the parse exception message and that outputFile was malformed/trimmed;\noptionally include a short snippet or first N chars of resultsJson for\ndebugging, and ensure no exception propagates from the function.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 233e00f to 340ecec",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/run-story-tests.ts",
+          "line_number": 66,
+          "start_line": null,
+          "commit_sha": "fabaa0de53cbdf1a04c9d02aef61462365a617bc",
+          "created_at": "2026-01-08T23:46:32Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Unchecked Return",
+          "label_confidence": "high",
+          "label_reasoning": "JSON.parse is called without error handling, meaning a malformed or truncated output file will throw an unhandled exception and crash the function."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags unhandled JSON.parse that could crash the function on malformed input, with a try-catch fix proposed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fZjH6",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Replace console.error with logger.**\n\nDirect use of `console.error` violates the coding guideline for server-side code. Use the `logger` from `storybook/internal/node-logger` instead.\n\n\n\n<details>\n<summary>\ud83d\udcdd Replace console.error</summary>\n\n```diff\n   } catch (error) {\n-    console.error('Error running story tests:', error);\n+    logger.error('Error running story tests:', error);\n\n     return {\n```\n</details>\n\nAs per coding guidelines, use `logger` from `storybook/internal/node-logger` for server-side logging.\n\n\n> Committable suggestion skipped: line range outside the PR's diff.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/ghost-stories/run-story-tests.ts around\nlines 140 - 142, Replace the direct console.error call in the catch block of\nrun-story-tests (the catch handling around running story tests) with the\nStorybook server logger: import logger from 'storybook/internal/node-logger' at\nthe top if not present and call logger.error with a clear message and the caught\nerror object (preserving the current message \"Error running story tests:\" and\nincluding the error variable) so server-side logging follows the coding\nguideline.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/ghost-stories/run-story-tests.ts",
+          "line_number": 142,
+          "start_line": null,
+          "commit_sha": "fabaa0de53cbdf1a04c9d02aef61462365a617bc",
+          "created_at": "2026-01-08T23:46:33Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "high",
+          "label_reasoning": "Direct use of `console.error` violates the project's server-side logging guidelines requiring `logger` from `storybook/internal/node-logger`."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests replacing console.error with the structured logger per coding guidelines."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fZjH7",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Remove duplicate 'primereact' entry.**\n\nThe package 'primereact' appears twice in the UI_LIBRARY_PACKAGES array (lines 88 and 94).\n\n\n<details>\n<summary>\ud83d\udd27 Proposed fix</summary>\n\n```diff\n  '@fluentui/*',\n  'rsuite',\n  'react-aria*',\n  '@react-aria/*',\n  '@heroui/*',\n- 'primereact',\n  '@carbon/*',\n  'theme-ui',\n  'rebass',\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nexport const UI_LIBRARY_PACKAGES = [\n  '@mui/*',\n  '@headlessui/*',\n  'antd',\n  'radix-ui',\n  '@radix-ui/*',\n  'react-bootstrap',\n  '@mantine/*',\n  '@chakra-ui/*',\n  'shadcn',\n  '@blueprintjs/*',\n  'semantic-ui-react',\n  'primereact',\n  '@fluentui/*',\n  'rsuite',\n  'react-aria*',\n  '@react-aria/*',\n  '@heroui/*',\n  '@carbon/*',\n  'theme-ui',\n  'rebass',\n] as const;\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/telemetry/ecosystem-identifier.ts around lines 76 - 98, The\nUI_LIBRARY_PACKAGES array contains a duplicate entry for 'primereact'; remove\nthe redundant 'primereact' string from the UI_LIBRARY_PACKAGES constant so each\npackage appears only once (update the exported UI_LIBRARY_PACKAGES definition\naccordingly).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 233e00f to 340ecec",
+          "file_path": "code/core/src/telemetry/ecosystem-identifier.ts",
+          "line_number": 97,
+          "start_line": 76,
+          "commit_sha": "340ecece7ebaf53f28d34dacfeb9bcbfb7f98020",
+          "created_at": "2026-01-08T23:46:33Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Redundancy Handling",
+          "label_confidence": "high",
+          "label_reasoning": "Duplicate 'primereact' entry in the UI_LIBRARY_PACKAGES array is a redundant/unnecessary duplication."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a duplicate 'primereact' entry in an array and requests removal of the duplicate."
+    }
+  ],
+  "review_thread_count": 19,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 19,
+    "stage1_kept": 19,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

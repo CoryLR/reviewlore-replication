@@ -1,0 +1,120 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3448,
+  "title": "Accelerate `Spacegroup.equivalent_sites`",
+  "body": "# Summary\n\nThis MR accelerates `Spacegroup.equivalent_sites` by\n\n1. removing unnecessary check (thus essentially removing one for loop)\n2. numpy-fying symmetry-operation application rather than a for loop\n\n# Issue and solution\n\n`Spacegroup.equivalent_sites` checks whether the basis atoms are symmetrically inequivalent with each other. Each basis atom makes a so-called orbit (set of symmetrically equivalent positions). If one of the members of a certain orbit overlaps with some member of another orbit, such atoms are, e.g., excluded in the `Atoms` to be made. (The behavior depends on the `onduplicates` option.)\n\nHere, if one of the members of a certain orbit overlaps with some member of another orbit, this means that all the atoms from the two orbits fully share the same positions. Therefore, it should be enough to check if *just one* of the members of a certain orbit overlaps with some member of another orbit. Nevertheless, in the implementation in the present master (2c0ea1252eb36480efc88d78495d7c0113595533), the checks are over all the members of an orbit, which is unnecessary.\n\nThis MR solves the issue by focusing on only one atom from each orbit and checking whether this is equivalent to some member in the already stored orbits. I also (1) separate out the orbit-calculation implementation from the for loops and (2) numpy-fy symmetry application when making an orbit.\n\nThis MR does not break the backward compatibility. The attached [run_crystal.py](/uploads/db2aa28efb21aeff0ad000eb3fe46585/run_crystal.py) gives exactly the same results before and after this MR. The speed is largely improved; the present master (2c0ea1252eb36480efc88d78495d7c0113595533) gives\n```\n5.21 s \u00b1 56.1 ms per loop (mean \u00b1 std. dev. of 7 runs, 1 loop each)\n```\nwhile the present MR gives\n```\n969 ms \u00b1 9.81 ms per loop (mean \u00b1 std. dev. of 7 runs, 1 loop each)\n```\nmeaning that it is more than 5 times faster.\n\nAll the tests are passed as well (https://gitlab.com/yuzie007/ase/-/pipelines/1417549387).\n\n# Checklist\n\n- [x] I am familiar with [ASE's contribution guidelines](https://wiki.fysik.dtu.dk/ase/development/contribute.html).\n- [~] [**Doc strings**](https://wiki.fysik.dtu.dk/ase/development/python_codingstandard.html#writing-documentation-in-the-code) in code changed in this MR are up to date.\n- [~] [**Unit tests** have been added for new or changed code.](https://wiki.fysik.dtu.dk/ase/development/tests.html)\n- [~] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "yuzie007",
+  "merged_at": "2024-08-31T10:23:18.442Z",
+  "base_ref": "master",
+  "merge_commit_sha": "6baf477fc3d461fe33a8998cad71e64dce1623e0",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2067060720",
+          "author": "askhl",
+          "body": "I wonder if this actually should be mod() twice, due to this surprising case:\n\n```\n>>> -1e-20\n-1e-20\n>>> (-1e-20) % 1\n1.0\n>>> ((-1e-20) % 1) % 1\n0.0\n```\n\nIt looks like the `np.rint()` further down resolves this, so maybe it is not strictly necessary.",
+          "file_path": "ase/spacegroup/spacegroup.py",
+          "line_number": 457,
+          "commit_sha": "589b165d57b46b1498fa1e359d70bd0c580bebb9",
+          "base_sha": "2c0ea1252eb36480efc88d78495d7c0113595533",
+          "created_at": "2024-08-21T17:00:06.950Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2083048473",
+          "author": "yuzie007",
+          "body": "Thank you @askhl for the suggestion to apply `%` twice. I fully agree on this and revised the commit accordingly.",
+          "file_path": "ase/spacegroup/spacegroup.py",
+          "line_number": 457,
+          "commit_sha": "589b165d57b46b1498fa1e359d70bd0c580bebb9",
+          "base_sha": "2c0ea1252eb36480efc88d78495d7c0113595533",
+          "created_at": "2024-08-31T10:13:33.961Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2067063426",
+          "author": "askhl",
+          "body": "Thanks @yuzie007!  The logic is a bit complicated so I could not entirely verify the equivalence of the code, but you have tested it very well so I think it's very safe.\n\nPlease feel free to merge.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2024-08-21T17:01:54.257Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2083048476",
+          "author": "yuzie007",
+          "body": "Thank you so much @askhl for the review and the approval! With the revised commit, I would like to auto-merge this MR.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2024-08-31T10:13:34.903Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2684464123",
+          "author": "lan496",
+          "body": "Thank you for implementing this performance improvement for high-symmetry structures. However, I found that the new algorithm shows O(N^2) scaling for distorted structures or slabs, since len(orbits) = len(scaled) in the worst case. In such scenarios, the old algorithm remains preferable for large systems, while the new one works well for small systems with high symmetry. I am not sure which case is the primary target in ASE, but I wanted to report this observation.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-13T00:18:37.771Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2685499381",
+          "author": "yuzie007",
+          "body": "Thank you @lan496 for letting me know the issue for disordered structures! I agree, and we may need some further refactoring to achieve ideal performance. In case you have plan to have some MR, I am happy to review, otherwise I would like to try to fix when I have time.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-13T12:04:24.888Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2686762696",
+          "author": "lan496",
+          "body": "Could you look into this issue when you have the time? I am not fully familiar with the `Spacegroups` class\u2019 behavior, and I am unsure how to balance performance for the two cases",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-13T23:46:34.078Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 4
+}

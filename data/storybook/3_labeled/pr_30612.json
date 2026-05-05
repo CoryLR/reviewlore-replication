@@ -1,0 +1,473 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 30612,
+  "title": "Core and Vite: Use story index as source of truth for Vite paths",
+  "body": "Supersedes https://github.com/storybookjs/storybook/pull/26010\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n### Todo\r\n\r\n- [x] Go through all usages/references of `importPath` in `StoryIndexGenerator` and ensure their behavior still work. `importPath` is expected to be a file path, but can now be a virtual module, and I'm not sure yet if it's supported in all cases there.\r\n- [x] Unit tests\r\n- [x] Experiment with moving `initializedStoryIndexGenerator` to a preset instead if possible\r\n- [x] Test on Windows\r\n- [x] Ensure Vitest works\r\n  - [ ] ~Also with virtual files~\r\n- [x] Update docs\r\n  - [x] Virtual modules are only supported in Vite\r\n  - [x] Mark `importPath` as optional, both in types and docs\r\n  - [x] Check against documented examples in https://storybook.js.org/docs/api/main-config/main-config-indexers\r\n\r\n## What I did\r\n\r\nThis PR does a few things, all based on making the Vite builder depend on _the story index_ for a list of stories, instead of re-globbing the files manually like the StoryIndexGenerator already does.\r\n\r\nUntying the Vite builder from the file system means it no longer has to do duplicate file watching to make HMR work, instead `StoryIndexGenerator` will directly notify the Vite builder when the virtual modules are invalidated.\r\n\r\nThis enables the feature of custom indexers specifying an _alternative_ path as the `importPath` for an index, as those are now the single source of truth. The paths can even be virtual modules, or paths with query param suffixes. However virtual modules will _not_ work with the Vitest integration as Vitest doesn't support that.\r\n\r\nAn important addition to this PR, is that the StoryIndexGenerator is now available as a preset property for anyone to access on the server side. We've been needing this for quite a few features now, and we finally don't have to work around it anymore.\r\n\r\n<!-- Briefly describe what your PR does -->\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [x] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\nIn a `react-vite` sandbox, modify `.storybook/main.ts` `stories` and `addons` to:\r\n\r\n```js\r\n  \"stories\": [\r\n    \"../src/**/*.mdx\",\r\n    \"../src/**/*.stories.@(js|jsx|mjs|ts|tsx)\", \r\n    \"../src/**/*.stories-emoji.@(js|jsx|mjs|ts|tsx)\", \r\n    \"../src/**/*.stories.json\", \r\n],\r\n\r\n  \"addons\": [\r\n    \"@storybook/addon-essentials\",\r\n    \"@storybook/addon-onboarding\",\r\n    \"@chromatic-com/storybook\",\r\n    \"@storybook/experimental-addon-test\",\r\n    \"@storybook/addon-a11y\",\r\n    \"./custom-indexers.ts\"\r\n  ],\r\n```\r\n\r\nAdd the following `.storybook/custom-indexers.ts` file:\r\n\r\n```ts\r\nimport { readFile } from 'node:fs/promises';\r\nimport type { Indexer, PresetProperty, StoryIndexInput } from 'storybook/internal/types';\r\nimport type { ViteFinal } from '../../../code/builders/builder-vite/src';\r\nimport type { Plugin } from 'vite';\r\nimport { readCsf } from 'storybook/internal/csf-tools';\r\n\r\nconst jsonIndexer: Indexer = {\r\n  test: /stories\\.json$/,\r\n  createIndex: async (filename) => {\r\n    const content = JSON.parse(await readFile(filename, 'utf-8')) as { stories: {title: string, name: string}[] };\r\n    const stories: StoryIndexInput[] = content.stories.map((story) => ({\r\n      type: 'story',\r\n      title: story.title,\r\n      name: story.name,\r\n      importPath: `virtual:json-indexer@${filename}.js?title=${story.title}`,\r\n      exportName: story.name\r\n    }));\r\n    return stories;\r\n  },\r\n}\r\n\r\nconst jsonVitePlugin: Plugin = {\r\n  name: 'json-stories',\r\n  resolveId(id) {\r\n    if (id.startsWith('virtual:json-indexer@')) {\r\n      return `\\0${id}`;\r\n    }\r\n  },\r\n  async load(id) {\r\n    if (!id.startsWith('\\0virtual:json-indexer@')) {\r\n      return;\r\n    }\r\n    const url = new URL(id.replace('\\\\0', ''));\r\n    const filePath = url.pathname.replace('json-indexer@', '').replace(/\\.js$/, '');\r\n    const title = url.searchParams.get('title');\r\n\r\n    const content = JSON.parse(await readFile(filePath, 'utf-8')) as { stories: {title: string, name: string}[] };\r\n\r\n    const stories = content.stories.filter((story) => story.title === title);\r\n    const result = `\r\nexport default {\r\ntitle: '${title}',\r\n};\r\n\r\n${stories.map((story) => `export const ${story.name} = { render: () => '${story.name}' };`).join('\\n')}\r\n`;\r\n    return result;\r\n  },\r\n}\r\n\r\nconst emojiTransformIndexer: Indexer = {\r\n  test: /stories-emoji\\.(m?js|ts)x?$/,\r\n  createIndex: async (fileName, options) => {\r\n    const indexInputs = (await readCsf(fileName, options)).parse().indexInputs;\r\n    return indexInputs.map((input) => ({\r\n      ...input,\r\n      title: `\ud83c\udf89 ${input.title}`,\r\n      name: `\ud83d\ude0e ${input.name}`,\r\n      __id: undefined,\r\n      importPath: `${input.importPath}?emoji=true`,\r\n    }));\r\n  },\r\n}\r\n\r\nconst emojiVitePlugin: Plugin = {\r\n  name: 'emoji-stories',\r\n  async transform(code, id) {\r\n    if (!id.endsWith('emoji=true')) {\r\n      return;\r\n    }\r\n    const transformed = code\r\n      .replaceAll(/(title:\\s*['\"])/g, '$1\ud83c\udf89 ')\r\n      .replaceAll(/(name:\\s*['\"])/g, '$1\ud83d\ude0e ');\r\n\r\n    return transformed;\r\n  }\r\n}\r\n\r\nexport const experimental_indexers: PresetProperty<'experimental_indexers'> = (existingIndexers) => {\r\n  return [jsonIndexer, emojiTransformIndexer].concat(existingIndexers || []);\r\n};\r\n\r\nexport const viteFinal: ViteFinal = (config) => {\r\n  return {\r\n    ...config,\r\n    plugins: [\r\n      ...(config.plugins ?? []),\r\n      jsonVitePlugin,\r\n      emojiVitePlugin,\r\n    ]\r\n  };\r\n};\r\n```\r\n\r\nAdd the following file to `src/stories/my.stories.json`:\r\n\r\n```json\r\n{\r\n  \"stories\": [\r\n    {\r\n      \"title\": \"Bit\",\r\n      \"name\": \"First\"\r\n    },\r\n    {\r\n      \"title\": \"Bit\",\r\n      \"name\": \"Second\"\r\n    },\r\n    {\r\n      \"title\": \"Bit\",\r\n      \"name\": \"Third\"\r\n    },\r\n    {\r\n      \"title\": \"Bot\",\r\n      \"name\": \"First\"\r\n    },\r\n    {\r\n      \"title\": \"Bot\",\r\n      \"name\": \"Second\"\r\n    },\r\n    {\r\n      \"title\": \"Bot\",\r\n      \"name\": \"Third\"\r\n    }\r\n  ]\r\n}\r\n```\r\n\r\nAnd this file too: `src/stories.Flimflom.stories-emoji.ts`:\r\n\r\n```js\r\nimport { fn } from 'storybook/test';\r\n\r\nimport { Button } from './Button';\r\n\r\nconst meta = {\r\n  component: Button,\r\n  title: 'Flimflom',\r\n  tags: ['autodocs'],\r\n  args: { onClick: fn() },\r\n};\r\n\r\nexport default meta;\r\n\r\nexport const Primary = {\r\n  name: 'Primary',\r\n  args: {\r\n    primary: true,\r\n    label: 'Button',\r\n  },\r\n};\r\n\r\nexport const Secondary = {\r\n  name: 'Secondary',\r\n  args: {\r\n    label: 'Button',\r\n  },\r\n};\r\n\r\n```\r\n\r\n<!-- Please include the steps to test your changes here. For example:\r\n\r\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Open Storybook in your browser\r\n3. Access X story\r\n\r\n-->\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/canary-release-pr.yml) or locally with `gh workflow run --repo storybookjs/storybook canary-release-pr.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Refactor**\n  * Story indexing unified behind a shared generator and consolidated virtual-file handling for more consistent builds.\n\n* **Performance**\n  * Debounced file-watching, batched invalidation, and optimized import-path handling for faster, more reliable dev-server updates.\n\n* **Public API / Config**\n  * Exposed a configurable story-index generator and made index input importPath optional with clarified defaults.\n\n* **Documentation**\n  * Clarified importPath defaults and Vite vs Webpack guidance for indexer inputs.\n\n* **Tooling**\n  * Added a VS Code workspace and minor lint/config cleanup.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "JReinhold",
+  "merged_at": "2025-12-19T09:35:53Z",
+  "base_ref": "next",
+  "merge_commit_sha": "e66b664488523899b028d676d8ef4f7cd285429f",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "54a153738b80621fdb2e85326dbdff1b8a8ced9c",
+    "43774a764dba2af9750829276cb91f149670f2b2"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6cXcWF",
+          "author": "valentinpalkovic",
+          "body": "Move `Object.values(SB_VIRTUAL_FILES)` to the module scope to evaluate it only once for performance reasons",
+          "file_path": "code/builders/builder-vite/src/plugins/code-generator-plugin.ts",
+          "line_number": 56,
+          "start_line": null,
+          "commit_sha": "e5ece54563e11e7abb091e1e94f1e8e4dcf215b0",
+          "created_at": "2025-12-16T13:58:38Z",
+          "is_outdated": true,
+          "dimension": "Performance Issue",
+          "category": "Repeated Computations",
+          "label_confidence": "high",
+          "label_reasoning": "Suggests moving Object.values() call to module scope to avoid re-evaluating it on every call."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests moving code to module scope for performance improvement."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6cXev9",
+          "author": "valentinpalkovic",
+          "body": "Shouldn't we rather assume that the index always exists, or at least that it does so?",
+          "file_path": "code/builders/builder-vite/src/plugins/code-generator-plugin.ts",
+          "line_number": 69,
+          "start_line": null,
+          "commit_sha": "e5ece54563e11e7abb091e1e94f1e8e4dcf215b0",
+          "created_at": "2025-12-16T14:01:37Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "medium",
+          "label_reasoning": "Questions whether a fallback/null assumption is correct, suggesting the logic around index existence may be wrong."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6cX7T2",
+          "author": "JReinhold",
+          "body": "yes, I think the typings were imprecise early in this work, but now `getIndex` always returns an index.",
+          "file_path": "code/builders/builder-vite/src/plugins/code-generator-plugin.ts",
+          "line_number": 69,
+          "start_line": null,
+          "commit_sha": "e5ece54563e11e7abb091e1e94f1e8e4dcf215b0",
+          "created_at": "2025-12-16T14:28:14Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions the fallback assumption, implying the code should be changed to assume the index always exists."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6cXgna",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Wrap switch case declarations in a block to prevent scope leakage.**\n\nStatic analysis correctly identifies that `const` declarations inside switch cases can be accessed from other cases, which is error-prone. Wrap the case in a block.\n\n```diff\n       case getResolvedVirtualModuleId(SB_VIRTUAL_FILES.VIRTUAL_STORIES_FILE):\n-        const storyIndexGenerator = await storyIndexGeneratorPromise;\n-        const index = (await storyIndexGenerator?.getIndex()) ?? { v: 5, entries: {} };\n-        return generateImportFnScriptCode(index);\n+        {\n+          const storyIndexGenerator = await storyIndexGeneratorPromise;\n+          const index = (await storyIndexGenerator?.getIndex()) ?? { v: 5, entries: {} };\n+          return generateImportFnScriptCode(index);\n+        }\n```\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n      switch (id) {\n        case getResolvedVirtualModuleId(SB_VIRTUAL_FILES.VIRTUAL_STORIES_FILE):\n          {\n            const storyIndexGenerator = await storyIndexGeneratorPromise;\n            const index = (await storyIndexGenerator?.getIndex()) ?? { v: 5, entries: {} };\n            return generateImportFnScriptCode(index);\n          }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\uddf0 Tools</summary>\n\n<details>\n<summary>\ud83e\ude9b Biome (2.1.2)</summary>\n\n[error] 68-68: Other switch clauses can erroneously access this declaration.\nWrap the declaration in a block to restrict its access to the switch clause.\n\nThe declaration is defined in this switch clause:\n\nSafe fix: Wrap the declaration in a block.\n\n\n(lint/correctness/noSwitchDeclarations)\n\n---\n\n[error] 69-69: Other switch clauses can erroneously access this declaration.\nWrap the declaration in a block to restrict its access to the switch clause.\n\nThe declaration is defined in this switch clause:\n\nSafe fix: Wrap the declaration in a block.\n\n\n(lint/correctness/noSwitchDeclarations)\n\n</details>\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/builders/builder-vite/src/plugins/code-generator-plugin.ts around lines\n66 to 70, the switch case creates const bindings (e.g., storyIndexGenerator,\nindex) that can leak into other cases; wrap the entire case body in a block (add\n{ ... } around the case's statements) so the const/let declarations are scoped\nto that case and cannot be accessed by other cases.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits d4cdc75 to d4d5654",
+          "file_path": "code/builders/builder-vite/src/plugins/code-generator-plugin.ts",
+          "line_number": 74,
+          "start_line": 70,
+          "commit_sha": "43774a764dba2af9750829276cb91f149670f2b2",
+          "created_at": "2025-12-16T14:03:57Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "const declarations in switch cases without blocks can leak scope to other cases, causing incorrect behavior."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a lint error and requests wrapping switch case declarations in a block to prevent scope leakage."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6cXgni",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Potential dead code: `indexError` is declared but never assigned.**\n\nThe `indexError` variable is declared on line 37 and checked on lines 158-162, but with the new promise-based flow, it appears to never be assigned a value. This check will always evaluate to `false`, making the error handling block unreachable.\n\n\n\nConsider removing the dead code:\n\n```diff\n- let indexError: Error | undefined;\n-\n  const workingDir = process.cwd();\n```\n\nAnd remove the corresponding check on lines 158-162:\n\n```diff\n- if (indexError) {\n-   await managerBuilder?.bail().catch();\n-   await previewBuilder?.bail().catch();\n-   throw indexError;\n- }\n```\n\n\n> Committable suggestion skipped: line range outside the PR's diff.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/core-server/dev-server.ts around lines 37 and 158-162, the\nvariable `indexError` is declared at line 37 but never assigned in the new\npromise-based flow, and the subsequent check at lines 158-162 is therefore dead\ncode; remove the `let indexError: Error | undefined;` declaration and delete the\ncorresponding conditional block at lines 158-162, ensuring any necessary error\nhandling is handled through the promise rejection/try-catch path already present\nelsewhere in the function.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits d4cdc75 to d4d5654",
+          "file_path": "code/core/src/core-server/dev-server.ts",
+          "line_number": 38,
+          "start_line": null,
+          "commit_sha": "c9c58c69970f240fae3a688ea71baff1ae154db9",
+          "created_at": "2025-12-16T14:03:57Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Dead Code",
+          "label_confidence": "high",
+          "label_reasoning": "indexError is declared but never assigned, making the error handling block unreachable dead code."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies dead code (never-assigned variable and unreachable block) and requests removal."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6cXgnl",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Remove `console.time`/`console.timeEnd` calls.**\n\nPer coding guidelines, avoid using `console.log`, `console.warn`, or `console.error` directly. These timing calls appear to be debug artifacts and should be removed.\n\n```diff\n       const mockServerChannel = { emit: vi.fn() } as any as ServerChannel;\n-      console.time('registerIndexJsonRoute');\n       registerIndexJsonRoute({\n         app,\n         serverChannel: mockServerChannel,\n         workingDir,\n         normalizedStories,\n         storyIndexGeneratorPromise: getStoryIndexGeneratorPromise(),\n       });\n-      console.timeEnd('registerIndexJsonRoute');\n```\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n      registerIndexJsonRoute({\n        app,\n        serverChannel: mockServerChannel,\n        workingDir,\n        normalizedStories,\n        storyIndexGeneratorPromise: getStoryIndexGeneratorPromise(),\n      });\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/core-server/utils/index-json.test.ts around lines 97 to 105,\nremove the debug timing calls console.time('registerIndexJsonRoute') and\nconsole.timeEnd('registerIndexJsonRoute'); simply delete those two lines so the\ntest no longer uses console timing (do not replace with console.* calls; if you\nneed timing keep it local to the test runner or use the project logger API).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/index-json.test.ts",
+          "line_number": 105,
+          "start_line": null,
+          "commit_sha": "d4d565455bad33fbeb85cc458520d7d7243ad71c",
+          "created_at": "2025-12-16T14:03:58Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Dead-Code Related Issues",
+          "label_confidence": "high",
+          "label_reasoning": "console.time/timeEnd are debug artifacts left in test code that should be removed."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removal of debug console.time/timeEnd calls left in test code."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6cXgnv",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Map.keys().find() is not valid\u2014convert iterator to array.**\n\nMap.keys() returns a map iterator object, which does not have array methods like `.find()`. Iterator helpers are not supported in Node.js versions below 22, and Node.js v22 has a bug with iterator helpers. This code will fail. Use `Array.from()`:\n\n```diff\n-    const specifier = this.specifierToCache\n-      .keys()\n-      .find((ns) => ns.importPathMatcher.exec(importPath));\n+    const specifier = Array.from(this.specifierToCache.keys())\n+      .find((ns) => ns.importPathMatcher.exec(importPath));\n```\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    const specifier = Array.from(this.specifierToCache.keys())\n      .find((ns) => ns.importPathMatcher.exec(importPath));\n    if (!specifier) {\n      // not a story file\n      return;\n    }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/core-server/utils/StoryIndexGenerator.ts around lines 811 to\n817, the call to this.specifierToCache.keys().find(...) fails because Map.keys()\nreturns an iterator (no .find) and iterator helpers aren't safe; replace it by\nconverting the iterator to an array (e.g.\nArray.from(this.specifierToCache.keys()).find(...)) or iterate with a for..of\nloop to locate the matching specifier, then proceed as before so the lookup\nworks on all Node versions.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits d4cdc75 to d4d5654",
+          "file_path": "code/core/src/core-server/utils/StoryIndexGenerator.ts",
+          "line_number": 817,
+          "start_line": null,
+          "commit_sha": "c9c58c69970f240fae3a688ea71baff1ae154db9",
+          "created_at": "2025-12-16T14:03:58Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "high",
+          "label_reasoning": "Map.keys() returns an iterator without .find(), so calling .find() on it is incorrect API usage that will fail at runtime."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a critical bug where Map.keys().find() is invalid and suggests using Array.from()."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6cXho7",
+          "author": "valentinpalkovic",
+          "body": "```suggestion\n  const objectEntries: [path: string, importStatement: string][] = getUniqueImportPaths(index).map((importPath) => {\n```",
+          "file_path": "code/builders/builder-vite/src/codegen-importfn-script.ts",
+          "line_number": 17,
+          "start_line": null,
+          "commit_sha": "e5ece54563e11e7abb091e1e94f1e8e4dcf215b0",
+          "created_at": "2025-12-16T14:05:04Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Variable Handling",
+          "label_confidence": "medium",
+          "label_reasoning": "Suggests adding an explicit type annotation to improve clarity of the variable's type."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Provides a concrete code suggestion to add explicit type annotation."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6cXjP9",
+          "author": "valentinpalkovic",
+          "body": "Again, do we really need the fallback?",
+          "file_path": "code/builders/builder-vite/src/optimizeDeps.ts",
+          "line_number": 27,
+          "start_line": null,
+          "commit_sha": "e5ece54563e11e7abb091e1e94f1e8e4dcf215b0",
+          "created_at": "2025-12-16T14:06:56Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "medium",
+          "label_reasoning": "Questions whether a fallback value is necessary, implying the logic may be incorrect or overly defensive."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6cX5n8",
+          "author": "JReinhold",
+          "body": "removed.",
+          "file_path": "code/builders/builder-vite/src/optimizeDeps.ts",
+          "line_number": 27,
+          "start_line": null,
+          "commit_sha": "e5ece54563e11e7abb091e1e94f1e8e4dcf215b0",
+          "created_at": "2025-12-16T14:26:20Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions whether a fallback is needed, implying it should be removed if unnecessary."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6cXj0u",
+          "author": "valentinpalkovic",
+          "body": "does the `storyIndexGenerator` needs to be invalidated at some point?",
+          "file_path": "code/core/src/core-server/presets/common-preset.ts",
+          "line_number": 297,
+          "start_line": null,
+          "commit_sha": "43774a764dba2af9750829276cb91f149670f2b2",
+          "created_at": "2025-12-16T14:07:42Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "medium",
+          "label_reasoning": "Raises concern about whether the storyIndexGenerator cache is properly invalidated, pointing to a potential correctness/state management issue."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6cX5N5",
+          "author": "JReinhold",
+          "body": "no, it is always the same instance.",
+          "file_path": "code/core/src/core-server/presets/common-preset.ts",
+          "line_number": 297,
+          "start_line": null,
+          "commit_sha": "43774a764dba2af9750829276cb91f149670f2b2",
+          "created_at": "2025-12-16T14:25:51Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Raises a concern about whether storyIndexGenerator needs invalidation, implying potential missing functionality."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6cg62e",
+          "author": "tmeasday",
+          "body": "Is this a change in the `importPath` in `index.json`?",
+          "file_path": "code/core/src/core-server/utils/StoryIndexGenerator.ts",
+          "line_number": 470,
+          "start_line": null,
+          "commit_sha": "43774a764dba2af9750829276cb91f149670f2b2",
+          "created_at": "2025-12-17T07:14:54Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "medium",
+          "label_reasoning": "Questions whether a change in importPath behavior matches the intended specification/contract of index.json."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6ckjh_",
+          "author": "JReinhold",
+          "body": "yes and no. this does end up as a change in `index.json`. however only when an indexer returns an actual `importPath` for an entry, which our CSF indexer doesn't anymore. Furthermore, the parsing that `toImportPath` does, is actually the same as the parsing we already do for the original `importPath` variable above, which is converting absolute paths to relative paths.\nI've confirmed this with the Svelte CSF addon, which _has_ a custom indexer that _does_ return `importPath`, and I can see that the final entry in `index.json` is exactly the same as it was before.",
+          "file_path": "code/core/src/core-server/utils/StoryIndexGenerator.ts",
+          "line_number": 470,
+          "start_line": null,
+          "commit_sha": "43774a764dba2af9750829276cb91f149670f2b2",
+          "created_at": "2025-12-17T12:14:25Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions whether there's a change in importPath behavior, flagging a potential unintended behavioral change that may need to be addressed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6cg9tR",
+          "author": "tmeasday",
+          "body": "This name seems surprising",
+          "file_path": "code/core/src/core-server/build-static.ts",
+          "line_number": 141,
+          "start_line": null,
+          "commit_sha": "c3941b131e40f2ac78aeafbfc4fbed874547536b",
+          "created_at": "2025-12-17T07:19:42Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "high",
+          "label_reasoning": "Comment indicates the name is surprising/confusing, pointing to a naming convention issue."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6cqTKV",
+          "author": "JReinhold",
+          "body": "agree, fixed",
+          "file_path": "code/core/src/core-server/build-static.ts",
+          "line_number": 141,
+          "start_line": null,
+          "commit_sha": "c3941b131e40f2ac78aeafbfc4fbed874547536b",
+          "created_at": "2025-12-17T19:15:59Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Comments that a name is surprising, implying it should be renamed to something more intuitive."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6cqeqn",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Type assertion assumes preset always returns defined generator.**\n\nLine 146 casts away the `undefined` from the union type. If the `storyIndexGenerator` preset ever fails to return a generator when `!options.ignorePreview`, this could cause runtime errors inside `writeIndexJson`.\n\nConsider handling the undefined case gracefully, or adding a runtime guard:\n\n```diff\n-    effects.push(\n-      writeIndexJson(\n-        join(options.outputDir, 'index.json'),\n-        storyIndexGeneratorPromise as Promise<StoryIndexGenerator>\n-      )\n-    );\n+    effects.push(\n+      storyIndexGeneratorPromise.then(async (generator) => {\n+        if (generator) {\n+          await writeIndexJson(join(options.outputDir, 'index.json'), generator);\n+        }\n+      })\n+    );\n```\n\n\n\n> Committable suggestion skipped: line range outside the PR's diff.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/core-server/build-static.ts around lines 138 to 148, the code\nforce-casts storyIndexGeneratorPromise to Promise<StoryIndexGenerator> which\nremoves the possibility of undefined and can cause runtime errors if the preset\nreturns undefined; instead, await or then the storyIndexGeneratorPromise and\nonly call/writeIndexJson when a defined generator is returned (or provide a\nsensible fallback), e.g. resolve the promise first and push writeIndexJson\ninside a conditional that checks the resolved value is not undefined, or adjust\npresets.apply to guarantee a generator and handle the undefined case with an\nearly return or a clear error log.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/build-static.ts",
+          "line_number": 148,
+          "start_line": 138,
+          "commit_sha": "43774a764dba2af9750829276cb91f149670f2b2",
+          "created_at": "2025-12-17T19:31:53Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Null Pointer",
+          "label_confidence": "high",
+          "label_reasoning": "Type assertion casts away undefined, potentially causing runtime errors if the generator is undefined."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential runtime error from a type assertion and suggests a safer alternative implementation."
+    }
+  ],
+  "review_thread_count": 14,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6OZ3O4",
+            "author": "JReinhold",
+            "body": "in ESM-only SB 10, regular imports of vite are now supported",
+            "file_path": "code/.eslintrc.js",
+            "line_number": 61,
+            "start_line": 32,
+            "commit_sha": "137980dae739e25e50ef782d402b8c7604daf72e",
+            "created_at": "2025-09-29T20:05:15Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_collapsed": false,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6cXXcD",
+            "author": "JReinhold",
+            "body": "The reason I'm removing the `specifier` from the `invalidate` signature, is because it meant that the StoryIndexGenerator implicitly relied on the specifiers to be referential equal, as they were used as keys for Map lookups. This was not obvious, so during my refactor I was creating multiple specifiers with `normalizeStories`, and they would not be referential equal, which I spent a lot of time debugging.\n\nThis change means we rely on the `importPath` to lookup the specifier, similar to what used to happen in `watchStorySpecifier`. `importPath` is just a string, so equality is simpler.",
+            "file_path": "code/core/src/core-server/utils/StoryIndexGenerator.ts",
+            "line_number": 809,
+            "start_line": null,
+            "commit_sha": "43774a764dba2af9750829276cb91f149670f2b2",
+            "created_at": "2025-12-16T13:52:43Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6cg7ea",
+            "author": "tmeasday",
+            "body": "Did you think about what happens if multiple specifiers match the same import path?",
+            "file_path": "code/core/src/core-server/utils/StoryIndexGenerator.ts",
+            "line_number": 809,
+            "start_line": null,
+            "commit_sha": "43774a764dba2af9750829276cb91f149670f2b2",
+            "created_at": "2025-12-17T07:16:00Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6cqb-5",
+            "author": "JReinhold",
+            "body": "I didn't think about that case specifically, and that also doesn't work today on `next`. What I did here, was just copy the existing check that happens in `watchStorySpecifier`, and run that same check in `StoryIndexGenerator` too, so no behavior changes: https://github.com/storybookjs/storybook/pull/30612/changes#diff-e677174c1c4567773a801f4662a199c0975fe538f86bdf43d3362dc2c58c3033R72-R76\n\nI've confirmed the behavior is the same between `next` and this branch, by having the following stories globs:\n\n```ts\n[\n  \"../src/**/*.stories.@(js|jsx|mjs|ts|tsx)\",\n  {\n    directory: \"../src/stories\",\n    titlePrefix: \"Extra\",\n    files: \"Button.@(mdx|stories.@(js|jsx|mjs|ts|tsx))\",\n  },\n]\n```\n\nWhich correctly shows the Button stories twice in the sidebar, but when updating the file to add another story, only the first entry is updated in the sidebar, the second stays static.\n\nThis seems weird anyway, is there an actual use case for this that I'm missing?",
+            "file_path": "code/core/src/core-server/utils/StoryIndexGenerator.ts",
+            "line_number": 809,
+            "start_line": null,
+            "commit_sha": "43774a764dba2af9750829276cb91f149670f2b2",
+            "created_at": "2025-12-17T19:27:51Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6cqeN-",
+            "author": "JReinhold",
+            "body": "Funnily enough, the change I'm making here actually makes it _easier_ to support that use case, if that is something that we want?",
+            "file_path": "code/core/src/core-server/utils/StoryIndexGenerator.ts",
+            "line_number": 809,
+            "start_line": null,
+            "commit_sha": "43774a764dba2af9750829276cb91f149670f2b2",
+            "created_at": "2025-12-17T19:31:07Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 14,
+    "stage1_kept": 12,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 2,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

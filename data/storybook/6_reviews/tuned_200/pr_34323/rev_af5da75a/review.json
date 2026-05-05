@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 6,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`buildModuleGraph` is imported from `./index` but is never re-exported from `index.ts`\u2014only imported there as an internal dependency. TypeScript will emit a 'Module has no exported member buildModuleGraph' error and the import will fail at runtime. The `describe('buildModuleGraph')` test suite should be extracted to a dedicated `./utils/build-module-graph.test.ts` file that imports directly from `'./utils/build-module-graph'`. Keeping these tests co-located in `index.test.ts` requires either exposing an internal implementation detail on the public API or maintaining a broken import.",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 9,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`vi.mock('./vite-server', () => ({...}))` uses a factory function but omits the `{ spy: true }` option required by the project's Vitest coding guidelines. Restructure this as `vi.mock('./vite-server', { spy: true });` and move the return-value setup (`vi.mocked(createViteServer).mockResolvedValue(fakeViteServer)`) into `beforeEach`, which is already done\u2014so only the declaration site needs to change.",
+      "index": 1
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 64,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`bail()` calls `listeners.clear()`, which silently drops every active subscription without invoking the individual unsubscribe functions returned to callers. A consumer who registered via `onModuleGraphChange` and stored the unsubscribe function will receive no further callbacks\u2014and no notification that their subscription was discarded. This behavior should be documented in a JSDoc comment on both `bail()` and `onModuleGraphChange` so callers know they must re-subscribe after a server restart.",
+      "index": 2
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 68,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`NonNullable<Builder<Options>['onModuleGraphChange']>` uses `Options` (Storybook's general per-build options) as the `Config` generic parameter of `Builder`, but `Config` is meant to be the builder's own configuration shape (e.g., Vite's `UserConfig`). `ViteBuilder` is already defined in `./types` as `Builder<UserConfig, ViteStats>`, so the correct annotation is `NonNullable<ViteBuilder['onModuleGraphChange']>`. The resulting type is identical at runtime, but the current form misrepresents the type parameter's semantics.",
+      "index": 3
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 97,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `setInterval` callback is `async` but `setInterval` does not await the returned promise. If `server.waitForRequestsIdle()` rejects\u2014for example, because `bail()` closes the server while the interval is mid-flight\u2014the rejection becomes an unhandled promise rejection that can crash the Node.js process depending on the runtime version. Wrap the body in a `try/catch` or chain a `.catch()` to suppress or log the error gracefully:\n```ts\nwaitForModuleGraph = setInterval(() => {\n  void (async () => {\n    try {\n      if (server.moduleGraph.fileToModulesMap.size > 0) {\n        clearInterval(waitForModuleGraph);\n        waitForModuleGraph = undefined;\n        await server.waitForRequestsIdle();\n        watcherChangeHandler?.();\n      }\n    } catch {\n      // server was closed before idle; no-op\n    }\n  })();\n}, 1000);\n```",
+      "index": 4
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 97,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "The `waitForModuleGraph` polling interval is started unconditionally in `start()` regardless of whether any listeners have been registered via `onModuleGraphChange`. When there are no listeners, the interval fires every second, calls `server.waitForRequestsIdle()`, and then calls `watcherChangeHandler?.()`, which in turn calls `notifyListeners` on an empty set\u2014wasted work on every development server start. Consider only starting the interval when `listeners.size > 0`, or starting it lazily from within `onModuleGraphChange` when the first subscriber registers.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `describe('buildModuleGraph')` and `describe('onModuleGraphChange')` suites live in the same `index.test.ts` file, but they test two distinct units: an internal conversion utility (`build-module-graph.ts`) and the public subscription API (`index.ts`). Splitting them into `./utils/build-module-graph.test.ts` (for the conversion logic) and `./index.test.ts` (for subscription/event behavior) would also resolve the broken import issue noted above, since `buildModuleGraph` could then be imported directly from its own module file without needing a public re-export.",
+      "index": 6
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The module-level `server` variable is never reset to `undefined` inside `bail()`. After `bail()` closes the server, `server` continues to hold a stale reference to the closed `ViteDevServer`. If `bail()` is called again before the next `start()` (e.g., a double-bail scenario), `server?.watcher.off(...)` and `server?.close()` will operate on an already-closed server. While Vite's `close()` is idempotent in practice, making the stale-reference risk explicit\u2014either by setting `server = undefined` in `bail()` or by using a typed `let server: ViteDevServer | undefined`\u2014would make the lifetime contract clearer and catch accidental uses of the closed server via TypeScript.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.7474605,
+  "duration_seconds": 502.433913230896
+}

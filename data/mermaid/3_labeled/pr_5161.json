@@ -1,0 +1,278 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 5161,
+  "title": "Feature/5114 add parallel commit config",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nAdds support for parallel commits in git graphs.\r\n\r\nResolves #5114 \r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nThe logic consists on searching for the closest parent commit of the current commit being positioned and placing it right after said parent, instead of the default that places after the latest commit.\r\n\r\n`parallelCommits: false`\r\n![image](https://github.com/mermaid-js/mermaid/assets/31048764/2716fae7-36f8-4457-aa3f-20e4ce9849c5)\r\n\r\n`parallelCommits: true`\r\n![image](https://github.com/mermaid-js/mermaid/assets/31048764/decdb701-4358-4281-9703-ebec2d0871f7)\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n- [ ] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/docs/community/development.md#3-update-documentation) is used for all new features.\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "mathbraga",
+  "merged_at": "2024-01-23T05:01:43Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "05e17c0bf08d99810321b07710d62adff1be3673",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "1612d3fabd5ae991dcb656649caca6c8382ff81b",
+    "1bad612c516c9674f47356f443a84cab0662b7d4"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85WiFqQ",
+          "author": "nirname",
+          "body": "There is already `gitGraphConfig` defined\r\n```suggestion\r\n  const isParallelCommits = gitGraphConfig.parallelCommits;\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 114,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-14T17:49:07Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Redundancy Handling",
+          "label_confidence": "high",
+          "label_reasoning": "The comment points out that gitGraphConfig is already defined and should be reused instead of redefining/re-accessing it, which is a redundant operation."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Provides a concrete code suggestion to use already-defined gitGraphConfig variable instead of redefining it."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85WiF2P",
+          "author": "nirname",
+          "body": "It seems there is only one argument in `findClosesParent` function, so the second is extra\r\n```suggestion\r\n      const closestParent = findClosestParent(commit.parents);\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 119,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-14T17:54:02Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "high",
+          "label_reasoning": "The comment identifies an extra argument being passed to findClosestParent that only accepts one argument \u2014 incorrect usage of the function's interface."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Points out an extra argument being passed and provides a specific code suggestion to fix it."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85WiGdF",
+          "author": "nirname",
+          "body": "There is no check for the case when `closesParent` is blank string. I am not sure, maybe there is always an empty element in `commitPos`, but it seems strange a little bit. Initial commit should not have a parent, for instance, if I am not mistaken",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 120,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-14T18:11:07Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The comment flags a missing edge case check: when closestParent is a blank string (e.g., for the initial commit with no parent), there is no guard, which could lead to incorrect behavior."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85WrMp3",
+          "author": "mathbraga",
+          "body": "`closestParent` will never be blank here I believe. The `commit.parents.length` in the `if` condition guarantees that the commit has atleast 1 parent, so the `findClosestParent` inside always returns a parent. Initial commit for example won't satisfy this `if` condition since its `commit.parents.length` will be 0.\r\n\r\nI could pass the `closestParent` definition to outside the `if`, just above it, and then change the `if` condition to something like this:\r\n```javascript\r\nif (isParallelCommits && closestParent) {...}\r\n```\r\n\r\nBut tell me if you still wish to change this.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 120,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-16T22:48:00Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a missing edge case check for when closestParent is a blank string, implying a guard/check should be added."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85WiGgg",
+          "author": "nirname",
+          "body": "Maybe it is better to return undefined when parent is missing",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 76,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-14T18:12:33Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "medium",
+          "label_reasoning": "Suggesting returning undefined when a parent is missing addresses an edge case handling issue in the function's return logic."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85WrOCh",
+          "author": "mathbraga",
+          "body": "The way I used `findClosestParent` in the code guarantees the function returns a parent as I mentioned above. But I do agree to return `undefined` for correctness, and the function could be used in other contexts aswell.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 76,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-16T22:53:23Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests returning undefined when a parent is missing, implying a concrete code change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85W7DCl",
+          "author": "sidharthv96",
+          "body": "If we move the magic numbers 40 and 10 to constants (and replace other usages), that would be nice.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 126,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-19T04:16:00Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "Magic numbers (40 and 10) embedded in code reduce readability and maintainability; extracting them to named constants would clarify their intent."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85XEG73",
+          "author": "mathbraga",
+          "body": "Noticed the `pos + 10` was very repetitive throughout the code so I also made that into a const. Some of the 10 values seemed to have a different context so I left them untouched.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 126,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-21T00:18:56Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests extracting magic numbers 40 and 10 into named constants and replacing all usages."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85XItGN",
+          "author": "sidharthv96",
+          "body": "Shouldn't posWithOffset be set after the if block, as pos is updated inside it?",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 134,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-22T13:57:13Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The comment identifies a sequencing bug where posWithOffset is set before pos is updated inside the if block, meaning it would use a stale value of pos."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85XLG1E",
+          "author": "mathbraga",
+          "body": "Yes it should, it even breaks the tests I added, not sure how I missed this. Good catch.",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 134,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-22T23:05:14Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential logic bug where posWithOffset is set before pos is updated inside an if block, implying the assignment should be moved."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85XIt3F",
+          "author": "sidharthv96",
+          "body": "Oh, and please swap the blocks of this `if` to avoid the negation. \r\n",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+          "line_number": 133,
+          "start_line": null,
+          "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+          "created_at": "2024-01-22T13:59:16Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Redundancy Handling",
+          "label_confidence": "medium",
+          "label_reasoning": "Swapping the if/else blocks to avoid negation improves readability by removing unnecessary logical negation, reducing cognitive load."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests swapping the if/else blocks to eliminate a negation condition, a concrete style/readability change."
+    }
+  ],
+  "review_thread_count": 8,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85XIswc",
+            "author": "sidharthv96",
+            "body": "\u2764\ufe0f ",
+            "file_path": "packages/mermaid/src/diagrams/git/gitGraphRenderer.js",
+            "line_number": 376,
+            "start_line": 333,
+            "commit_sha": "1bad612c516c9674f47356f443a84cab0662b7d4",
+            "created_at": "2024-01-22T13:56:44Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_too_short"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 8,
+    "stage1_kept": 7,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 1,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

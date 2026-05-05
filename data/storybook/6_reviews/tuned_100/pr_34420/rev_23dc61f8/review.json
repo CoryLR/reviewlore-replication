@@ -1,0 +1,52 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 106,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `while` loop in `ensureWatchers` creates an infinite async retry loop when git is unavailable. When `setupWatchers` fails (e.g., `getRepoRoot()` throws because the project is not a git repository), the `catch` block on line 131 swallows the error and the `finally` block clears `watcherSetupInFlight`. Control returns here and the loop condition is still true \u2014 `gitStateCallbacks.size > 0` AND `Object.keys(this.watchers).length === 0` \u2014 so it immediately allocates a new `setupWatchers` promise and tries again indefinitely.\n\nBecause `getRepoRoot()` does not cache failures, every iteration spawns a fresh git subprocess that fails. This is a tight resource-wasting loop that runs until `dispose()` is called. For a long-running Storybook server opened in a non-git directory, this could cause measurable CPU and process overhead for the entire session.\n\nA simple fix is to only attempt setup once rather than loop:\n```typescript\nprivate async ensureWatchers(): Promise<void> {\n  if (this.watcherSetupInFlight) {\n    await this.watcherSetupInFlight;\n    return;\n  }\n  if (this.gitStateCallbacks.size > 0 && Object.keys(this.watchers).length === 0) {\n    this.watcherSetupInFlight = this.setupWatchers(this.watcherSetupGeneration);\n    await this.watcherSetupInFlight;\n  }\n}\n```\nSince watching is already documented as opportunistic (line 132), there's no need to retry \u2014 if the initial setup fails, module-graph-triggered scans remain the fallback.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 131,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The bare `catch` block silently discards all errors from `setupWatchers` \u2014 including unexpected ones like bugs in `configureBranchWatcher`. While the comment correctly describes the intent, a `logger.debug` (or `logger.warn`) call here would surface real failures during development. For example:\n```typescript\n} catch (error) {\n  logger.debug(`Git state watcher setup failed, falling back to module-graph scanning: ${String(error)}`);\n}\n```\nNote: `logger` is already imported at the top of `ChangeDetectionService.ts` but not in `GitDiffProvider.ts`. If added here, it would need an import.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 127,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "If `packed-refs` doesn't exist at provider startup (common in newly created git repos), `watchFile` silently returns `undefined` and no watcher is registered. Git later creates this file when it first packs refs (e.g., after `git gc` or `git fetch` on some hosts). Since there is no retry or recovery mechanism for this specific file, changes that only update `packed-refs` \u2014 such as certain fast-forward merges or tag operations \u2014 will not trigger a rescan for the lifetime of the session.\n\nThis may be acceptable given the opportunistic design, but worth an inline comment noting the limitation, or a subsequent `onGitStateChange` subscription could invoke `ensureWatchers` to re-attempt setup (though the while-loop issue above would need to be fixed first).",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.test.ts",
+      "line_number": 107,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`void callback` is an unconventional way to suppress the unused-parameter warning. The idiomatic TypeScript convention is to prefix the parameter name with an underscore: `(_callback) => { ... }`. The `void` operator is typically reserved for intentionally discarding a promise, not for marking unused variables.",
+      "index": 3
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The test 'logs unavailability when the builder does not expose module graph changes' (which tests the path where `start()` returns early because the builder doesn't expose module graph events) creates a `MockGitDiffProvider` but never asserts that `onGitStateChangeMock` was **not** called. After the PR, `start()` subscribes to git state changes with `this.gitDiffProvider.onGitStateChange(...)` in the same code path. If the early-return guard were accidentally removed or ordered incorrectly, the git state subscription could happen even for disabled builders. Adding `expect(gitDiffProvider.onGitStateChangeMock).not.toHaveBeenCalled()` to this test would explicitly document and enforce that the git watcher is skipped when the builder offers no module graph.",
+      "index": 4
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `MockGitDiffProvider` class is a solid improvement over the previous plain-object mocks, as it is type-safe and ensures the mock is structurally compatible with the real `GitDiffProvider`. However, the `getRepoRootMock` field is set up with a default implementation but is never directly asserted in any test (the tests only assert on `getChangedFilesMock` and `onGitStateChangeMock`). If the service no longer calls `getRepoRoot()` directly (it's now called internally by `getChangedFiles()`), the mock method could be removed from `MockGitDiffProvider` to reduce confusion about what the service actually depends on. Alternatively, if it's retained for completeness, a brief comment explaining why it exists would clarify intent.",
+      "index": 5
+    }
+  ],
+  "cost_usd": 0.7751600000000001,
+  "duration_seconds": 544.6632270812988
+}

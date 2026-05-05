@@ -1,0 +1,96 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 3,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`import { join } from 'node:path'` is inconsistent with the project's use of `pathe` in adjacent files (e.g., `ChangeDetectionService.ts` imports `join` from `pathe`). `pathe` always produces POSIX-style paths, which is important here because `getRepoRoot()` gets its root path from `git rev-parse --show-toplevel`, which returns forward-slash paths even on Windows. Mixing path libraries risks subtle separator mismatches in path comparisons downstream. Use `pathe` here to stay consistent.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 148,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`void this.configureBranchWatcher(gitDir)` discards the returned Promise without chaining `.catch()`. `configureBranchWatcher` is async and propagates any non-ENOENT error thrown by `readHeadRef` (e.g. a permission error reading `.git/HEAD`). Calling it with `void` from inside the HEAD watcher's `onChange` callback will produce an unhandled promise rejection in that case, potentially crashing the process. Add a `.catch()` that logs a warning and optionally tears down the watchers, similar to how `reconfigureBranchWatcher` is handled in the production code:\n```typescript\nvoid this.configureBranchWatcher(gitDir).catch(() => {\n  // Same trade-off as watcher errors: log and fail gracefully.\n});\n```",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 215,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`getGitDir()` unconditionally returns `join(await this.getRepoRoot(), '.git')`, but in a git worktree the `.git` entry is a **file** (not a directory) containing a pointer like `gitdir: ../.git/worktrees/foo`. Calling `watchFile('head', join(gitDir, 'HEAD'), ...)` with this file-path `.git` will try to watch e.g. `/repo/.git/HEAD`, which doesn't exist in the worktree \u2014 `watchFile` silently swallows the ENOENT and returns `undefined`, leaving no HEAD watcher at all. Monorepos that use `git worktree` (a common pattern) will silently get no git-change detection. Add a `stat` call and a pointer-file parse step (or use `git rev-parse --git-dir` instead of `--show-toplevel`) to resolve the actual git directory before setting up watchers.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 200,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "In `configureBranchWatcher`, when `watchFile('branch', join(gitDir, branchRef), ...)` returns `undefined` due to an ENOENT (the branch-specific ref file doesn't exist yet), the branch watcher is simply not set up with no fallback. This can happen with packed refs or immediately after a fresh branch checkout where git hasn't yet written the loose ref file. As a result, new commits on that branch will not trigger a rescan until the next module-graph event fires. Consider falling back to watching the parent directory (e.g. `join(gitDir, dirname(branchRef))`) when the specific ref file is absent, so directory-level `refs/heads/` changes are still detected.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.test.ts",
+      "line_number": 106,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`void callback` is a non-idiomatic way to suppress the \"declared but unused variable\" warning for the `callback` parameter in the default `onGitStateChangeMock` implementation. Prefer using a leading underscore to signal an intentionally ignored parameter:\n```typescript\nvi.fn<(callback: () => void) => () => void>((_callback) => {\n  return vi.fn();\n})\n```\nThis is the project's established convention for unused parameters.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.test.ts",
+      "line_number": 1,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Lines 1 and 3 both import types from `node:fs` (`FSWatcher` and `watch`). These can be merged into a single import statement:\n```typescript\nimport type { FSWatcher, watch } from 'node:fs';\nimport type { readFile } from 'node:fs/promises';\n```\nThis matches the project's convention of grouping imports from the same module.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.test.ts",
+      "line_number": 94,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `headReads.shift() ?? headReads[0] ?? 'ref: refs/heads/main\\n'` fallback chain is subtle: after `shift()` drains the last element, `headReads[0]` is `undefined` (empty array), so the final literal is the real fallback. This means if `readHeadRef` is called more times than `headReads` has entries, subsequent calls silently return the hardcoded default rather than the last-pushed value. A comment explaining this fallback intent (and why it differs from `headReads.at(-1)`) would help future test authors avoid surprises.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.test.ts",
+      "line_number": 105,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The diff types `onGitStateChangeMock` as `vi.fn<(callback: () => void) => () => void>` \u2014 returning a cleanup function \u2014 but the `MockGitDiffProvider.onGitStateChange` override must also match that return type. Look carefully: the generic on `vi.fn<...>` here signals the mock's return type is `() => void`, but if `override onGitStateChange` is typed to return `() => void` and the underlying real `GitDiffProvider.onGitStateChange` returns `() => void` as well, then `ChangeDetectionService` stores the cleanup in `unsubscribeGitState` and calls it on `dispose()`. The new test (`expect(unsubscribeGitState).toHaveBeenCalledTimes(1)`) validates this. This design is correct \u2014 just confirm the TypeScript return type annotation on `override onGitStateChange(callback: () => void): () => void` is present and matches the base class, otherwise the mock will silently drift from the interface.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `onGitStateChange` API in the diff correctly returns a cleanup function (`() => void`), and `ChangeDetectionService` stores it as `unsubscribeGitState` and calls it in `dispose()`. This is the right design \u2014 it ensures `fs.watch` watchers are torn down when the service shuts down and prevents stale callbacks from leaking. Make sure this contract is enforced by the TypeScript types on both the base class method signature and every override/mock. If the return type is ever relaxed to `void`, `ChangeDetectionService.dispose()` will silently stop cleaning up the git watchers, leaking OS-level file descriptors for the lifetime of the process.",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `ensureWatchers` method uses two separate guards \u2014 `watcherSetupInFlight` and `Object.keys(this.watchers).length > 0` \u2014 to avoid redundant watcher setup. The interaction between these two guards is non-obvious: the in-flight guard handles concurrent calls during initial setup, while the keys check handles subsequent calls after setup completes. A short inline comment explaining why both are needed (and what happens between setup completing and the promise resolving) would help future maintainers reason about correctness without needing to trace all call paths.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `MockGitDiffProvider extends GitDiffProvider` pattern is a significant improvement over plain object mocks \u2014 it enforces the real class interface and will catch type-level regressions automatically. However, the `super('/repo')` constructor call initialises the base class with real `cwd` and the actual `node:fs`/`node:fs/promises` functions as the `fileSystem`. This is fine as long as all three methods are overridden, but if a new method is added to `GitDiffProvider` in the future and a test calls it on a `MockGitDiffProvider` without overriding it, the base class will attempt real file-system or git operations. Consider also mocking the `fileSystem` argument passed to `super` (or passing stub FS functions) so the base class is truly isolated even if new un-overridden methods are added.",
+      "index": 10
+    },
+    {
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`setupWatchers` calls `this.getGitDir()` which internally calls `this.getRepoRoot()`, which in turn spawns a `git rev-parse --show-toplevel` subprocess. The `getRepoRoot()` result is cached on first call, so repeated watcher re-configurations do not incur multiple git invocations. However, `configureBranchWatcher` is called both at initial setup and every time HEAD changes (triggered by the HEAD watcher). Each call to `configureBranchWatcher` calls `readHeadRef` which does a filesystem read. This is fine, but worth confirming that rapid HEAD change events (e.g. an interactive rebase) are not queued up and serialised in a way that causes unbounded accumulation. The current design runs each `configureBranchWatcher` call serially (they're awaited), so a burst of HEAD events will cause serial re-reads. Since `gitStateCallbacks.size === 0` guards handle abrupt teardown, this is acceptable \u2014 just worth documenting.",
+      "index": 11
+    }
+  ],
+  "cost_usd": 0.9948115999999998,
+  "duration_seconds": 757.138995885849
+}

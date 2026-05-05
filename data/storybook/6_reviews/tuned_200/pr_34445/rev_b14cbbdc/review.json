@@ -1,0 +1,36 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/trace-changed.ts",
+      "line_number": 9,
+      "dimension": "Performance Issue",
+      "importance": "major",
+      "comment": "On Windows, `moduleGraph` keys are backslash-separated paths produced by the builder (e.g. `C:\\project\\src\\Button.tsx`), while `normalizedPath` uses forward slashes. As a result, `moduleGraph.get(normalizedPath)` will **always** miss on Windows \u2014 the direct O(1) fast-path effectively becomes dead code on the platform this PR targets. Every call to `findAffectedStoryFiles` will fall through to the O(n) linear scan on lines 14\u201318, iterating over the entire module graph and calling `normalizePath` for each entry.\n\nWith a large project (thousands of modules) and multiple changed files, this is repeated O(n\u00b7m) work. A more efficient approach is to build a normalized lookup map once before the BFS starts and pass it through:\n\n```typescript\nconst normalizedModuleGraph = new Map<string, Set<ModuleNode>>();\nfor (const [k, v] of moduleGraph) {\n  normalizedModuleGraph.set(normalizePath(k), v);\n}\n```\n\nThis makes the lookup O(1) unconditionally, and eliminates the need for both `getModuleNodesByNormalizedPath`'s fallback loop and the per-step `normalizePath(importer.file)` call inside the BFS traversal.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/trace-changed.ts",
+      "line_number": 59,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`normalizePath(importer.file)` is called once per node visited during BFS traversal. Since `ModuleNode.file` values originate from the builder and are not pre-normalized, on Windows each visited node pays a regex replace + posix normalize cost. For deeply connected graphs this accumulates. Pre-normalizing the module graph once (as suggested on line 9) would eliminate this repeated work.",
+      "index": 1
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "No test cases exercise the Windows code path that this PR introduces. All tests in `trace-changed.test.ts` use Unix-style paths exclusively (e.g. `/repo/src/Button.tsx`), so `moduleGraph.get(normalizedPath)` always finds a direct match and the fallback loop in `getModuleNodesByNormalizedPath` (lines 14\u201318) \u2014 the core of this Windows fix \u2014 is never reached. The per-BFS `normalizePath(importer.file)` path (line 59) is similarly untested with Windows-style values.\n\nAt minimum, add a test where `moduleGraph` keys and `ModuleNode.file` values use backslash separators (e.g. keys like `'C:\\\\repo\\\\src\\\\Button.tsx'` and `importer.file` values like `'C:\\\\repo\\\\src\\\\Button.stories.tsx'`) while `changedFile` and `storyIdsByFile` use the normalized forward-slash form. This directly exercises the new fallback logic and the per-importer normalization. Without such a test, a regression in `getModuleNodesByNormalizedPath`'s fallback would go undetected.",
+      "index": 2
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `changedFile` argument received by `findAffectedStoryFiles` is already normalized by its only call site in `buildStatuses()` (ChangeDetectionService.ts lines 247/250 wrap both sets of paths in `normalizePath` before passing them). The `normalizePath(changedFile)` on line 29 of `trace-changed.ts` is therefore redundant in practice. Since `findAffectedStoryFiles` is an exported function, the defensive normalization is a reasonable API contract choice \u2014 but a short comment (e.g. `// normalize defensively in case callers haven't pre-normalized`) would clarify the intent to future readers and prevent this line from appearing as dead code during refactors.",
+      "index": 3
+    }
+  ],
+  "cost_usd": 0.6314975999999999,
+  "duration_seconds": 284.3059651851654
+}

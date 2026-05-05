@@ -1,0 +1,200 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3957,
+  "title": "ENH: number field arithmetic in the GUI",
+  "body": "Adds functionality to the SpinBoxes in the GUI by which their values can be modified using simple mathematical expressions (Python syntax).\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [ ] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [x] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [x] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)",
+  "author": "lempelto",
+  "merged_at": "2026-02-01T13:55:44.527Z",
+  "base_ref": "master",
+  "merge_commit_sha": "2448a74ca3e6765c06f6d2e5c4d592c2015e14a9",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3042652430",
+          "author": "yuzie007",
+          "body": "Presently the arithmetic is valid only for magnitudes, not for elements of lattice vectors and angles.\n\nThe arithmetic feature can be generally applicable to any spinboxes that accept numbers.\nSo, it would be very best if we can put the parsing logic not for individual boxes but somewhere upstream. Please see my other comments for details.",
+          "file_path": "ase/gui/celleditor.py",
+          "line_number": 116,
+          "commit_sha": "75212729ccab800dcfb7bb862c76c21ef7a710bb",
+          "base_sha": "425030c87d3e14c3d3b4ce5ba15bbbe57101cc52",
+          "created_at": "2026-01-28T23:01:01.801Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The arithmetic parsing logic is only applied to magnitude fields, not to lattice vector elements and angles, meaning the code behavior does not match the intended general applicability."
+        },
+        {
+          "id": "3042844900",
+          "author": "lempelto",
+          "body": "Thank you very much for the comments, @yuzie007\n\nAt least in my testing, the feature does already work for all spinboxes including vectors and angles but only if you press Enter in the SpinBox (the `ui.SpinBox.parse_and_callback` wrapper does the evaluation). At first (in 3e795023829ebd045cd3e05ea5dfbb6cbac918e3), I did have the evaluation in the 'value' property but then the math was only resolved when the value was read and I specifically liked being able to always see the result by pressing Enter, even when Enter wasn't bound to another event. But I'm realizing now that we should be able to have the best of both worlds and add `self.parse_value()` to the 'value' getter and it'll work more robustly, so I will change that.",
+          "file_path": "ase/gui/celleditor.py",
+          "line_number": 116,
+          "commit_sha": "75212729ccab800dcfb7bb862c76c21ef7a710bb",
+          "base_sha": "425030c87d3e14c3d3b4ce5ba15bbbe57101cc52",
+          "created_at": "2026-01-29T01:01:30.803Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3043453601",
+          "author": "yuzie007",
+          "body": "Thank you @lempelto for your quick response!\n\nI also realized that your original implementation worked as well when I press Enter for in the Spinbox. The issue I wrote existed the \"Apply Vectors\" and the \"Apply Angles\" buttons apart from \"Apply Magnitudes\".\n\nThank you so much for your revision. May I ask you to check one more thing here? As far as I tested on my environment (Apple Silicon MacOS), the revision of `value` is sufficient, and `parse_and_callback` may be not necessary, because `value` will be called from the original `callback` in e.g. `apply_magnitudes` in `celleditor.py`.\n\nThe other thing is about the potential security risk of `eval`; please have a look on\n- https://leapcell.io/blog/python-eval-how-it-works-and-why-its-risky, particularly \"Security Vulnerabilities\"\n- https://stackoverflow.com/a/34904657\n\nAfter a survey, I found ASE already has a nice and safe `eval_expression` in `ase.utils.parsemath`. With this, we probably do not need `parse_input_arithmetic` and can simply do\n```python\nfrom ase.utils.parsemath import eval_expression\n...\n    @property\n    def value(self):\n        return eval_expression(self.widget.get().replace(',', '.'))\n```\nThis allows us to give even `sqrt(2.0)`. Would you also think it's reasonable?",
+          "file_path": "ase/gui/celleditor.py",
+          "line_number": 116,
+          "commit_sha": "75212729ccab800dcfb7bb862c76c21ef7a710bb",
+          "base_sha": "425030c87d3e14c3d3b4ce5ba15bbbe57101cc52",
+          "created_at": "2026-01-29T07:57:30.159Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3043882760",
+          "author": "lempelto",
+          "body": "Hi. I just pushed some changes and I'll mention the rest here.\n\n> As far as I tested on my environment (Apple Silicon MacOS), the revision of `value` is sufficient, and `parse_and_callback` may be not necessary, because `value` will be called from the original `callback` in e.g. `apply_magnitudes` in `celleditor.py`\n\nThis is true, but the `parse_and_callback` will also work even when no callback has been set (e.g. the SpinBoxes in the 'Add atoms' dialog don't have callbacks). It's not strictly necessary but this way you can still press Enter to evaluate the entered expression, which I like. Thus I would prefer keeping the wrappers. It also neatly makes it so that we don't get `TypeError: 'NoneType' object is not callable` messages.\n\n> The other thing is about the potential security risk of `eval`\n\nI was aware of this but figured that anyone using ASE probably has access to a Python interpreter to run their malicious code in. A simple check was in place to make sure no text (e.g. functions with names) would be evaluated.\n\nRegardless, the `ase.utils.parsemath.eval_expression` function is certainly the better option and I've now changed the code to use it instead. I probably would have used it to begin with had I realized it existed :grin:",
+          "file_path": "ase/gui/celleditor.py",
+          "line_number": 116,
+          "commit_sha": "75212729ccab800dcfb7bb862c76c21ef7a710bb",
+          "base_sha": "425030c87d3e14c3d3b4ce5ba15bbbe57101cc52",
+          "created_at": "2026-01-29T10:03:34.202Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3046492309",
+          "author": "yuzie007",
+          "body": "Thank you @lempelto for the additional info and revision!\nI now fully agree on the present version.\n\nYou're right, there are also `Spinbox`es without callback, like those in \"Add Atoms\".\nFor such `Spinbox`es, actually in the present master, even hitting Enter does not work:\n```\nException in Tkinter callback\nTraceback (most recent call last):\n  File \"/Users/ikeda/miniforge3/envs/myenv/lib/python3.11/tkinter/__init__.py\", line 1967, in __call__\n    return self.func(*args)\n           ^^^^^^^^^^^^^^^^\n  File \"/Users/ikeda/codes/ase/ase/gui/ui.py\", line 235, in <lambda>\n    bind_enter(self.widget, lambda event: self.callback())\n                                          ^^^^^^^^^^^^^^^\nTypeError: 'NoneType' object is not callable\n```\nThe present MR also addresses this with `parse_and_callback`.",
+          "file_path": "ase/gui/celleditor.py",
+          "line_number": 116,
+          "commit_sha": "75212729ccab800dcfb7bb862c76c21ef7a710bb",
+          "base_sha": "425030c87d3e14c3d3b4ce5ba15bbbe57101cc52",
+          "created_at": "2026-01-30T05:51:10.204Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags that arithmetic is only valid for magnitudes and suggests moving parsing logic upstream to be applicable to all spinboxes."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3042652461",
+          "author": "yuzie007",
+          "body": "Rather than the above changes, we can probably just modify this part as\n```python\n    @property\n    def value(self):\n        x = self.widget.get().replace(',', '.')\n        x = ase.gui.utils.parse_input_arithmetic(x)\n        if '.' in str(x):\n            return float(x)\n        if x == 'None':\n            return None\n        return int(x)\n```\nThen, the arithmetic will hopefully available for all spinboxes, when their `value`s are accessed.",
+          "file_path": "ase/gui/ui.py",
+          "line_number": 264,
+          "commit_sha": "f20538c22a2d48a0aa9ba1b4a71b975d88efc3be",
+          "base_sha": "425030c87d3e14c3d3b4ce5ba15bbbe57101cc52",
+          "created_at": "2026-01-28T23:01:02.361Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "high",
+          "label_reasoning": "The suggestion is to move the parsing logic upstream to the shared `value` property in `SpinBox` rather than duplicating or scattering it across individual box implementations, addressing a structural/code organization concern."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Proposes a specific code change to the `value` property in `ase/gui/ui.py` to make arithmetic available for all spinboxes."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3042652491",
+          "author": "yuzie007",
+          "body": "Thank you @lempelto for the MR!\nI like this arithmetic feature very much.\nThis will largely strengthen the GUI functionality.\n\nPresently the arithmetic feature is available only for magnitudes, but this feature can probably be enabled for all spinboxes.\nWith a quick test, I found, maybe we can just update the `value` property of `ase.gui.ui.SpinBox`.\nIf you agree, could you implement this?\n\nHaving the test is very nice.\nI believe we can merge this MR soon.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-01-28T23:01:02.824Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Duplication",
+          "label_confidence": "medium",
+          "label_reasoning": "The review comment suggests centralizing the arithmetic feature in the shared `SpinBox.value` property rather than having it applied selectively, pointing to a duplication/reuse concern across spinbox types."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests a specific implementation change: enabling arithmetic for all spinboxes by updating the `value` property of `SpinBox`."
+    }
+  ],
+  "review_thread_count": 5,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3046493784",
+            "author": "yuzie007",
+            "body": "For my own notes; we need to consider two cases:\n\n1. Hitting Enter in the `Spinbox`. Then the code should once parse the expression given in the box, and, if necessary, reflect the given change via `callback`. (This is done now with `parse_and_callback`).\n2. Clicking buttons like \"Apply Magnitudes\"  in the cell editor, which reflect given changes in (possibly) multiple `Spinbox`es simultaneously. In mamy cases, these buttons refer to the `value` attributes of the `Spinbox`es directly. So, the parsing is needed also at this timing.\n\nTo make these well explicit, it is nice to call `parse_value` both in `parse_and_callback` and in the `value` attribute, as exactly implemeneted in the present MR.\n\n@askhl: The present MR looks to me a very good enhancement. If no comments further, I would like to merge in a few days.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-01-30T05:52:35.927Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Personal notes clarifying design rationale and acknowledging the current implementation; no new code change is requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3049862809",
+            "author": "yuzie007",
+            "body": "Thank you @lempelto once again for the MR! I would like to merge now.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-01T13:55:40.036Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment and merge intent with no code change suggested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 5,
+    "stage1_kept": 5,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 2,
+    "stage3_cost_usd": 0.017676
+  }
+}

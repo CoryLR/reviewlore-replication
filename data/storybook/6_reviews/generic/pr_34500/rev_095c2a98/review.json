@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "MIGRATION.md",
+      "line_number": 529,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "\"In Storybook 9\" is inconsistent with the section heading \"From version 10.3.0 to 10.4.0\". A reader of the 10.3\u219210.4 migration chapter would be confused to find a statement that this requirement comes from Storybook 9. The sentence should either drop the version qualifier entirely (\"On-device addons must be listed under the `deviceAddons` key...\") or reference the correct version where this restriction is enforced.",
+      "index": 0
+    },
+    {
+      "file_path": "MIGRATION.md",
+      "line_number": 525,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The document currently jumps from \"10.3.0 to 10.4.0\" (this new section) directly to \"10.0.0 to 10.1.0\", with no sections for 10.1\u219210.2 or 10.2\u219210.3. If this PR is targeting the next unreleased version and the version number is speculative, the heading should reflect the actual release version. Prematurely labelling this as a 10.4.0 change may cause confusion if the target version changes before shipping.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 178,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test named \"handles the case where @storybook/react-native is in dependencies (not devDependencies)\" does not actually exercise a distinct code path. `JsPackageManager.getAllDependencies()` merges `dependencies`, `devDependencies`, and `peerDependencies` into a single flat map, so the fix behaves identically regardless of which section the package appears in. The test is effectively identical to other positive-case tests and creates false confidence that a specific scenario is verified. Consider either removing it, or if you want explicit coverage, add a test with no `@storybook/react-native` in the flat map at all (which is already covered by the first test) and document why both cases resolve to the same behavior.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 193,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "There is no test covering the case where `deviceAddons` is already populated in the config before the migration runs. `appendValueToArray` would append the migrated addons to whatever already exists in `deviceAddons`, which is the desired behavior, but it's worth verifying with a test that pre-existing `deviceAddons` entries are preserved and not duplicated. This edge case could arise when a user has already partially migrated manually.",
+      "index": 3
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 28,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The filter `getAddonName(addon).includes('ondevice')` is case-sensitive. All currently known first-party addons use lowercase, so this is low risk today. However, if a third-party package names its addon with mixed case (e.g. `@org/addon-OnDevice-something`), it will silently remain in `addons` and the extract failure will persist without any warning. A case-insensitive check (`.toLowerCase().includes('ondevice')`) would be more robust.",
+      "index": 4
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 37,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `prompt()` message is static and does not tell the user which specific addons were detected. While the `Fix` API intentionally defines `prompt` as `() => string` (no result argument), the message could at least be improved by describing the detection heuristic more precisely \u2014 for instance, noting that any package whose name contains `\"ondevice\"` will be moved. This helps users understand why a particular addon was flagged and whether the heuristic might produce false positives for their setup.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Several pre-existing test files in `code/lib/create-storybook/src/generators/REACT_NATIVE/` receive import path changes (adding `.ts` extensions) and unrelated formatting refactors (splitting single-line object arguments across multiple lines in `metroConfig.test.ts`). These changes are unrelated to the automigration feature being introduced and make the diff harder to review. They would be cleaner in a dedicated commit or PR to keep the history readable.",
+      "index": 6
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The placement of `rnOndeviceAddonsToDeviceAddons` immediately before `rnstorybookConfig` in the `allFixes` array is intentional according to the PR description, but there is no explanatory comment in `index.ts` documenting why the order matters. If `rnstorybookConfig` ever renames or relocates the React Native config directory, running the addon migration first (with the old `mainConfigPath`) could produce unexpected results. A brief inline comment explaining the dependency would help future maintainers avoid accidentally reordering these entries.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.6120417,
+  "duration_seconds": 330.93593287467957
+}

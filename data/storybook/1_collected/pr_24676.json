@@ -1,0 +1,193 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 24676,
+  "title": "Addons, core: Make `react` and Storybook packages `devDependencies` where possible",
+  "body": "Works on #24490 \r\n\r\n## ~TODO~\r\n- [ ] ~Document new `optimizeDeps` preset property~\r\n- [x] Reword \"no React\" error\r\n- [x] Test that an addon author can import from `manager-api` and still have correct types, even though `@storybook/types` and `@types/react` are not part of the package.\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/react/contribute/how-to-contribute\r\n\r\n-->\r\n\r\n\r\n## What I did\r\n\r\nThis PR is a retry of #23486 with many non-essential things ignored.\r\n\r\nThe main purpose of this PR is to minimize the amount of peer dependencies in addons and a few of the core packages, most notably removing `react` as a peer dependency.\r\n\r\nThe way the manager and the preview globalizes a fixed set of dependencies means that these packages don't strictly need the dependencies, as they will be referenced from the global window instead, which our builders ensures. Removing them from peer dependencies mean that users don't need to specify them either.\r\n\r\nHaving them as devDependencies will however make our (tsup) bundler default to bundle them in, which we don't want. Therefore this PR also introduces a new bundler configuration, `addon-bundle` that makes sure that the globalized packages are externalized (thus the imports are kept intact), so they can be replaced with the global reference when built.\r\nA handful of packages like `manager-api` are _not_ using `addon-bundle` but still need these packages externalized, so they've been added to their bundler configuration manually to ensure that happens.\r\n\r\n`addon-essentials` and `addon-docs` are largely left out of this PR, as tackling them in terms of `react` requires more work.\r\n\r\n<!-- Briefly describe what your PR does -->\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n- [ ] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [x] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\nIt's important to test this in the different package manager configuration, npm, yarn, yarn pnp and pnpm and with both builders.\r\n\r\nFor each configuration and builder:\r\n\r\n1. Create a new non-React sandbox outside of the monorepo (`npx sb@next sandbox`)\r\n2. Replace all versions with this PR's canary version.\r\n\r\n#### Testing `addon-essentials` _with_ docs\r\n\r\n3. Run `storybook` and `build-storybook` and see that it works\r\n\r\n#### Testing `addon-docs` directly\r\n\r\n1. Replace `addon-essentials` with `addon-docs` both in `main.ts` and `package.json`\r\n2. Run `storybook` and `build-storybook` and see that it works\r\n\r\n#### Testing `addon-essentials` with docs _disabled_\r\n\r\n1. Remove the `mdx` glob from `stories` in `main.ts`\r\n1. Replace `addon-docs` with `addon-essentails` both in `main.ts` and `package.json` again\r\n2. Remove `react` and `react-dom` from `package.json`. You will see an unmet peer deps from `addon-essentials`, that's okay.\r\n3. disable `docs` in `main.ts` with `{ name: '@storybook/addon-essential', options: { docs: false } }`\r\n4. Run `storybook` and `build-storybook` and see that it works, now without React\r\n\r\n#### Testing _without_ `addon-essentials` and `addon-docs`\r\n\r\n1. Remove `addon-docs` with `addon-essentails` both from `main.ts` and `package.json` again\r\n2. Run `storybook` and `build-storybook` and see that it works\r\n\r\n<!-- Please include the steps to test your changes here. For example:\r\n\r\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n10. Open Storybook in your browser\r\n11. Access X story\r\n\r\n-->\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n     - `bug`: Internal changes that fixes incorrect behavior.\r\n     - `maintenance`: User-facing maintenance tasks.\r\n     - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n     - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n     - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n     - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n     - `feature request`: Introducing a new feature.\r\n     - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n     - `other`: Changes that don't fit in the above categories.\r\n   \r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\nThis pull request has been released as version [`0.0.0-pr-24676-sha-214a6f84`](https://npmjs.com/package/@storybook/cli/v/0.0.0-pr-24676-sha-214a6f84). Install it by pinning all your Storybook dependencies to that version.\n<details>\n<summary>More information</summary>\n\n| | |\n| --- | --- |\n| **Published version** | [`0.0.0-pr-24676-sha-214a6f84`](https://npmjs.com/package/@storybook/cli/v/0.0.0-pr-24676-sha-214a6f84) |\n| **Triggered by** | @JReinhold |\n| **Repository** | [storybookjs/storybook](https://github.com/storybookjs/storybook) |\n| **Branch** | [`experiment-addon-peer-dep`](https://github.com/storybookjs/storybook/tree/experiment-addon-peer-dep) |\n| **Commit** | [`214a6f84`](https://github.com/storybookjs/storybook/commit/214a6f845fcb3af4e07839ff9288c71f5d6a0e02) |\n| **Datetime** | Wed Nov  8 11:20:01 UTC 2023 (`1699442401`) |\n| **Workflow run** | [6797494862](https://github.com/storybookjs/storybook/actions/runs/6797494862) |\n\nTo request a new release of this pull request, mention the `@storybookjs/core` team.\n\n_core team members can create a new canary release [here](https://github.com/storybookjs/storybook/actions/workflows/canary-release-pr.yml) or locally with `gh workflow run --repo storybookjs/storybook canary-release-pr.yml --field pr=24676`_\n</details>\n<!-- CANARY_RELEASE_SECTION -->\r\n",
+  "author": "JReinhold",
+  "merged_at": "2023-11-13T10:59:22Z",
+  "base_ref": "next",
+  "merge_commit_sha": "657f3896fabd421601df02108396c066af10b833",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "4278a433dfba5bb285a4fbd506b88a059f0e1639",
+    "94abc13417207ca6627355a1fcb4b810b81023a3"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc5SQn3v",
+          "author": "JReinhold",
+          "body": "manager and preview entries don't need types nor cjs outputs as they are always loaded in the manager or preview in the browser, never directly imported by the user.",
+          "file_path": "code/addons/controls/package.json",
+          "line_number": 36,
+          "start_line": 35,
+          "commit_sha": "94abc13417207ca6627355a1fcb4b810b81023a3",
+          "created_at": "2023-11-02T13:20:59Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc5SQoCk",
+          "author": "JReinhold",
+          "body": "these new fields are used by `addon-bundle.ts` to determine which entry points needs which packages externalized.\r\n`exportEntries` are assumed to be imported by users, so they won't have any externalization and they'll keep their `d.ts` files",
+          "file_path": "code/addons/controls/package.json",
+          "line_number": 79,
+          "start_line": 74,
+          "commit_sha": "94abc13417207ca6627355a1fcb4b810b81023a3",
+          "created_at": "2023-11-02T13:21:33Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc5SQowW",
+          "author": "JReinhold",
+          "body": "Moved from the Vite builder's default optimization, as that would break if `addon-essentials` was installed without `react`, which is a valid scenario now.",
+          "file_path": "code/addons/docs/src/preset.ts",
+          "line_number": 203,
+          "start_line": null,
+          "commit_sha": "94abc13417207ca6627355a1fcb4b810b81023a3",
+          "created_at": "2023-11-02T13:23:55Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc5SQpc2",
+          "author": "JReinhold",
+          "body": "@ndelangen I think we should move this to `framework.options.builder.optimizeDeps`, where other Vite-specific options are set too.",
+          "file_path": "code/addons/docs/src/preset.ts",
+          "line_number": 197,
+          "start_line": null,
+          "commit_sha": "94abc13417207ca6627355a1fcb4b810b81023a3",
+          "created_at": "2023-11-02T13:26:10Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc5SQ-cH",
+          "author": "ndelangen",
+          "body": "why? that just overly complicates things, no?",
+          "file_path": "code/addons/docs/src/preset.ts",
+          "line_number": 197,
+          "start_line": null,
+          "commit_sha": "94abc13417207ca6627355a1fcb4b810b81023a3",
+          "created_at": "2023-11-02T13:53:51Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc5STg7E",
+          "author": "JReinhold",
+          "body": "It just feels natural to locate this very Vite-specific option with the other Vite-specific options. From an API-design mindset I don't see why we would make it top-level, unless it was because we didn't intend this to be a public API.",
+          "file_path": "code/addons/docs/src/preset.ts",
+          "line_number": 197,
+          "start_line": null,
+          "commit_sha": "94abc13417207ca6627355a1fcb4b810b81023a3",
+          "created_at": "2023-11-02T22:26:37Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc5Sdpzn",
+          "author": "JReinhold",
+          "body": "We decided to keep this API undocumented, and so we can make it a bit less \"correct\", and it is now just a top-level `optimizeViteDeps` config property.",
+          "file_path": "code/addons/docs/src/preset.ts",
+          "line_number": 197,
+          "start_line": null,
+          "commit_sha": "94abc13417207ca6627355a1fcb4b810b81023a3",
+          "created_at": "2023-11-06T15:20:46Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc5Sdbut",
+          "author": "ndelangen",
+          "body": "Why is this removed again, didn't we add it for a good reason?\r\n\r\nFYI, @valentinpalkovic will need this in his work/spike project.",
+          "file_path": "code/lib/preview/src/globals/definitions.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "765dbb1218cf328356962aa4bff315acf3249461",
+          "created_at": "2023-11-06T14:42:29Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc5SddNP",
+          "author": "JReinhold",
+          "body": "We thought it would make sense to align manager and preview bundling, but when I looked into it, we don't ever import the definitions from preview, because we don't use them in `builder-vite` or `builder-manager`. They only need the keys, not the map from keys to exports",
+          "file_path": "code/lib/preview/src/globals/definitions.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "765dbb1218cf328356962aa4bff315acf3249461",
+          "created_at": "2023-11-06T14:46:52Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc5SizYG",
+          "author": "JReinhold",
+          "body": "@valentinpalkovic agrees that we can add this back in as part of his work if it will ever be needed.",
+          "file_path": "code/lib/preview/src/globals/definitions.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "765dbb1218cf328356962aa4bff315acf3249461",
+          "created_at": "2023-11-07T12:43:58Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc5SjjH2",
+          "author": "ndelangen",
+          "body": "Did you check if the `react-dom` dep is needed truly in these addons?\r\n\r\nIt's not a big deal at all having them as devDependencies of course, no harm to users.",
+          "file_path": "code/addons/a11y/package.json",
+          "line_number": 70,
+          "start_line": null,
+          "commit_sha": "94abc13417207ca6627355a1fcb4b810b81023a3",
+          "created_at": "2023-11-07T14:53:57Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc5Sjlvi",
+          "author": "JReinhold",
+          "body": "no, I added it as a todo to my cooldown period.\n\n> - [ ]  Remove `react-dom` from `package.json`s when not needed\n> - [ ]  Audit dependencies of frameworks+renderers, they might have a lot of unused `@storybook` dependencies we can remove",
+          "file_path": "code/addons/a11y/package.json",
+          "line_number": 70,
+          "start_line": null,
+          "commit_sha": "94abc13417207ca6627355a1fcb4b810b81023a3",
+          "created_at": "2023-11-07T15:00:38Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 6
+}

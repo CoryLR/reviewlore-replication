@@ -1,0 +1,226 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3968,
+  "title": "BUG: Fixed a crash when reading VASP output files",
+  "body": "Certain versions of VASP will write POTCAR hashes to the CONTCAR in place of element symbols, e.g. \"Na_pv/6a2f546d\" where ASE expects \"Na\". This caused ase.io.vasp.read_vasp_configuration to crash when it tried to treat the POTCAR hash as an element. This has been fixed with a few additional lines, and no existing code has been altered.\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [ ] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code) \\~\n- [ ] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html) \\~\n- [x] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [ ] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically) \\~",
+  "author": "pprussell",
+  "merged_at": "2026-04-09T07:06:48.694Z",
+  "base_ref": "master",
+  "merge_commit_sha": "7f410e390356053e937789436005225e5370b4fe",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3060099130",
+          "author": "stly",
+          "body": "Thank you for this contribution!\n\nDo you know which versions of VASP this issue relates to? If I read this thread correctly: https://www.vasp.at/forum/viewtopic.php?t=19113#p24554 printing of POTCAR hashes in the CONTCAR was stopped at one point?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-05T08:55:34.225Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment asks which versions of VASP are affected, implying the fix or its documentation should specify version scope. It also references a forum thread suggesting the behavior may have changed at some point, implying version-specific handling or documentation may be needed."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3179167528",
+          "author": "yuzie007",
+          "body": "If this is indeed related to the HDF5 integration (according to https://gitlab.com/ase/ase/-/merge_requests/3968#note_3061996804), this may be helpful for future developers to state.\n\n(`, so split on \"/\" and \"_\" and take the left hand side each time` is obvious from the code, so I would omit.)",
+          "file_path": "ase/io/vasp.py",
+          "line_number": 252,
+          "commit_sha": "840185e69b46b02c318d551f5d9df527a3f9f0fc",
+          "base_sha": "536df4049df122c312330272155240333fa1246d",
+          "created_at": "2026-03-21T07:22:58.641Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment suggests adding information about HDF5 integration to the code comment for future developers, and also recommends omitting an obvious part of the comment \u2014 both are concrete suggestions to modify the comment/documentation."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3179167529",
+          "author": "yuzie007",
+          "body": "```rst\n- Fix :func:`~ase.io.vasp.read_vasp_configuration` so that it can parse the VASP-POSCAR\n  format with POTCAR hashes in place of element symbols like ``Na_pv/6a2f546d``\n  (:mr:`3968`)\n```",
+          "file_path": "changelog.d/20260204_144750_peterrussell102_read_contcar_potcar_hash_fix.rst",
+          "line_number": 49,
+          "commit_sha": "b2b2c5b26dc71811a472eb0b82d155acbf028e45",
+          "base_sha": "536df4049df122c312330272155240333fa1246d",
+          "created_at": "2026-03-21T07:22:58.959Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment provides a suggested changelog entry, implying the current changelog entry should be replaced or updated with this more precise wording."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3179167536",
+          "author": "yuzie007",
+          "body": "Thank you @pprussell for the fix and @stly for your review!\nThe change looks reasonable also to me.\nWe just need to add a test. I would suggest `ase/test/fio/vasp/test_poscar.py` and\n```python\ndef test_read_atom_types_with_hashes() -> None:\n    \"\"\"Test if `read_vasp` can read atom types with POTCAR hashes.\"\"\"\n    atoms = read_vasp(io.StringIO(BUF_WITH_HASHES))\n    numbers_ref = [1]  # if one hydrogen atom\n    np.testing.assert_allclose(atoms.numbers, numbers_ref)\n```\nwith minimal realistic `BUF_WITH_HASHES`.\n\nApart from that, please also address a few my other minor suggestions.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-21T07:22:59.295Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment explicitly requests adding a test with a specific file location and sample code, and asks the author to address other minor suggestions \u2014 all concrete requested changes."
+    }
+  ],
+  "review_thread_count": 8,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3060770312",
+            "author": "pprussell",
+            "body": "Hi, as far as I understand it relates to version 6.4.2, but seemingly not to all instances of it - perhaps it depends on a compile time setting? I believe the change was reverted in 6.4.3 and later.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-05T12:38:47.178Z",
+            "is_outdated": false
+          },
+          {
+            "id": "3061996804",
+            "author": "stly",
+            "body": "Ok, that seems right. I think the compile time setting is support for HDF5.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-05T19:06:06.030Z",
+            "is_outdated": false
+          },
+          {
+            "id": "3094009520",
+            "author": "pprussell",
+            "body": "Apologies if this is a stupid question, but is there anything else that I need to do now?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-18T16:50:11.722Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3169812885",
+            "author": "stly",
+            "body": "@yuzie007 lgtm",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-18T09:55:35.682Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_too_short"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3195658874",
+            "author": "pprussell",
+            "body": "Thank you for the review and detailed suggestions @stly, @yuzie007, I hope they have been implemented to your satisfaction.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-26T18:29:51.519Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3234268168",
+            "author": "yuzie007",
+            "body": "Thank you @pprussell for the update! Let's merge it now :)",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-04-09T07:06:07.917Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment and approval to merge \u2014 no code change is suggested or implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 8,
+    "stage1_kept": 5,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 2,
+    "stage1_filtered_too_short": 1,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1,
+    "stage3_cost_usd": 0.01808375
+  }
+}

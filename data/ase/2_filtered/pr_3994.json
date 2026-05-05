@@ -1,0 +1,258 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3994,
+  "title": "Extend `get_rdf` for multiple images to compute their average RDF",
+  "body": "This MR suggests to extend `ase.geometry.rdf.get_rdf` so that it can handle multiple `Atoms` images and compute the average RDF over them.\n\nThis complements !3993 for smooth transition from `ase.geometry.analysis.Analysis.get_rdf` to `ase.geometry.rdf.get_rdf`.\n\n@askhl @drFaustroll for your notice.\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [x] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [x] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [x] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [~] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "yuzie007",
+  "merged_at": "2026-03-24T19:29:57.002Z",
+  "base_ref": "master",
+  "merge_commit_sha": "dfe8de72bc4be8c2989c1a947f9eef0896e842e9",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3145802240",
+          "author": "askhl",
+          "body": "We sometimes use `_` when we unpack a tuple like `a, b, _ = thing()`.  It indicates that we are not going to use the variable `_`.  However here, `_` is actually the main character so we should name it something nice, e.g., `atoms`.",
+          "file_path": "ase/geometry/rdf.py",
+          "line_number": 85,
+          "commit_sha": "581009deff6228c04ab0c72ae51e244a77212e59",
+          "base_sha": "7985947b7a4b953cfdd2708e3a5037c686032211",
+          "created_at": "2026-03-10T11:11:23.223Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3146262919",
+          "author": "yuzie007",
+          "body": "My mistake always... Thank you so much for pointing this out, and I fixed in the revised commit.",
+          "file_path": "ase/geometry/rdf.py",
+          "line_number": 85,
+          "commit_sha": "581009deff6228c04ab0c72ae51e244a77212e59",
+          "base_sha": "7985947b7a4b953cfdd2708e3a5037c686032211",
+          "created_at": "2026-03-10T13:28:10.423Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests a specific rename of the variable `_` to something meaningful like `atoms`."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3145802288",
+          "author": "askhl",
+          "body": "If there are multiple images, *and* we are returning dists, then the dists come only from the last image.  What behaviour would we want?\n\n(Generally returning a variable number of things is very bad function design, so I would entirely deprecate the existing method and make a new one that has a cleaner API.  But that's not for this MR...)\n\nIs it always better to average the rdfs rather than calculating multiple rdfs?  I think it is not all that useful (it's easy for the caller to do the averaging anyway) but maybe we are trying to make the function more compatible with the pervious one and then we'll need to do something like that.",
+          "file_path": "ase/geometry/rdf.py",
+          "line_number": 102,
+          "commit_sha": "67fba2d2edd78690da9d8d0fa75969eac5117739",
+          "base_sha": "45240a970e4f528709348cbe9a148acbbd59f284",
+          "created_at": "2026-03-10T11:11:24.072Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3146262950",
+          "author": "yuzie007",
+          "body": "> If there are multiple images, _and_ we are returning dists, then the dists come only from the last image. What behaviour would we want?\n\nActually, `rr` is determined solely from `rmax` and `nbins` independent of images ([this line](https://gitlab.com/ase/ase/-/blob/3.27.0/ase/geometry/rdf.py?ref_type=tags#L127)).\nThis can be clearer if we make `rr` out of `_get_rdf_per_frame`, so, in the revised commit, I suggest a possible refactoring.\n\n> (Generally returning a variable number of things is very bad function design, so I would entirely deprecate the existing method and make a new one that has a cleaner API. But that's not for this MR...)\n\nI fully agree. Such a function design makes the annotation hard and actually unnecessary as we can discard unused variables on the user's side by e.g. `rdf = get_rdf(...)[0]`.\nLater I will make another MR to deprecate the `no_dists` option.\n\n> Is it always better to average the rdfs rather than calculating multiple rdfs? I think it is not all that useful (it's easy for the caller to do the averaging anyway) but maybe we are trying to make the function more compatible with the pervious one and then we'll need to do something like that.\n\nI partly agree, and actually `ase.geometry.analysis.Analysis.get_rdf` returns the RDF for each image, without averaging.\n\nThe reasons I suggest the averaging are (1) this may be a typical use case to compute time-averaged RDFs from MD trajectories and (2) getting the individual RDF is also as easy as averaging on the user's side e.g. as:\n```python\nrdfs = [get_rdf(atoms, ...) for atoms in images]\n```\nIn other words, I thought the reason why users what to give a list of atoms to `get_rdf` may be something more than getting individual RDFs.\n\nI am open for discussion, particularly about the last point :)",
+          "file_path": "ase/geometry/rdf.py",
+          "line_number": 102,
+          "commit_sha": "67fba2d2edd78690da9d8d0fa75969eac5117739",
+          "base_sha": "45240a970e4f528709348cbe9a148acbbd59f284",
+          "created_at": "2026-03-10T13:28:11.000Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a bug/design issue where `dists` from only the last image is returned when multiple images are provided, and raises questions about the intended behavior implying code changes are needed."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3145802303",
+          "author": "askhl",
+          "body": "if this was to better match the older function's interface we might want to mention that intent",
+          "file_path": "changelog.d/20260222_104329_yuji.ikeda.ac.jp_get_rdf_with_multiple_images.rst",
+          "line_number": 44,
+          "commit_sha": "67fba2d2edd78690da9d8d0fa75969eac5117739",
+          "base_sha": "45240a970e4f528709348cbe9a148acbbd59f284",
+          "created_at": "2026-03-10T11:11:24.468Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3146262964",
+          "author": "yuzie007",
+          "body": "`ase.geometry.analysis.Analysis.get_rdf` computes the RDF for each image, without averaging, so the suggestion in the present MR for `ase.geometry.rdf.get_rdf` is not just mimic a similar behavior to the former.\n\nAs I commented above, the behavior of `ase.geometry.analysis.Analysis.get_rdf` can be easily mimicked on the user's side with a for loop or a list comprehension, so I am not sure if we really need it inside the function.",
+          "file_path": "changelog.d/20260222_104329_yuji.ikeda.ac.jp_get_rdf_with_multiple_images.rst",
+          "line_number": 44,
+          "commit_sha": "67fba2d2edd78690da9d8d0fa75969eac5117739",
+          "base_sha": "45240a970e4f528709348cbe9a148acbbd59f284",
+          "created_at": "2026-03-10T13:28:11.312Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding a comment/clarification to the changelog entry to mention the intent of matching the older function's interface."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3186681709",
+          "author": "askhl",
+          "body": "I realize that this has the %3.28.0 milestone, so it slipped through without actually getting released.  Sorry about that.\n\nThe reason for this is that I look at issues, not merge requests.  Either I can try to also look at merge requests, but actually gitlab considers a milestone complete (\"100%\") when all the issues are closed.  So I think issues (or work items) are really the intended way to go.\n\nWould it be okay that we use issues (work items) consistently for this in the future?  I.e. any merge requests with a milestone must also depend on an issue with that milestone.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-24T12:29:27.785Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests a process/workflow change: that merge requests with milestones must depend on an issue with that milestone going forward."
+    }
+  ],
+  "review_thread_count": 9,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3145802340",
+            "author": "askhl",
+            "body": "Thanks!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-10T11:11:25.133Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_too_short"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3146262992",
+            "author": "yuzie007",
+            "body": "I also found @askhl's comment in Element:\n\n> I think the get_rdf works on images because it reuses a neighbour list, meaning that the computation is faster when the atoms don't move a lot\nIf the replacement implementation cannot perform this optimization then the main use case for taking images disappears, except we could indeed keep it in order to make the change less of a hassle\n\nIt is possible that each image has different numbers of atoms or different orders of chemical symbols, so I am not sure if we can always reuse `NeighborList` for images in `get_rdf`.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-10T13:28:11.609Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3146263004",
+            "author": "yuzie007",
+            "body": "Thank you so much @askhl for your review! I have revised some parts following the suggestions, while leaving other parts for further discussion.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-10T13:28:11.879Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3186721400",
+            "author": "yuzie007",
+            "body": "> Would it be okay that we use issues (work items) consistently for this in the future? I.e. any merge requests with a milestone must also depend on an issue with that milestone.\n\nOK, from next time I try to make an issue to demonstrate the problem and then MR for the solution/suggestion :) Thank you so much @askhl for letting me know the milestone visibility difference between issues and MRs!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-24T12:40:17.861Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3188304608",
+            "author": "askhl",
+            "body": "Good points.  I think we should one day consider writing a new get_rdf() function due to the general design issues, also allowing neighbour list reuse for efficiency (this requires some more planning).  Meanwhile I think this is quite fine since it solves the immediate problems. So I will go ahead and merge.\n\nThanks a lot @yuzie007 both for the code and the discussion.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-24T19:29:34.833Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment and status update announcing the merge; no code change is requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 9,
+    "stage1_kept": 5,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 3,
+    "stage1_filtered_too_short": 1,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1,
+    "stage3_cost_usd": 0.01742775
+  }
+}

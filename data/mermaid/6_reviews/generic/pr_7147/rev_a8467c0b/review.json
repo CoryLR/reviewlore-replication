@@ -1,0 +1,130 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "PR_READY.md",
+      "line_number": 1,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "This file (along with `PR_SUBMISSION_GUIDE.md`, `WARDLEY_MAPS_MEDIUM_GUIDE.md`, and `WARDLEY_MAPS_USER_GUIDE.md`) is a development preparation artifact and should not be committed to the repository. `PR_READY.md` and `PR_SUBMISSION_GUIDE.md` contain personal fork URLs, internal checklists, and submission templates; the two user-guide files (~1,200\u20131,300 lines each) duplicate content that belongs in `packages/mermaid/src/docs/syntax/wardley.md`. None of these four files serve any purpose for users or contributors once the PR is open. They should all be removed before merging.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 366,
+      "dimension": "Performance Issue",
+      "importance": "major",
+      "comment": "`data.nodes.find((n) => n.id === link.source)` is an O(n) linear scan called inside **each** of the four D3 attribute callbacks (`x1`, `y1`, `x2`, `y2`) for every rendered link \u2014 and then again in the link-label callbacks. For N nodes and L links this amounts to roughly 8\u00d7N\u00d7L node lookups per render. Build a `Map<string, WardleyNode>` once before the link selection (e.g. `const nodesById = new Map(data.nodes.map(n => [n.id, n]))`), replacing every `data.nodes.find(...)` call with an O(1) map lookup.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 366,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The vector calculation (`dx`, `dy`, `distance`, `radius`) is computed independently inside each of the four `.attr('x1')`, `.attr('y1')`, `.attr('x2')`, `.attr('y2')` callbacks, and then duplicated again three times inside the link-label callbacks (`.attr('x')`, `.attr('y')`, `.attr('transform')`). Extract a helper such as `getLinkEndpoints(link, positions, nodesById, nodeRadius, squareSize) => {x1, y1, x2, y2}` and precompute results before the selection, or use a single `.each()` that sets all attributes at once. This also eliminates the `data.nodes.find()` duplication mentioned in the parallel comment.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 370,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "When source and target nodes occupy the same SVG coordinates, `dx === 0` and `dy === 0`, which yields `distance === 0`. The subsequent `dx / distance` evaluates to `NaN`, producing an invalid SVG `x1` attribute that silently drops the link from the rendered output. Add a guard before returning: `if (distance < 0.001) return sourcePos.x;` (and analogous guards in y1, x2, y2). The same issue exists in the trend-arrow rendering section.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 785,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`const boxWidth = maxWidth + padding * 2 + 105; // Extra 105px buffer for safety` \u2014 the constant `105` is unexplained. Even the comment acknowledges it as an ad-hoc buffer. Promote it to a named constant (e.g. `const ANNOTATION_BOX_TEXT_BUFFER = 105`) and document why this specific value was chosen (e.g. an empirical estimate to offset `getComputedTextLength` underreporting wide characters). Without this, any future change to font size or label content may require re-discovering the magic number.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyParser.ts",
+      "line_number": 124,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Pipeline component IDs are constructed as `` `${pipeline.parent}_${component.name}` ``. If a pipeline parent is `\"Order_Management\"` and a component is `\"Process\"`, the ID `\"Order_Management_Process\"` would collide with a pipeline parent `\"Order\"` with component `\"Management_Process\"`. Consider using a separator that cannot appear in user-supplied names (e.g. a Unicode private-use character or a structured key like `pipeline:${pipeline.parent}:${component.name}`), or normalise/escape the names.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyParser.ts",
+      "line_number": 195,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "When `evolve` references a component that does not exist in the diagram (e.g. a typo like `evolve Ketttle 0.62`), the block `if (node?.y !== undefined)` silently skips it \u2014 no evolution arrow appears and the user gets no diagnostic message. Add a `log.warn(...)` call in the `else` branch (or throw a parse error) so the misconfiguration is surfaced: `else { log.warn(\\`evolve: component \"${evolve.component}\" not found\\`); }`.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyParser.ts",
+      "line_number": 218,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `// @ts-expect-error - WardleyDB is not assignable to DiagramDB` comment suppresses a type error because `WardleyDB` does not implement the `DiagramDB` interface required by Mermaid's diagram orchestration layer. Any code that accesses `diagram.db` through the `DiagramDB` interface may call methods that don't exist on `WardleyDB`, or vice versa, without TypeScript catching it. Consider having `wardleyDb` explicitly implement (or extend) `DiagramDB` \u2014 at minimum, add the required members as stubs \u2014 to restore type safety.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/parser/src/language/wardley/wardley.langium",
+      "line_number": 94,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `Annotations`, `Annotation`, `Accelerator`, and `Deaccelerator` grammar rules use the field names `x` and `y`, which implies standard Cartesian coordinates. However, `wardleyParser.ts` passes them to `toCoordinates(element.x, element.y)`, which treats the **first** argument as `visibility` (the Y-axis) and the **second** as `evolution` (the X-axis) \u2014 the opposite of standard `x, y` convention. Rename these grammar fields to `visibility` and `evolution` (consistent with `Anchor` and `Component`) to eliminate the semantic inversion and reduce the risk of future off-by-one coordinate bugs.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/parser/src/language/wardley/wardley.langium",
+      "line_number": 117,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`terminal WARDLEY_NUMBER returns number: /[0-9]+\\.[0-9]+/;` \u2014 this terminal only matches values with an explicit decimal point (e.g. `0.5`, `1.0`). Integer literals such as `1` or `0` do not match, so coordinates like `[1, 0]` will fail to parse. Users expecting `[0.95, 1]` (a valid point on the 0\u20131 scale) will receive a cryptic error. Either extend the terminal to accept integers (`/[0-9]+(\\.[0-9]+)?/`) or expose a `CoordinateValue` alias (like the one already used for annotation coordinates) for component/anchor positions too.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyDetector.ts",
+      "line_number": 11,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The detector regex is case-insensitive (`/^\\s*wardley-beta/i`), so it would match `WARDLEY-BETA` or `Wardley-Beta`. However, the Langium grammar declares `terminal KW_WARDLEY: 'wardley-beta'` with no case-insensitive flag, so parsing would fail with a confusing error for any variation other than the exact lowercase keyword. Either add case-insensitive support to the grammar terminal, or make the detector exact-case to match: `return /^\\s*wardley-beta/.test(text);`.",
+      "index": 10
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyBuilder.ts",
+      "line_number": 100,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`startPipeline` and `addPipelineComponent` directly mutate node objects retrieved from the internal `Map` (e.g. `node.isPipelineParent = true`) rather than going through the `addNode` merge path. This creates an implicit side-effect hidden inside a method named `start`. Prefer: `this.addNode({ ...node, isPipelineParent: true })` to keep all node updates centralised through `addNode`, making the state transitions easier to trace and test.",
+      "index": 11
+    },
+    {
+      "file_path": "demos/wardley.html",
+      "line_number": 280,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`logLevel: 'debug'` in the demo's `mermaid.initialize` call will flood the browser console with internal Mermaid debug output for every visitor who opens this page. Change to `'error'` or remove the key entirely (the default is non-verbose) before merging.",
+      "index": 12
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "Four large Markdown files \u2014 `PR_READY.md` (434 lines), `PR_SUBMISSION_GUIDE.md` (359 lines), `WARDLEY_MAPS_MEDIUM_GUIDE.md` (1,306 lines), `WARDLEY_MAPS_USER_GUIDE.md` (1,236 lines) \u2014 are committed to the repository root. The first two are PR-preparation checklists containing personal fork URLs (e.g. `https://github.com/tractorjuice/wardley-mermaid`) and step-by-step submission guides for the author only. The latter two are verbose user guides that duplicate content from the proper documentation location (`packages/mermaid/src/docs/syntax/wardley.md`). None of these belong in the repository. All four should be removed before this PR is merged.",
+      "index": 13
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The internal coordinate representation in `wardleyBuilder.ts`, `wardleyDb.ts`, and `wardleyRenderer.ts` stores `x = evolution \u00d7 100` and `y = visibility \u00d7 100`, which is the inverse of the user-facing `[visibility, evolution]` syntax. While `wardleyParser.ts` performs this swap correctly via `toCoordinates()`, the convention is entirely invisible once data enters the builder layer. Add a prominent comment block at the top of `wardleyBuilder.ts` documenting the internal convention (e.g. `// Internal coordinates: x = evolution (0\u2013100), y = visibility (0\u2013100)`) to prevent future contributors from accidentally double-inverting the axes.",
+      "index": 14
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `pnpm-lock.yaml` diff includes version upgrades for unrelated packages (Vue `3.5.21 \u2192 3.5.25`, Rollup `4.50.2 \u2192 4.52.5`, and several Babel plugin variants). These appear to be incidental changes from regenerating the lockfile during development. If these upgrades are intentional, they should be in a separate PR/commit; if accidental, the lockfile should be regenerated from the original to avoid coupling unrelated dependency changes to this feature PR.",
+      "index": 15
+    }
+  ],
+  "cost_usd": 2.17051245,
+  "duration_seconds": 1314.1116931438446
+}

@@ -1,0 +1,672 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33970,
+  "title": "A11y: Add aria-live announcements via @react-aria/live-announcer",
+  "body": "Storybook UI lacks a centralized approach for managing `aria-live` announcements, making screen reader users unable to perceive status changes (test results, loading states, errors, etc.).\n\n### Changes\n\n- **`extend-to-be-announced` integration** \u2014 Added <a href=\"https://github.com/AriPerkkio/extend-to-be-announced\">`extend-to-be-announced`</a> (by @AriPerkkio) as a devDependency in core for robust ARIA live region assertion via `aria-live-capture`. Registered in `code/.storybook/storybook.setup.ts` via `import 'extend-to-be-announced/vitest'`.\n- **TestProviderRender announcements** \u2014 Integrated `announce()` from `@react-aria/live-announcer` directly into the vitest addon's `TestProviderRender` component to announce test run lifecycle events:\n  - \"Test run started.\" (`polite`) when tests begin\n  - \"Test run finished. X components errored, Y components with warnings, Z components passed.\" on completion (`assertive` if component test errors **or** accessibility errors are present, `polite` otherwise; includes a11y error/warning counts when the a11y addon is present)\n  - \"Test run crashed.\" (`assertive`) on fatal errors\n- **Stories** \u2014 3 new stories with `play` functions on `TestProviderRender` using `render` with `useState` and mock-driven state transitions (via mocked `store.send` or `setTimeout`) to verify announcements via `waitFor` + `toBeAnnounced` (`AnnouncesTestRunStart`, `AnnouncesTestRunFinished`, `AnnouncesTestRunCrashed`). Tagged with `vitest` for vitest-only test execution.\n- **Dependencies** \u2014 Both `@react-aria/live-announcer` and `extend-to-be-announced` are added as devDependencies in `code/core/package.json` (required by the pre-bundling system).\n\n### Usage\n\n```tsx\n// Imperative \u2014 import directly from @react-aria/live-announcer\nimport { announce } from '@react-aria/live-announcer';\nannounce('3 tests passed', 'polite');\n\n// Test assertion (via extend-to-be-announced, registered in storybook.setup.ts)\nexpect('3 tests passed').toBeAnnounced('polite');\nexpect('Error occurred').toBeAnnounced('assertive');\n```\n\n#### Manual testing\n\n1. **Start Storybook UI**: run `cd code && yarn storybook:ui` (requires compilation first via `yarn nx run-many -t compile -c production`)\n2. **Navigate to TestProviderRender stories** \u2014 verify the `AnnouncesTestRunStart`, `AnnouncesTestRunFinished`, `AnnouncesTestRunCrashed` stories pass their play function assertions\n3. **Screen reader testing**: Enable VoiceOver (\u2318+F5 on macOS) and trigger test run state transitions in the announcement stories to confirm announcements are spoken\n\n<!-- START COPILOT ORIGINAL PROMPT -->\n\n\n\n<details>\n\n<summary>Original prompt</summary>\n\n> \n> ----\n> \n> *This section details on the original issue you should resolve*\n> \n> <issue_title>[A11y]: Create aria live region component</issue_title>\n> <issue_description>### Describe the bug\n> \n> We need a component created to handle aria-live announcements in things like\n> \n> - [ ] the interaction addon\n> - [ ] the a11y addon\n> - [ ] the testing module\n> - [ ] toasts\n> - [ ] search\n> - [ ] loader\n> - [ ] announcing the repositioning of the addon panel\n> \n> A dedicated component will help, because live notifications often require developers to maintain a `sb-sr-only` `aria-hidden` `aria-live` UI section where they'll inject notification content. It's then necessary to clear this region so that the next notification can be sent in.\n> \n> Places where we need the component can then start using it. In some cases (search, and any classic HTML form), the live region area is not `aria-hidden` (and not `sb-sr-only`) so that it doubles up as an error notification area. The component should support both use cases.\n> \n> **The component should use react-spectrum/react-aria primitives. Do check @react-aria/live-announcer`.**\n> \n> The loader also needs to be checked for `aria-busy`.\n> \n> ### Reproduction link\n> \n> yarn storybook:ui\n> \n> ### Reproduction steps\n> \n> 1. Launch tests in the test module\n> 2. Turn off your screen\n> 3. Guess when tests are over\n> \n> ### System\n> \n> ```bash\n> n/a, 9.2.0 alpha\n> ```\n> \n> ### Additional context\n> \n> _No response_</issue_description>\n> \n> <agent_instructions>Make sure to add stories illustrating the live regions\n> \n> You may add a devDependency to detect live regions if there is a popular, maintained NPM package for it; otherwise, write a centralised test util to extend expect, so we can `expect(canvas).toHaveLiveRegion({ text: '...' })`\n> \n> Create E2E tests too</agent_instructions>\n> \n> ## Comments on the Issue (you are @copilot in this section)\n> \n> <comments>\n> </comments>\n> \n\n\n</details>\n\n\n\n<!-- START COPILOT CODING AGENT SUFFIX -->\n\n- Fixes storybookjs/storybook#32251\n\n<!-- START COPILOT CODING AGENT TIPS -->\n---\n\n\ud83d\udd12 GitHub Advanced Security automatically protects Copilot coding agent pull requests. You can protect all pull requests by enabling Advanced Security for your repositories. [Learn more about Advanced Security.](https://gh.io/cca-advanced-security)\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n## Release Notes\n\n* **New Features**\n  * Added live region announcements for test run state changes (start, finish, crash) to improve accessibility for screen reader users.\n  * Introduced a new test matcher for verifying live region announcements in tests.\n\n* **Tests**\n  * Added test stories demonstrating live region announcements for different test run scenarios.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "copilot-swe-agent",
+  "merged_at": "2026-04-02T15:33:46Z",
+  "base_ref": "next",
+  "merge_commit_sha": "ce8c743b04264c5e8010df1181c828171a04c33a",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "c6391a672d01e48d29c48ac7a8fcbf5aef78d593",
+    "21f483c4e6bbd7db54e24ce395fdcbaf0421690c"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rf83-",
+          "author": "Sidnioulz",
+          "body": "Make this `aria-relevant all` by default and adjust some tests and stories to verify that.",
+          "file_path": "code/core/src/components/components/LiveRegion/LiveRegion.tsx",
+          "line_number": 51,
+          "start_line": null,
+          "commit_sha": "33b24225957f773a6d63599da193bf3a16311b2b",
+          "created_at": "2026-03-03T09:56:11Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6rgdm_",
+          "author": "copilot-swe-agent",
+          "body": "The `LiveRegion` component has been removed per the other comment requesting its deletion (dbb64bd). The `aria-relevant` attribute is handled by `@react-aria/live-announcer` which sets `aria-relevant=\"additions\"` on its internal log elements.",
+          "file_path": "code/core/src/components/components/LiveRegion/LiveRegion.tsx",
+          "line_number": 51,
+          "start_line": null,
+          "commit_sha": "33b24225957f773a6d63599da193bf3a16311b2b",
+          "created_at": "2026-03-03T10:20:31Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests a specific change: make aria-relevant 'all' by default and adjust tests/stories."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r5TZ4",
+          "author": "Sidnioulz",
+          "body": "Let's not re-export this as it'd become a public API. Instead let's just use the react aria component since we don't modify it.",
+          "file_path": "code/core/src/components/components/LiveRegion/LiveRegion.tsx",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "dd8620b48741bebd0b7d4a2a5dddd9fada150d6c",
+          "created_at": "2026-03-04T13:53:11Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6r6KPV",
+          "author": "copilot-swe-agent",
+          "body": "Removed all re-exports from `storybook/internal/components` in 1902224. `TestProviderRender` now imports `announce` directly from `@react-aria/live-announcer`. The `LiveRegion.tsx` file and its associated exports have been completely removed.",
+          "file_path": "code/core/src/components/components/LiveRegion/LiveRegion.tsx",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "dd8620b48741bebd0b7d4a2a5dddd9fada150d6c",
+          "created_at": "2026-03-04T14:36:20Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests not re-exporting the component and using react-aria directly instead."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r5UES",
+          "author": "Sidnioulz",
+          "body": "Try and move this to a better location in the manager UI package. It's only for us internally, we dont want it exported in the components package.",
+          "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "0c3df6bf042e3179860ae537b9d597c77a73c8a9",
+          "created_at": "2026-03-04T13:53:45Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6r6KS_",
+          "author": "copilot-swe-agent",
+          "body": "Moved to `code/core/src/manager/utils/toHaveLiveRegion.ts` in 1902224. No longer exported from the components package.",
+          "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "0c3df6bf042e3179860ae537b9d597c77a73c8a9",
+          "created_at": "2026-03-04T14:36:23Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests moving the file to a different location in the manager UI package."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r5U8e",
+          "author": "Sidnioulz",
+          "body": "Move file to manager too, to stay near the `toHaveLiveRegion` util",
+          "file_path": "code/core/src/manager/utils/toHaveLiveRegion.test.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "0c3df6bf042e3179860ae537b9d597c77a73c8a9",
+          "created_at": "2026-03-04T13:54:29Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6r6KXe",
+          "author": "copilot-swe-agent",
+          "body": "Moved to `code/core/src/manager/utils/toHaveLiveRegion.test.ts` in 1902224, alongside the matcher.",
+          "file_path": "code/core/src/manager/utils/toHaveLiveRegion.test.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "0c3df6bf042e3179860ae537b9d597c77a73c8a9",
+          "created_at": "2026-03-04T14:36:25Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests moving the file to stay near the toHaveLiveRegion util."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r56VS",
+          "author": "Sidnioulz",
+          "body": "Clean up the new stories. Remove those ugly trigger buttons, and instead, mock the environment and trigger actual actions to start, finish and crash test runs.",
+          "file_path": "code/addons/vitest/src/components/TestProviderRender.stories.tsx",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "21f483c4e6bbd7db54e24ce395fdcbaf0421690c",
+          "created_at": "2026-03-04T14:24:15Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6r6Ka-",
+          "author": "copilot-swe-agent",
+          "body": "Replaced the trigger-button stories with `mount()`-based state transitions in 1902224. Each announcement story now:\n1. Renders the component with an initial state via `mount(<TestProviderRender {...args} />)`\n2. Re-renders with the target state via a second `mount()` call to trigger the `useEffect` transition\n3. Asserts via `toHaveLiveRegion`\n\nNo custom render functions or trigger buttons remain.",
+          "file_path": "code/addons/vitest/src/components/TestProviderRender.stories.tsx",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "21f483c4e6bbd7db54e24ce395fdcbaf0421690c",
+          "created_at": "2026-03-04T14:36:28Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests cleanup of stories: remove trigger buttons and mock the environment to trigger actual actions."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r9UZN",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, let's look at the actual file and the specific lines mentioned\ncat -n code/addons/vitest/src/components/TestProviderRender.stories.tsx | sed -n '330,400p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2847\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check what's exported from storybook/test\nfind . -type f -name \"*.ts\" -o -name \"*.tsx\" | xargs grep -l \"from 'storybook/test'\" | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 370\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for live-announcer usage patterns in the codebase\nrg \"@react-aria/live-announcer\" --type ts --type tsx -A 3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if waitFor is used in other stories\nrg \"waitFor.*expect.*\" code/addons/*/src/components/*.stories.tsx --type tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check storybook/test exports\ncat code/.storybook/storybook.setup.ts | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1123\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for live-announcer imports and usage in the component\nrg \"live-announcer\" code/addons/vitest/src/components/ -A 5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1311\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find the TestProviderRender component to see how announce is called\nfd \"TestProviderRender\" --type f code/addons/vitest/src/components/ | grep -v \".stories\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 121\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for toHaveLiveRegion matcher definition\nrg \"toHaveLiveRegion\" code/ --type ts --type js -B 2 -A 5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 13200\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the main TestProviderRender component implementation\ncat -n code/addons/vitest/src/components/TestProviderRender.tsx | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3390\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check how announce() is called in TestProviderRender.tsx\ncat -n code/addons/vitest/src/components/TestProviderRender.tsx | grep -A 5 -B 5 \"announce(\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1021\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check what's actually exported from storybook/test by looking at the storybook test package\nfind code -name \"package.json\" -path \"*/storybook/test*\" | head -3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for storybook/test exports - check the library\nrg \"export.*waitFor\" code/ --type ts --type js\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 827\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if `@react-aria/live-announcer` announce is async\nweb_search\n`@react-aria/live-announcer` announce() function async behavior documentation\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 276\n\n---\n\n\ud83c\udf10 Web query:\n\n`@react-aria/live-announcer announce function synchronous or asynchronous`\n\n\ud83d\udca1 Result:\n\n`@react-aria/live-announcer`\u2019s `announce(...)` API is **synchronous** in the sense that it **returns `void`** (no `Promise`, not `async`). However, on the **first** call (when it has to create/attach the live region), it will often **schedule the actual DOM announcement via `setTimeout(..., 100)`** (i.e., happens asynchronously ~100ms later) to improve Safari reliability; subsequent calls announce immediately (synchronously) by directly appending to the live region. [1]\n\n**Source(s)**  \n[1] `LiveAnnouncer.tsx` implementation (React Spectrum repo) https://raw.githubusercontent.com/adobe/react-spectrum/main/packages/%40react-aria/live-announcer/src/LiveAnnouncer.tsx\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check storybook/test exports more directly - look at testing library setup\nrg \"from 'storybook/test'\" code/addons/vitest/ --type ts --type tsx -B 2 -A 5 | head -40\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for test utilities in storybook to see if waitFor exists\nfd \"test.ts\" -o \"test.tsx\" code/core/src/preview-api | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 200\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's a vitest testing-library integration or waitFor being used in other stories\nrg \"waitFor\" code/addons/vitest/src/components/ --type ts --type tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's check what storybook/test actually exports by looking at the test package or preview integration\nfind code -type f -name \"*.ts\" -o -name \"*.js\" | xargs grep -l \"export.*from.*storybook/test\" | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if vitest's waitFor could be imported instead\nrg \"from 'vitest'\" code/addons/vitest/src/ --type ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1155\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for actual waitFor usage in storybook test files or integrations\nrg \"waitFor\" code/.storybook/ -t ts -t js\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check what testing library is being used\ncat code/package.json | grep -A 5 -B 5 \"testing-library\\|vitest\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2887\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check what storybook/test actually exports - look for any export patterns\nrg \"export.*from\" code/packages/test/ --type ts --type js | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 124\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look at the storybook/test package directly\nfind code/packages -name \"test\" -type d | head -3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 113\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's a storybook test package and what it exports\nfd -type f \"index.ts\" code/packages/test/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 235\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look at the story setup to understand what testing capabilities are available\ncat -n code/.storybook/preview.tsx | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3524\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for storybook/test implementation or re-exports\nfind . -type f \\( -name \"test.ts\" -o -name \"test.js\" -o -name \"index.ts\" -o -name \"index.js\" \\) -path \"*/storybook/test*\" 2>/dev/null\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's a test re-export file in storybook\nrg \"storybook/test\" code/.storybook/ -A 10 -B 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1672\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for testing-library/dom usage which would have waitFor\nrg \"@testing-library/dom\" code/ --type ts --type js -l | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 260\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check for vitest browser waitFor since vitest is being used\nrg \"from 'vitest'\" code/addons/vitest/src/components/ --type ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check what storybook/test exports from the core test module\ncat -n code/core/src/test/index.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2092\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Also check the testing-library file\ncat -n code/core/src/test/testing-library.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4485\n\n---\n\n\n\n</details>\n\n**Announcement assertions should wait for async live-region updates.**\n\nThese expectations run immediately after `mount()`. The `announce()` function from `@react-aria/live-announcer` schedules DOM updates asynchronously (~100ms on first call), so these checks can intermittently fail before the announcement is inserted into the DOM.\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n-import { expect, fn } from 'storybook/test';\n+import { expect, fn, waitFor } from 'storybook/test';\n@@\n-    await expect(document.body).toHaveLiveRegion({ text: 'Test run started.', level: 'polite' });\n+    await waitFor(() =>\n+      expect(document.body).toHaveLiveRegion({ text: 'Test run started.', level: 'polite' })\n+    );\n@@\n-    await expect(document.body).toHaveLiveRegion({\n-      text: /Test run finished\\. 1 component errored, 3 components passed\\./,\n-      level: 'assertive',\n-    });\n+    await waitFor(() =>\n+      expect(document.body).toHaveLiveRegion({\n+        text: /Test run finished\\. 1 component errored, 3 components passed\\./,\n+        level: 'assertive',\n+      })\n+    );\n@@\n-    await expect(document.body).toHaveLiveRegion({\n-      text: 'Test run crashed.',\n-      level: 'assertive',\n-    });\n+    await waitFor(() =>\n+      expect(document.body).toHaveLiveRegion({\n+        text: 'Test run crashed.',\n+        level: 'assertive',\n+      })\n+    );\n```\n</details>\n\nAlso applies to: 358-368, 384-394\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/vitest/src/components/TestProviderRender.stories.tsx` around\nlines 337 - 345, The announcement assertions run immediately after mount but\nannounce() from `@react-aria/live-announcer` updates the DOM asynchronously, so\nwrap the live-region expectation in an async wait helper (e.g., await waitFor(()\n=> expect(document.body).toHaveLiveRegion({ text: 'Test run started.', level:\n'polite' })) or use a find-style helper) to retry until the live region appears;\nupdate each play block that mounts TestProviderRender (references: the play\nfunction, mount, TestProviderRender, and announce) to await the waitFor-based\nassertion instead of asserting immediately after mount.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits ac19cb0 to 8c757a2",
+          "file_path": "code/addons/vitest/src/components/TestProviderRender.stories.tsx",
+          "line_number": 345,
+          "start_line": null,
+          "commit_sha": "190222429bcb9b30bd83bbb15a9b7ff2edcd20ff",
+          "created_at": "2026-03-04T17:02:10Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tIQpC",
+          "author": "Sidnioulz",
+          "body": "Wait as suggested.",
+          "file_path": "code/addons/vitest/src/components/TestProviderRender.stories.tsx",
+          "line_number": 345,
+          "start_line": null,
+          "commit_sha": "190222429bcb9b30bd83bbb15a9b7ff2edcd20ff",
+          "created_at": "2026-03-09T10:44:27Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tIlAb",
+          "author": "copilot-swe-agent",
+          "body": "Added `waitFor` around all `toHaveLiveRegion` assertions in the announcement stories in ac19cb0.",
+          "file_path": "code/addons/vitest/src/components/TestProviderRender.stories.tsx",
+          "line_number": 345,
+          "start_line": null,
+          "commit_sha": "190222429bcb9b30bd83bbb15a9b7ff2edcd20ff",
+          "created_at": "2026-03-09T11:01:47Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential intermittent failure and provides a specific fix using waitFor for async live-region assertions."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r9UZe",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Treat accessibility errors as assertive completion errors too.**\n\nCompletion urgency is currently assertive only for component-test errors. Runs with only accessibility errors are announced as polite even though they are failures.\n\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n-      if (hasA11yAddon) {\n-        const a11yErrorCount = a11yStatusValueToStoryIds['status-value:error'].length;\n+      let a11yErrorCount = 0;\n+      if (hasA11yAddon) {\n+        a11yErrorCount = a11yStatusValueToStoryIds['status-value:error'].length;\n         const a11yWarningCount = a11yStatusValueToStoryIds['status-value:warning'].length;\n         if (a11yErrorCount > 0) {\n           parts.push(\n             `${a11yErrorCount} accessibility ${a11yErrorCount === 1 ? 'error' : 'errors'}`\n           );\n         }\n@@\n-      announce(message, errorCount > 0 ? 'assertive' : 'polite');\n+      const hasErrors = errorCount > 0 || (hasA11yAddon && a11yErrorCount > 0);\n+      announce(message, hasErrors ? 'assertive' : 'polite');\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n      let a11yErrorCount = 0;\n      if (hasA11yAddon) {\n        a11yErrorCount = a11yStatusValueToStoryIds['status-value:error'].length;\n        const a11yWarningCount = a11yStatusValueToStoryIds['status-value:warning'].length;\n        if (a11yErrorCount > 0) {\n          parts.push(\n            `${a11yErrorCount} accessibility ${a11yErrorCount === 1 ? 'error' : 'errors'}`\n          );\n        }\n        if (a11yWarningCount > 0) {\n          parts.push(\n            `${a11yWarningCount} accessibility ${a11yWarningCount === 1 ? 'warning' : 'warnings'}`\n          );\n        }\n      }\n\n      const message =\n        parts.length > 0\n          ? `Test run finished. ${parts.join(', ')}.`\n          : 'Test run finished. No results.';\n\n      const hasErrors = errorCount > 0 || (hasA11yAddon && a11yErrorCount > 0);\n      announce(message, hasErrors ? 'assertive' : 'polite');\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/vitest/src/components/TestProviderRender.tsx` around lines 180 -\n201, The announce urgency only checks errorCount so runs that fail solely due to\naccessibility issues are announced as polite; update the logic in\nTestProviderRender (around hasA11yAddon / a11yErrorCount) to treat accessibility\nerrors as assertive too by using a combined error check (e.g., compute a\ntotalErrorCount = errorCount + (hasA11yAddon ? a11yErrorCount : 0) or otherwise\ninclude a11yErrorCount in the condition) and then call announce(message,\ntotalErrorCount > 0 ? 'assertive' : 'polite'); reference the variables/function\nnames a11yErrorCount, hasA11yAddon, errorCount, announce, and message when\nmaking the change.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits ac19cb0 to 8c757a2",
+          "file_path": "code/addons/vitest/src/components/TestProviderRender.tsx",
+          "line_number": 203,
+          "start_line": 181,
+          "commit_sha": "21f483c4e6bbd7db54e24ce395fdcbaf0421690c",
+          "created_at": "2026-03-04T17:02:10Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tIPff",
+          "author": "Sidnioulz",
+          "body": "Apply this suggestion, make sure we announce a11y errors too.",
+          "file_path": "code/addons/vitest/src/components/TestProviderRender.tsx",
+          "line_number": 203,
+          "start_line": 181,
+          "commit_sha": "21f483c4e6bbd7db54e24ce395fdcbaf0421690c",
+          "created_at": "2026-03-09T10:43:26Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tIk9Y",
+          "author": "copilot-swe-agent",
+          "body": "Applied in ac19cb0. `a11yErrorCount` is now declared outside `if (hasA11yAddon)` and used alongside `errorCount` to determine assertiveness: `const hasErrors = errorCount > 0 || (hasA11yAddon && a11yErrorCount > 0);`",
+          "file_path": "code/addons/vitest/src/components/TestProviderRender.tsx",
+          "line_number": 203,
+          "start_line": 181,
+          "commit_sha": "21f483c4e6bbd7db54e24ce395fdcbaf0421690c",
+          "created_at": "2026-03-09T11:01:44Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where a11y errors don't trigger assertive announcements, with a specific code fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r9UZy",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nset -euo pipefail\n\necho \"== Import sites for `@react-aria/live-announcer` ==\"\nrg -nP \"from '@react-aria/live-announcer'|require\\('@react-aria/live-announcer'\\)\" --type=ts --type=tsx\n\necho\necho \"== Relevant package.json files ==\"\nfd package.json code | rg 'code/(core|addons/vitest)/package\\.json'\n\nfor f in code/core/package.json code/addons/vitest/package.json; do\n  if [ -f \"$f\" ]; then\n    echo\n    echo \"== $f ==\"\n    rg -n '\"name\"|\"dependencies\"|\"devDependencies\"|\"@react-aria/live-announcer\"' \"$f\"\n  fi\ndone\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 159\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nset -euo pipefail\n\necho \"== Import sites for `@react-aria/live-announcer` ==\"\nrg \"@react-aria/live-announcer\" -g \"*.ts\" -g \"*.tsx\"\n\necho\necho \"== code/core/package.json ==\"\ncat code/core/package.json | grep -A 5 -B 5 \"@react-aria/live-announcer\" || echo \"Not found\"\n\necho\necho \"== code/addons/vitest/package.json ==\"\nif [ -f code/addons/vitest/package.json ]; then\n  cat code/addons/vitest/package.json | grep -A 5 -B 5 \"@react-aria/live-announcer\" || echo \"Not found\"\nelse\n  echo \"File not found\"\nfi\n\necho\necho \"== List of addon packages ==\"\nfd \"code/addons/.*/package.json\" | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 915\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nset -euo pipefail\n\necho \"== Check if code/addons/vitest directory exists and list its contents ==\"\nif [ -d code/addons/vitest ]; then\n  ls -la code/addons/vitest/ | head -20\nelse\n  echo \"Directory does not exist\"\nfi\n\necho\necho \"== Check for any package.json files in code/addons/ ==\"\nfd \"package.json\" code/addons/\n\necho\necho \"== Check workspace configuration in root package.json ==\"\ncat package.json | grep -A 20 '\"workspaces\"' || echo \"No workspaces field found\"\n\necho\necho \"== Check code/addons structure ==\"\nls -la code/addons/ 2>/dev/null | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2326\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\ncat code/addons/vitest/package.json\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3691\n\n---\n\n\n\n</details>\n\n**Add `@react-aria/live-announcer` to `code/addons/vitest/package.json` devDependencies.**\n\nThe dependency is imported at runtime in `code/addons/vitest/src/components/TestProviderRender.tsx` and `TestProviderRender.stories.tsx`, but it's only declared in `code/core/package.json`. Since vitest is a separate workspace package, it must declare its own dependencies to avoid breaks in strict workspace/package-manager installs.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/package.json` at line 266, Add the missing devDependency\n\"@react-aria/live-announcer\" to the vitest addon package by updating\ncode/addons/vitest/package.json: add \"@react-aria/live-announcer\": \"^3.4.4\" (or\nmatch the version used in core) under devDependencies so imports in\nTestProviderRender.tsx and TestProviderRender.stories.tsx resolve correctly\nduring strict workspace installs; then run install to update lockfiles.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 77ad062 to 0c1b5dd",
+          "file_path": "code/core/package.json",
+          "line_number": 267,
+          "start_line": null,
+          "commit_sha": "190222429bcb9b30bd83bbb15a9b7ff2edcd20ff",
+          "created_at": "2026-03-04T17:02:11Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tII2G",
+          "author": "Sidnioulz",
+          "body": "@copilot address this feedback. Import the devDependency in the addon instead of in core.",
+          "file_path": "code/core/package.json",
+          "line_number": 267,
+          "start_line": null,
+          "commit_sha": "190222429bcb9b30bd83bbb15a9b7ff2edcd20ff",
+          "created_at": "2026-03-09T10:37:46Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tIk2g",
+          "author": "copilot-swe-agent",
+          "body": "Moved `@react-aria/live-announcer` from `code/core/package.json` to `code/addons/vitest/package.json` (as a regular dependency since the component imports it at runtime) in ac19cb0.",
+          "file_path": "code/core/package.json",
+          "line_number": 267,
+          "start_line": null,
+          "commit_sha": "190222429bcb9b30bd83bbb15a9b7ff2edcd20ff",
+          "created_at": "2026-03-09T11:01:39Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding @react-aria/live-announcer to the vitest addon's devDependencies."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r9UZ4",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\nfd toHaveLiveRegion.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 112\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/manager/utils/toHaveLiveRegion.ts | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3240\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nfd -e test.ts -e test.js -e spec.ts | xargs grep -l \"toHaveLiveRegion\" 2>/dev/null | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 117\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg \"toHaveLiveRegion\" --type ts --type tsx -l\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check TypeScript strict mode setting in tsconfig\nfind . -name \"tsconfig.json\" -o -name \"tsconfig*.json\" | xargs grep -l \"strict\" 2>/dev/null | head -3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 329\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/manager/utils/toHaveLiveRegion.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3981\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat code/tsconfig.json | grep -A 5 '\"strict\"'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 233\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ngit log --oneline -n 5 -- code/core/src/manager/utils/toHaveLiveRegion.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 167\n\n---\n\n\n\n</details>\n\n**Reset RegExp state before `.test()` to prevent matching failures with global/sticky flags.**\n\nWhen `text` is a global or sticky regex, `.test()` mutates `lastIndex`. Since this matcher loops through multiple elements, an uninitialized `lastIndex` on the second and subsequent elements can cause false negatives.\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n-    const textMatches = typeof text === 'string' ? content.includes(text) : text.test(content);\n+    const textMatches =\n+      typeof text === 'string'\n+        ? content.includes(text)\n+        : (() => {\n+            text.lastIndex = 0;\n+            return text.test(content);\n+          })();\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    // Filter by text content.\n    const content = el.textContent ?? '';\n    const textMatches =\n      typeof text === 'string'\n        ? content.includes(text)\n        : (() => {\n            text.lastIndex = 0;\n            return text.test(content);\n          })();\n\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager/utils/toHaveLiveRegion.ts` around lines 57 - 60, The\nRegExp used in the text matching may have global/sticky flags and .test()\nmutates lastIndex, causing false negatives across multiple elements; in the mesh\nthat computes textMatches (where variable text is used and textMatches is\nassigned), detect if text is a RegExp (instanceof RegExp) and reset\ntext.lastIndex = 0 before calling .test(content) so each element test starts\nfrom the beginning.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+          "line_number": 75,
+          "start_line": 63,
+          "commit_sha": "0c3df6bf042e3179860ae537b9d597c77a73c8a9",
+          "created_at": "2026-03-04T17:02:11Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tIKry",
+          "author": "Sidnioulz",
+          "body": "@copilot fix this",
+          "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+          "line_number": 75,
+          "start_line": 63,
+          "commit_sha": "0c3df6bf042e3179860ae537b9d597c77a73c8a9",
+          "created_at": "2026-03-09T10:39:22Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tIk6I",
+          "author": "copilot-swe-agent",
+          "body": "Fixed in ac19cb0 \u2014 `text.lastIndex` is now reset to `0` before calling `.test()` to prevent false negatives when the regex has global/sticky flags. Added a test case verifying a global regex matches correctly across multiple elements.",
+          "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+          "line_number": 75,
+          "start_line": 63,
+          "commit_sha": "0c3df6bf042e3179860ae537b9d597c77a73c8a9",
+          "created_at": "2026-03-09T11:01:42Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a RegExp lastIndex mutation bug and provides a specific fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tITyT",
+          "author": "Sidnioulz",
+          "body": "Avoid using mount in stories and write play function steps that trigger the different statuses. Try and use mocks to cause external errors where relevant.",
+          "file_path": "code/addons/vitest/src/components/TestProviderRender.stories.tsx",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "21f483c4e6bbd7db54e24ce395fdcbaf0421690c",
+          "created_at": "2026-03-09T10:47:09Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tIlFF",
+          "author": "copilot-swe-agent",
+          "body": "Refactored in ac19cb0. Stories now use `render` with `useState` instead of `mount()`:\n- **AnnouncesTestRunStart**: mocks `store.send` to transition state when the \"Start test run\" button is clicked, then asserts via `waitFor`\n- **AnnouncesTestRunFinished/Crashed**: use `setTimeout` in `useEffect` to simulate completion/crash, then assert via `waitFor`\n\nAll stories use `step()` for organization and clean up mocks on unmount.",
+          "file_path": "code/addons/vitest/src/components/TestProviderRender.stories.tsx",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "21f483c4e6bbd7db54e24ce395fdcbaf0421690c",
+          "created_at": "2026-03-09T11:01:50Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests avoiding mount in stories and writing play function steps with mocks instead."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6vomL-",
+          "author": "AriPerkkio",
+          "body": "Most of these tests are passing even though they should not. Mounting a live region with text content does NOT trigger live region update in assistive technologies.\n\nhttps://github.com/AriPerkkio/aria-live-capture?tab=readme-ov-file#announcement-detection-examples",
+          "file_path": "code/core/src/manager/utils/toHaveLiveRegion.test.ts",
+          "line_number": 15,
+          "start_line": 11,
+          "commit_sha": "0c3df6bf042e3179860ae537b9d597c77a73c8a9",
+          "created_at": "2026-03-17T13:08:59Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6w0JH4",
+          "author": "Sidnioulz",
+          "body": "Yeah, that helper is misleading because we check that a live region was created, not that it is announced.\n\nThe underlying expectation is that RAC's helper will maintain it and that in practice, when a live region gets created, this helper will then detect it.\n\nSo my understanding is\n* testing the helper means testing that the helper detects live region\n* and testing if a specific part of the UI creates a live region should be done with your code pattern (test `.not.toHaveLiveRegion` and then `.toHaveLiveRegion`)\n\nI like your testing API in your addon and I think it's kinda nicer, though don't think it goes well with RAC, because I believe RAC maintains a single live region in the entire app.\n\nWould you be ok to give this PR a thorough review and tell me if you think the API makes sense for checking if we're correctly using @react-aria/live-announcer?",
+          "file_path": "code/core/src/manager/utils/toHaveLiveRegion.test.ts",
+          "line_number": 15,
+          "start_line": 11,
+          "commit_sha": "0c3df6bf042e3179860ae537b9d597c77a73c8a9",
+          "created_at": "2026-03-20T15:32:47Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6xUDWI",
+          "author": "AriPerkkio",
+          "body": "Reviewed rest of the code \u2705 \r\n\r\n> though don't think it goes well with RAC, because I believe RAC maintains a single live region in the entire app\r\n\r\nThat should not matter at all. It's all about detecting DOM updates in whole document.",
+          "file_path": "code/core/src/manager/utils/toHaveLiveRegion.test.ts",
+          "line_number": 15,
+          "start_line": 11,
+          "commit_sha": "0c3df6bf042e3179860ae537b9d597c77a73c8a9",
+          "created_at": "2026-03-23T12:47:54Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags that tests are passing incorrectly because mounting a live region with text content doesn't trigger live region updates in assistive technologies \u2014 implies tests need to be fixed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6xTby6",
+          "author": "Sidnioulz",
+          "body": "Todo for me: https://github.com/storybookjs/storybook/pull/34110 would conflict with this PR, so if we merge this one first, re-review the other one. Else, handle migration before merging.",
+          "file_path": "code/addons/vitest/src/components/TestProviderRender.stories.tsx",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "21f483c4e6bbd7db54e24ce395fdcbaf0421690c",
+          "created_at": "2026-03-23T12:14:45Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Notes a merge conflict concern with another PR that requires action (re-review or migration) before merging."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6xTwIM",
+          "author": "AriPerkkio",
+          "body": "Also `<output>`:\n- https://github.com/AriPerkkio/aria-live-capture/blob/c49ebbf898ba7f758a31cc2ce99d9ea34c53c991/src/utils.ts#L9-L20\n- Implicit `status` role: https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/output#technical_summary",
+          "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+          "line_number": 32,
+          "start_line": null,
+          "commit_sha": "0c3df6bf042e3179860ae537b9d597c77a73c8a9",
+          "created_at": "2026-03-23T12:32:28Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6xT23C",
+          "author": "AriPerkkio",
+          "body": "Live regions also work when used inside shadow DOM, so query selectors need to be extended to pass through those. But maybe current implementation doesn't use any elements with shadow roots? \ud83e\udd14 ",
+          "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+          "line_number": 32,
+          "start_line": null,
+          "commit_sha": "0c3df6bf042e3179860ae537b9d597c77a73c8a9",
+          "created_at": "2026-03-23T12:38:09Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6xYhjT",
+          "author": "Sidnioulz",
+          "body": "We don't use any WCs that I know of in the Storybook UI, only React components. So this shouldn't affect us fortunately.",
+          "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+          "line_number": 32,
+          "start_line": null,
+          "commit_sha": "0c3df6bf042e3179860ae537b9d597c77a73c8a9",
+          "created_at": "2026-03-23T16:01:47Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Points out that <output> element should also be included in live region detection, implying a code change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6xT8rL",
+          "author": "AriPerkkio",
+          "body": "Would be useful to render the implicit live settings too. Otherwise based on this output it's not clear what level of announcement was made instead. ",
+          "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+          "line_number": 86,
+          "start_line": 85,
+          "commit_sha": "0c3df6bf042e3179860ae537b9d597c77a73c8a9",
+          "created_at": "2026-03-23T12:42:49Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests rendering implicit live settings in the output to make the error message clearer."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6xT_zq",
+          "author": "AriPerkkio",
+          "body": "If now or in future you don't want to maintain this hand-rolled version, or want to do more accurate assertions against actual DOM <ins>**updates**</ins>, see https://github.com/AriPerkkio/extend-to-be-announced?tab=readme-ov-file#vitest. It's 0 external dependency solution (well 1 direct dep on `aria-live-capture` which is 0 deps) that provides everything out-of-the-box. \n\n\n```ts\n// setup.ts\nimport 'extend-to-be-announced/vitest';\n\n// test\nexpect('Loading').toBeAnnounced('polite');\nexpect('Error').toBeAnnounced('assertive');\n```",
+          "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+          "line_number": 23,
+          "start_line": null,
+          "commit_sha": "0c3df6bf042e3179860ae537b9d597c77a73c8a9",
+          "created_at": "2026-03-23T12:45:10Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests using the extend-to-be-announced library as an alternative to the hand-rolled implementation, implying a possible replacement."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6xcmIi",
+          "author": "Sidnioulz",
+          "body": "@copilot move both these new deps to the core/package.json `devDependencies`. We have a very special pre-bundling system that requires you to trust me on that one.",
+          "file_path": "code/addons/vitest/package.json",
+          "line_number": 92,
+          "start_line": null,
+          "commit_sha": "d764f9794a0d8dcd9b741aa6e0c5e31f387e5838",
+          "created_at": "2026-03-23T19:15:57Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6xcsrk",
+          "author": "copilot-swe-agent",
+          "body": "Moved both `@react-aria/live-announcer` and `extend-to-be-announced` to `code/core/package.json` devDependencies in 0d09b38.",
+          "file_path": "code/addons/vitest/package.json",
+          "line_number": 92,
+          "start_line": null,
+          "commit_sha": "d764f9794a0d8dcd9b741aa6e0c5e31f387e5838",
+          "created_at": "2026-03-23T19:21:07Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests moving new dependencies from vitest/package.json to core/package.json devDependencies."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60fIUb",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if the file exists and read its content\nfind code/core/src/shared/utils -name \"toHaveLiveRegion.test.ts\" -type f | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 116\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Read the actual file to verify line 4\nif [ -f \"code/core/src/shared/utils/toHaveLiveRegion.test.ts\" ]; then\n  cat -n \"code/core/src/shared/utils/toHaveLiveRegion.test.ts\" | head -20\nfi\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 962\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if the target file exists with .ts extension\nfind code/core/src/shared/utils -name \"toHaveLiveRegion.ts\" -type f\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 111\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for other side-effect imports in test files to see the pattern\nrg \"import '\\./[^']+'\" code/core/src --type ts -A 0 -B 0 | head -30\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 374\n\n---\n\n\n\n</details>\n\n**Use an explicit `.ts` extension for the relative import.**\n\nLine 4 requires the file extension to match repository TypeScript import rules.\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n-import './toHaveLiveRegion';\n+import './toHaveLiveRegion.ts';\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nimport './toHaveLiveRegion.ts';\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/shared/utils/toHaveLiveRegion.test.ts` at line 4, The test file\nimports a local helper without the required TypeScript extension; update the\nrelative import in toHaveLiveRegion.test.ts from the extensionless form to\ninclude \".ts\" (i.e., change the import statement that references\n'./toHaveLiveRegion' to './toHaveLiveRegion.ts'), then run the project's\nlint/tests to verify the import rules are satisfied; target the import statement\nin toHaveLiveRegion.test.ts to make this change.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk:dd8ea363-aec8-450c-a76e-defa2628d182 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/shared/utils/toHaveLiveRegion.test.ts",
+          "line_number": 4,
+          "start_line": null,
+          "commit_sha": "23a208469b9fb1675103c58b11a25b8e5ad80d17",
+          "created_at": "2026-04-02T13:28:51Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding explicit .ts extension to a relative import."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60fIU2",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Handle implicit politeness for `<output>` elements in level filtering.**\n\nLine 36 includes `<output>` as a candidate, but Lines 47-55 never infer its effective level. `expect(...).toHaveLiveRegion({ level: 'polite' })` can incorrectly fail for `<output>` regions.\n\n\n\n<details>\n<summary>\ud83d\udca1 Proposed fix</summary>\n\n```diff\n-    const role = el.getAttribute('role');\n+    const role = el.getAttribute('role');\n+    const isOutput = el.tagName.toLowerCase() === 'output';\n\n     let effectiveLevel: string | null = ariaLive;\n     if (!effectiveLevel) {\n-      if (role === 'status' || role === 'log') {\n+      if (role === 'status' || role === 'log' || isOutput) {\n         effectiveLevel = 'polite';\n       }\n       if (role === 'alert') {\n         effectiveLevel = 'assertive';\n       }\n     }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    const role = el.getAttribute('role');\n    const isOutput = el.tagName.toLowerCase() === 'output';\n\n    let effectiveLevel: string | null = ariaLive;\n    if (!effectiveLevel) {\n      if (role === 'status' || role === 'log' || isOutput) {\n        effectiveLevel = 'polite';\n      }\n      if (role === 'alert') {\n        effectiveLevel = 'assertive';\n      }\n    }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/shared/utils/toHaveLiveRegion.ts` around lines 47 - 55, The\nlevel-inference block for computing effectiveLevel doesn't treat <output> as\nimplicitly polite, so toHaveLiveRegion can falsely fail for output elements;\nupdate the logic that sets effectiveLevel (the branch using role === 'status' ||\nrole === 'log' and role === 'alert') to include role === 'output' in the polite\ncase (i.e., treat 'status', 'log', and 'output' as polite) while keeping 'alert'\n-> 'assertive' behavior, referencing the effectiveLevel, ariaLive and role\nidentifiers to locate the change.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk:dd8ea363-aec8-450c-a76e-defa2628d182 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/shared/utils/toHaveLiveRegion.ts",
+          "line_number": 56,
+          "start_line": 48,
+          "commit_sha": "21f483c4e6bbd7db54e24ce395fdcbaf0421690c",
+          "created_at": "2026-04-02T13:28:51Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where <output> elements aren't treated as implicitly polite in level filtering, with a specific code fix."
+    }
+  ],
+  "review_thread_count": 19,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6xTz0H",
+            "author": "AriPerkkio",
+            "body": "Text content match is a bit more complex. If I remember correctly, the terminology in ARIA specs uses `flat string` definition. But if only simple cases are expected, I guess this implementation is fine.\n\nMore complex resolving at:\n\n- https://github.com/AriPerkkio/aria-live-capture/blob/c49ebbf898ba7f758a31cc2ce99d9ea34c53c991/src/utils.ts#L142-L162\n",
+            "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+            "line_number": 74,
+            "start_line": 63,
+            "commit_sha": "0c3df6bf042e3179860ae537b9d597c77a73c8a9",
+            "created_at": "2026-03-23T12:35:32Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6xYi0v",
+            "author": "Sidnioulz",
+            "body": "Oh yeah yours is cleaner. I remember writing utilities like that in the past. I'm just gonna go ahead and switch to your lib as it already solves multiple things this PR does in a more robust way.",
+            "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+            "line_number": 74,
+            "start_line": 63,
+            "commit_sha": "0c3df6bf042e3179860ae537b9d597c77a73c8a9",
+            "created_at": "2026-03-23T16:02:44Z",
+            "is_outdated": true
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Acknowledges the current implementation is fine for simple cases; provides informational links but does not request a specific change."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 19,
+    "stage1_kept": 19,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1
+  }
+}

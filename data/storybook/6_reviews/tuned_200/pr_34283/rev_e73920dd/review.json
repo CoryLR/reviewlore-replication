@@ -1,0 +1,60 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 566,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "When active tag filters are set, `selectFirstStory` only selects entries with `type === 'story'` from the filtered index. If all stories are excluded by the active filters but some docs entries remain, the function reaches `return` (line 571) without navigating anywhere, leaving the UI with no selection. By contrast, the STORY_RENDERED/DOCS_RENDERED handler at line 995 explicitly accepts `type === 'story' || type === 'docs'` when picking the first filtered entry. Make this consistent by also checking `filteredIndex[id].type === 'docs'` here, or by falling back to calling `navigateWithQueryParams('/')` when no story or docs entry is found.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 989,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`storyPassesFilter` only succeeds when the entry reported by the preview has `type === 'story'`. If the user navigates directly to a docs page (e.g., `?path=/docs/component-foo`) with active tag filters, and that docs entry is present in `filteredIndex`, this check evaluates to `false` and the code redirects the user to the first filtered entry instead of staying on the requested docs page. Change the check to also accept `type === 'docs'`:\n```typescript\nconst storyPassesFilter =\n  filteredIndex &&\n  (filteredIndex[storyId]?.type === 'story' || filteredIndex[storyId]?.type === 'docs');\n```",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/tags.ts",
+      "line_number": 44,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`reverseBuiltInUrlTagMap` is rebuilt from the module-level constant `BUILT_IN_URL_TAG_MAP` on every call to `serializeTagsParam`. Since `BUILT_IN_URL_TAG_MAP` never changes, hoist the reverse map to module scope so it is computed exactly once:\n```typescript\nconst REVERSE_BUILT_IN_URL_TAG_MAP: Record<string, string> = Object.fromEntries(\n  Object.entries(BUILT_IN_URL_TAG_MAP).map(([urlTag, internalTag]) => [internalTag, urlTag])\n);\n```\nThen reference `REVERSE_BUILT_IN_URL_TAG_MAP` inside the function.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 441,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The sort comparator `([a], [b]) => (a < b ? -1 : 1)` never returns `0`, which technically violates the comparison contract (a comparator must return negative, zero, or positive). While object keys are unique so `a === b` cannot occur in practice here, the idiomatic form is `a < b ? -1 : a > b ? 1 : 0` and prevents potential issues if the comparator is reused or inlined elsewhere.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/manager-api/tests/url.test.js",
+      "line_number": 150,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The assertion after the second `applyQueryParams` call only checks the negative case (`not.stringContaining('tags=')`), without a positive assertion confirming `args=foo:baz` is actually present in the navigated URL. Per project convention, navigation assertions should verify both what is present and what is absent. Add a companion positive assertion such as `expect.stringContaining('args=foo:baz')` to guard against a regression where the whole URL is empty or the args param is also silently dropped.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `navigateWithQueryParams` helper in `stories.ts` manually reimplements URL-building logic (filter by truthy, sort alphabetically, map to `key=value`, join with `&`) that closely mirrors patterns already in `setQueryParams` and potentially in a shared `buildNavigationUrl` utility elsewhere in the codebase. Having two independent implementations of this logic means future changes to query-param handling (e.g., encoding rules, filtering semantics) must be applied in both places. Consider extracting the shared logic into a single utility or reusing an existing one so the behavior stays in sync.",
+      "index": 5
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The new `tags.test.js` file covers `parseTagsParam` and `serializeTagsParam` but has no tests for `navigateWithQueryParams` or the `persistFilters` closure (including the serialize callback). Both of these produce observable side-effects (URL changes and store state changes) that are core to the feature. Adding at least a unit test that verifies the `serialize` callback returns `{ tags: null }` when both filter arrays are empty, and `{ tags: '$play' }` for a known included tag, would prevent silent regressions in the URL-persistence wiring.",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.8245838999999997,
+  "duration_seconds": 782.6826241016388
+}

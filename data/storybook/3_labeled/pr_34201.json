@@ -1,0 +1,130 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34201,
+  "title": "UI: Fix global shortcuts not showing region focus indicator",
+  "body": "## What I did\r\n\r\nFollow up on issue found in 10.3 QA: the focus indicator for sidebars and addon panels showed when pressing their respective \"show sidebar/panel\" buttons but not when using the global keyboard shortcuts.\r\n\r\n## Checklist for Contributors\r\n\r\n\r\n#### Manual testing\r\n\r\n* Close the sidebar and addon panel\r\n* Press Alt+A or Alt+S (note that these don't work when focus is inside the preview)\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Chores**\n  * Improved focus management when toggling addon panels and navigation sidebars for more reliable & consistent focus restoration and fallbacks.\n  * Made keyboard activation explicitly focus UI regions while clicks focus controls, improving accessibility and predictability.\n  * Removed landmark-animation orchestration in favor of direct, poll-enabled focus control for simpler, more deterministic behavior.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "Sidnioulz",
+  "merged_at": "2026-04-01T10:28:15Z",
+  "base_ref": "next",
+  "merge_commit_sha": "4ffc04181bb9089891e031e8288f1a20c896dbba",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "199f65679628d2575f0cba43354e3db4284901a5",
+    "70bb0c968164a3a43d1fcd10cba9cf91a8b848d8"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6wZ43t",
+          "author": "ghengeveld",
+          "body": "Should this be removed?",
+          "file_path": "code/core/src/manager/components/preview/tools/menu.tsx",
+          "line_number": 25,
+          "start_line": null,
+          "commit_sha": "c869f47bf6e39951254e328fb9860f15c582c959",
+          "created_at": "2026-03-19T11:58:24Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Dead-Code Related Issues",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment asks if something should be removed, suggesting it may be unused or unnecessary code."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6xWl0y",
+          "author": "Sidnioulz",
+          "body": "hmm,oops :grimacing: thanks!",
+          "file_path": "code/core/src/manager/components/preview/tools/menu.tsx",
+          "line_number": 25,
+          "start_line": null,
+          "commit_sha": "c869f47bf6e39951254e328fb9860f15c582c959",
+          "created_at": "2026-03-23T14:40:13Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The question 'Should this be removed?' implies a suggestion to delete code, making it actionable."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60DlZq",
+          "author": "copilot-pull-request-reviewer",
+          "body": "When `forceFocus` is false (e.g. mouse click), this still calls `focusOnUIElement` with `poll: true`. Because the sidebar container isn\u2019t normally focusable, this will poll for ~500ms and repeatedly attempt to focus but will never succeed, doing unnecessary work on every click. Consider skipping the focus call entirely when `forceFocus` is false, or set `poll: false` (and possibly `forceFocus: false`) for the non-keyboard path.\n```suggestion\n    if (forceFocus) {\n      api.focusOnUIElement(focusableUIElements.sidebarRegion, {\n        forceFocus: true,\n        poll: true,\n      });\n    }\n```",
+          "file_path": "code/core/src/manager/components/preview/tools/menu.tsx",
+          "line_number": 22,
+          "start_line": 19,
+          "commit_sha": "70bb0c968164a3a43d1fcd10cba9cf91a8b848d8",
+          "created_at": "2026-04-01T09:17:01Z",
+          "is_outdated": false,
+          "dimension": "Performance Issue",
+          "category": "Computation Efficiency",
+          "label_confidence": "high",
+          "label_reasoning": "The comment highlights unnecessary polling work (~500ms of repeated focus attempts) triggered on every mouse click when forceFocus is false, which is wasteful and will never succeed."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc60Dv27",
+          "author": "Sidnioulz",
+          "body": "This sounds reasonable but there's a subtlety here: `forceFocus` plays a different role (it adds tabindex if needed to absolutely ensure focus does happen on keyboard-only workflows).\r\n\r\nI don't remember why I set `forceFocus` to false on mouse clicks though. Probably has to do with avoiding a focus indicator appearing on clicks.\r\n\r\nWhere possible, we still want to focus on mouse clicks because hybrid mouse+kb usage benefits from keeping focus position somewhat logical.",
+          "file_path": "code/core/src/manager/components/preview/tools/menu.tsx",
+          "line_number": 22,
+          "start_line": 19,
+          "commit_sha": "70bb0c968164a3a43d1fcd10cba9cf91a8b848d8",
+          "created_at": "2026-04-01T09:25:00Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a performance bug with unnecessary polling and provides a concrete code suggestion to fix it."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60DlaX",
+          "author": "copilot-pull-request-reviewer",
+          "body": "Same issue as the menu tool: `focusOnUIElement` is invoked with `forceFocus: false` and `poll: true` on the mouse-click path, which will poll for up to 500ms even though the addon panel region isn\u2019t normally focusable (so focus won\u2019t succeed without `forceFocus`). Skip focusing when `forceFocus` is false or disable polling for that path to avoid unnecessary intervals.\n```suggestion\n      poll: forceFocus,\n```",
+          "file_path": "code/core/src/manager/components/preview/tools/addons.tsx",
+          "line_number": 23,
+          "start_line": null,
+          "commit_sha": "70bb0c968164a3a43d1fcd10cba9cf91a8b848d8",
+          "created_at": "2026-04-01T09:17:01Z",
+          "is_outdated": false,
+          "dimension": "Performance Issue",
+          "category": "Computation Efficiency",
+          "label_confidence": "high",
+          "label_reasoning": "Same issue as index 1 \u2014 unnecessary polling intervals are triggered on the mouse-click path when forceFocus is false, causing up to 500ms of futile repeated work."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags the same polling issue in a different file and provides a concrete one-line code suggestion to fix it."
+    }
+  ],
+  "review_thread_count": 3,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 3,
+    "stage1_kept": 3,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

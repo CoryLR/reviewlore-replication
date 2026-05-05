@@ -1,0 +1,23 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.ts",
+      "line_number": 206,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The literal `11` is a magic number whose value depends on `THEME_COLOR_LIMIT - 1` from the theme layer. The CSS generator in `styles.ts` loops `for (let i = 0; i < THEME_COLOR_LIMIT; i++)` and emits `.section-${i - 1}`, so with `THEME_COLOR_LIMIT = 12` the valid non-root section classes are `section-0` through `section-10` \u2014 exactly 11 classes. The modulus must equal that count. If any theme ever changes `THEME_COLOR_LIMIT`, this hardcoded `11` will silently regress (producing out-of-range section numbers and the same black-node bug). At minimum, extract this into a named constant with an explanatory comment:\n```ts\n// Must stay in sync with THEME_COLOR_LIMIT - 1 in styles.ts:\n// that loop generates section-0 through section-(THEME_COLOR_LIMIT-2)\nconst MINDMAP_SECTION_COUNT = 11;\nconst childSectionNumber = node.level === 0 ? index % MINDMAP_SECTION_COUNT : sectionNumber;\n```\nIdeally, read the value from the theme/config so the two files cannot drift.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.getData.test.ts",
+      "line_number": 295,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test verifies node `section` and `cssClasses` after the wrap, but `generateEdges` also derives `section-edge-${child.section}` and stores `section` directly on the edge (lines 306 and 324 in `mindmapDb.ts`). The original bug report described nodes that were visually \"disconnected\" \u2014 which is likely the edge color losing its theme class. Adding assertions on the edges corresponding to child12\u2013child15 (e.g., `expect(edgeToChild12.section).toBe(0)` and checking `edgeToChild12.classes` includes `section-edge-0`) would give complete coverage of the behavioral fix.",
+      "index": 1
+    }
+  ],
+  "general_comments": [],
+  "cost_usd": 0.29178625,
+  "duration_seconds": 170.34630489349365
+}

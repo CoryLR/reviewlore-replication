@@ -1,0 +1,757 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 1705,
+  "title": "ENH: Add GAMESS-US FileIOCalculator",
+  "body": "[GAMESS-US](https://www.msg.chem.iastate.edu/gamess/) is a quantum chemistry program developed by the group of Mark Gordon at Iowa State University. It is a GTO code with many advanced quantum chemistry capabilities.\r\n\r\n~~This is currently a minimal working prototype for basic HF calculations. I have not tested that this works for any other methods.~~\r\n\r\nThis calculator works with {R,U,RO}HF, DFT, MP2, and coupled cluster at least. It may fail to parse energies for other methods that I haven't tested.\r\n\r\nAnother thing: GAMESS-US is pretty annoying to run. It has a wrapper script named `rungms` written in `csh` (not even `tcsh`!) which does a lot of magic things, like moving files around and setting environment variables. This script must be edited for each cluster that it runs on, and customizing it is not at all easy.\r\n\r\nOne \"helpful\" feature of the `rungms` script is if it detects that you are running a calculation with the same name as a previously run calculation, it will fail with an error message stating you should back up your previous results. If you comment that part of `rungms` out, then the GAMESS-US executable will crash. You have to actually move/remove the previous results file (the \"punchcard\") in order to run a new calculation. I've locally modified my `rungms` script to do this, but we probably want the Calculator to take care of that for us. Of course, that requires knowing what `USERSCR` is set to in the `rungms` script, so....\r\n\r\nTODO:\r\n* [x]  Make the Calculator take care of this file moving problem described above\r\n* [x]  Ensure compatibility with other non-RHF methods\r\n* [x]  Write some tests\r\n* [x]  Write documentation",
+  "author": "ehermes",
+  "merged_at": "2020-02-13T17:22:45.528Z",
+  "base_ref": "master",
+  "merge_commit_sha": "d223bd9f22940aed5c37b9af403189255e01a597",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "285856120",
+          "author": "askhl",
+          "body": "(Would gamess-us-out be more natural?)\n\nThe input and output have the same magic string, which means it's arbitrary whether we recognize a given file as one or the other.  It would be preferable to use different magic strings.  The format of output formats is normally detaile enough that we can recognize them reliably with a magic string (or pattern).",
+          "file_path": "ase/io/formats.py",
+          "line_number": 279,
+          "commit_sha": "2beffd1c762d3299452e7a35629500b4a52744a1",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-10T23:29:03.959Z",
+          "is_outdated": false
+        },
+        {
+          "id": "285860886",
+          "author": "ehermes",
+          "body": "> (Would gamess-us-out be more natural?)\n\nI suppose it would. Would we keep the Calculator name as `GAMESSUS`? Or is there a better way of formatting that?\n\n> The input and output have the same magic string\n\nThat was an oversight, fixed in a subsequent commit.",
+          "file_path": "ase/io/formats.py",
+          "line_number": 279,
+          "commit_sha": "2beffd1c762d3299452e7a35629500b4a52744a1",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-10T23:56:49.027Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests using different magic strings for input and output formats, and suggests renaming to 'gamess-us-out'."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "285856121",
+          "author": "askhl",
+          "body": "Fantastically small class!\n\nThe set() method can (probably) be removed, setting instead the class attribute `discard_results_on_any_change = True` which the superclass will recognize as a common usecase for file io calculators.\n\nI think we are looking to remove or try to remove several constructor keywords unless there are good arguments to keep them.  This is because constructing calculators in exotic ways is probably more suited for specialized factory methods.  This means maybe remove, unless you really use/believe in them, these: restart (unless explicitly tested, and preferably available as a separate function), ignore_bad_restart_file, and atoms.\n\nAbout the atoms keyword see #475 .",
+          "file_path": "ase/calculators/gamessus.py",
+          "line_number": 16,
+          "commit_sha": "4993a6f256f983cd3d984e4d82af59167128358e",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-10T23:29:04.156Z",
+          "is_outdated": false
+        },
+        {
+          "id": "285860887",
+          "author": "ehermes",
+          "body": "> Fantastically small class!\n\nFor now. I foresee the addition of an uncomfortable amount of logic to deal with GAMESS's awkward `rungms` script.\n\n> The set() method can (probably) be removed, setting instead the class attribute `discard_results_on_any_change = True` which the superclass will recognize as a common usecase for file io calculators.\n\nDone.\n\n> I think we are looking to remove or try to remove several constructor keywords...\n\nFine by me. If and once this reaches merge-able status, we can see whether some of the constructor keywords can be removed.",
+          "file_path": "ase/calculators/gamessus.py",
+          "line_number": 16,
+          "commit_sha": "4993a6f256f983cd3d984e4d82af59167128358e",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-10T23:56:49.236Z",
+          "is_outdated": false
+        },
+        {
+          "id": "285862658",
+          "author": "askhl",
+          "body": "> For now. I foresee the addition of an uncomfortable amount of logic to deal with GAMESS's awkward `rungms` script.\n\nWell, if it can be expressed as functions that don't clutter the class too much, then we might not suffer too much :).",
+          "file_path": "ase/calculators/gamessus.py",
+          "line_number": 16,
+          "commit_sha": "4993a6f256f983cd3d984e4d82af59167128358e",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-11T00:07:25.837Z",
+          "is_outdated": false
+        },
+        {
+          "id": "286587073",
+          "author": "ehermes",
+          "body": "I think I managed to keep the Calculator itself in check.",
+          "file_path": "ase/calculators/gamessus.py",
+          "line_number": 16,
+          "commit_sha": "4993a6f256f983cd3d984e4d82af59167128358e",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-12T00:26:14.019Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests removing set() method and replacing with class attribute, and removing several constructor keywords (restart, ignore_bad_restart_file, atoms)."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "285856123",
+          "author": "askhl",
+          "body": "(You can do `float(ematch.group(0))` to avoid the slightly-less-elegant-looking `[0]`)",
+          "file_path": "ase/io/gamessus.py",
+          "line_number": 84,
+          "commit_sha": "f477a82b19c711ceb02a766033728ce43c143014",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-10T23:29:04.353Z",
+          "is_outdated": false
+        },
+        {
+          "id": "285860888",
+          "author": "ehermes",
+          "body": "This doesn't seem to work for me. `ematch.group(0)` gives me the entire line, not just the energy.",
+          "file_path": "ase/io/gamessus.py",
+          "line_number": 84,
+          "commit_sha": "f477a82b19c711ceb02a766033728ce43c143014",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-10T23:56:49.394Z",
+          "is_outdated": false
+        },
+        {
+          "id": "285862660",
+          "author": "askhl",
+          "body": "Sorry, should be `group(1)`.\n\ngroup(0) is the *full match*, group(1, 2, 3, 'hello', ...) retrieve numbered or named groups.",
+          "file_path": "ase/io/gamessus.py",
+          "line_number": 84,
+          "commit_sha": "f477a82b19c711ceb02a766033728ce43c143014",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-11T00:07:26.060Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a code improvement to use float(ematch.group(0)) instead of the current approach."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "285857547",
+          "author": "askhl",
+          "body": "Unusually concise and readable, I can almost see the output file materializing on the screen.  Wow.\n\nWould be good to have a test case in `test/standardization/test_ch4_energy.py`.\n\nImportant question: What do you think about that test?\n\nIf spins are a thing, we should think of a spin-equivalent to the test_ch4_energy test for multiple calculators.  Probably N atom vs N2 is ideal (large energy difference, symmetric ground-state so easy convergence etc.).  Should we do that?  It can be enabled for multiple calculators relatively easily.\n\nSomething about release notes, `ase.calculators.calculator.names`, link on front page, but you already know these things.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-02-10T23:37:06.725Z",
+          "is_outdated": false
+        },
+        {
+          "id": "285860889",
+          "author": "ehermes",
+          "body": "> Unusually concise and readable, I can almost see the output file materializing on the screen. Wow.\n\nThanks! But be aware, this is very much Not Done, and I think it will grow in complexity before it's ready to go.\n\n> Would be good to have a test case in `test/standardization/test_ch4_energy.py`.\n>\n>Important question: What do you think about that test?\n\nThis is a bit too much for me to wrap my head around now. The basic idea is favorable to me, but I don't have the brainpower currently to figure out how to make this work with the GAMESS-US calculator.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-02-10T23:56:49.515Z",
+          "is_outdated": false
+        },
+        {
+          "id": "286587076",
+          "author": "ehermes",
+          "body": "> Would be good to have a test case in `test/standardization/test_ch4_energy.py`.\n\nDone.\n\n> Important question: What do you think about that test?\n\nI think it's a good idea, but maybe we should make it isodesmic, since that's where quantum chemistry is going to perform best, and we can expect more consistency across different methods. Maybe something like propene (a.k.a. propylene) + ethane <-> propane + ethene (a.k.a. ethylene). Though that's a lot more electrons.\n\n> If spins are a thing, we should think of a spin-equivalent to the test_ch4_energy test for multiple calculators.\n\nI'm not entirely sure what you're proposing w.r.t. N vs N2, but I think it makes sense to have a test akin to the CH4 energy test where we consider open shell vs closed-shell systems. We could do something simple like methane + H <-> methyl + H2.\n\n> Something about release notes, `ase.calculators.calculator.names`, link on front page, but you already know these things.\n\nI think I touched all those points, but let me know if I missed anything. (Also still waiting on permission to use the GAMESS logo, but that can always be added later)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-02-12T00:26:14.188Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding a test case, considering a spin test, and adding release notes/calculator names/front page link."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "285858900",
+          "author": "askhl",
+          "body": "About the file moving issue: You are probably in the best position to decide how to handle it.  I would consider asking python to create a tempdir for each calculation, then remembering the tempdir within `self.results` in order to retrieve results.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-02-10T23:45:07.627Z",
+          "is_outdated": false
+        },
+        {
+          "id": "285860890",
+          "author": "ehermes",
+          "body": "The problem is that these files are generally *not in the working directory*. The relevant files are stored in `$USERSCR`, which is a directory set by the user in `rungms`. It's commonly set to a scratch directory, like `/scratch/$USER`, but this is definitely not guaranteed to be the location.\n\nSo let's assume that the user has GAMESS-US set up the way the like it with a customized `rungms` script, and now they want to be able to use GAMESS-US from ASE. How do we make sure that ASE knows where $USERSCR is? There are many different ways we could go about this, but I'm not yet sure what the path of least resistance is.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-02-10T23:56:49.629Z",
+          "is_outdated": false
+        },
+        {
+          "id": "285862661",
+          "author": "askhl",
+          "body": "I'm probably not providing too much value since I don't know much about how rungms works, but\n\n1) user needs to tell ASE `$USERSCR` (simple but annoying).\n2) ASE generates rungms.  Probably not an option in general, but we could generate a sample rungms which we know will work.\n\nI assume it's next to impossible to extract `$USERSCR` without also running the calculation (getting more than we bargained for).",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-02-11T00:07:26.208Z",
+          "is_outdated": false
+        },
+        {
+          "id": "285869047",
+          "author": "ehermes",
+          "body": ">ASE generates rungms.\n\nDefinitely not feasible. There's too much going on in that file...\n\n>I assume it's next to impossible to extract `$USERSCR` without also running the calculation (getting more than we bargained for).\n\nThat gave me an idea, actually. I don't think we want to try to parse a `csh` script, but we actually *can* run the script with a bogus input name. The version of `rungms` that ships with the source code will print USERSCR, along with other information. So we can try to run `rungms` with a non-existent input file name, ignore the failure, and parse USERSCR. If that fails, we can require the user to provide USERSCR manually.\n\nI just pushed a commit which (as promised) adds complexity to the GAMESSUS calculator with just this functionality.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-02-11T00:40:44.221Z",
+          "is_outdated": false
+        },
+        {
+          "id": "286465796",
+          "author": "askhl",
+          "body": ">> ASE generates rungms.\n\n> Definitely not feasible. There's too much going on in that file...\n\nWe probably need at least one rungms in order to establish tests that are reproducible.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-02-11T18:27:35.188Z",
+          "is_outdated": false
+        },
+        {
+          "id": "286467909",
+          "author": "ehermes",
+          "body": "`rungms` is a system configuration script. If we plan on running tests in CI, we will just need to customize the `rungms` script when setting up the docker image. We would have to get permission from Gordon to even do this, though.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-02-11T18:32:18.845Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests using a tempdir for each calculation and storing it in self.results to handle the file moving issue."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "285886795",
+          "author": "askhl",
+          "body": "Is it possible to backup the directory (one thing) instead of all the files inside it (many things)?",
+          "file_path": "ase/calculators/gamessus.py",
+          "line_number": 72,
+          "commit_sha": "3ffacfb9029cdee67cca0a260304a11511c58db7",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-11T01:47:36.486Z",
+          "is_outdated": false
+        },
+        {
+          "id": "286391697",
+          "author": "ehermes",
+          "body": "The USERSCR directory will contain *all* output files from *all* GAMESS calculations the user has ever run with that particular `rungms` script, so we don't want to throw away all of the users other output files.",
+          "file_path": "ase/calculators/gamessus.py",
+          "line_number": 72,
+          "commit_sha": "3ffacfb9029cdee67cca0a260304a11511c58db7",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-11T16:20:00.806Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests backing up the directory as a whole instead of individual files inside it."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "285886799",
+          "author": "askhl",
+          "body": "Might be cleaner as a function since it only depends only on command and prefix+directory, but moreso because we are mortally scared of calculators with many lines.\n\nWould it be possible to use a tempdir (and clean it up) instead of self.directory etc.?",
+          "file_path": "ase/calculators/gamessus.py",
+          "line_number": 63,
+          "commit_sha": "3ffacfb9029cdee67cca0a260304a11511c58db7",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-11T01:47:36.649Z",
+          "is_outdated": false
+        },
+        {
+          "id": "286391698",
+          "author": "ehermes",
+          "body": "Good idea. Done.",
+          "file_path": "ase/calculators/gamessus.py",
+          "line_number": 63,
+          "commit_sha": "3ffacfb9029cdee67cca0a260304a11511c58db7",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-11T16:20:01.001Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests refactoring as a function and using a tempdir instead of self.directory."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "286466281",
+          "author": "askhl",
+          "body": "Add the calculator's name to ase.calculators.calculator.names so get_calculator_class() works.  That allows the test suite to monkeypatch the class, skipping tests automatically.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-02-11T18:28:40.089Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding the calculator's name to ase.calculators.calculator.names."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "286466731",
+          "author": "askhl",
+          "body": "You might also want to put something in ase.calculators.autodetect and check `ase info --calculators`.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-02-11T18:29:45.924Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding something to ase.calculators.autodetect."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "287134943",
+          "author": "askhl",
+          "body": "maybe round instead of truncate?",
+          "file_path": "ase/io/gamess_us.py",
+          "line_number": 82,
+          "commit_sha": "bfd2d0e3bea16375a8cf2149dcb4e4c2c808dd63",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-12T16:58:58.150Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests rounding instead of truncating."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "287134945",
+          "author": "askhl",
+          "body": "perhaps use `check_call(command, shell=True)` since that will fail loudly rather than silently.  Otherwise it'll go on to read `<prefix_test>.log` which would presumably fail anyway (but the reason would be less obvious).",
+          "file_path": "ase/io/gamess_us.py",
+          "line_number": 239,
+          "commit_sha": "bfd2d0e3bea16375a8cf2149dcb4e4c2c808dd63",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-12T16:58:58.546Z",
+          "is_outdated": false
+        },
+        {
+          "id": "287150136",
+          "author": "ehermes",
+          "body": "The `get_userscr` function tries to figure out the USERSCR environment variable that is defined in the `rungms` script. It does this by executing `rungms` on a non-existent input file, which causes the `rungms` command to print its header and exit with an error. We fully expect this command to fail (in fact, if it *doesn't* fail, that's a problem).",
+          "file_path": "ase/io/gamess_us.py",
+          "line_number": 239,
+          "commit_sha": "bfd2d0e3bea16375a8cf2149dcb4e4c2c808dd63",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-12T17:28:17.702Z",
+          "is_outdated": false
+        },
+        {
+          "id": "287165515",
+          "author": "askhl",
+          "body": "Ah of course.  But some kind of error handling would be appropriate since it might fail to fail correctly, and this could be all the more tricky to figure out for someone working with it.  (A comment would be appropriate also)",
+          "file_path": "ase/io/gamess_us.py",
+          "line_number": 239,
+          "commit_sha": "bfd2d0e3bea16375a8cf2149dcb4e4c2c808dd63",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-12T17:56:58.141Z",
+          "is_outdated": false
+        },
+        {
+          "id": "287857722",
+          "author": "ehermes",
+          "body": "I think I made it a bit more robust. The function uses `call` now instead of `Popen` (or `check_call`), and it opens the potentially non-existent log file in the idiomatic Python way. I tried to suppress any exceptions that would be raised by the execution of `command` or parsing of the log file, since a failure here is not necessarily fatal, and I suspect will be somewhat common.",
+          "file_path": "ase/io/gamess_us.py",
+          "line_number": 239,
+          "commit_sha": "bfd2d0e3bea16375a8cf2149dcb4e4c2c808dd63",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-13T17:13:59.060Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests using check_call with shell=True to fail loudly on errors."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "287134946",
+          "author": "askhl",
+          "body": "In order to always keep things clean, I've enabled a global autouse=True fixture which creates and runs inside a tmp_path (in conftest.py).\n\n(Hmm, maybe there's still a manual tmp_path in the ch4 test - those should be unnecessary now)",
+          "file_path": "ase/test/gamess_us/test_basis_ecp.py",
+          "line_number": 85,
+          "commit_sha": "bfd2d0e3bea16375a8cf2149dcb4e4c2c808dd63",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-12T16:58:58.723Z",
+          "is_outdated": false
+        },
+        {
+          "id": "287857723",
+          "author": "ehermes",
+          "body": "That's certainly more ergonomic than having to include `tmp_path` and `workdir` manually in every test (though for some reason I thought that was the advice you gave me earlier?).",
+          "file_path": "ase/test/gamess_us/test_basis_ecp.py",
+          "line_number": 85,
+          "commit_sha": "bfd2d0e3bea16375a8cf2149dcb4e4c2c808dd63",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-13T17:13:59.297Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Points out that manual tmp_path usage is unnecessary given the autouse fixture, implying it should be removed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "287134948",
+          "author": "askhl",
+          "body": "(Also no tmppath necessary)",
+          "file_path": "ase/test/gamess_us/test_gamess_us.py",
+          "line_number": 33,
+          "commit_sha": "bfd2d0e3bea16375a8cf2149dcb4e4c2c808dd63",
+          "base_sha": "920e0d94624fac393529eabc3f5cc1e5394514c8",
+          "created_at": "2020-02-12T16:58:58.878Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removing the manual tmppath from the test."
+    }
+  ],
+  "review_thread_count": 22,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "286422379",
+            "author": "ehermes",
+            "body": "I added GAMESS-US to `tests/standardization/test_ch4_energy.py`, and it passes on my end.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-02-11T17:03:54.323Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "286440824",
+            "author": "ehermes",
+            "body": "The test is failing with an error about running GAMESS-US. How do I make it skip this test if GAMESS-US isn't installed, like the other codes do?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-02-11T17:38:00.664Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "286565298",
+            "author": "ehermes",
+            "body": "I've asked for permission to use the GAMESS logo on the ASE wiki (hopefully I asked the correct person!). Until we receive permission, I've added a logo-less link to the GAMESS-US calculator to the ASE wiki home page.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-02-11T22:38:21.125Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "286575610",
+            "author": "ehermes",
+            "body": "I tried adding GAMESS-US to some of the tests in `test/calculator`, but I'm getting test failures because multiple tests are running at the same time using the default label, which results in the calculations stepping on each others files in the USERSCR directory. In order to run these tests in parallel, each thread will need to use a different label.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-02-11T23:23:49.058Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "287109153",
+            "author": "ehermes",
+            "body": "I'm happy with the current state of this MR, and I think I've addressed all of @askhl's concerns thus far. Let me know if there's any other issues I need to address before this can be merged.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-02-12T16:28:44.802Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "287858787",
+            "author": "ehermes",
+            "body": "I got in contact with Mark Gordon, and he seems willing to help, but I haven't gotten a firm answer on which logo they'd like us to use. That's a pretty minor issue, but there's also no pressing need to merge this immediately. Once I get the logo added, then I'll merge this.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-02-13T17:16:00.632Z",
+            "is_outdated": false
+          },
+          {
+            "id": "287860771",
+            "author": "askhl",
+            "body": "So something is still missing?  I wouldn't worry about a logo -- we need to reformat those someday anyway so it's easier to read the list.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-02-13T17:19:33.042Z",
+            "is_outdated": false
+          },
+          {
+            "id": "287862310",
+            "author": "ehermes",
+            "body": "Aside from the logo, nothing is missing. Would you prefer that I merge this now?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-02-13T17:21:33.103Z",
+            "is_outdated": false
+          },
+          {
+            "id": "287863009",
+            "author": "askhl",
+            "body": "It's a bit silly to wait for just a logo, we can always add that.  I'll merge now.  Thank you!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-02-13T17:22:40.930Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "287135086",
+            "author": "askhl",
+            "body": "That would be all.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-02-12T16:59:14.061Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment indicating review is complete, no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "287174248",
+            "author": "askhl",
+            "body": "Please feel free to merge if/once things are good to go.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-02-12T18:15:43.742Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Meta-comment about merging strategy/process, no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "287859954",
+            "author": "askhl",
+            "body": "Eric Hermes <https://gitlab.com/ehermes> commented on a discussion on\nase/test/gamess_us/test_basis_ecp.py\n<https://gitlab.com/ase/ase/-/merge_requests/1705#note_287857723>:\n\n>\n> 83\n>\n> +        atoms.calc = GAMESSUS(basis=basis, ecp=ecp, label='NaCl')\n>\n> 84\n>\n> +        e = atoms.get_potential_energy()\n>\n> 85\n>\n> +        np.testing.assert_allclose(e, -407.32054460869796, atol=1e-3, rtol=1e-3)\n>\n> That's certainly more ergonomic than having to include tmp_path and\n> workdir manually in every test (though for some reason I thought that was\n> the advice you gave me earlier?).\n>\n\nRight ... but now pytest does it for us.\n\nBasically any silly repetition we should delegate to pytest so it's always\ndone correctly and in the same way.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-02-13T17:18:05.115Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "A quoted conversation explaining why the global autouse fixture approach is preferred \u2014 informational context, no new concrete code change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 22,
+    "stage1_kept": 16,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 6,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 3,
+    "stage3_cost_usd": 0.03047475
+  }
+}

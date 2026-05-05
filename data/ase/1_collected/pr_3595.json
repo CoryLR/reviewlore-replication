@@ -1,0 +1,442 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3595,
+  "title": "Add anisotropic NpT with MTK equations",
+  "body": "# Summary\n\nThis MR adds anisotropic NPT by MTK equations, which uses Nose-Hoover-like chains for both thermostats and barostats.\nBoth cell volume and shape fluctuate by this integrator.\nThe barostat for the cell fluctuations is controlled by damping parameter `pdamp` (in time unit).\n\nThis MR is the successor of https://gitlab.com/ase/ase/-/merge_requests/3550, and my implementation note for the MTK equations is in the same PDF for the previous Nose-Hoover chain implementation, https://github.com/lan496/lan496.github.io/blob/main/notes/nose_hoover_chain/main.pdf.\n\n# Testing\n\n## Conserved quantity\n\nIn `ase/test/md/test_nose_hoover_chain.py`, I have checked the new anisotropic NPT integrator conserves the following energy-like quantity.\n\n![image](/uploads/68156a6c756c3589a7b0eb912f26f9fd/image.png)\n\nI tried to generalize MTK equations to allow fluctuating only specified axes.\nHowever, I failed to modify the energy-like quantity to be conserved during MD.\nThus, I would like to proceed with this MR without considering `mask` keyword for now.\n\n## External pressure\n\nFirst, I performed NPT with this new integrator by changing external pressures `pressure_au` from 0 to 100 GPa.\nThe figure below shows the volumes during NPT trajectories, and the equilibrium volumes decrease by applying the external pressure as expected.\n\n![image](/uploads/4390672b559ba4c0618bd2b38c390192/image.png)\n\n## Barostat damping parameter (`pdamp`) dependency\n\nNext, I performed NPT by changing `pdamp` parameter with `pressure_au=10 * GPa` and `tdamp=100*timestep`.\nThe figure below shows the instantaneous stress tensors during NPT trajectories.\nHere I define the stress tensors by pxx = -atoms.get_stress()[0, 0] and so on.\nAll components of the diagonal stress (pxx, pyy, pzz) are close to the external pressure (10 GPa) as expected.\nAlso, the stress tensors are well-controlled in wide range of `pdamp` from `100*timestep` to `10000*timestep`.\n\n![image](/uploads/028aea0393d98add9eb3b53f2eed6ffa/image.png)\n\nI checked the distributions of instantaneous pressure with Q-Q plot for these trajectories.\nIf the distribution is normal, the ordered points should line up straight.\nAll cases distribute like normal distributions within 2\u03c3 regions.\n\n![image](/uploads/685bd8a3a73492195d4ae4ad4ae885eb/image.png)\n\n## Scripts\n<details><summary>Scripts for the testings</summary>\n\n```python\nfrom typing import Union, IO\nimport weakref\nfrom concurrent.futures import ThreadPoolExecutor, as_completed\n\nimport numpy as np\nimport asap3\nfrom ase.parallel import world\nfrom ase.md.md import MolecularDynamics\nfrom ase.md.logger import MDLogger\nfrom ase import Atoms\nimport ase.units\nimport ase.build\nfrom ase.calculators.emt import EMT\nfrom ase.md.velocitydistribution import MaxwellBoltzmannDistribution, Stationary\n\nfrom ase.md.nose_hoover_chain import NoseHooverChainNVT, IsotropicMTKNPT\n\nclass CustomMDLogger(MDLogger):\n\n    def __init__(\n        self,\n        dyn: MolecularDynamics,\n        atoms: Atoms,\n        logfile: Union[IO, str],\n    ):\n        self.dyn: MolecularDynamics = weakref.proxy(dyn)\n        self.atoms = atoms\n\n        self.logfile = self.openfile(file=logfile, mode='w', comm=world)\n\n        self.hdr = \"step,time(ps),epot(eV/atom),ekin(eV/atom),etot(eV/atom),temperature(K),volume(Ang3/atom),pxx(GPa),pyy(GPa),pzz(GPa),pyz(GPa),pzx(GPa),pxy(GPa)\"\n        self.fmt = \"%d\" + \",%.8f\" * 12 + \"\\n\"\n\n        self.logfile.write(self.hdr + \"\\n\")\n\n    def __call__(self):\n        num_atoms = len(self.atoms)\n        epot_eV_per_atom = self.atoms.get_potential_energy() / num_atoms\n        ekin_eV_per_atom = self.atoms.get_kinetic_energy() / num_atoms\n        etot_eV_per_atom = epot_eV_per_atom + ekin_eV_per_atom\n        temperature_K = self.atoms.get_temperature()\n        volume_Ang3_per_atom = self.atoms.get_volume() / num_atoms\n\n        stress_GPa = self.atoms.get_stress(include_ideal_gas=True, voigt=False) / ase.units.GPa\n        pxx_GPa = -stress_GPa[0, 0]\n        pyy_GPa = -stress_GPa[1, 1]\n        pzz_GPa = -stress_GPa[2, 2]\n        pyz_GPa = -stress_GPa[1, 2]\n        pzx_GPa = -stress_GPa[2, 0]\n        pxy_GPa = -stress_GPa[0, 1]\n\n        steps = self.dyn.nsteps\n        time_ps = self.dyn.get_time() / (1000 * ase.units.fs)\n\n        dat = (\n            steps,\n            time_ps,\n            epot_eV_per_atom,\n            ekin_eV_per_atom,\n            etot_eV_per_atom,\n            temperature_K,\n            volume_Ang3_per_atom,\n            pxx_GPa,\n            pyy_GPa,\n            pzz_GPa,\n            pyz_GPa,\n            pzx_GPa,\n            pxy_GPa,\n        )\n\n        self.logfile.write(self.fmt % dat)\n        self.logfile.flush()\n\ndef run_aniso_npt(pdamp_timestep: int, pressure_GPa: int):\n    atoms = ase.build.bulk(\"Cu\", crystalstructure='hcp', a=2.53, c=4.0).repeat((4, 4, 4))\n    atoms.calc = asap3.EMT()\n\n    temperature_K = 300\n    rng = np.random.default_rng(0)\n    MaxwellBoltzmannDistribution(atoms, temperature_K=temperature_K, force_temp=True, rng=rng)\n    Stationary(atoms)\n\n    timestep = 1.0 * ase.units.fs\n    md = MTKNPT(\n        atoms,\n        timestep=timestep,\n        temperature_K=temperature_K,\n        pressure_au=float(pressure_GPa) * ase.units.GPa,\n        tdamp=100 * timestep,\n        pdamp=pdamp_timestep * timestep,\n    )\n    logfile = f'aniso-npt_pressure-{pressure_GPa}_pdamp-{pdamp_timestep}.log'\n    md.attach(CustomMDLogger(md, atoms, logfile), interval=100)\n    md.run(100_000)\n```\n\n</details>\n\n# Checklist\n\n- [x] I am familiar with [ASE's contribution guidelines](https://wiki.fysik.dtu.dk/ase/development/contribute.html).\n- [x] [**Doc strings**](https://wiki.fysik.dtu.dk/ase/development/python_codingstandard.html#writing-documentation-in-the-code) in code changed in this MR are up to date.\n- [x] [**Unit tests** have been added for new or changed code.](https://wiki.fysik.dtu.dk/ase/development/tests.html)\n- [ ] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "lan496",
+  "merged_at": "2025-07-17T12:56:27.866Z",
+  "base_ref": "master",
+  "merge_commit_sha": "c10077250940de76fa5fae45a7d4da13fc82f197",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2359817240",
+          "author": "thangckt",
+          "body": "hi @lan496,\n\nThank you so much for the implementation.\nDo you consider what mentioned in [this discussion](https://gitlab.com/ase/ase/-/merge_requests/3550#note_2264432548)\n\nThanks.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-02-21T06:57:31.254Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2360124914",
+          "author": "lan496",
+          "body": "Hi. I tried to introduce `mask` in MTK equations, but I failed to generalize the conserved energy-like quantity (https://gitlab.com/ase/ase/-/merge_requests/3595#conserved-quantity).\nWhen we allow cell fluctuations in specific axes, I think we need to introduce a `Constraints` to modify a stress tensor.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-02-21T09:57:47.199Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2362685640",
+          "author": "thangckt",
+          "body": "hi @lan496,\n\nThank you for information.\n\nAs your comment, in the case we want to fix box on z-dim only, can we use `MTKNPT()` class in incorporation with `ExpCellFilter()` class?\n\nThanks.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-02-23T11:58:01.494Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2363738469",
+          "author": "lan496",
+          "body": "`ExpCellFilter` (and its successor `FrechetCellFilter`) just appends gradients w.r.t. cell to forces. So, it is not enough to constrain the system not to allow elongating to a specific axis.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-02-24T12:45:11.777Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2364890177",
+          "author": "thangckt",
+          "body": "@lan496 thank you for your guide.\n\nSo, do we have any technique to work around this?\nI am immigrating from LAMMPS, and really want to see such functions in ASE.\n\nThanks.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-02-25T00:27:49.545Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2365448419",
+          "author": "lan496",
+          "body": "Well, a current workaround would be to use other barostats like `NPTBerendsen`.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-02-25T09:34:28.455Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2373735286",
+          "author": "lan496",
+          "body": "@schiotz I am sorry for pinging you. I would appreciate it if you could review this MR when you can. This MR implements a fully anisotropic NPT with chained barostats.\n\nIt might be better to merge https://gitlab.com/ase/ase/-/merge_requests/3601 before this MR to fix the initialization of `IsotropicMTKNPT`.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-03-01T00:18:43.628Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2382141269",
+          "author": "schiotz",
+          "body": "@lan496 Sorry for being slow - I am very busy this week, but will try to look at it next week.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-03-06T08:11:36.734Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2602678685",
+          "author": "lan496",
+          "body": "@schiotz, I apologize for pinging you again. How have things been after that?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-07-04T04:38:14.243Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2608790568",
+          "author": "schiotz",
+          "body": "Why does the MTKBarostat store the masses?  It does not use them.  The IsotropicMTKBarostat has the same issue.",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 698,
+          "commit_sha": "6731abf7585e660d35829d4573c714beed621979",
+          "base_sha": "d2d04cef41e384565d65cfa7868956cf067fd572",
+          "created_at": "2025-07-07T14:28:15.320Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2611577922",
+          "author": "lan496",
+          "body": "It looks the masses are just copied and pasted from `NoseHooverChainThermostat`. I have removed them in https://gitlab.com/ase/ase/-/merge_requests/3595/diffs?commit_id=d769bfe1abc5e78fbbbf126ff178e35d45025d57",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 698,
+          "commit_sha": "6731abf7585e660d35829d4573c714beed621979",
+          "base_sha": "d2d04cef41e384565d65cfa7868956cf067fd572",
+          "created_at": "2025-07-08T11:40:47.512Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2608790598",
+          "author": "schiotz",
+          "body": "Could you please move the ``self._get_forces()`` call to the top of the function, and replace ``len(self.atoms)`` with ``self._num_atoms_global``.  That will make it much easier for me to get NPTMTK to work with Asap.\n\nReason: When ``._get_forces()`` is called, it may trigger migration of atoms between MPI tasks.  In Asap, the ``._get_forces()`` method is extended to update variables such as ``self._p`` after migration has happened, so things will still work.  But it cannot update the ``y`` variable, which will then have the wrong shape if ``._get_forces()`` after it has been calculated.  Also, the total number of atoms should be used when calculating `kappas``.  In ASE they two are the same, but not in Asap.",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 652,
+          "commit_sha": "6731abf7585e660d35829d4573c714beed621979",
+          "base_sha": "d2d04cef41e384565d65cfa7868956cf067fd572",
+          "created_at": "2025-07-07T14:28:15.787Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2611579048",
+          "author": "lan496",
+          "body": "Done in https://gitlab.com/ase/ase/-/merge_requests/3595/diffs?commit_id=266170ecee10780624dfba5e55a02934380b52fd",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 652,
+          "commit_sha": "6731abf7585e660d35829d4573c714beed621979",
+          "base_sha": "d2d04cef41e384565d65cfa7868956cf067fd572",
+          "created_at": "2025-07-08T11:41:21.871Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2608790627",
+          "author": "schiotz",
+          "body": "This looks very good, I have added a much longer test of this to Asap in a branch.\n\nI have made a few requests for changes that are needed before I can use it with Asap.\n\nI also note that the volume fluctuations seem to be larger than expected, unlike in IsotropicMTK, but not by a large factor.  Maybe that is just how this dynamics behaves.\n\n(thanks for pinging me!)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-07-07T14:28:16.222Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2611588096",
+          "author": "lan496",
+          "body": "Thank you for your comment and review!\nI have revised this MR based on your suggestions (and rebased it into the current master branch).\n\n> I also note that the volume fluctuations seem to be larger than expected, unlike in IsotropicMTK, but not by a large factor.  Maybe that is just how this dynamics behaves.\n\nIn my opinion, anisotropic cell fluctuation is harder to control than isotropic volume fluctuation due to the larger number of extended variables for barostats.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-07-08T11:46:12.170Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2611636717",
+          "author": "schiotz",
+          "body": "Thank you @lan496 for your contributions to ASE!  This looks very good, indeed.  I think is should be merged now (CC: @askhl @yuzie007).\n\nIt passes both the ASE tests, and also the longer tests that I added to Asap.\n\n\nA question: Do you think it would be worth adding a version where a full external stress tensor can be specified instead of a hydrostatic pressure?  I do not know if that would require major changes, but I suspect it might be difficult.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-07-08T12:09:45.306Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2611657561",
+          "author": "lan496",
+          "body": "> Do you think it would be worth adding a version where a full external stress tensor can be specified instead of a hydrostatic pressure? \n\nIt should be worth enabling to specify a full external stress tensor, but I am not aware of any references for combining it with the MTK barostat. So, it will be challenging.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-07-08T12:19:25.906Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2611666417",
+          "author": "schiotz",
+          "body": "> So, it will be challenging.\n\nWhich means that it should only be done if somebody needs it desperately :-)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-07-08T12:23:39.664Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2615236715",
+          "author": "askhl",
+          "body": "Like in one of the previous MRs, we need `atoms.get_potential_energy(force_consistent=True)` and then get the kinetic energy separately.  Otherwise there will be cases where it is not quite conserved.",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 604,
+          "commit_sha": "266170ecee10780624dfba5e55a02934380b52fd",
+          "base_sha": "f0aea3fd3ee2a671c0fa449ed0c076dcd66b4d29",
+          "created_at": "2025-07-09T14:19:26.339Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2615237289",
+          "author": "askhl",
+          "body": "Like in one of the previous MRs, we need `atoms.get_potential_energy(force_consistent=True)` and then get the kinetic energy separately.  Otherwise there will be cases where it is not quite conserved.",
+          "file_path": "ase/md/nose_hoover_chain.py",
+          "line_number": 604,
+          "commit_sha": "266170ecee10780624dfba5e55a02934380b52fd",
+          "base_sha": "f0aea3fd3ee2a671c0fa449ed0c076dcd66b4d29",
+          "created_at": "2025-07-09T14:19:36.752Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2615240751",
+          "author": "askhl",
+          "body": "We test that things haven't deviated from the starting values.  But this test will also pass if the MD run doesn't do anything.  Can we think of an assertion that would fail if the propagation didn't do something it should?",
+          "file_path": "ase/test/md/test_nose_hoover_chain.py",
+          "line_number": 121,
+          "commit_sha": "266170ecee10780624dfba5e55a02934380b52fd",
+          "base_sha": "f0aea3fd3ee2a671c0fa449ed0c076dcd66b4d29",
+          "created_at": "2025-07-09T14:20:34.764Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2617386287",
+          "author": "lan496",
+          "body": "Thank you for your review! I have added assertion to check these variables are actually updated at the middle in 79fe88f4ca1149380fb1416f24744043cb004501",
+          "file_path": "ase/test/md/test_nose_hoover_chain.py",
+          "line_number": 127,
+          "commit_sha": "79fe88f4ca1149380fb1416f24744043cb004501",
+          "base_sha": "f0aea3fd3ee2a671c0fa449ed0c076dcd66b4d29",
+          "created_at": "2025-07-10T10:56:44.517Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2615240779",
+          "author": "askhl",
+          "body": "This also has the property (I think) that it will still pass if we entirely remove the line `md.run(100)`.  Is there anything we could test that actually ensures that the propagation has also changed something?",
+          "file_path": "ase/test/md/test_nose_hoover_chain.py",
+          "line_number": 212,
+          "commit_sha": "266170ecee10780624dfba5e55a02934380b52fd",
+          "base_sha": "f0aea3fd3ee2a671c0fa449ed0c076dcd66b4d29",
+          "created_at": "2025-07-09T14:20:35.379Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2617387156",
+          "author": "lan496",
+          "body": "I have added assertion to check if positions are actually updated in 79fe88f4ca1149380fb1416f24744043cb004501",
+          "file_path": "ase/test/md/test_nose_hoover_chain.py",
+          "line_number": 219,
+          "commit_sha": "79fe88f4ca1149380fb1416f24744043cb004501",
+          "base_sha": "f0aea3fd3ee2a671c0fa449ed0c076dcd66b4d29",
+          "created_at": "2025-07-10T10:57:12.490Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2632717487",
+          "author": "lan496",
+          "body": "@askhl I think this MR is ready for review again. Are there other issues to be addressed?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-07-17T07:20:46.892Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2633518324",
+          "author": "askhl",
+          "body": "OK.  It would still be nice to check a more non-trivial aspect of the dynamics, but I don't have any particular ideas and I think this is very well done.\n\nThank you very much.  Merging.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-07-17T12:56:20.275Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2636438081",
+          "author": "PHPJochen",
+          "body": "Hello, great work!\nIs there currently a workaround for fixing certain axes in the simulation? Is the implementation of a mask planned any time soon? Thank you!",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-07-18T17:31:02.413Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2641457024",
+          "author": "lan496",
+          "body": "It would be the same answer with https://gitlab.com/ase/ase/-/merge_requests/3595#note_2365448419",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-07-21T13:39:45.273Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 17
+}

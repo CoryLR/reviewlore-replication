@@ -1,0 +1,462 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 446,
+  "title": "ENH: ase-gui uses atoms",
+  "body": "ase-gui represents its images explicitly as Atoms objects instead of creating intermediate arrays for them.\n\nFixes: #4",
+  "author": "askhl",
+  "merged_at": "2017-03-22T11:08:44.651Z",
+  "base_ref": "master",
+  "merge_commit_sha": "c8c61202dd59efd7796f07fd263cc8cb29d9bccd",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "25283152",
+          "author": "jensj",
+          "body": "There are now an ase-gui test (in the ase/test/gui/ folder).  Feel free to expand it as you fix things.  One thing that will require some work is showing bonds.  Currently, all images must have the same bonds, which will no longer make sense.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2017-03-13T20:15:55.870Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that showing bonds will require work because all images must have the same bonds, implying a code change is needed."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "25285681",
+          "author": "jensj",
+          "body": "Yes, I think it's a good idea to use Atoms objects behind the scene.  Originally, I used one large ndarray because I thought it would be simpler and more performant, but today I would have gone with Atoms objects.  And, yes, we should calculate bonds for all images instead of just the first one.  It'll be nice to get this fixed.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2017-03-13T20:59:05.234Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests bonds should be calculated for all images instead of just the first one, implying a concrete fix is needed."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "25314461",
+          "author": "schiotz",
+          "body": "I agree that Atoms must be the right way to do it - I hope it does not impact performance badly (why would it, I assume we still access the arrays that the atoms store).  Regarding bonds calculations: I hope they are only calculated if one enables displaying bonds, otherwise it may be very slow.  And I hope it does something more intelligent than an O(N^2) algorithm...",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2017-03-14T09:38:33.615Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags concerns about performance and bond calculation algorithm (O(N^2)), implying improvements should be made."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "25558779",
+          "author": "schiotz",
+          "body": "* Creating nanotubes works.\n* Loading a trajectory with many frames works.\n* Moving one of the atoms in one of the frames works as expected.\n* Alchemy works as I would expect it: the element is changed in that frame only.\n* Deleting an atom works as it did previously, which is *not* as I would expect: The entire sequence is replaced with a single frame where the atom has been deleted.  This was the only possible way it could work in the old version.  What behaviour do we want now?\n\nPerformance for a medium-sized system (77000 atoms, 10 frames) is unchanged.  It takes 42 seconds to run through the ten frames as a movie on my Mac both with this branch and with the master branch.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2017-03-17T08:24:28.271Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Reports a bug with atom deletion behavior and raises the question of what the desired behavior should be, implying a fix or design decision is needed."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "25896419",
+          "author": "jensj",
+          "body": "I just tried it and it seems to mostly work.  Nice work!  Except this:\n\n```\n$ ase-gui ~/ase/ase/collections/s22.json --bonds\n```",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2017-03-21T15:22:54.282Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Reports a bug when running ase-gui with --bonds flag, implying a fix is needed."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "25896726",
+          "author": "jensj",
+          "body": "If I open the s22 collection without `--bonds` and then turn on bonds from the View menu, then it works better, but if I then hold down page-down I get some weird stuff.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2017-03-21T15:26:10.608Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Reports bugs with bond display when toggling from the View menu and holding page-down, implying fixes are needed."
+    }
+  ],
+  "review_thread_count": 20,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "25202760",
+            "author": "askhl",
+            "body": "Presently this will crash rather badly because everything that would edit the atoms object, including repeat(), is still broken.\n\nThe idea would be to go ahead and fix all those errors, and rely on the actual Atoms objects (instead of the current IndexHack objects).\n\nIf this would yield some performance problem for very large atoms objects, we can perhaps think about it afterwards.\n\nOpinions?  @jensj @schiotz \n\nFixes: #4",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2017-03-12T15:37:51.504Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "25203942",
+            "author": "askhl",
+            "body": "(try e.g. `ase-gui ase/collections/g2.json` and it should play the animation.)",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2017-03-12T16:35:36.158Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "25284824",
+            "author": "askhl",
+            "body": "I guess it has to recalculate bonds for each image.  I am not sure how bonds would work for an MD simulation of a fluid.  It would need to recalculate all the time anyway.\n\nMore generally, do I understand that the Powers That Be look favourably on this humble, uh, *ansatz*?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2017-03-13T20:43:01.897Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "25540246",
+            "author": "askhl",
+            "body": "@schiotz @jensj Would you like to check the GUI?  I have fixed most features but there must be some bugs still.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2017-03-16T22:13:35.098Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "25583646",
+            "author": "askhl",
+            "body": "I had not thought much about why delete was so funny.  I have changed it now so it simply deletes some atoms in the current frame.\n\nThis reminds me that I am sure there will be a few awkward issues related to how selections work across systems of different length.  I have tried to avoid IndexErrors, but in most cases I have not really tried to achieve overly intelligent behaviour.  Anyway these things are generalizations that we can decide upon later, hopefully.\n\nImplementation-wise, images.selections (also 'images.visible') is a mask which is as long as the longest system.  Any time the current frame is changed, only the part of the selection up to the size of the current atoms object is used.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2017-03-17T10:46:17.281Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "25588917",
+            "author": "askhl",
+            "body": "As I accidentally said in another MR: Special support for \"quaternions\" is disabled by the way. I could not bother to learn what they are and all that just to test them. Is that okay?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2017-03-17T12:04:59.952Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "25589181",
+            "author": "askhl",
+            "body": "Also NEB is disabled at the moment.  Is it supposed to be working?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2017-03-17T12:10:37.783Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "25590578",
+            "author": "askhl",
+            "body": "It turns out that NEB works after all (I thought it did not).",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2017-03-17T12:34:09.501Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "25895733",
+            "author": "askhl",
+            "body": "I think this is working now.  Merge?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2017-03-21T15:14:56.635Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "25898067",
+            "author": "askhl",
+            "body": "Ah yes - the bonds are not wholly updated.  Will fix this",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2017-03-21T15:39:49.777Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "25905707",
+            "author": "askhl",
+            "body": "I am doing some refactoring.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2017-03-21T16:42:29.738Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "25908881",
+            "author": "askhl",
+            "body": "That's probably enough refactoring for now.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2017-03-21T17:27:09.222Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "25589918",
+            "author": "jensj",
+            "body": "Yes, that should be working.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2017-03-17T12:23:32.914Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment with no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "25947950",
+            "author": "jensj",
+            "body": "Works for me now.  I would say just merge this now and then we'll fix bugs as we find them.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2017-03-22T07:48:27.853Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Meta-comment about merge strategy with no specific code change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 20,
+    "stage1_kept": 8,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 12,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 2,
+    "stage3_cost_usd": 0.0200225
+  }
+}

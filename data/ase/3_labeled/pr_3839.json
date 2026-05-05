@@ -1,0 +1,2213 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3839,
+  "title": "Implementation of MD with Langevin and variable cell shape using Leimkuhler BAOAB integrator",
+  "body": "Implementation of Langevin for MD with variable cell shape. Correctly reproduces cell shape fluctuations as confirmed by relation to elastic constants, although test is much too slow to include in CI.\n\n(recreated from original MR using ase repo to take advantage of available runners)\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [X] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [X] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [X] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [X] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [ ] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "noambern",
+  "merged_at": "2025-10-24T08:56:03.453Z",
+  "base_ref": "master",
+  "merge_commit_sha": "58ff401a70e49adbefb32e2ff1c164bff3ac3586",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2800643070",
+          "author": "ajjackson",
+          "body": "ASE uses `warnings.warn`. I am familiar with the benefits of `logging` and not really opposed to using it, but consistency is more important. (And `warn` is easier to capture and manipulate from tests/downstream packages that don't use `logging`.)",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 135,
+          "commit_sha": "91e23eb552b95a820e1d524d75595d7ad4a957d5",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T10:56:34.051Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Function Consistency",
+          "label_confidence": "high",
+          "label_reasoning": "The comment calls out that the code uses `logging` instead of `warnings.warn`, which is inconsistent with the rest of the ASE codebase."
+        },
+        {
+          "id": "2801076284",
+          "author": "noambern",
+          "body": "I'm all for consistency - this was just ported from another codebase, and I forgot to clean that up.  Will resolve this thread once that's done.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 135,
+          "commit_sha": "91e23eb552b95a820e1d524d75595d7ad4a957d5",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T12:52:18.514Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2801380308",
+          "author": "noambern",
+          "body": "fixed",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 135,
+          "commit_sha": "91e23eb552b95a820e1d524d75595d7ad4a957d5",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T13:50:23.577Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests replacing `logging` with `warnings.warn` to match ASE conventions."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2800643095",
+          "author": "ajjackson",
+          "body": "It's a bit surprising that `True` is the fallback case if no stress is provided.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 96,
+          "commit_sha": "91e23eb552b95a820e1d524d75595d7ad4a957d5",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T10:56:34.403Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The fallback value of `True` when no stress is provided is logically surprising and likely incorrect behavior."
+        },
+        {
+          "id": "2801084908",
+          "author": "noambern",
+          "body": "I think this is probably a historical artifact.  Let me look over this code, and what I can find in terms of similar functionality in other ASE variable cell propagators, and clean it up.  \n\nConsistency with other integrators aside, do you think `hydrostatic=False` or `variable_cell_shape=False` (with the opposite meaning) would be a more expected default?",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 96,
+          "commit_sha": "91e23eb552b95a820e1d524d75595d7ad4a957d5",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T12:54:24.214Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2801108054",
+          "author": "ajjackson",
+          "body": "I would expect that where a variable-shape algorithm is available it would be preferred, and so be the default. In the solid-state, fixing the shape is quite an artificial choice.\n\nBut that is coming from a solid-state-chemistry bias: I suppose that many MD users would have boxes full of weakly-interacting molecules with a calculator that is optimised for (or mandates) an orthorhombic cell. In which case they would likely prefer to keep things simple!",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 96,
+          "commit_sha": "91e23eb552b95a820e1d524d75595d7ad4a957d5",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T12:59:20.668Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2801379815",
+          "author": "noambern",
+          "body": "I just changed to default `hydrostatic=False`",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 96,
+          "commit_sha": "91e23eb552b95a820e1d524d75595d7ad4a957d5",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T13:50:16.117Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags a surprising/likely incorrect fallback behavior, implying the logic should be changed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2800643117",
+          "author": "ajjackson",
+          "body": "I notice other thermostats use `self.atoms.get_number_of_degrees_of_freedom()` to account for atom constraints. Should this also include the unit cell vectors?",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 156,
+          "commit_sha": "91e23eb552b95a820e1d524d75595d7ad4a957d5",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T10:56:34.633Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The degrees-of-freedom calculation doesn't account for atom constraints, causing the code behavior to diverge from the intended physical meaning."
+        },
+        {
+          "id": "2801091207",
+          "author": "noambern",
+          "body": "Let me see what other integrators do, or, better yet, some real derivation.  I'll use number of DOFs, although I've never tested this one in conjunction with constraints.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 156,
+          "commit_sha": "91e23eb552b95a820e1d524d75595d7ad4a957d5",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T12:55:48.341Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2801093933",
+          "author": "noambern",
+          "body": "Probably should test, and/or give a warning or an error if constraints are being used, at least to warn people that it's untested.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 156,
+          "commit_sha": "91e23eb552b95a820e1d524d75595d7ad4a957d5",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T12:56:25.437Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2801381124",
+          "author": "noambern",
+          "body": "fixed",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 156,
+          "commit_sha": "91e23eb552b95a820e1d524d75595d7ad4a957d5",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T13:50:35.914Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Asks whether the degrees-of-freedom calculation should also account for cell vectors, implying a possible fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2800643127",
+          "author": "ajjackson",
+          "body": "Why enable/disable the barostat with this parameter, rather than `externalstress=None`? Float comparisons _mostly_ work well in Python but are still best avoided if practical.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 38,
+          "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T10:56:34.810Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Using a specific floating-point value to enable/disable the barostat is fragile; float comparisons can fail unexpectedly. Using `None` would be more robust."
+        },
+        {
+          "id": "2801103484",
+          "author": "noambern",
+          "body": "Which \"this parameter\" do you mean? If you mean `P_tau`, it should still do variable cell, just without the Langevin equilibration, if it's 0, because I wanted to use the default of `None` for the default (20 * T_tau). \n\nI agree that it's a bit confusing.  Maybe better as more, and therefore more explicit, flags?",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 38,
+          "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T12:58:21.321Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2801118991",
+          "author": "ajjackson",
+          "body": "Ah, interesting! What ensemble would that end up being, NTH?",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 38,
+          "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T13:01:55.815Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2801160504",
+          "author": "ajjackson",
+          "body": "Does this mean that with `temperature_K=None, P_tau=0.` it runs in some kind of under-constrained `nH` regime?",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 38,
+          "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T13:13:27.717Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2801193915",
+          "author": "noambern",
+          "body": "I'm not sure what you mean by \"under-constrained\" - it's just a different ensemble.  But yes, it's intended to run at constant pressure and enthalpy NPH where H = E + PV (the variable cell analog of constant energy and cell NVE), although that's an ensemble that's difficult to make stable because it's more sensitive to the cell DOF timescale.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 38,
+          "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T13:21:17.829Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2801381419",
+          "author": "ajjackson",
+          "body": "All the classic statistical ensembles constrain either V or P, so a pure nH seems quite exotic (and hard to manage experimentally?)\n\nI see what you mean now that P_tau=0 does not disable the barostat, so we are still in nPH. What about when `temperature_K=None, externalstress=None`? Then it is nVH, which is also ok?",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 38,
+          "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T13:50:39.199Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2801414401",
+          "author": "noambern",
+          "body": "You could call it \"NVH\", but really that's just NVE (if V isn't changing, neither is PV, so const H == const E). But I'm not sure I actually tested it.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 38,
+          "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T13:57:01.159Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2801456952",
+          "author": "ajjackson",
+          "body": "Ah, of course! Forgive my unorthodox spelling of \"microcanonical\", the coffee machine in my building is broken :weary:",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 38,
+          "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T14:04:35.912Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2802017974",
+          "author": "noambern",
+          "body": "Let me know if the revised docstring is now more clear.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 38,
+          "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T16:55:39.232Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828324973",
+          "author": "ajjackson",
+          "body": "Looks good, yes :smile:",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 38,
+          "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T11:30:45.302Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests using `externalstress=None` instead of a float comparison to enable/disable the barostat."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2800643139",
+          "author": "ajjackson",
+          "body": "According to the docstring, P_tau = 0 disables the barostat so why worry about P_mass in that case?",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 213,
+          "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T10:56:35.279Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Redundancy Handling",
+          "label_confidence": "high",
+          "label_reasoning": "Computing `P_mass` when `P_tau = 0` disables the barostat is unnecessary/redundant logic."
+        },
+        {
+          "id": "2801115774",
+          "author": "noambern",
+          "body": "It just disables the Langevin - still allows variable cell, e.g. for NPH (fixed total enthalpy variable cell), or for NPT but with the cell only equilibrating through interaction with the position DOFs.  I'll try to improve the docs.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 213,
+          "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T13:01:02.427Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Questions why `P_mass` is computed when `P_tau=0` disables the barostat, implying the check/logic should be removed or restructured."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2800643146",
+          "author": "ajjackson",
+          "body": "What is supposed to happen when T_tau = 0?",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 232,
+          "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T10:56:35.488Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Missing edge case handling for `T_tau = 0`, which may cause undefined or erroneous behavior."
+        },
+        {
+          "id": "2801118334",
+          "author": "noambern",
+          "body": "No thermostat, I think.  Let me look, and try to at least improve the docs, or perhaps improve consistency if the actual behavior is what's broken.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 232,
+          "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T13:01:45.141Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2802019012",
+          "author": "noambern",
+          "body": "I hope the docstring is now more clear, but perhaps I should add an explicit NVE / NPH E/H conservation test.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 232,
+          "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-06T16:56:27.563Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828631872",
+          "author": "ajjackson",
+          "body": "That seems wise, hopefully there are some existing NVE conservation tests we can base it on (or add to?)",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 232,
+          "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T13:36:48.622Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828859084",
+          "author": "noambern",
+          "body": "Looks like some errors in the tests were being ignored (apparently using `with pytest.raises(UserWarning)` instead of `with pytest.warns(UserWarning)` caused it to ignore any errors, or maybe not even run the code inside that context?). Fixing that now.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 232,
+          "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T14:54:00.193Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2829404326",
+          "author": "noambern",
+          "body": "OK, fixed now I believe, with a new test that checks conservation of enthalpy (minimal run length to make it fast, so it's not entirely definitive, but if you run longer you can see that the energy oscillates a lot while the enthalpy is conserved much better, and that it scales as expected with timestep).",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 232,
+          "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T19:11:25.503Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Asks what should happen when `T_tau=0`, implying missing handling or documentation for that edge case."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2800643156",
+          "author": "ajjackson",
+          "body": "As we have a nice separation of the B-A-O steps here, it would be straightforward to implement other permutations. ABOBA seems to be generally worse than BAOAB, but there is a claim that the Gromacs-equivalent BAOA gives the same positions and better momenta than BAOAB https://pubs.acs.org/doi/full/10.1021/acs.jctc.2c00585\n\nIf you don't fancy implementing this it could be managed later (compatibly) with derived classes.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 469,
+          "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-06T10:56:35.652Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "medium",
+          "label_reasoning": "Suggestion to support other integrator permutations via derived classes, touching on code organization and extensibility."
+        },
+        {
+          "id": "2801125247",
+          "author": "noambern",
+          "body": "For now I'll wait. In principle I agree that it might be nice, but I had to do some non-obvious manipulation of the math to cast the variable cell dynamics into the form of plain position BAOAB, which I didn't bother to re-derive for other step orders, so I'm not 100% sure it'll actually be straightforward.\n\nI'll add a comment mentioning this, if anyone wants to get back to it later.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 469,
+          "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-06T13:03:40.578Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2801395656",
+          "author": "noambern",
+          "body": "comment added",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 469,
+          "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-06T13:53:29.443Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests implementing BAOA/ABOBA permutations (or using derived classes to support them later)."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2800643178",
+          "author": "ajjackson",
+          "body": "Thank you for contributing this powerful and useful thermostat!\nI took some time last week to look at the papers and get a feel for what is being put together here.\n\nIt seems that most of the complexity in the code relates to its ability to work in a number of different regimes:\n- nVH\n- nVT\n- nPH (fixed-shape)\n- nPH (variable-shape)\n- nPT (fixed-shape)\n- nPT (variable-shape)\n\nAs well as some handling of default values.\n\nAs a general design principle I am wary of parameters that often don't do anything, and of parameters that do special things when given particular floating-point values or ranges.\n\nI think we could remove some nested logic and make things easier to read/maintain by breaking apart into several thermostat classes that have stronger assumptions/requirements about what they are doing. Six is probably too many! Additionally there is the tempting possibility of ABOBA and BAOA variants: 18 classes is definitely too many.\n\n@AndrewRosen @yuzie007 what do you think would fit well with other features? Perhaps three classes: LangevinLeimkuhlerNVT, LangevinLeimkuhlerNPThydrostatic, LangevinLeimkuhlerNPT? With a \"structure\" parameter switching between \"baoab\" and \"baoa\", say. The names do work out a bit verbose :thinking:\n\nWe can play around with under-the-hood structure later, but the public API needs to be good the first time.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-06T10:56:36.055Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Class Design Guidelines",
+          "label_confidence": "high",
+          "label_reasoning": "General review comment about class design: concerns about parameters that do special things at specific float values and proposal to split into multiple focused classes."
+        },
+        {
+          "id": "2801139818",
+          "author": "noambern",
+          "body": "I agree with you about the complexity, and I'd consider refactoring, but I would not split fixed and variable cell - those are distinguished by just a single flag and single simple operation `sigma = np.trace(sigma) / 3 * np.eye()` (in principle - in practice some of the matrix exponential stuff is simplified in the fixed cell shape).\n\nThe one down side is that the rest of my workflow is generally more straightforward with being able to use the same constructor and controlling everything with `kwargs`. \n\nLet me think about it, and follow up here.  I would definitely be interested in hearing other opinions.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-06T13:08:02.112Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Proposes splitting the implementation into multiple thermostat classes with cleaner APIs and a 'structure' parameter."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2828324156",
+          "author": "ajjackson",
+          "body": "```suggestion:-0+0\n    Atoms object for dynamics.\n```",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 21,
+          "commit_sha": "c43caebf9274721c8780bd95a4697e1cdec29307",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T11:30:19.127Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "Inline suggestion to fix docstring wording."
+        },
+        {
+          "id": "2828477715",
+          "author": "noambern",
+          "body": "done",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 21,
+          "commit_sha": "c43caebf9274721c8780bd95a4697e1cdec29307",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T12:39:34.847Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Inline suggestion to change the docstring text."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2828324170",
+          "author": "ajjackson",
+          "body": "```suggestion:-0+0\nmay be better (https://pubs.acs.org/doi/full/10.1021/acs.jctc.2c00585),\n```",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 10,
+          "commit_sha": "c43caebf9274721c8780bd95a4697e1cdec29307",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T11:30:19.489Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "Inline suggestion to correct wording in the module docstring/comment."
+        },
+        {
+          "id": "2828479167",
+          "author": "noambern",
+          "body": "done",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 10,
+          "commit_sha": "c43caebf9274721c8780bd95a4697e1cdec29307",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T12:40:15.664Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Inline suggestion to update a docstring/comment line."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2828324185",
+          "author": "ajjackson",
+          "body": "I think this is fine here.\n\nBut, out of interest, is there any recommendation of when this scheme would be more/less appropriate? It might be good to write something elsewhere in the docs about it.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 55,
+          "commit_sha": "a0b8f44bd14296bba98ade26f29bbdeba99c0d8f",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T11:30:19.877Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "medium",
+          "label_reasoning": "Comment requests that documentation about when the scheme is appropriate/inappropriate be added."
+        },
+        {
+          "id": "2828482094",
+          "author": "noambern",
+          "body": "Do you specifically mean the disable cell langevin? If so, I'm not really aware of one, except for debugging the cell Langevin time propagation during the development of the code.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 55,
+          "commit_sha": "a0b8f44bd14296bba98ade26f29bbdeba99c0d8f",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T12:41:44.560Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828646791",
+          "author": "ajjackson",
+          "body": "Can the same behaviour be achieved by setting P_tau to a very large number, or would that have other side-effects?",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 55,
+          "commit_sha": "a0b8f44bd14296bba98ade26f29bbdeba99c0d8f",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T13:43:02.219Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828716808",
+          "author": "noambern",
+          "body": "I don't think so.  Large P_tau will slow all cell dynamics, while this gives NPH-like cell dynamics, so they can change on the usual time scale, but deterministically due to the stress, without Langevin thermostating (drag + random force).",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 55,
+          "commit_sha": "a0b8f44bd14296bba98ade26f29bbdeba99c0d8f",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T14:12:23.884Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding documentation about when the scheme is more/less appropriate."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2828324191",
+          "author": "ajjackson",
+          "body": "I think this docstring needs to be on the LangevinBAOAB class to work properly. Currently it uses an inherited docstring from the base class.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 18,
+          "commit_sha": "a0b8f44bd14296bba98ade26f29bbdeba99c0d8f",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T11:30:20.083Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "Docstring is placed incorrectly (not on the class itself), resulting in an inherited docstring being shown instead."
+        },
+        {
+          "id": "2828483713",
+          "author": "noambern",
+          "body": "You mean move it to between the `class LangevinBAOAB` and the `def __init__` ?",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 18,
+          "commit_sha": "a0b8f44bd14296bba98ade26f29bbdeba99c0d8f",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T12:42:32.560Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828572073",
+          "author": "ajjackson",
+          "body": "I think it will work at the class level _or_ `__init__` level, but it's currently at the top of the module file.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 18,
+          "commit_sha": "a0b8f44bd14296bba98ade26f29bbdeba99c0d8f",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T13:15:30.647Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828718622",
+          "author": "noambern",
+          "body": "done",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 18,
+          "commit_sha": "a0b8f44bd14296bba98ade26f29bbdeba99c0d8f",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T14:13:09.819Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Points out that the docstring needs to be moved to the `LangevinBAOAB` class to work properly."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2828324194",
+          "author": "ajjackson",
+          "body": "This parameter doesn't seem to be documented? It's quite unclear why type it should have: `int`, `numpy.random.Generator` or `Callable[int|tuple[int...], np.ndarray]` are all plausible! I think `numpy.random.Generator` is correct? There doesn't seem to be a fallback/default if it is left as `None`; this should call `numpy.random.default_rng()`.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 91,
+          "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-17T11:30:20.291Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "The `rng` parameter is undocumented in the docstring, its expected type is unclear, and no default is provided."
+        },
+        {
+          "id": "2828488276",
+          "author": "noambern",
+          "body": "Good point.  Yes, it's used assuming it's a generator. There's no default because I don't believe in doing non-reproducible simulations, so I think it's actively good to _force_ the user to pass something where the seed has been set.  I'd be willing to accept an int, and use it as the seed. I'll clean that up.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 91,
+          "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-17T12:44:17.381Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828540220",
+          "author": "noambern",
+          "body": "better in the new version (not yet pushed, should be ready in a few minutes)?",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 91,
+          "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-17T13:03:58.762Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828575886",
+          "author": "ajjackson",
+          "body": "I think the user expectation is that they can run _something_ without worrying about this. I don't mind if the default is deterministic with a fixed seed, though.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 91,
+          "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-17T13:16:54.979Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828586162",
+          "author": "ajjackson",
+          "body": "As a general rule I'd prefer to let users pass a generator rather than an int, so that things like quasirandom generators to be used instead of the default RNG. (Admittedly QRNG is probably not a brilliant choice for MD. But some people care about using extra-high-quality randomness for Monte Carlo simulations, etc.)",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 91,
+          "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-17T13:20:47.049Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828730934",
+          "author": "noambern",
+          "body": "It'll now accept a generator or anything that can function as a seed when passed to `np.random.default_rng`, so `int` or one of the other types. But I think a _fixed_ seed is in practice a way more surprising option than allowing for non-deterministic runs (i.e. default seed). Certainly I find `Atoms.rattle`'s behavior https://gitlab.com/ase/ase/-/blob/master/ase/atoms.py?ref_type=heads#L1490 disastrously surprising. If anything, I'd rather allow non-reproducible runs with defaulting to `np.random.default_rng()`.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 91,
+          "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-17T14:17:33.182Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags missing documentation for a parameter, unclear type, and missing default RNG fallback via `numpy.random.default_rng()`."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2828324205",
+          "author": "ajjackson",
+          "body": "This is always \"got None\" by construction. Anyway, I suggest we remove this warning and provide a default rng for consistency with other thermostats.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 105,
+          "commit_sha": "c43caebf9274721c8780bd95a4697e1cdec29307",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T11:30:20.530Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Dead Code",
+          "label_confidence": "high",
+          "label_reasoning": "The warning is always triggered with 'got None' by construction, making the conditional check effectively dead/meaningless code."
+        },
+        {
+          "id": "2828490105",
+          "author": "noambern",
+          "body": "I'd be willing to do that, grudgingly, but did my claim about non-reproducible simulations convince you?",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 105,
+          "commit_sha": "c43caebf9274721c8780bd95a4697e1cdec29307",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T12:45:11.301Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828580883",
+          "author": "ajjackson",
+          "body": "I do like reproducibility :smile: I think the user-friendly solution is \"reproducible by default\" rather than \"error by default\".",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 105,
+          "commit_sha": "c43caebf9274721c8780bd95a4697e1cdec29307",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T13:18:54.285Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828738563",
+          "author": "noambern",
+          "body": "Except that \"reproducible by default\" means using the same seed each time, and with Langevin you can lock into identical trajectories by starting with the same seed for the random forces, even if the initial config isn't identical (https://journals.aps.org/pre/abstract/10.1103/PhysRevE.86.026703).",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 105,
+          "commit_sha": "c43caebf9274721c8780bd95a4697e1cdec29307",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T14:20:30.426Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2830900587",
+          "author": "ajjackson",
+          "body": "Interesting paper! That does seem a good reason to discourage seed re-use across different runs. (Whereas a default seed would encourage it.)",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 105,
+          "commit_sha": "c43caebf9274721c8780bd95a4697e1cdec29307",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-20T07:31:21.331Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2831643537",
+          "author": "noambern",
+          "body": "That's my reasoning.  Also, I've already confused myself by not remembering that `Atoms.rattle` uses a fixed seed.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 105,
+          "commit_sha": "c43caebf9274721c8780bd95a4697e1cdec29307",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-20T12:56:31.306Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests removing a warning and providing a default RNG."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2828324213",
+          "author": "ajjackson",
+          "body": "```suggestion:-0+0\n        super().__init__(atoms, timestep, **kwargs)\n```",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 91,
+          "commit_sha": "10ce685005e03a8ac9925ac1ff4043b61d2bf151",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T11:30:20.735Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "medium",
+          "label_reasoning": "Suggestion to use `super().__init__` properly, implying the current call is not correctly using the parent class API."
+        },
+        {
+          "id": "2828490614",
+          "author": "noambern",
+          "body": "~~done~~ Actually, changing from `MolecularDynamics` to `super()` causes all the tests that pass a `trajectory` to fail with \n```\nFAILED ase/test/md/test_langevinbaoab.py::test_LangevinBAOAB_NVT - TypeError: MolecularDynamics.__init__() got multiple values for argument 'trajectory'\n```\nI'm not sure how python subclassing interacts with kwargs, but it looks like the superclass has an explicitly specified `trajectory` argument, but somehow the calls in the tests end up with `trajectory` in the `**kwargs`, so the superclass constructor thinks it's getting it twice?",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 91,
+          "commit_sha": "10ce685005e03a8ac9925ac1ff4043b61d2bf151",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T12:45:25.271Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828703119",
+          "author": "noambern",
+          "body": "reopening",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 91,
+          "commit_sha": "10ce685005e03a8ac9925ac1ff4043b61d2bf151",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T14:06:44.532Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828815261",
+          "author": "ajjackson",
+          "body": "I don't suppose you accidentally left `self` in the call to `super().__init__`? That usually leads to this sort of error as it tries to figure out which parameter the extra `self` should go to.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 91,
+          "commit_sha": "10ce685005e03a8ac9925ac1ff4043b61d2bf151",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T14:42:41.763Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828907964",
+          "author": "noambern",
+          "body": "Indeed, that's what it was.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 91,
+          "commit_sha": "10ce685005e03a8ac9925ac1ff4043b61d2bf151",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T15:10:25.366Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Inline code suggestion to change a `super().__init__` call."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2828324222",
+          "author": "ajjackson",
+          "body": "This little chunk of code comes between two large `if self.externalstress is not None:` blocks.\n- If these lines were located elsewhere, it could be a single block\n  - `self.gamma_mod = 0.0` can really go anywhere in `__init__`\n  - the check on `self.P_tau` could also go in the with-stress block, it doesn't really matter if it is negative when we have no barostat!\n\n- That does in turn lead to a very long `if` block, which suggests some/all of it might be factored out to another method for clarity. We could tidy this up with `self._set_externalstress(externalstress)`, `self._set_default_p_tau()`, `self._set_default_p_mass()` methods that have no side-effects beyond those expressed in their names.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 128,
+          "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-17T11:30:20.979Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "high",
+          "label_reasoning": "Code chunk is poorly placed between two related blocks, and the reviewer suggests refactoring into helper methods for clarity."
+        },
+        {
+          "id": "2828544893",
+          "author": "noambern",
+          "body": "I'll do this kind of refactoring.  Update coming soon.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 128,
+          "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-17T13:05:43.725Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828706918",
+          "author": "noambern",
+          "body": "just pushed everything except the puzzling `trajectory` superclass constructor issue.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 128,
+          "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-17T14:08:13.887Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2829405824",
+          "author": "noambern",
+          "body": "supercell constructor now fixed",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 128,
+          "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-17T19:12:06.467Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests refactoring the init logic into smaller methods to reduce nesting and improve clarity."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2828324228",
+          "author": "ajjackson",
+          "body": "This is a cute feature, but should really be implemented at the base Dynamics or MolecularDynamics level rather than on a specific thermostat class. Could we make that a separate MR?",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 98,
+          "commit_sha": "c43caebf9274721c8780bd95a4697e1cdec29307",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T11:30:21.202Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Class Design Guidelines",
+          "label_confidence": "high",
+          "label_reasoning": "Feature is implemented in the wrong class; it belongs in a base class rather than in a specific thermostat implementation."
+        },
+        {
+          "id": "2828516717",
+          "author": "noambern",
+          "body": "Sure",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 98,
+          "commit_sha": "c43caebf9274721c8780bd95a4697e1cdec29307",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T12:56:01.054Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828547477",
+          "author": "noambern",
+          "body": "removed from this MR, will start another",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 98,
+          "commit_sha": "c43caebf9274721c8780bd95a4697e1cdec29307",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-17T13:06:47.633Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests moving a feature to the base `Dynamics`/`MolecularDynamics` class in a separate MR."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2828324248",
+          "author": "ajjackson",
+          "body": "This is now looking quite manageable given how many modes it can operate in! I think we can keep a single class after all.\n\nI would like to see long methods tidied up a bit by factoring more steps out to methods; this is not a firm requirement to accept the MR, though, and if you are fed up with this I can do it later.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-17T11:30:21.971Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Smelling",
+          "label_confidence": "high",
+          "label_reasoning": "General review comment noting that long methods should be factored into smaller methods for readability."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Recommends factoring long methods into smaller ones, even if not a hard requirement."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2828331522",
+          "author": "ajjackson",
+          "body": "This seems to be the only place `self.disable_cell_langevin` is used. Shouldn't it impact `step()` in some way?",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 332,
+          "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-17T11:33:51.453Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Dead Code",
+          "label_confidence": "high",
+          "label_reasoning": "`self.disable_cell_langevin` is set but never used in `step()`, making the flag effectively dead/unused code."
+        },
+        {
+          "id": "2828518706",
+          "author": "noambern",
+          "body": "I'll check.  Maybe the refactor into an attribute with an explicit name messed something up.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 332,
+          "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-17T12:56:54.530Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828567976",
+          "author": "noambern",
+          "body": "The logic is correct because the guts of the code uses `self.barostat_gamma == 0` as the test for cell Langevin, which is the default value if this block isn't entered. I guess that's a bit ugly, but do we think it's OK if it's documented?",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 332,
+          "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-17T13:14:05.370Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828622190",
+          "author": "ajjackson",
+          "body": "I see. Then let's update the line to\n\n```python\nif self.barostat_gamma == 0:  # i.e. disable_cell_langevin=True\n```",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 332,
+          "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-17T13:33:32.590Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2828750507",
+          "author": "noambern",
+          "body": "done",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 332,
+          "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-17T14:25:34.302Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags that `self.disable_cell_langevin` appears unused in `step()`, implying a bug or dead code."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2830903932",
+          "author": "ajjackson",
+          "body": "I would support a move to encourage use of explicit RNG instances/seeds. I think at the moment in ASE we have a mix of functions that accept a seed, accept an RNG instance, or accept either. Most things default to a random seed, and it's weird that rattle doesn't.\n\nThis could use an overhaul in a separate MR, with associated deprecations warnings etc. I think for now the implementation here (accept RNG or seed, default to random) is exemplary.\n\nPerhaps we can standardise on something which is similar to this, but if you leave it on `None` raises a warning and prints the seed.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-20T07:33:41.452Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Function Consistency",
+          "label_confidence": "medium",
+          "label_reasoning": "Discussion about inconsistent RNG handling across ASE functions (some accept seed, some accept RNG instance, some accept both), suggesting a future standardization effort."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a future standardization of RNG handling (with a warning when seed is None), pointing to a follow-up MR."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2831321861",
+          "author": "ajjackson",
+          "body": "It's not restricted to fixed cell, maybe that remark was from an earlier version?",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 13,
+          "commit_sha": "fa6ee0cfedb59928432fff6b389d9e6f0c0b92d3",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-20T10:39:59.819Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "Comment in the docstring incorrectly states the method is restricted to fixed cell, which no longer matches the implementation."
+        },
+        {
+          "id": "2831646805",
+          "author": "noambern",
+          "body": "Indeed.  I'll fix this.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 13,
+          "commit_sha": "fa6ee0cfedb59928432fff6b389d9e6f0c0b92d3",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-20T12:57:29.969Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Points out that a remark about fixed-cell restriction is outdated and should be removed/updated."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2831321874",
+          "author": "ajjackson",
+          "body": "```suggestion:-0+0\n        Allow only hydrostatic strain (i.e. preserve cell _shape_ but allow\n```",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 48,
+          "commit_sha": "fa6ee0cfedb59928432fff6b389d9e6f0c0b92d3",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-20T10:40:00.175Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "Inline suggestion to improve parameter documentation wording."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Inline suggestion to improve docstring wording."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2831321881",
+          "author": "ajjackson",
+          "body": "This parameter is a little tricky: it only acts if `P_mass` wasn't set by the user.\n\n```suggestion:-1+0\n    P_mass_factor: float, default 1.0\n        Factor to multiply heuristic `P_mass` if no user value provided.\n```",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 62,
+          "commit_sha": "fa6ee0cfedb59928432fff6b389d9e6f0c0b92d3",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-20T10:40:00.574Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "The `P_mass_factor` parameter description is unclear; reviewer provides a clearer docstring suggestion."
+        },
+        {
+          "id": "2831647448",
+          "author": "noambern",
+          "body": "Good point.  Technically, it's implied by \"heuristic `P_mass`\", since the heuristic is invoked if P_mass is None, but claiming that's a good explanation is actively user hostile.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 62,
+          "commit_sha": "fa6ee0cfedb59928432fff6b389d9e6f0c0b92d3",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-20T12:57:44.826Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Inline suggestion to clarify the docstring for `P_mass_factor`."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2831321888",
+          "author": "ajjackson",
+          "body": "```suggestion:-2+0\n    rng: np.random.Generator or argument to np.random.default_rng, default None\n        Random number generator for Langevin forces, or integer used as seed\n        for new Generator.\n```",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 70,
+          "commit_sha": "fa6ee0cfedb59928432fff6b389d9e6f0c0b92d3",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-20T10:40:00.790Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "Inline suggestion to improve the `rng` parameter docstring with clearer type and description."
+        },
+        {
+          "id": "2831779677",
+          "author": "noambern",
+          "body": "What do you think of this\n```\n    rng: np.random.Generator or argument to np.random.default_rng, default None\n        Random number generator for Langevin forces, or integer used as seed\n        for new Generator.  If None, a random seed will be generated and\n        reported for future reproducibility of run\n```",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 70,
+          "commit_sha": "fa6ee0cfedb59928432fff6b389d9e6f0c0b92d3",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-20T13:44:31.078Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2831783225",
+          "author": "ajjackson",
+          "body": "Looks good!",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 70,
+          "commit_sha": "fa6ee0cfedb59928432fff6b389d9e6f0c0b92d3",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-20T13:45:54.429Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2831817673",
+          "author": "noambern",
+          "body": "OK - I'll implement that.  I think everything else you suggested is pushed now.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 70,
+          "commit_sha": "fa6ee0cfedb59928432fff6b389d9e6f0c0b92d3",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-20T13:54:33.064Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2831893010",
+          "author": "noambern",
+          "body": "Random seed generated and printed (as a warning). If you think it looks OK, please resolve the thread.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 70,
+          "commit_sha": "fa6ee0cfedb59928432fff6b389d9e6f0c0b92d3",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-20T14:17:10.582Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2837504591",
+          "author": "noambern",
+          "body": "@ajjackson I think this is the last remaining item, right?",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 70,
+          "commit_sha": "fa6ee0cfedb59928432fff6b389d9e6f0c0b92d3",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-22T13:09:27.886Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Inline suggestion to rewrite the `rng` parameter docstring."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2831321895",
+          "author": "ajjackson",
+          "body": "```suggestion:-0+0\n        if externalstress.shape == ():\n```",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 177,
+          "commit_sha": "fa6ee0cfedb59928432fff6b389d9e6f0c0b92d3",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-20T10:40:01.024Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Variable Handling",
+          "label_confidence": "medium",
+          "label_reasoning": "Suggestion to use `.shape == ()` for scalar shape check, improving clarity of the shape-checking condition."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Inline code suggestion to change a shape comparison."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2831321901",
+          "author": "ajjackson",
+          "body": "As we are now on Python 3.10 there is also the option to do it this way:\n\n```suggestion:-12+0\n            match externalstress.shape:\n                case (1,):\n                    externalstress = externalstress * np.identity(3)\n                case (3,):\n                    externalstress = np.diag(externalstress)\n                case (6,):\n                    externalstress = voigt_6_to_full_3x3_stress(externalstress)\n                case (3, 3):\n                    pass\n                case _:\n                    raise ValueError(\n                        'externalstress must be scalar, 3-vector (diagonal), '\n                        '6-vector (Voigt), or 3x3 matrix, '\n                        f'got \"{externalstress}\" with shape '\n                        f'{externalstress.shape}'\n                    )\n```\n\nUp to you! In this case I find match/case slightly more readable but it's quite marginal. With this intermediate `stress_shape` variable can be eliminated while keeping things clean.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 205,
+          "commit_sha": "fa6ee0cfedb59928432fff6b389d9e6f0c0b92d3",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-20T10:40:01.220Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Smelling",
+          "label_confidence": "medium",
+          "label_reasoning": "Suggestion to refactor if/elif chain into a match/case statement for improved readability, also eliminating an intermediate variable."
+        },
+        {
+          "id": "2831653796",
+          "author": "noambern",
+          "body": "I forgot about match-case. I'll update, since 3.10 is already required.",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 205,
+          "commit_sha": "fa6ee0cfedb59928432fff6b389d9e6f0c0b92d3",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-20T13:00:23.883Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests refactoring a chain of if/elif into a match/case block."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2831321908",
+          "author": "ajjackson",
+          "body": "```suggestion:-0+0\n                    'Got `externalstress` but missing `P_tau`, got '\n```",
+          "file_path": "ase/md/langevinbaoab.py",
+          "line_number": 220,
+          "commit_sha": "fa6ee0cfedb59928432fff6b389d9e6f0c0b92d3",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-20T10:40:01.453Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "high",
+          "label_reasoning": "Suggestion to improve the wording of an error message for clarity."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Inline suggestion to update an error message string."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2831321916",
+          "author": "ajjackson",
+          "body": "Can use the `match=` argument here to make sure we got the right warning",
+          "file_path": "ase/test/md/test_langevinbaoab.py",
+          "line_number": 122,
+          "commit_sha": "fa6ee0cfedb59928432fff6b389d9e6f0c0b92d3",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-20T10:40:01.711Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "medium",
+          "label_reasoning": "The test captures the warning but doesn't verify the warning message content, weakening the test's ability to confirm correct behavior."
+        },
+        {
+          "id": "2831802752",
+          "author": "noambern",
+          "body": "done",
+          "file_path": "ase/test/md/test_langevinbaoab.py",
+          "line_number": 122,
+          "commit_sha": "fa6ee0cfedb59928432fff6b389d9e6f0c0b92d3",
+          "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+          "created_at": "2025-10-20T13:53:04.635Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding a `match=` argument to a warning assertion in a test."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2831321938",
+          "author": "ajjackson",
+          "body": "A few little things.\n\nI think this is basically mergeable. I have asked the Matrix channel for advice on constraints as it isn't great to merge in a comment block that says \"not sure about this\".\n\nThe other main omission is documentation: we need to add something to this page: https://ase-lib.org/ase/md.html#module-ase.md.nose_hoover_chain\n\nCurrently the thermostats are separated into NVE, NVT and NPT... I think it makes most sense to put this one in the NPT section, but also add references to it in the summary/recommendation lists of other sections.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-20T10:40:02.617Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "General review noting that the new class is missing documentation on the official MD docs page."
+        },
+        {
+          "id": "2831656743",
+          "author": "noambern",
+          "body": "Thanks.  I'll update for your current set of suggestions, and try to fix the conflicts that appea to have cropped up",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-20T13:01:32.595Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2831890339",
+          "author": "noambern",
+          "body": "I just added to the docs page with autoclass - I assume that'll reproduce the class's docstring?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-20T14:16:14.660Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2831900145",
+          "author": "ajjackson",
+          "body": "Right, if you imitate how other classes were added to the page it should work! Indeed it comes from the docstrings and function signatures.\n\nYou can check exactly how the docs look by downloading the zipped HTML artifact from the relevant CI run; it'll appear on the right hand side of this page when it finishes: https://gitlab.com/ase/ase/-/jobs/11775527024",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-20T14:19:47.189Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2832001402",
+          "author": "noambern",
+          "body": "I don't see any artifacts, perhaps due to \n```\n/builds/ase/ase/doc/examples_generated/tutorials/dimensionality.rst:25: WARNING: duplicate label dim_examples, other instance in /builds/ase/ase/doc/examples_generated/dimensionality/dimensionality.rst\n```\nwhich seems to be caused by code that got merged from `main`.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-20T14:53:41.099Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2832016767",
+          "author": "ajjackson",
+          "body": "That's odd, doc is running fine on `master` but that does seems related to a recent change. https://gitlab.com/ase/ase/-/pipelines/2108673170",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-20T14:59:59.496Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2832026984",
+          "author": "ajjackson",
+          "body": "Ah, found the extra files! See below.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-20T15:03:26.666Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding documentation to the MD docs page for this new thermostat."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2832025315",
+          "author": "ajjackson",
+          "body": "Here's the problem: this branch accidentally re-adds a copy of these tutorial files which were moved in `master`",
+          "file_path": "examples/dimensionality/README.rst",
+          "line_number": null,
+          "commit_sha": "9f6d1400b8b2610f9ef35d9c3ce3aa81317ad27c",
+          "base_sha": "8fc7075eaec692b8e883742cb0cf6c5fd78a8875",
+          "created_at": "2025-10-20T15:02:56.398Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Dead-Code Related Issues",
+          "label_confidence": "high",
+          "label_reasoning": "Branch accidentally re-adds duplicate tutorial files that had already been moved, introducing unwanted redundant files."
+        },
+        {
+          "id": "2834564083",
+          "author": "noambern",
+          "body": "I just gave up and tried to clean it up manually.  Hopefully that worked.",
+          "file_path": "examples/dimensionality/README.rst",
+          "line_number": null,
+          "commit_sha": "9f6d1400b8b2610f9ef35d9c3ce3aa81317ad27c",
+          "base_sha": "8fc7075eaec692b8e883742cb0cf6c5fd78a8875",
+          "created_at": "2025-10-21T13:04:25.914Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2837502731",
+          "author": "noambern",
+          "body": "fixed by switching to @askhl 's cherry picked branch",
+          "file_path": "examples/dimensionality/README.rst",
+          "line_number": null,
+          "commit_sha": "9f6d1400b8b2610f9ef35d9c3ce3aa81317ad27c",
+          "base_sha": "8fc7075eaec692b8e883742cb0cf6c5fd78a8875",
+          "created_at": "2025-10-22T13:08:50.033Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Identifies duplicate tutorial files accidentally re-added by this branch that should be removed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2832025327",
+          "author": "ajjackson",
+          "body": "This is the duplicate file that causes the docs build to warn",
+          "file_path": "examples/dimensionality/dimensionality.py",
+          "line_number": null,
+          "commit_sha": "9f6d1400b8b2610f9ef35d9c3ce3aa81317ad27c",
+          "base_sha": "8fc7075eaec692b8e883742cb0cf6c5fd78a8875",
+          "created_at": "2025-10-20T15:02:56.685Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Dead-Code Related Issues",
+          "label_confidence": "high",
+          "label_reasoning": "Duplicate file that was already moved in master, causing documentation build warnings."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a duplicate file causing docs build warnings, implying it should be removed."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2834622510",
+          "author": "askhl",
+          "body": "I cherry-picked the relevant commits onto master and pushed to `baoab-cherrypick`.  If you hardreset the LangevinBAOAB branch to `baoab-cherrypick` then the issue should be gone.  You may want to briefly check the branch before doing so though.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-21T13:23:31.235Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "low",
+          "label_reasoning": "Git workflow advice about how to fix the duplicate file issue via cherry-picking; closest category is structural/organizational."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Provides concrete instructions to hard-reset the branch to fix the duplicate file issue."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2836063598",
+          "author": "askhl",
+          "body": "I'd force-push the cherry-picked branch.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-21T22:40:10.803Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "low",
+          "label_reasoning": "Git workflow advice (force-push); organizational in nature."
+        },
+        {
+          "id": "2837460708",
+          "author": "noambern",
+          "body": "Thanks - seems to have worked. The commit history is clean now, and hopefully the cherry picking didn't miss anything, and the tests will just pass.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-22T12:55:30.355Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Instructs to force-push the cherry-picked branch to resolve the issue."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2837888906",
+          "author": "ajjackson",
+          "body": "```suggestion:-0+0\nLangevin(-Hoover) BAOAB dynamics\n```\n\nEverything is variable-cell in this NPT section, cleaner not to mention it.",
+          "file_path": "doc/ase/md.rst",
+          "line_number": 460,
+          "commit_sha": "ba4be7d2c4a79d75563f935390bcbd429f0f1de0",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-22T15:05:12.389Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "Inline suggestion to simplify the section heading in the docs RST file."
+        },
+        {
+          "id": "2837898439",
+          "author": "noambern",
+          "body": "done",
+          "file_path": "doc/ase/md.rst",
+          "line_number": 460,
+          "commit_sha": "ba4be7d2c4a79d75563f935390bcbd429f0f1de0",
+          "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+          "created_at": "2025-10-22T15:08:45.945Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Inline suggestion to change a section title in the docs."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2837951177",
+          "author": "ajjackson",
+          "body": "I have pushed up some other tweaks to the MD docs so this class is properly included and also signposted from the NVE, NVT sections. Please have a look at the artifact when it is built and say if there are any issues!",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-22T15:27:52.546Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "Reviewer notes they pushed doc updates to properly include and cross-reference the new class in the MD documentation."
+        },
+        {
+          "id": "2838058442",
+          "author": "noambern",
+          "body": "I fixed some ReST italics in the docstring, and tweaked the wording in the non-auto-generated part of the md.rst.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-22T16:08:45.079Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Notifies that docs were pushed and asks the author to review the artifact and report issues."
+    }
+  ],
+  "review_thread_count": 50,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2801778820",
+            "author": "noambern",
+            "body": "I just pushed an update to all the T/P enabling/disabling stuff.  I think it's now _reasonably_ clean, at least to the extent that's possible without splitting off different classes. I personally like it this way, but I could be convinced to refactor.\n\nBasically, const T and const P (variable cell) are enabled simply by specifying `temperature_K` and  `externalstress`, respectively. All the remaining parameters that control the thermostat and barostat have (hopefully sensible) defaults, and are just ignored if the corresponding functionality isn't enabled.\n\nThere's also no longer any overloading of `P_mass == 0` (replaced with `disable_cell_langevin`), and `hydrostatic` defaults to `False`.\n\nThe docstring is now more detailed about all of this.\n\n@ajjackson let me know if you think it's an improvement.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-06T15:17:35.571Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_inline": true,
+        "comments": [
+          {
+            "id": "2828324237",
+            "author": "ajjackson",
+            "body": "```suggestion:-0+0\n```",
+            "file_path": "ase/md/langevinbaoab.py",
+            "line_number": 439,
+            "commit_sha": "c43caebf9274721c8780bd95a4697e1cdec29307",
+            "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+            "created_at": "2025-10-17T11:30:21.400Z",
+            "is_outdated": false
+          },
+          {
+            "id": "2828546516",
+            "author": "noambern",
+            "body": "done",
+            "file_path": "ase/md/langevinbaoab.py",
+            "line_number": 439,
+            "commit_sha": "c43caebf9274721c8780bd95a4697e1cdec29307",
+            "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+            "created_at": "2025-10-17T13:06:22.624Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_too_short"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2829410229",
+            "author": "noambern",
+            "body": "I think it's ready, except possibly for the best default behavior when there's no rng passed in. As I said, I'm of the opinion that it's a good idea to force the user to think about it, but if that's not the ASE way, I'll live, but I'm not sure how I feel about the reproducibility - strange behavior tradeoff, so I'm not sure if I'd campaign for fixed seed (reproducible but possible trajectory artifacts) or no seed (not reproducible) passed to default_rng. \n\nOne option that might give the best of both is to use no seed to generate a seed, and then print that seed and use it to initialize the generator.  So the user has, at least in principle, a way of reproducing the run.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-17T19:14:50.677Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_inline": true,
+        "comments": [
+          {
+            "id": "2831321924",
+            "author": "ajjackson",
+            "body": "Nice test!",
+            "file_path": "ase/test/md/test_langevinbaoab.py",
+            "line_number": 216,
+            "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+            "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+            "created_at": "2025-10-20T10:40:01.968Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_too_short"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2831956693",
+            "author": "noambern",
+            "body": "I merged from `master` to fix conflicts, and now lint is failing on other people's code. I feel like that shouldn't happen, and I have no idea how to fix it.\n\nThere's also an issue with my docstring, apparently (in the docs CI action), but I'm not sure what it's referring to\n```\n/home/ase/.local/lib/python3.13/site-packages/ase/md/langevinbaoab.py:docstring of ase.md.langevinbaoab.LangevinBAOAB:27: ERROR: Unknown target name: \"contribution\". [docutils]\n```\nI'll try the ReST-standard `**` instead.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-20T14:38:13.848Z",
+            "is_outdated": false
+          },
+          {
+            "id": "2831973304",
+            "author": "ajjackson",
+            "body": "It's intepreting the trailing underscore on `contribution_` as a link",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-20T14:44:08.152Z",
+            "is_outdated": false
+          },
+          {
+            "id": "2831999940",
+            "author": "noambern",
+            "body": "I think this is fixed now, at least I don't see the error in the docs CI anymore",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-20T14:53:11.831Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2835339286",
+            "author": "noambern",
+            "body": "I got the final state of the branch correct here, but I guess the cherry-picked branch has a cleaner commit history. It's not clear to me what's the easiest way to deal with this.  Could switch the MR to the other branch, although that'd lose this discussion history, or maybe force push the cherry-picked branch on top of this one?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-21T17:17:21.758Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2767980243",
+            "author": "ajjackson",
+            "body": "This looks like a useful option to provide! I think this will fit nicely :smile: \n\nThis week is a bit difficult but I will try to review the code properly next week. Feel free to nag then or tag in another possible reviewer now... @drFaustroll is this the same scheme used in some dedicated MD codes? Any thoughts about the appropriate name/citations?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-09-22T08:41:56.729Z",
+            "is_outdated": false
+          },
+          {
+            "id": "2768703841",
+            "author": "noambern",
+            "body": "I'm not aware of this precise combination being available anywhere.  I wouldn't be surprised if the dynamical equations are, but the particular integration scheme is probably unique. It would also probably be possible, perhaps even straightforward, to support other propagation schemes for the same dynamical equations.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-09-22T13:23:46.777Z",
+            "is_outdated": false
+          },
+          {
+            "id": "2802016546",
+            "author": "noambern",
+            "body": "Notes about possibility of other time integrations are in the docstring now, but not currently planned to be implemented.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-06T16:55:16.713Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Meta-discussion about review timeline and tagging another reviewer; no code change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_inline": true,
+        "comments": [
+          {
+            "id": "2800643134",
+            "author": "ajjackson",
+            "body": "If I understand this correctly: it is expected that the barostat mass parameter $W$ should vary linearly with system size, but in your experience we have cube-root scaling? That does sound like it could be an implementation difference. Still, good to have a heuristic that works!",
+            "file_path": "ase/md/langevinbaoab.py",
+            "line_number": 209,
+            "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+            "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+            "created_at": "2025-10-06T10:56:35.057Z",
+            "is_outdated": false
+          },
+          {
+            "id": "2801109124",
+            "author": "noambern",
+            "body": "I'm not sure what \"expected\" means here, but yes, this is the empirical observation.  It more or less makes sense that it varies with a system length, not volume, so I found cube_rt(N) to be plausible.",
+            "file_path": "ase/md/langevinbaoab.py",
+            "line_number": 209,
+            "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+            "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+            "created_at": "2025-10-06T12:59:33.602Z",
+            "is_outdated": false
+          },
+          {
+            "id": "2801132188",
+            "author": "ajjackson",
+            "body": "Expected from the cited paper (which does apparently go on to make heavy use of the linear equation with target frequencies from NVT simulations).",
+            "file_path": "ase/md/langevinbaoab.py",
+            "line_number": 209,
+            "commit_sha": "a3b9bcce0ff6707751fc3eb709b2cb89edb4adb1",
+            "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+            "created_at": "2025-10-06T13:05:45.340Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Informational observation about expected vs. observed scaling; no code change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2820409712",
+            "author": "ajjackson",
+            "body": "Apologies for the delay in closing this out, @noambern . This week is not quite going to plan, feel free to nag me next week if I haven't come back to it by then.\n\nI agree it would still be nice to hear from some other reviewers, especially on general naming/structure/API issues.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-14T16:24:24.547Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Apology/status update about review delay; no code change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_inline": true,
+        "comments": [
+          {
+            "id": "2828324178",
+            "author": "ajjackson",
+            "body": "This looks nice and clear to me :smile:",
+            "file_path": "ase/md/langevinbaoab.py",
+            "line_number": 34,
+            "commit_sha": "a0b8f44bd14296bba98ade26f29bbdeba99c0d8f",
+            "base_sha": "443c12b218f1ce63fb0833f38884c7448019ec98",
+            "created_at": "2025-10-17T11:30:19.679Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure positive acknowledgment; no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2829016908",
+            "author": "ajjackson",
+            "body": "I ran a little sanity check across some of the ASE NVT thermostats: 3 simple harmonic oscillators in a box together (using SpringCalculator). This should give a gaussian distribution in position and velocity, and we see that LangevinBAOAB is satisfying this expectation alongside the existing Langevin and Andersen. The Bussi thermostat, on the other hand, looks rather off! Maybe my parameters are bad, I'll open a separate issue for that... (#1817 )\n\n![nvt_tests](/uploads/5117292500d1d2f8a0ac91dd55ea9116/nvt_tests.png)",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-17T15:57:19.557Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Shares sanity-check results confirming correctness; no code change requested (the Bussi issue is filed separately)."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": true,
+        "comments": [
+          {
+            "id": "2831182356",
+            "author": "ajjackson",
+            "body": "I'll ask in the Matrix channel if anyone can help with this",
+            "file_path": "ase/md/langevinbaoab.py",
+            "line_number": 153,
+            "commit_sha": "8957c12fa917553aa20c10082678b0d9ee4aa69a",
+            "base_sha": "c83dd1c6319c9c973cae91f1ef83ae2c3b57be27",
+            "created_at": "2025-10-20T09:42:18.634Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Status update about seeking external input; no code change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2831323558",
+            "author": "ajjackson",
+            "body": "The refactored structure is looking really nice to me, somehow we now have a readable thermostat that does nearly everything and controls it with just a few parameters!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-20T10:40:57.985Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure positive acknowledgment of the refactored structure; no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2838067131",
+            "author": "ajjackson",
+            "body": "Ok, I'm happy! Thank you for this substantial contribution which fills some gaps in the ASE thermostat collection.\n\nGiven the scope/impact of this I'll give other maintainers a chance to look/object before merging.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-22T16:12:21.736Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Approval comment and process note about giving other maintainers time to review; no code change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2842426492",
+            "author": "askhl",
+            "body": "Thanks a lot @noambern and @ajjackson.  I suppose we'll go ahead and merge this.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-24T08:55:56.727Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Acknowledgment and merge decision; no code change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 50,
+    "stage1_kept": 44,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 4,
+    "stage1_filtered_too_short": 2,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 9,
+    "stage3_cost_usd": 0.06692100000000001
+  }
+}

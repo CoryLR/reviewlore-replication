@@ -1,0 +1,48 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3958,
+  "title": "Fix `ImageIterator` to accept negative steps",
+  "body": "This MR is a follow-up of !3942.\n\nThe present `ImageIterator` cannot handle negative steps.\nFor the following `test.xyz`\n```\n1\nProperties=species:S:1:pos:R:3 pbc=\"F F F\"\nH        0.00000000       0.00000000       0.00000000\n```\nthe following `test.py` shows `ValueError: Stop argument for islice() must be None or an integer: 0 <= x <= sys.maxsize.`.\n```python\nfrom ase.io.extxyz import iread_xyz\n\nwith open(\"test.xyz\") as fd:\n    for atoms in iread_xyz(fd, index=\"::-1\"):\n        print(atoms)\n```\nWhile the error message says about `stop`, the issue is actualy for `step` given to `islice`.\n\nAs written in [the official document](https://docs.python.org/3/library/itertools.html#itertools.islice), `islice` does not support negative values for `start`, `stop`, and `step`.\nFor the former two arguments, we can convert them to the corresponding non-negative values with [the `slice.indices` method](https://docs.python.org/3/reference/datamodel.html#slice.indices) used [in `ImageIterator`](https://gitlab.com/ase/ase/-/blob/a210e8e47ddc00863788a639a69bff61c913225e/ase/io/utils.py#L590), but `step` remains negative and causes the error above.\n\nThe present MR solves the issue by using `index2range` instead of `islice`.\nMore concretely, now `ImageIterator` once makes a list of chunks and then makes an iterator using `index2range`, which can handle also negative steps.\n\nNote that the list of chunks is still light-weight as it defers the construction of the `Atoms` object in the `build` method in each chunk.\nFor `iread_xyz`, we can further make it memory-efficient, so that it stores not a list of lines but just a position of the file to start, which is also implemented in this MR.\n\n- 5a807039: `test_iread_xyz` has been extended to test the slice with negative steps.\n- 3e5f71b7: Just a minor refactor of `index2range` (not directly relevant to the main focus of this MR)\n- d4aecfd5: Core of this MR\n- 7ea34b1e: revision of `iread_xyz` to make it memory-wise light-weight. Note that I have also removed a few `try...except` contexts for cleanness but am also OK to revert.\n\n@askhl Could you again kindly have a look when you have time?\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [~] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [x] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [~] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [~] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "yuzie007",
+  "merged_at": "2026-02-01T06:42:31.806Z",
+  "base_ref": "master",
+  "merge_commit_sha": "642de059c3d594414edd77aa521c2deaaf4eb27b",
+  "merge_commit_parent_count": 2,
+  "review_threads": [],
+  "review_thread_count": 1,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3049695344",
+            "author": "yuzie007",
+            "body": "Functionality-wise, it is just an extension to accept negative steps of `index` in `ImageIterator`.\nWhile there are a few other changes in internal procedures of `iread_xyz`, the real impact on users may be marginal, as this function may be not often used so far.\nI am therefore going to merge and then would like to proceed !3959 and other related changes.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-01T06:42:29.365Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 0,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 1,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0,
+    "stage3_cost_usd": 0.0
+  }
+}

@@ -1,0 +1,559 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3750,
+  "title": "All (ordinary) optimizers work with arbitrary degrees of freedom",
+  "body": "This MR parametrizes the test that verifies that an optimizer on a \"pure\" (analytic) function in 2D.  Now we test all eligible (ordinary gradient based) optimizers.\n\nIt also fixes all the array shapes in all the optimizers.  (Only BFGS was working previously)\n\nThe optimizer step() implementations now ~~ignore the forces argument~~ convert the existing `forces` to flat gradients (and issue a warning so we can remove the `step(forces)` argument).  Although arguably *better* for performance to pass the forces if they were available, I didn't want to fight both the implementations and their callers at the same time.  As it turned out, we almost never pass the forces to step().  So maybe this will not be a huge performance hit.\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [ ] [I am familiar with **ASE's contribution guidelines.**](https://wiki.fysik.dtu.dk/ase/development/contribute.html)\n- [ ] [**Doc strings** in code changed in this MR are up to date.](https://wiki.fysik.dtu.dk/ase/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [ ] [**Unit tests** have been added for new or changed code.](https://wiki.fysik.dtu.dk/ase/development/tests.html)\n- [ ] [**Changes** have been added in `changelog.d` using `scriv`.](https://wiki.fysik.dtu.dk/ase/development/writing_changelog.html)\n- [ ] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "askhl",
+  "merged_at": "2025-10-24T08:54:33.804Z",
+  "base_ref": "master",
+  "merge_commit_sha": "66564222c8318ce2277393fb82548bba6c9e37b0",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2752030946",
+          "author": "ajjackson",
+          "body": "I suppose there should be a timeline to remove this",
+          "file_path": "ase/optimize/fire2.py",
+          "line_number": 209,
+          "commit_sha": "50626d5c47355fc519743e18c603968b0022f991",
+          "base_sha": "8dceb40fac0e8e117c236711e7121a9ce4eaec1d",
+          "created_at": "2025-09-15T16:41:03.974Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2822315334",
+          "author": "askhl",
+          "body": "I added a comment",
+          "file_path": "ase/optimize/fire2.py",
+          "line_number": 209,
+          "commit_sha": "50626d5c47355fc519743e18c603968b0022f991",
+          "base_sha": "8dceb40fac0e8e117c236711e7121a9ce4eaec1d",
+          "created_at": "2025-10-15T10:27:58.208Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Implies a concrete task: adding a timeline/plan to remove something (likely deprecated code)."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2752030953",
+          "author": "ajjackson",
+          "body": "The internal logic is getting cleaner, which is lovely to see! The Booth function test across all optimizers is also a very nice thing to have, and in not too many lines of code :smile: \n\nMy main concern is the API breakage that removes the `f` parameter from all optimize `step()` methods. This is a public method and there is a real possibility someone is using this to do some kind of hack around optimization.\n\nI wonder if it would be prudent to\n- mark this a **breaking** in the changelog, and\n- raise an *Error* if the argument is used so that workflows do not start producing incorrect results \"quietly\".\n\nIdeally those users would also be provided some other way to achieve whatever it was they were doing: perhaps this is supported by documenting some examples of custom Optimizeable.\n\nI recently tried to make a filter-like Optimizeable (which presents a primitive cell but calculates a supercell) and found it a bit cumbersome to apply. Perhaps we can use that starting-point to find or create a reasonably streamlined example in the docs.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-09-15T16:41:04.446Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests multiple concrete changes: marking the changelog as breaking, raising an Error on deprecated argument use, documenting examples of custom Optimizeable, and potentially adding a streamlined example in the docs."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2752037208",
+          "author": "ajjackson",
+          "body": "> Although arguably _better_ for performance to pass the forces if they were available, I didn't want to fight both the implementations and their callers at the same time.\n\nThis could be a problem for ASE4, if the new \"functional\" calculators do not cache forces?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-09-15T16:43:54.177Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential future problem (performance/correctness issue with ASE4 functional calculators not caching forces), implying the current approach may need to be reconsidered."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2825419481",
+          "author": "ajjackson",
+          "body": "If we are simply adding warnings to places that the user forces never did anything anyway, that is ok. But at a glance it still looks like this MR introduces breaking changes. I will try to look more closely later: sorry this week has not been going to plan...",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-16T10:51:07.328Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that the MR may still introduce breaking changes beyond what was addressed, implying further review and possible fixes are needed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2826056702",
+          "author": "ajjackson",
+          "body": "This one seems \"breaking\" but defensibly so: `f` is used in the first point added to model PES per step, and will now always be first clobbered from `self.optimizable`. But after that the method used direct calls to `get_gradient()` anyway. So this was always odd/misleading behaviour.",
+          "file_path": "ase/optimize/gpmin/gpmin.py",
+          "line_number": 256,
+          "commit_sha": "50626d5c47355fc519743e18c603968b0022f991",
+          "base_sha": "8dceb40fac0e8e117c236711e7121a9ce4eaec1d",
+          "created_at": "2025-10-16T13:48:35.885Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2826303503",
+          "author": "askhl",
+          "body": "I cannot see what's breaking here.",
+          "file_path": "ase/optimize/gpmin/gpmin.py",
+          "line_number": 256,
+          "commit_sha": "50626d5c47355fc519743e18c603968b0022f991",
+          "base_sha": "8dceb40fac0e8e117c236711e7121a9ce4eaec1d",
+          "created_at": "2025-10-16T14:52:49.649Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2826314249",
+          "author": "ajjackson",
+          "body": "Right, if `_get_gradient` returns `forces.ravel()` then this is fine.",
+          "file_path": "ase/optimize/gpmin/gpmin.py",
+          "line_number": 256,
+          "commit_sha": "50626d5c47355fc519743e18c603968b0022f991",
+          "base_sha": "8dceb40fac0e8e117c236711e7121a9ce4eaec1d",
+          "created_at": "2025-10-16T14:56:46.696Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a breaking behavior change in a specific file/line and flags it as defensible but still breaking, implying it should be documented or handled in the changelog."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2826056726",
+          "author": "ajjackson",
+          "body": "This one is breaking because the function signature changes as well as the behaviour. It also appears that `step` _did_ use the user-provided gradient correctly so we are not just removing buggy behaviour.",
+          "file_path": "ase/optimize/bfgs.py",
+          "line_number": 98,
+          "commit_sha": "baa030746fcba28fd36c521ccd50720f946424f6",
+          "base_sha": "8dceb40fac0e8e117c236711e7121a9ce4eaec1d",
+          "created_at": "2025-10-16T13:48:36.366Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2826288402",
+          "author": "askhl",
+          "body": "We renamed it to `gradient` in the preceding MR, so there can't be a lot of code relying on this.\n\nThe actual signature of `step()` is `step(self)` and the subclasses that add an argument name it `f`, `forces`, or something else here and there, because when that argument was used, it was passed positionally and never by name.",
+          "file_path": "ase/optimize/bfgs.py",
+          "line_number": 98,
+          "commit_sha": "baa030746fcba28fd36c521ccd50720f946424f6",
+          "base_sha": "8dceb40fac0e8e117c236711e7121a9ce4eaec1d",
+          "created_at": "2025-10-16T14:48:25.114Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2826337485",
+          "author": "ajjackson",
+          "body": "Ah, then the previous MR was breaking and this fixes it :laughing: I guess that is fine.",
+          "file_path": "ase/optimize/bfgs.py",
+          "line_number": 98,
+          "commit_sha": "baa030746fcba28fd36c521ccd50720f946424f6",
+          "base_sha": "8dceb40fac0e8e117c236711e7121a9ce4eaec1d",
+          "created_at": "2025-10-16T15:03:50.433Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly identifies a breaking change where previously correct behavior is being removed, implying the change should be reconsidered, deprecated properly, or documented."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2826056741",
+          "author": "ajjackson",
+          "body": "It looks like this one was using `forces` correctly so discarding them here is a breaking change, not a bugfix.",
+          "file_path": "ase/optimize/bfgslinesearch.py",
+          "line_number": 109,
+          "commit_sha": "50626d5c47355fc519743e18c603968b0022f991",
+          "base_sha": "8dceb40fac0e8e117c236711e7121a9ce4eaec1d",
+          "created_at": "2025-10-16T13:48:36.638Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2826288452",
+          "author": "askhl",
+          "body": "We are not discarding them.  `_ignore()` is gone and replaced by `_get_gradient()` which does not ignore the legacy parameter.\n\n(Additionally, implementations that rely on passing the wrong forces to step() were wrong in the first place)",
+          "file_path": "ase/optimize/bfgslinesearch.py",
+          "line_number": 109,
+          "commit_sha": "50626d5c47355fc519743e18c603968b0022f991",
+          "base_sha": "8dceb40fac0e8e117c236711e7121a9ce4eaec1d",
+          "created_at": "2025-10-16T14:48:25.776Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2826309639",
+          "author": "ajjackson",
+          "body": "Ah, my bad. I missed the `return` statement and believed the warning message, which says that the forces are ignored. I think the message needs to be removed?\n\n```python\n    def _get_gradient(self, forces=None):\n        if forces is not None:\n            warnings.warn('The forces argument in step(...) is ignored '\n                          'and forces are (currently) recalculated.')\n            return forces.ravel()\n        return self.optimizable.get_gradient()\n```",
+          "file_path": "ase/optimize/bfgslinesearch.py",
+          "line_number": 109,
+          "commit_sha": "50626d5c47355fc519743e18c603968b0022f991",
+          "base_sha": "8dceb40fac0e8e117c236711e7121a9ce4eaec1d",
+          "created_at": "2025-10-16T14:55:06.839Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies that discarding the forces argument here is a breaking change rather than a bugfix, implying the change needs to be handled differently."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2826056751",
+          "author": "ajjackson",
+          "body": "This one again seems to use `f` correctly: the only call to `get_gradient() is inside `if f is None` and there is no call to `get_forces()`.",
+          "file_path": "ase/optimize/fire.py",
+          "line_number": 165,
+          "commit_sha": "50626d5c47355fc519743e18c603968b0022f991",
+          "base_sha": "8dceb40fac0e8e117c236711e7121a9ce4eaec1d",
+          "created_at": "2025-10-16T13:48:36.905Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2826288498",
+          "author": "askhl",
+          "body": "I am not sure what the problem is?",
+          "file_path": "ase/optimize/fire.py",
+          "line_number": 165,
+          "commit_sha": "50626d5c47355fc519743e18c603968b0022f991",
+          "base_sha": "8dceb40fac0e8e117c236711e7121a9ce4eaec1d",
+          "created_at": "2025-10-16T14:48:26.056Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2826312785",
+          "author": "ajjackson",
+          "body": "If `_get_gradient` returns `forces.ravel()` then it is indeed fine.",
+          "file_path": "ase/optimize/fire.py",
+          "line_number": 165,
+          "commit_sha": "50626d5c47355fc519743e18c603968b0022f991",
+          "base_sha": "8dceb40fac0e8e117c236711e7121a9ce4eaec1d",
+          "created_at": "2025-10-16T14:56:15.355Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Points out that `f` was being used correctly in this file, implying the PR should not silently discard it as it constitutes a real breaking change."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2826056775",
+          "author": "ajjackson",
+          "body": "I checked a few of them and some are using the forces argument correctly (albeit with different names) so I think it is a significant API break to start ignoring it. It also doesn't seem obviously harmful to leave them be... Can we deprecate the \"nice\" ones and only clobber the \"bad\" ones?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-16T13:48:37.309Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests a specific alternative approach: deprecate the 'nice' ones (that correctly used the forces argument) rather than silently clobbering all of them."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2826079792",
+          "author": "ajjackson",
+          "body": "A slightly cumbersome but fair-to-end-users solution to gradient/force sign conventions might involve an optional `negative=True` parameter on `get_gradient()` which\n- defaults to existing behaviour (i.e. wrong sign)\n- is explicitly corrected to new convention internally (i.e. all internal calls to `get_gradient` are `get_gradient(negative=False)`\n- raises deprecation warning if used with default\n\n- Then later we change the default and raise an error if you try to use the old behaviour\n- Then later remove the parameter\n\n`Optimizable.get_gradient()` is in a release so we shouldn't just invert the behaviour overnight! But because we have warned that Optimizable is a bit experimental this could be done a bit more swiftly than typical deprecations.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-16T13:56:05.924Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Proposes a concrete, detailed deprecation strategy for the gradient/force sign convention, including a specific API change (`negative` parameter), migration steps, and a phased removal plan."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2828146543",
+          "author": "ajjackson",
+          "body": "This is also technically breaking, but doesn't seem worth remarking on for release notes as it's *quite* internal.",
+          "file_path": "ase/optimize/fire.py",
+          "line_number": 159,
+          "commit_sha": "50626d5c47355fc519743e18c603968b0022f991",
+          "base_sha": "8dceb40fac0e8e117c236711e7121a9ce4eaec1d",
+          "created_at": "2025-10-17T10:10:20.958Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Notes a technically breaking change, and implies it should at minimum be considered for release notes, even if minor."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2828173232",
+          "author": "ajjackson",
+          "body": "```suggestion:-4+0\n```\n\nThis seems to be unused; deleting it doesn't affect a basic local test run.",
+          "file_path": "ase/optimize/optimize.py",
+          "line_number": 398,
+          "commit_sha": "aa8f930559fe3c06b0371203ca4f551e4c92834e",
+          "base_sha": "8dceb40fac0e8e117c236711e7121a9ce4eaec1d",
+          "created_at": "2025-10-17T10:18:44.280Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Includes a code suggestion (diff) to delete unused code, which is a direct and concrete requested change."
+    }
+  ],
+  "review_thread_count": 20,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2751506323",
+            "author": "askhl",
+            "body": "@ajjackson this has been sitting for a while (I actually forgot that it hadn't been merged).  Opinions?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-09-15T14:01:21.980Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2822305725",
+            "author": "askhl",
+            "body": "> My main concern is the API breakage that removes the `f` parameter from all optimize `step()` methods. This is a public method and there is a real possibility someone is using this to do some kind of hack around optimization.\n\nMost algorithms get the forces many times in different places.  So I think `step(my_own_forces)` simply doesn't work for most optimizers.  I have nevertheless changed the `_ignored()` method to something that flattens the input forces and issues a warning.\n\n(Note that the parameter wasn't *removed*, it was just ignored but with a warning.)\n\n> mark this a **breaking** in the changelog\n\nMaybe not necessary now?\n\nWe want to flip the sign, too (right now gradients are still actually the forces), so there will be more shenanigans after this MR.\n\n> I recently tried to make a filter-like Optimizeable (which presents a primitive cell but calculates a supercell) and found it a bit cumbersome to apply. Perhaps we can use that starting-point to find or create a reasonably streamlined example in the docs.\n\nIt would be interesting to see that example.  Maybe we need an explicit \"convert between dumb gradients and domain data (forces/stresses etc.)\" step?\n\n> This could be a problem for ASE4, if the new \"functional\" calculators do not cache forces?\n\nThe current situation is not significantly different from how things always were.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-15T10:24:27.550Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2822308474",
+            "author": "askhl",
+            "body": "@ajjackson I would like to merge this very soon unless there are further important issues.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-15T10:25:24.207Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2826403298",
+            "author": "askhl",
+            "body": "I updated the warning now (thanks for spotting that!) and also made the step() signature strictly equal to that in master/3.26.0, promising to remove these arguments in 3.28.0.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-16T15:25:00.348Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2826411058",
+            "author": "askhl",
+            "body": "> I checked a few of them and some are using the forces argument correctly (albeit with different names) so I think it is a significant API break to start ignoring it. It also doesn't seem obviously harmful to leave them be... Can we deprecate the \"nice\" ones and only clobber the \"bad\" ones?\n\nSo to clarify, this was already what the MR was doing at the time, but I hadn't updated the warning so it claimed something else.\n\nNevertheless passing the wrong forces to step() (anything other than what the internal potential energy surface would say) is not a behaviour we should pretend to support.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-16T15:27:31.040Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2826415913",
+            "author": "askhl",
+            "body": "After this MR I'm going to try to flip the sign of `gradient` at the Optimizable level (I'm sorry I didn't get that done in the previous MR, it is not easy to make these changes particularly due to the usual time constraints).",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-16T15:29:17.451Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2839825067",
+            "author": "askhl",
+            "body": "@ajjackson Thanks once more.  OK to merge?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-23T09:12:51.133Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2842423446",
+            "author": "askhl",
+            "body": "Great, merging!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-10-24T08:54:27.174Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 20,
+    "stage1_kept": 12,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 8,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0,
+    "stage3_cost_usd": 0.0280005
+  }
+}

@@ -1,0 +1,184 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33971,
+  "title": "UI: Fix tab navigation after closing addon panel",
+  "body": "Closes #32583 \r\n\r\n## What I did\r\n\r\n[Peek 2026-03-03 16-40.webm](https://github.com/user-attachments/assets/63f4bff4-ce23-40b5-8e54-8dea70e80c50)\r\n\r\n### Testing\r\n#### Manual testing\r\n\r\n1. Open Storybook\r\n2. Close addon panel with kb and see where focus lands\r\n3. Open addon panel with kb and see where focus lands\r\n4. Notice that when opening addon panel with kb, we show the region outline because we land on the region for more coherent screen reader announcements\r\n\r\n## Copilot slop\r\n\r\nClosing the addon panel (via close button or Alt+A shortcut) left focus on the now-removed DOM element, breaking keyboard navigation entirely.\r\n\r\nAfter hiding the panel, focus is now moved to the \"Show addon panel\" toolbar button, but only when focus was within the panel at the time of closing. If the toolbar button is unavailable, focus falls back to the start of the document. When focus is elsewhere in the app (e.g. sidebar, toolbar, preview), it is left untouched.\r\n\r\n- **`layout.ts`**: Added `showAddonPanel` to `focusableUIElements`; added `focusOnUIElement` to `SubAPI` type; refactored `focusOnUIElement` to accept an options object with optional `poll` flag (defaults to `true` for backwards compatibility) and return `boolean | Promise<boolean>` indicating focus success\r\n- **`addons.tsx`**: Added `id=\"storybook-show-addon-panel\"` to the toolbar button\r\n- **`container/Panel.tsx`**: `toggleVisibility` now calls `focusOnUIElement` with `{ poll: false }` when hiding, falling back to `document.body.focus()` on failure; uses `focusableUIElements.showAddonPanel` constant\r\n- **`shortcuts.ts`**: `togglePanel` shortcut handler checks if focus was within the panel before moving it; uses `{ poll: false }` and falls back to `document.body.focus()`\r\n- **`layout.test.ts`**: Added 10 unit tests for `focusOnUIElement` covering all code paths (no elementId, immediate focus, select options, poll/no-poll, polling success/timeout)\r\n\r\n#### Manual testing\r\n\r\n**Prerequisites:** Run `yarn storybook:ui` and open the Storybook UI in a browser.\r\n\r\n**Test 1 \u2013 Close addon panel via close button, focus moves to toolbar button**\r\n1. Open the Storybook UI with the addon panel visible (default state).\r\n5. Using the keyboard (Tab), navigate to the \"Hide addon panel\" close button (\u2715) in the addon panel header.\r\n6. Press Enter or Space to close the addon panel.\r\n7. Verify that focus moves to the \"Show addon panel\" button in the toolbar.\r\n8. Press Tab and verify that keyboard navigation continues normally from the toolbar.\r\n\r\n**Test 2 \u2013 Close addon panel via keyboard shortcut while focus is in the panel**\r\n1. Open the Storybook UI with the addon panel visible.\r\n2. Using the keyboard, navigate to any element inside the addon panel (e.g. an addon tab, the close button, the position toggle button).\r\n3. Press the keyboard shortcut to toggle the panel (default: `A`).\r\n4. Verify that focus moves to the \"Show addon panel\" button in the toolbar.\r\n5. Press Tab and verify that keyboard navigation continues normally.\r\n\r\n**Test 3 \u2013 Toggle panel via keyboard shortcut while focus is outside the panel**\r\n1. Open the Storybook UI with the addon panel visible.\r\n2. Click on the sidebar (or any element outside the addon panel) to place focus there.\r\n3. Press the keyboard shortcut to toggle the panel (`A`).\r\n4. Verify that focus does **not** move \u2014 it stays wherever it was before (e.g. in the sidebar).\r\n5. Press Tab and verify that keyboard navigation continues normally from the current focus position.\r\n\r\n**Test 4 \u2013 Re-open addon panel after closing**\r\n1. Close the addon panel using any method (close button or shortcut).\r\n2. Verify the \"Show addon panel\" button appears in the toolbar.\r\n3. Click or activate the \"Show addon panel\" button.\r\n4. Verify the addon panel re-opens and functions normally.\r\n5. Verify keyboard navigation works correctly with the panel re-opened.\r\n\r\n**Test 5 \u2013 Toggle panel shortcut when panel is already hidden**\r\n1. Close the addon panel so it is hidden.\r\n2. Press the keyboard shortcut (`A`) to toggle the panel.\r\n3. Verify the panel opens and focus is not unexpectedly moved.\r\n4. Press Tab and verify keyboard navigation works normally.\r\n\r\n**Test 6 \u2013 Existing search shortcut still works**\r\n1. Press the search shortcut (default: `/`) to focus the search field.\r\n2. Verify that the search field receives focus and the `select` behavior works (text is selected).\r\n3. Press Escape to close search, then press `/` again \u2014 verify polling still works for the search field focus.\r\n\r\n<!-- START COPILOT ORIGINAL PROMPT -->\r\n\r\n\r\n\r\n<details>\r\n\r\n<summary>Original prompt</summary>\r\n\r\n> \r\n> ----\r\n> \r\n> *This section details on the original issue you should resolve*\r\n> \r\n> <issue_title>[Bug]:  Tab navigation is broken after closing the addon panel</issue_title>\r\n> <issue_description>### Describe the bug\r\n> \r\n> https://github.com/user-attachments/assets/acdb8194-4669-4d84-aaa7-b613569bbfc3\r\n> \r\n> We should address this by repositioning focus (at the start of the toolbar? start of the page? on the button in the toolbar for showing the toolbar?) and/or actually removing the panel instead of hiding it.\r\n> \r\n> ### Reproduction link\r\n> \r\n> yarn storybook:ui\r\n> \r\n> ### Reproduction steps\r\n> \r\n> 1. Go to the close addon panel button with kb\r\n> 2. Close the panel\r\n> 3. Press tab\r\n> \r\n> ### System\r\n> \r\n> ```bash\r\n> SB 9 and 10\r\n> ```\r\n> \r\n> ### Additional context\r\n> \r\n> _No response_</issue_description>\r\n> \r\n> ## Comments on the Issue (you are @copilot in this section)\r\n> \r\n> <comments>\r\n> <comment_new><author>@Sidnioulz</author><body>\r\n> > [@Sidnioulz](https://github.com/Sidnioulz) , can i work on this issue?\r\n> \r\n> We don't assign issues, but you're free to start working on it on your own. See https://storybook.js.org/docs/contribute/code to get started.\r\n> \r\n> Please refrain from pinging people on multiple tickets at the same time too. This causes a bit of email spam for the issue authors and the team. Thanks!</body></comment_new>\r\n> <comment_new><author>@Sidnioulz</author><body>\r\n> Note that for this one, we haven't actually decided where focus should land when the addon panel is closed. My first guess would be to target the toolbar button that reopens it, and if the toolbar is also closed, to target the start of the document.</body></comment_new>\r\n> </comments>\r\n> \r\n\r\n\r\n</details>\r\n\r\n\r\n\r\n<!-- START COPILOT CODING AGENT SUFFIX -->\r\n\r\n- Fixes storybookjs/storybook#32583\r\n\r\n<!-- START COPILOT CODING AGENT TIPS -->\r\n---\r\n\r\n\ud83d\udd12 GitHub Advanced Security automatically protects Copilot coding agent pull requests. You can protect all pull requests by enabling Advanced Security for your repositories. [Learn more about Advanced Security.](https://gh.io/cca-advanced-security)\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Improved keyboard focus management with programmatic focus (retry and select options) and two new focus targets for the addon panel and its toggle.\n  * Landmark focus animation to highlight regions during keyboard navigation.\n  * Panel visibility now requires actual panel content before showing.\n\n* **Bug Fixes**\n  * Restores focus after toggling addon panels, falling back to document focus if needed.\n\n* **Tests**\n  * Added comprehensive tests for focus, polling, and timeout scenarios.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "copilot-swe-agent",
+  "merged_at": "2026-03-06T16:50:24Z",
+  "base_ref": "next",
+  "merge_commit_sha": "fd2919db175b1b61f688e5af7a7526e239627330",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "6640a12d8be29d2f5eb0a16435367e1fe95d0700",
+    "f3a369e81a383671fead974177188529263f40c8"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rSyZZ",
+          "author": "Sidnioulz",
+          "body": "Add an option to that function to make the polling behaviour optional. Leave it on by default, but for our new use case, don't poll.\n\nThe function should return a boolean to indicate whether focus succeeded. You may make the function async if it results in cleaner code. Add unit tests to cover all relevant use cases for that function.",
+          "file_path": "code/core/src/manager-api/modules/layout.ts",
+          "line_number": 112,
+          "start_line": null,
+          "commit_sha": "478a4ff18f4c43c7e2a772db77e6d9ff8e8ae9e9",
+          "created_at": "2026-03-02T17:47:49Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6rTCxs",
+          "author": "copilot-swe-agent",
+          "body": "Added a `poll` option (defaults to `true` for backwards compat) and the function now returns `boolean` synchronously when `poll: false` or when focus succeeds immediately, and `Promise<boolean>` when polling. The second parameter also accepts the old `boolean` form for backwards compatibility with existing callers that pass `select`. Added 10 unit tests covering all code paths. See 787a74c.",
+          "file_path": "code/core/src/manager-api/modules/layout.ts",
+          "line_number": 112,
+          "start_line": null,
+          "commit_sha": "478a4ff18f4c43c7e2a772db77e6d9ff8e8ae9e9",
+          "created_at": "2026-03-02T18:01:29Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests specific code changes: add an option to make polling optional, make the function return a boolean, optionally make it async, and add unit tests."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rS1A5",
+          "author": "Sidnioulz",
+          "body": "## Problem 1\n\nI want you to account for two use cases:\n* The panel is closed by pressing the close button\n* The panel is closed by keyboard shortcut _and focus was currently within the panel_\n\nWhen focus was in a completely different part of the app (e.g. the toolbar, sidebar, preview), we never want to move focus. We only want to move focus when closing the addon panel would result in unpredictable behaviour.\n\n\n----\n## Problem 2\nUse the boolean returned by focusOnUIElement to see if we managed to focus `showAddonPanel`. If we failed to focus on it, focus at the start of the document (no need to check if that one worked).",
+          "file_path": "code/core/src/manager-api/modules/shortcuts.ts",
+          "line_number": 380,
+          "start_line": 361,
+          "commit_sha": "f3a369e81a383671fead974177188529263f40c8",
+          "created_at": "2026-03-02T17:49:56Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6rTC19",
+          "author": "copilot-swe-agent",
+          "body": "Addressed both problems:\n\n**Problem 1**: Now checks if `document.activeElement` is inside the panel element (`storybook-panel-root`) before the toggle. Focus is only moved when it was within the panel.\n\n**Problem 2**: Uses `{ poll: false }` and checks the boolean return. Falls back to `document.body.focus()` if `showAddonPanel` button isn't available.\n\nSee 787a74c.",
+          "file_path": "code/core/src/manager-api/modules/shortcuts.ts",
+          "line_number": 380,
+          "start_line": 361,
+          "commit_sha": "f3a369e81a383671fead974177188529263f40c8",
+          "created_at": "2026-03-02T18:01:32Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests two specific behavioral changes: only move focus when the panel close would cause unpredictable behavior (not when focus is elsewhere), and use the boolean return value to fall back to document start if focus on showAddonPanel fails."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rS1qB",
+          "author": "Sidnioulz",
+          "body": "Be coherent and use focusableUIElements.showAddonPanel if possible",
+          "file_path": "code/core/src/manager/container/Panel.tsx",
+          "line_number": 34,
+          "start_line": null,
+          "commit_sha": "478a4ff18f4c43c7e2a772db77e6d9ff8e8ae9e9",
+          "created_at": "2026-03-02T17:50:24Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6rTC5t",
+          "author": "copilot-swe-agent",
+          "body": "Now imports and uses `focusableUIElements.showAddonPanel` from the layout module. See 787a74c.",
+          "file_path": "code/core/src/manager/container/Panel.tsx",
+          "line_number": 34,
+          "start_line": null,
+          "commit_sha": "478a4ff18f4c43c7e2a772db77e6d9ff8e8ae9e9",
+          "created_at": "2026-03-02T18:01:34Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests a naming/consistency change to use focusableUIElements.showAddonPanel instead of whatever is currently used."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rmx4G",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Move mock behavior setup out of test bodies.**\n\n`mockGetElementById.mockImplementation(...)` and related focus mock behavior are still being configured per test flow (e.g., Lines 586 and 655-660). Centralize scenario mock implementations in `beforeEach` and drive variants through test state to keep mocking deterministic.\n\n\n\nAs per coding guidelines, \"Implement mock behaviors in `beforeEach` blocks in Vitest tests\" and \"Avoid inline mock implementations within test cases in Vitest tests\".\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager-api/tests/layout.test.ts` around lines 578 - 660, The\ntests are configuring element mocks inline which makes behavior\nnon-deterministic; move the repeated mock setup into a beforeEach: centralize\nmockGetElementById and mockActiveElement initialization and the\ncreateMockElement helper there, and then in individual tests only mutate\nper-test state (e.g., toggle a test-scoped flag or replace the return value)\nbefore calling focusLayoutApi.focusOnUIElement; ensure any focus/select mocks\n(element.focus, element.select) are created by createMockElement and their\nspecific behaviors for the polling test (delayed-element focus implementation)\nare set by adjusting the shared test state in beforeEach or a per-test setup\nfunction rather than calling mockGetElementById.mockImplementation inline inside\ntest bodies.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager-api/tests/layout.test.ts",
+          "line_number": 660,
+          "start_line": 578,
+          "commit_sha": "f3a369e81a383671fead974177188529263f40c8",
+          "created_at": "2026-03-03T15:50:50Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6r2Yll",
+          "author": "Sidnioulz",
+          "body": "This one appears specific to me. I'm ok with what Claude wrote here.",
+          "file_path": "code/core/src/manager-api/tests/layout.test.ts",
+          "line_number": 660,
+          "start_line": 578,
+          "commit_sha": "f3a369e81a383671fead974177188529263f40c8",
+          "created_at": "2026-03-04T11:03:22Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a testing practice violation and requests moving mock behavior setup out of test bodies into beforeEach blocks."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rmx4J",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Fallback can be skipped because this call may return a Promise.**\n\nAt Line 35, `focusOnUIElement` defaults to polling and may return `Promise<boolean>`. The `result === false` check only handles the synchronous branch, so fallback focus to `document.body` may never run.\n\n\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n-          const result = api.focusOnUIElement(focusableUIElements.showAddonPanel);\n+          const result = api.focusOnUIElement(focusableUIElements.showAddonPanel, {\n+            poll: false,\n+          });\n           if (result === false) {\n             document.body.focus();\n           }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n          const result = api.focusOnUIElement(focusableUIElements.showAddonPanel, {\n            poll: false,\n          });\n          if (result === false) {\n            document.body.focus();\n          }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager/container/Panel.tsx` around lines 35 - 38, The fallback\nfocus to document.body can be skipped because\napi.focusOnUIElement(focusableUIElements.showAddonPanel) may return a\nPromise<boolean>; update the call site (the code invoking focusOnUIElement with\nfocusableUIElements.showAddonPanel) to handle both sync and async returns by\nawaiting the result or normalizing with Promise.resolve(result).then(...), and\nonly call document.body.focus() when the resolved boolean is strictly false;\nensure the surrounding function is marked async if you choose to await.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 002085a",
+          "file_path": "code/core/src/manager/container/Panel.tsx",
+          "line_number": 38,
+          "start_line": null,
+          "commit_sha": "0b508dc93be97f4a5fe4955c2e2a1d2b85625f76",
+          "created_at": "2026-03-03T15:50:50Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where the fallback focus may never run due to async return, and provides a concrete fix to pass poll: false to avoid the async path."
+    }
+  ],
+  "review_thread_count": 5,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 5,
+    "stage1_kept": 5,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

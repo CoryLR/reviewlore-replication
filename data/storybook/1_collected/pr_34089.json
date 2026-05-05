@@ -1,0 +1,88 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34089,
+  "title": "ESLint: bail out config setup if eslint-plugin-storybook is already imported",
+  "body": "When `configureFlatConfig` ran against a config that already imported `eslint-plugin-storybook` under a custom alias, it skipped adding a duplicate import but still appended `...storybook.configs[\"flat/recommended\"]` \u2014 referencing an undefined `storybook` variable.\n\n**Example of broken output:**\n```js\n// user's existing config\nimport sb from 'eslint-plugin-storybook';\nexport default [\n  ...sb.configs['flat/recommended'],\n  ...storybook.configs[\"flat/recommended\"], // \u2190 `storybook` is undefined!\n];\n```\n\n## Changes\n\n- **`configureFlatConfig`**: Bails out immediately (returns code unchanged) by walking the full AST via `traverse` to detect if `eslint-plugin-storybook` is already referenced \u2014 covering both static `import` declarations and dynamic `import()` expressions (used by tools like [`eslint-flat-config-utils`](https://github.com/antfu/eslint-flat-config-utils)).\n- **`configureEslintPlugin`**: Skips writing the flat config file when `configureFlatConfig` returns unchanged code \u2014 consistent with the existing early-return behavior in the `.eslintrc.json` and `.eslintrc.js` paths.\n- **Tests**: Added test cases covering the \"already statically imported\" and \"already dynamically imported\" scenarios to verify no write occurs.\n\n<!-- START COPILOT CODING AGENT TIPS -->\n---\n\n\ud83d\udd12 GitHub Advanced Security automatically protects Copilot coding agent pull requests. You can protect all pull requests by enabling Advanced Security for your repositories. [Learn more about Advanced Security.](https://gh.io/cca-advanced-security)\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n\n## Summary by CodeRabbit\n\n* **Bug Fixes**\n  * Improved ESLint plugin configuration to skip modification when the Storybook plugin is already imported.\n  * Added validation to prevent unnecessary file writes when no configuration changes are required.\n\n* **Tests**\n  * Added test coverage for the already-imported plugin scenario in flat config.\n\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "copilot-swe-agent",
+  "merged_at": "2026-03-11T05:47:23Z",
+  "base_ref": "next",
+  "merge_commit_sha": "16239f5bb0d7609e0db2920b7aa210a5571ed06d",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "517922ed2fc93eb9337844e8005299b0e802387b",
+    "fc1e78939a66c59d79c0874a28f4dfdfc025771e"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6teNod",
+          "author": "huang-julien",
+          "body": "should we instead walk through the AST and look for `ImportDeclaration`? \nSometimes we can have import expressions.\nQuite a lot of projects uses https://github.com/antfu/eslint-flat-config-utils that accepts `import(...)`",
+          "file_path": "code/core/src/cli/eslintPlugin.ts",
+          "line_number": 60,
+          "start_line": null,
+          "commit_sha": "944b91a47caaae4ccb9389bd9f9db21669bcc641",
+          "created_at": "2026-03-10T09:15:29Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tgy93",
+          "author": "valentinpalkovic",
+          "body": "Good catch! @copilot+claude-sonnet-4.6 See above comment",
+          "file_path": "code/core/src/cli/eslintPlugin.ts",
+          "line_number": 60,
+          "start_line": null,
+          "commit_sha": "944b91a47caaae4ccb9389bd9f9db21669bcc641",
+          "created_at": "2026-03-10T11:21:42Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tg4nc",
+          "author": "copilot-swe-agent",
+          "body": "Good catch! Updated in fc1e789 to use `traverse` and walk the full AST. The check now covers both static `ImportDeclaration` nodes and dynamic `import()` expressions (represented in Babel's AST as a `CallExpression` with an `Import` callee). Added a test case for the dynamic import scenario using the `eslint-flat-config-utils` pattern.",
+          "file_path": "code/core/src/cli/eslintPlugin.ts",
+          "line_number": 60,
+          "start_line": null,
+          "commit_sha": "944b91a47caaae4ccb9389bd9f9db21669bcc641",
+          "created_at": "2026-03-10T11:26:45Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tlWGS",
+          "author": "huang-julien",
+          "body": "It still doesn't looks good to me, i'm pretty sure it's something like ImportExpression ? \nhttps://astexplorer.net/#/gist/59b5b27ffb3556636137d4f673037121/39190a25c6ca6cb3173cc27877f3a18481a9226c",
+          "file_path": "code/core/src/cli/eslintPlugin.ts",
+          "line_number": 69,
+          "start_line": null,
+          "commit_sha": "fc1e78939a66c59d79c0874a28f4dfdfc025771e",
+          "created_at": "2026-03-10T14:39:10Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6tmLcq",
+          "author": "valentinpalkovic",
+          "body": "I've also looked it up on AST Explorer, and it looked right to me. The difference is that you need to select `@babel/parser` instead of `@babel/eslint-parser`",
+          "file_path": "code/core/src/cli/eslintPlugin.ts",
+          "line_number": 69,
+          "start_line": null,
+          "commit_sha": "fc1e78939a66c59d79c0874a28f4dfdfc025771e",
+          "created_at": "2026-03-10T15:09:31Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 2
+}

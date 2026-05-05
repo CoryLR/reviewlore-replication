@@ -1,0 +1,108 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 177,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "When `checkRootFilesUpdate()` re-parses the tsconfig, it completely overwrites `this.commandLine.fileNames` with the freshly-parsed array: `this.commandLine.fileNames = newCommandLine.fileNames`. Any files dynamically added by `ensureFiles()` (story files, synthetic story probe files) are silently dropped from the file list. After the next `created`/`deleted` event, all those files will disappear from the TS program until the next call to `extractPropsFromStories` re-adds them. The fix is to merge: preserve the dynamic additions that are not in the tsconfig-sourced list, e.g. `this.commandLine.fileNames = [...new Set([...newCommandLine.fileNames, ...this.commandLine.fileNames.filter(f => !newCommandLine.fileNames.includes(f))])]`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 290,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `catch` block inside the `for (const entry of entries)` loop silently swallows all per-entry extraction errors with only a comment: `// One bad component should not kill the entire batch.` There's no `logger.debug(...)` call, so a misconfigured tsconfig, unresolvable module, or TS internal error will be invisible during development and debugging. Add at minimum `logger.debug(\\`[reactComponentMeta] Extraction failed for ${entry.componentPath}: ${err}\\`)` before the `continue`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+      "line_number": 60,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`ComponentMetaManager.instance` is a static Promise that is set once and never cleared in `dispose()`. If `dispose()` is called (e.g. in tests or on process restart), subsequent calls to `getInstance()` return the already-disposed manager. All projects inside it have been disposed, `fsFileSnapshots` is cleared, and internal state is wiped \u2014 but the Promise still resolves to the same object. Any new extraction call will fail silently or produce empty results. Fix: add `ComponentMetaManager.instance = undefined;` inside `dispose()` (or make the singleton non-static, managed by the caller).",
+      "index": 2
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+      "line_number": 499,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`watch(dir, { recursive: true }, ...)` relies on Node.js recursive directory watching. On Linux this requires Node.js \u2265 20.x (backed by `inotify` via libuv) \u2014 on earlier versions the `recursive` option is silently ignored, meaning file changes outside the top-level directory will never be detected. The codebase targets Node 18+. Either document this limitation prominently, add a runtime version guard and fall back to a manual recursive implementation, or pin the minimum required Node version for this feature.",
+      "index": 3
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.test.ts",
+      "line_number": 202,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`sys.deleteFile!(possibleTsconfig)` uses a non-null assertion on `deleteFile`. `ts.sys.deleteFile` is typed as `((path: string) => void) | undefined` \u2014 it is only present in some TS sys implementations and absent in others (e.g. when using a custom sys or running in certain environments). This will throw at runtime when `deleteFile` is absent. Use an explicit guard: `if (sys.deleteFile) { sys.deleteFile(possibleTsconfig); }` or delete via `execSync` like other cleanup helpers.",
+      "index": 4
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/test-helpers.ts",
+      "line_number": 34,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`copyNodeModules` uses `execSync` with Unix shell commands (`mkdir -p`, `cp -rL`). These will fail on Windows CI runners. Since this is a shared test-infrastructure file used across multiple test suites, platform portability matters. Replace with Node.js `fs` operations (e.g. `fs.mkdirSync` with `{ recursive: true }` and a recursive copy helper), or restrict the test suite to Linux/macOS with a clear `it.skipIf(process.platform === 'win32', ...)` guard on every test that calls `createTempDir`/`createTempProject`.",
+      "index": 5
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 253,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `react-component-meta` branch does not populate `docgenError` even when extraction fails. For `react-docgen` the error comes from `result.type === 'error'`; for RDT from `component?.reactDocgenTypescriptError`. For RCM, if `rcmResults` is `undefined` (manager init failed), or if `batchExtract` logged a debug error and returned empty results, `reactComponentMeta` will be `undefined` and the code falls through to the `if (!reactDocgen && !reactDocgenTypescript && !reactComponentMeta)` error block \u2014 but with `docgenError` unset, the manifest entry's `error` field will show only the generic 'No component found' message instead of the real failure reason. Add an RCM-specific error source (e.g. check `manager === null` and surface a 'TypeScript not available' error).",
+      "index": 6
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 248,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `react-component-meta` engine path never populates `importOverride`. Both `react-docgen` (via `getImportTag(reactDocgen.data)`) and `react-docgen-typescript` (via `getImportTag(reactDocgenTypescript)`) extract the `@import` JSDoc tag from the component description and store it in `ComponentRef.importOverride`, which then feeds the manifest's `import` field. For the RCM path, `component?.importOverride` remains `undefined`, so any `@import` override authored in the component's JSDoc is silently dropped and the manifest uses the raw (possibly relative) import. The `componentMetaExtractor.ts` extracts JSDoc descriptions, so the information is available \u2014 extract it via `getImportTag({ description: reactComponentMeta.description })` and merge it into `imports`.",
+      "index": 7
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/componentMetaExtractor.ts",
+      "line_number": 562,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The cache lookup in `getBulkSourceExclusions` uses a two-step pattern:\n```ts\nlet cached = propSourceCache.get(prop);\nif (cached === undefined && !propSourceCache.has(prop)) {\n```\nThe `!propSourceCache.has(prop)` check is redundant with `cached === undefined` \u2014 if the map has the key with value `undefined` (a legitimate return from `getPropSourceFile`), the first check already handles it. The second check only prevents recomputation when the stored value is `undefined`, but since `getPropSourceFile` returns `string | undefined`, storing `undefined` is valid and the double check is confusing. Simplify with a `has` check: `if (!propSourceCache.has(prop)) { ... }`.",
+      "index": 8
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/utils.ts",
+      "line_number": 112,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "In the `asyncCache` wrapper, the `.then()` callback logs `[cache] miss ... key=` \u2014 but a cache miss has already occurred at the point `fn(...args)` is called; by the time `.then()` fires, the result has resolved successfully. Logging 'miss' in both `.then()` and `.catch()` is confusing: the former should say something like `resolved` or `stored`, while the latter should say `failed`. Consider: `logger.verbose(\\`[cache] resolved ${name} in ${Date.now() - start}ms key=${k}\\`)` for `.then()` and `logger.verbose(\\`[cache] failed ${name} after ${Date.now() - start}ms key=${k}\\`)` for `.catch()`.",
+      "index": 9
+    },
+    {
+      "file_path": "code/package.json",
+      "line_number": 38,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `storybook:ui:build` Node.js heap limit was bumped from `--max_old_space_size=4096` to `--max_old_space_size=5120` (4 GB \u2192 5 GB) without a comment. If this increase is directly caused by the new `ComponentMetaManager` / TS LanguageService holding more in memory, that's worth documenting \u2014 either in a comment here or in the PR description \u2014 so future maintainers understand the baseline requirement has grown and whether it can be reduced.",
+      "index": 10
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `componentMetaExtractor.checker.test.ts` file uses a single shared `ComponentMetaProject` instance (`project`) created in `beforeAll` and reused across all 2,342 lines of tests. Each test writes synthetic story files (e.g. `Button.__story_Button__.tsx`) into the shared `tempDir` and calls `project.ensureFiles([storyPath])`. Because `project` is never reset between tests, its internal `commandLine.fileNames` and `fsFileSnapshots` grow monotonically across the entire suite. If a test modifies a synthetic file that a prior test also wrote (same path), both tests share the cached snapshot until `ensureFresh` detects the mtime change. Consider either clearing synthetic story files after each `describe` block, or constructing a fresh `ComponentMetaProject` per `describe`. This becomes especially important given the `checkRootFilesUpdate` bug noted above \u2014 file-list contamination between tests can cause subtle false passes.",
+      "index": 11
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "In `generator.ts`, the `manifests` preset function now accepts `{ manifestEntries: IndexEntry[]; watch: boolean }` as its extra-options type, but `watch` is non-optional. Callers that pass only `{ manifestEntries }` (e.g. `writeManifests` in `manifests.ts` which calls `getManifests(presets)` with an implicit empty extra-options default) will have `watch` arrive as `undefined` at runtime. The `if (manager && watch)` guard handles `undefined` correctly (it's falsy), but the TypeScript type is a lie \u2014 the actual runtime value can be `undefined`. Declare `watch` as optional (`watch?: boolean`) in the type signature so callers are not required to supply it and the type reflects reality.",
+      "index": 12
+    }
+  ],
+  "cost_usd": 1.40561385,
+  "duration_seconds": 723.2960331439972
+}

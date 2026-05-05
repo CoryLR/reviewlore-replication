@@ -1,0 +1,56 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33356,
+  "title": "Telemetry: Remove instance of check for sub-error handling",
+  "body": "Closes #\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\n<!-- Briefly describe what your PR does -->\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n_This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!_\r\n\r\n<!-- Please include the steps to test your changes here. For example:\r\n\r\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Open Storybook in your browser\r\n3. Access X story\r\n\r\n-->\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n\n## Summary by CodeRabbit\n\n## Release Notes\n\n* **Bug Fixes**\n  * Improved error telemetry to capture more complete diagnostic data from nested error scenarios, enabling better error tracking and system monitoring without affecting user experience.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "valentinpalkovic",
+  "merged_at": "2025-12-14T11:44:57Z",
+  "base_ref": "next",
+  "merge_commit_sha": "87bdf8bccb35c8b32931b4e13920ae7ad37f3c95",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "c4980c14537d4044608380d5262a5e8d8a33b96d",
+    "d8169b558527735c1aa16559da0f1de737c1dbec"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6b-y_Y",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Add defensive checks to prevent runtime errors with non-StorybookError objects.**\n\nThe change replaces strict type checking with duck-typing (`'subErrors' in error`), which introduces several type safety risks:\n\n1. **No array validation**: `error.subErrors.length` assumes `subErrors` is an array, but the `in` operator only checks property existence. If a non-array `subErrors` property exists, this will throw at runtime.\n\n2. **Unsafe cast to StorybookError**: Line 142 casts `error as StorybookError` without verification. When this reaches line 130, `parent.fullErrorCode` may be undefined if the error lacks this property.\n\n3. **Missing structural validation**: Each `subError` is passed recursively without verifying it matches the expected error structure.\n\nWhile the try-catch block prevents crashes, it may mask legitimate issues and make debugging harder.\n\n\n\nConsider adding defensive runtime checks:\n\n```diff\n-      if (error && 'subErrors' in error && error.subErrors.length > 0) {\n+      if (\n+        error &&\n+        'subErrors' in error &&\n+        Array.isArray(error.subErrors) &&\n+        error.subErrors.length > 0 &&\n+        'fullErrorCode' in error\n+      ) {\n         for (const subError of error.subErrors) {\n           await sendTelemetryError(subError, eventType, options, blocking, error as StorybookError);\n         }\n       }\n```\n\nAlternatively, verify this change is intentional and document why duck-typing is preferred over `instanceof StorybookError`.\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/withTelemetry.ts",
+          "line_number": 144,
+          "start_line": 140,
+          "commit_sha": "d8169b558527735c1aa16559da0f1de737c1dbec",
+          "created_at": "2025-12-14T11:10:47Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The comment identifies type safety risks from replacing instanceof checks with duck-typing, including missing array validation for subErrors and unsafe casting, which can lead to runtime errors or incorrect behavior."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies specific type safety risks and provides a concrete code diff suggesting defensive runtime checks (Array.isArray validation, fullErrorCode presence check) to prevent potential runtime errors."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

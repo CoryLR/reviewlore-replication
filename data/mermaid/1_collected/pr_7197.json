@@ -1,0 +1,250 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 7197,
+  "title": "5496 : fixed UI crash from excessive tick generation with invalid dates/intervals",
+  "body": "## Summary\r\n\r\nThis PR fixes a critical bug where Gantt charts with invalid dates or small tick intervals cause the UI to hang and become completely unresponsive. The issue was caused by a Temporal Dead Zone (TDZ) error and lack of validation for excessive tick generation, leading to infinite loops that freeze the browser.\r\n\r\n## Resolves\r\nResolves #5496\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nDescribe the way your implementation works or what design decisions you made if applicable.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://mermaid.js.org/community/contributing.html)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n- [ ] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://mermaid.js.org/community/contributing.html#update-documentation) is used for all new features.\r\n- [x] :butterfly: If your PR makes a change that should be noted in one or more packages' changelogs, generate a changeset by running `pnpm changeset` and following the prompts. Changesets that add features should be `minor` and those that fix bugs should be `patch`. Please prefix changeset messages with `feat:`, `fix:`, or `chore:`.\r\n",
+  "author": "omkarht",
+  "merged_at": "2025-11-27T17:19:25Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "614129ca318155d3ced95e8c8389d9cb21ad7aa7",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "a30b3bb3f8b6eaacff6025280e694d8df2d10f0c",
+    "b115ad3cd77679e3cf14323ec5771f74d681759f"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J86Y6kL0",
+          "author": "sidharthv96",
+          "body": "Won't this work?\n\n```suggestion\n    const intervalMs = (dayjs.duration({ [interval ?? 'day']: every }).milliseconds();\n    return Math.ceil(timeDiffMs / intervalMs);\n```",
+          "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+          "line_number": 627,
+          "start_line": null,
+          "commit_sha": "bf50ce5237460adf470786d079c340809de9a5a6",
+          "created_at": "2025-11-26T15:37:18Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J86ZB54w",
+          "author": "omkarht",
+          "body": "Yes @sidharthv96 , resolved in https://github.com/mermaid-js/mermaid/pull/7197/commits/0843a2fa7ac99b742b2c94c80e16a17dc2f26e38",
+          "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+          "line_number": 627,
+          "start_line": null,
+          "commit_sha": "bf50ce5237460adf470786d079c340809de9a5a6",
+          "created_at": "2025-11-27T07:18:04Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J86ZHh1l",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The JSDoc comment incorrectly states \"Returns the count or Infinity if there would be too many ticks\" but the function never returns `Infinity`. It always returns `Math.ceil(timeDiffMs / intervalMs)` regardless of the tick count. The documentation should be updated to reflect that the function simply calculates and returns the estimated tick count.\n```suggestion\n   * Returns the estimated number of ticks as a number.\n```",
+          "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+          "line_number": 611,
+          "start_line": null,
+          "commit_sha": "88e8ad6f5b0f2f9753d7ac6cfd05ae68e1920b6b",
+          "created_at": "2025-11-27T14:11:39Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J86ZHh18",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The `getEstimatedTickCount` function doesn't handle edge cases properly:\n1. If `intervalMs` is 0 or negative (when `every` is 0 or the interval is invalid), this will return `Infinity` or a negative number\n2. If `minTime > maxTime` (invalid time range), `timeDiffMs` will be negative, resulting in a negative tick count\n\nConsider adding validation:\n```javascript\nfunction getEstimatedTickCount(minTime, maxTime, every, interval) {\n  if (every <= 0 || minTime > maxTime) {\n    return Infinity;\n  }\n  const timeDiffMs = maxTime - minTime;\n  const intervalMs = dayjs.duration({ [interval ?? 'day']: every }).asMilliseconds();\n  if (intervalMs <= 0) {\n    return Infinity;\n  }\n  return Math.ceil(timeDiffMs / intervalMs);\n}\n```\n```suggestion\n  function getEstimatedTickCount(minTime, maxTime, every, interval) {\n    if (every <= 0 || minTime > maxTime) {\n      return Infinity;\n    }\n    const timeDiffMs = maxTime - minTime;\n    const intervalMs = dayjs.duration({ [interval ?? 'day']: every }).asMilliseconds();\n    if (intervalMs <= 0) {\n      return Infinity;\n    }\n```",
+          "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+          "line_number": 623,
+          "start_line": 618,
+          "commit_sha": "88e8ad6f5b0f2f9753d7ac6cfd05ae68e1920b6b",
+          "created_at": "2025-11-27T14:11:40Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J86ZHh2T",
+          "author": "copilot-pull-request-reviewer",
+          "body": "Grammar error: \"D3 using\" should be \"D3 will use\" for correct sentence structure.\n```suggestion\n        // D3 will use its default automatic tick generation\n```",
+          "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+          "line_number": 668,
+          "start_line": null,
+          "commit_sha": "88e8ad6f5b0f2f9753d7ac6cfd05ae68e1920b6b",
+          "created_at": "2025-11-27T14:11:40Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J86ZHh2m",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The time domain retrieval and tick estimation logic is duplicated between the bottom X axis (lines 656-668) and top X axis (lines 718-724). Consider extracting this validation logic into a reusable helper function to improve maintainability and reduce code duplication.\n\nFor example:\n```javascript\nfunction shouldApplyCustomTicks(timeScale, every, interval) {\n  const domain = timeScale.domain();\n  const estimatedTicks = getEstimatedTickCount(domain[0], domain[1], every, interval);\n  \n  if (estimatedTicks > MAX_TICK_COUNT) {\n    log.warn(\n      `The tick interval \"${every}${interval}\" would generate ${estimatedTicks} ticks, ` +\n        `which exceeds the maximum allowed (${MAX_TICK_COUNT}). ` +\n        `This may indicate an invalid date or time range. Skipping custom tick interval.`\n    );\n    return false;\n  }\n  return true;\n}\n```\n```suggestion\n      // Use helper to check if custom ticks should be applied\n      if (shouldApplyCustomTicks(timeScale, every, interval)) {\n```",
+          "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+          "line_number": 669,
+          "start_line": null,
+          "commit_sha": "88e8ad6f5b0f2f9753d7ac6cfd05ae68e1920b6b",
+          "created_at": "2025-11-27T14:11:41Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J86ZHh21",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The condition check logic differs between bottom axis (lines 662-669 with log warning when exceeding) and top axis (lines 724-749 with silent check). This inconsistency could make debugging harder. Consider logging the warning for the top axis as well, or extracting the validation logic to ensure both axes behave identically.",
+          "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+          "line_number": 669,
+          "start_line": null,
+          "commit_sha": "88e8ad6f5b0f2f9753d7ac6cfd05ae68e1920b6b",
+          "created_at": "2025-11-27T14:11:41Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J86ZHh3N",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The comment on lines 304-307 states \"if dayjs strict parsing fails - throws an error\" but the code doesn't actually throw an error at this point. The error is only thrown later (line 325) after additional validation checks. The comment should be clarified to indicate that for non-timestamp formats, the code will eventually throw an error if the fallback `new Date(str)` parsing also fails.\n```suggestion\n    // strict parsing fails, the code will attempt to parse with new Date(str)\n    // and only throws an error if that also fails.\n```",
+          "file_path": "packages/mermaid/src/diagrams/gantt/ganttDb.js",
+          "line_number": 306,
+          "start_line": null,
+          "commit_sha": "88e8ad6f5b0f2f9753d7ac6cfd05ae68e1920b6b",
+          "created_at": "2025-11-27T14:11:41Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J86ZHh3p",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The `parseInt` call should validate that the result is not `NaN`. If `resultTickInterval[1]` contains non-numeric characters, `parseInt` will return `NaN`, which will then be passed to `getEstimatedTickCount` and `dayjs.duration`, potentially causing issues. Consider adding validation:\n```javascript\nconst every = parseInt(resultTickInterval[1], 10);\nif (isNaN(every) || every <= 0) {\n  log.warn(`Invalid tick interval value: \"${resultTickInterval[1]}\". Skipping custom tick interval.`);\n  // Skip applying custom ticks\n} else {\n  // ... rest of the logic\n}\n```",
+          "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+          "line_number": 658,
+          "start_line": null,
+          "commit_sha": "b115ad3cd77679e3cf14323ec5771f74d681759f",
+          "created_at": "2025-11-27T14:11:42Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J86ZHh4I",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The `parseInt` call should validate that the result is not `NaN`. If `resultTickInterval[1]` contains non-numeric characters, `parseInt` will return `NaN`, which will then be passed to `getEstimatedTickCount` and `dayjs.duration`, potentially causing issues. Consider adding validation:\n```javascript\nconst every = parseInt(resultTickInterval[1], 10);\nif (isNaN(every) || every <= 0) {\n  log.warn(`Invalid tick interval value: \"${resultTickInterval[1]}\". Skipping custom tick interval.`);\n  // Skip applying custom ticks\n} else {\n  // ... rest of the logic\n}\n```",
+          "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+          "line_number": 714,
+          "start_line": null,
+          "commit_sha": "88e8ad6f5b0f2f9753d7ac6cfd05ae68e1920b6b",
+          "created_at": "2025-11-27T14:11:42Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J86ZHh4r",
+          "author": "copilot-pull-request-reviewer",
+          "body": "This debug log statement is redundant - it duplicates the information already logged on lines 301-302. The additional detail about the format mismatch doesn't add significant value since the same information is already available in the preceding logs. Consider removing this redundant log or consolidating it with the earlier logs.\n```suggestion\n      // Redundant log removed: already logged above.\n```",
+          "file_path": "packages/mermaid/src/diagrams/gantt/ganttDb.js",
+          "line_number": 310,
+          "start_line": null,
+          "commit_sha": "73b8626ab05fbffba391f18026d5b6efee4428c5",
+          "created_at": "2025-11-27T14:11:42Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J86ZI8SF",
+          "author": "sidharthv96",
+          "body": "@omkarht This is a valid comment. This condition does not add any extra value. \n\n<img width=\"757\" height=\"176\" alt=\"Image\" src=\"https://github.com/user-attachments/assets/05c3ae03-21ff-40bd-b244-a60d6bf1afe5\" />",
+          "file_path": "packages/mermaid/src/diagrams/gantt/ganttDb.js",
+          "line_number": 310,
+          "start_line": null,
+          "commit_sha": "73b8626ab05fbffba391f18026d5b6efee4428c5",
+          "created_at": "2025-11-27T15:28:29Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J86ZJuTZ",
+          "author": "omkarht",
+          "body": "Hey @sidharthv96 , Resolved in https://github.com/mermaid-js/mermaid/pull/7197/commits/b115ad3cd77679e3cf14323ec5771f74d681759f",
+          "file_path": "packages/mermaid/src/diagrams/gantt/ganttDb.js",
+          "line_number": 310,
+          "start_line": null,
+          "commit_sha": "73b8626ab05fbffba391f18026d5b6efee4428c5",
+          "created_at": "2025-11-27T16:25:15Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J86ZHh5W",
+          "author": "copilot-pull-request-reviewer",
+          "body": "Minor typo: \"diagramtype\" should be \"diagram\" (remove \"type\" or add a space to make \"diagram type\").\n```suggestion\nfix: validate dates and tick interval to prevent UI freeze/crash in gantt diagram\n```",
+          "file_path": ".changeset/tricky-rivers-stand.md",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "b115ad3cd77679e3cf14323ec5771f74d681759f",
+          "created_at": "2025-11-27T14:11:43Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 11
+}

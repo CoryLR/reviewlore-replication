@@ -1,0 +1,163 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 6566,
+  "title": "fix: escape backslashes before parentheses in URL replacement logic",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nFixes unsafe or incomplete string escaping in URL manipulation logic by ensuring backslashes are escaped before other characters like parentheses.\r\n\r\nResolves #6565 \r\n\r\nPS. This is the proof why this PR fixes the issues when running CodeQL on my forked repo.\r\n<img width=\"720\" alt=\"image\" src=\"https://github.com/user-attachments/assets/af16e2c1-82fa-4785-a110-65c78807b2c4\" />\r\n\r\n---\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\n- The bug was surfaced via CodeQL and relates to escaping parentheses in a string without first escaping existing backslashes.\r\n- To ensure correctness and avoid malformed escape sequences, the fix applies `.replace(/\\\\/g, '\\\\\\\\')` before replacing other special characters.\r\n- This avoids issues where characters like `\\(` are incorrectly interpreted or break rendering/parsing.\r\n- The change is minimal and scoped to the URL-escaping logic in `edges.js`.\r\n\r\n**Example of corrected code:**\r\n\r\n```js\r\nurl = url.replace(/\\\\/g, '\\\\\\\\').replace(/\\(/g, '\\\\(').replace(/\\)/g, '\\\\)');\r\n```\r\n\r\nThis order of replacements ensures robust and predictable escaping.\r\n\r\n---\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you:\r\n\r\n- [x] :book: have read the [contribution guidelines](https://mermaid.js.org/community/contributing.html)\r\n- [ ] :computer: have added necessary unit/e2e tests.\r\n- [ ] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://mermaid.js.org/community/contributing.html#update-documentation) is used for all new features.\r\n- [x] :butterfly: If your PR makes a change that should be noted in one or more packages' changelogs, generate a changeset by running `pnpm changeset` and following the prompts. Changesets that add features should be `minor` and those that fix bugs should be `patch`. Please prefix changeset messages with `fix:`.\r\n",
+  "author": "arpitjain099",
+  "merged_at": "2025-05-20T06:53:41Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "7075f833d0dacebfb52f92fbec57def9742a9842",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "d629c5eae584369b5697b3e7f7c88268737bdffd",
+    "d0f1dafd494633c1685abe1d158552b1ddf51631"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J858FPyE",
+          "author": "aloisklink",
+          "body": "I think instead of using `url = url.replace(/\\\\/g, '\\\\\\\\').replace(/\\(/g, '\\\\(').replace(/\\)/g, '\\\\)');`, we might want to use [`CSS.escape()`](https://developer.mozilla.org/en-US/docs/Web/API/CSS/escape_static).\r\n\r\nIt looks like we're trying to create valid [`CSS <url-token>`](https://www.w3.org/TR/css-syntax-3/#typedef-url-token), as these are passed unquoted to the [SVG/CSS `url()` function](https://developer.mozilla.org/en-US/docs/Web/CSS/url_function). `CSS.escape` will probably overly escape characters, but it's probably cleaner and describes what we want to do better.\r\n\r\nThere's other characters that are valid in a URI like `'`, but aren't valid in a CSS `<url-token>` so they should be escaped too.",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 163,
+          "start_line": null,
+          "commit_sha": "d0f1dafd494633c1685abe1d158552b1ddf51631",
+          "created_at": "2025-05-09T13:56:29Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "high",
+          "label_reasoning": "The comment suggests using CSS.escape() instead of manual regex replacements, pointing out that the current approach misses other characters invalid in CSS url-tokens (like quotes and whitespace), which is incorrect/incomplete use of string escaping for CSS URLs."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J858Jamy",
+          "author": "arpitjain099",
+          "body": "@aloisklink I have updated the function to use CSS.escape and replaced hardcoded occurrences with common function getUrl. Please review.\r\ncc: @sidharthv96 ",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 163,
+          "start_line": null,
+          "commit_sha": "d0f1dafd494633c1685abe1d158552b1ddf51631",
+          "created_at": "2025-05-10T05:13:52Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J858PqNX",
+          "author": "aloisklink",
+          "body": "Fixed by https://github.com/mermaid-js/mermaid/pull/6566/commits/e79147dcfcf9d3282f6f4b85ac6a377e28104bd4",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 163,
+          "start_line": null,
+          "commit_sha": "d0f1dafd494633c1685abe1d158552b1ddf51631",
+          "created_at": "2025-05-12T11:34:38Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests using CSS.escape() instead of manual regex replacements, and flags that other characters like single quotes aren't being escaped but should be."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J858PWR3",
+          "author": "aloisklink",
+          "body": "Since this is a bug-fix, this is a `patch` update!\r\n\r\n`major` is reserved for breaking changes, which will require us to bump the Mermaid version to v12.\r\n\r\n```suggestion\r\n'mermaid': patch\r\n```",
+          "file_path": ".changeset/yellow-walls-fry.md",
+          "line_number": 2,
+          "start_line": null,
+          "commit_sha": "d0f1dafd494633c1685abe1d158552b1ddf51631",
+          "created_at": "2025-05-12T10:43:45Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "high",
+          "label_reasoning": "The comment corrects the changeset version bump type from 'major' to 'patch', which is a project-specific convention for versioning/changelog standards."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J858PqRL",
+          "author": "aloisklink",
+          "body": "Fixed by https://github.com/mermaid-js/mermaid/pull/6566/commits/cadcddd40ce2cfb7e6db5555cc3941026ae7f6a6",
+          "file_path": ".changeset/yellow-walls-fry.md",
+          "line_number": 2,
+          "start_line": null,
+          "commit_sha": "d0f1dafd494633c1685abe1d158552b1ddf51631",
+          "created_at": "2025-05-12T11:34:48Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests a specific change to the changeset file \u2014 changing 'major' to 'patch' with an inline suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J858PdPI",
+          "author": "aloisklink",
+          "body": "How's this?\r\n\r\n```suggestion\r\nfix: Fix incomplete string escaping in URL manipulation logic when `arrowMarkerAbsolute: true` by ensuring all unsafe characters are escaped.\r\n```\r\n\r\n- I've removed `unsafe` since this code is already escaped in the HTML. The bug you're fixing means that if you have a URL like: `http://localhost:9000/flowchart.html?hi=world(%20\\)`, the arrow markers will now be correct.\r\n\r\n  E.g. something like the following would still be a valid SVG, but the `url()` is invalid so the arrows won't be proper (and an additional `url(javascript:)` won't do anything so there shouldn't be any XSS attack possible):\r\n\r\n  ```svg\r\n  <path\r\n    d=\"M196.238,47L196.238,51.167C196.238,55.333,196.238,63.667,196.238,71.333C196.238,79,196.238,86,196.238,89.5L196.238,93\"\r\n    id=\"L_A_B_0\"\r\n    class=\" edge-thickness-thick edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link\"\r\n    style=\"stroke:gold; stroke-width:4px;fill:none;\"\r\n    marker-end=\"url(http://localhost:9000/flowchart.html?hi=world\\(%20\\\\)#mermaid-1747046847808_flowchart-v2-pointEnd_gold)\"></path>\r\n  ```\r\n\r\n- I also added ```when `arrowMarkerAbsolute: true` ``` since that's the only case where this bug appears.\r\n- And I changed `ensuring backslashes are escaped` to `ensuring all unsafe characters are escaped` since your PR also fixes escaping `'`/`\"`/ and whitespace.",
+          "file_path": ".changeset/yellow-walls-fry.md",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "d0f1dafd494633c1685abe1d158552b1ddf51631",
+          "created_at": "2025-05-12T10:59:53Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "The comment proposes a revised changeset/changelog description to better document the bug fix, including more precise wording about the affected configuration and scope of the fix."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J858PjO6",
+          "author": "arpitjain099",
+          "body": "@aloisklink Thank you for finding the issues with my commit. I have incorporated both of the feedback items. Please review again.",
+          "file_path": ".changeset/yellow-walls-fry.md",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "d0f1dafd494633c1685abe1d158552b1ddf51631",
+          "created_at": "2025-05-12T11:15:16Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J858PqX-",
+          "author": "aloisklink",
+          "body": ":rocket: Your changes in https://github.com/mermaid-js/mermaid/pull/6566/commits/942ae8dcbcb30d07307e52c45d890244c89de11e look good to me!\r\n\r\nI think this is good to merge, but I'll wait until Wednesday to give @sidharthv96 a chance to re-review this!",
+          "file_path": ".changeset/yellow-walls-fry.md",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "d0f1dafd494633c1685abe1d158552b1ddf51631",
+          "created_at": "2025-05-12T11:35:06Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Proposes a specific replacement for the changeset description text via an inline suggestion."
+    }
+  ],
+  "review_thread_count": 3,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 3,
+    "stage1_kept": 3,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

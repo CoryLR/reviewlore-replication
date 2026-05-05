@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 39,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This change silently breaks compound component stories for all three docgen engines. `csf._meta.component` is the local variable name (e.g. `\"Accordion\"`), but `getComponentImports.ts` records the full JSX member path as `componentName` (e.g. `\"Accordion.Root\"`). The old code matched via `it.localImportName`, which IS `\"Accordion\"`. The new predicate `it.componentName === componentName` never matches compound components, so `findMatchingComponent` returns `undefined` for them. For existing engines this drops the docgen result; for RCM the `batchExtract` call silently skips the entry due to the `!component?.path` guard. Fix: also check `localImportName`, as the old code did:\n```ts\nreturn components.find((it) =>\n  it.componentName === componentName ||\n  it.localImportName === componentName\n);\n```",
+      "index": 0
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/test-helpers.ts",
+      "line_number": 23,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`execSync('mkdir -p ...')`, `execSync('cp -rL ...')` (line 29), and `execSync('rm -rf ...')` (line 99) are Unix-only shell commands that will fail on Windows CI. Consider using Node's built-in `fs.mkdirSync({ recursive: true })` and `fs.cpSync({ recursive: true })` instead, which are cross-platform. Alternatively, guard these tests with a `process.platform !== 'win32'` skip so CI doesn't silently fail on Windows runners.",
+      "index": 1
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 151,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`this.commandLine.fileNames.includes(fileName)` is O(n) inside a `for` loop, making `ensureFiles` O(n\u00b2) in the number of already-tracked files. For large projects (Mantine has 133 components across many story files) this will be called frequently with growing lists. A `Set<string>` shadow alongside the array would make membership checks O(1):\n```ts\nconst fileSet = new Set(this.commandLine.fileNames);\nfor (const fileName of fileNames) {\n  if (!fileSet.has(fileName)) {\n    this.commandLine.fileNames.push(fileName);\n    fileSet.add(fileName);\n    added = true;\n  }\n}\n```",
+      "index": 2
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 251,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`this.entries = entries` stores the caller's array reference. The warmup timer fires 100 ms later and calls `this.extractPropsFromStories(this.entries)` \u2014 if the caller mutates or replaces the array before then, the warmup replays different entries. Since `batchExtract` constructs the array fresh per call this is safe today, but it's fragile coupling. Store a defensive copy: `this.entries = [...entries];`",
+      "index": 3
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 290,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `catch` block is completely silent. Any exception during type resolution (null-deref inside a TS API, unexpected symbol shape, etc.) produces empty props with no trace. Even a single `logger.debug` line would make debugging failed extractions much easier:\n```ts\n} catch (err) {\n  logger.debug(`[reactComponentMeta] Failed to extract props for ${entry.componentPath}: ${err}`);\n  continue;\n}\n```",
+      "index": 4
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+      "line_number": 33,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`private static instance` is never cleared in `dispose()`. If `dispose()` is ever called outside a process-exit context (e.g. in tests or hot-reload scenarios), a subsequent `getInstance()` returns the already-disposed manager. Either clear the static in `dispose()`, or document that the singleton is one-way and add an assertion in `getInstance()` that verifies the manager is still live.",
+      "index": 5
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+      "line_number": 580,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Reassigning the `type` parameter inside the loop (`type = 'changed'`) is surprising \u2014 parameter variables being mutated mid-function is easy to miss when reading. A separate `let effectiveType = type` makes the reclassification intent explicit and keeps the parameter stable for debugging.",
+      "index": 6
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 127,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The third type parameter of `PresetPropertyFn` declares `watch: boolean` (non-optional), but `writeManifests` calls `getManifests(presets)` without the second argument, causing `watch` to be `undefined` at runtime. TypeScript does not catch this because the value flows through the untyped `presets.apply` call. Change the type to `watch?: boolean` to match the actual runtime shape and avoid a future type-narrowing surprise.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "When `react-component-meta` is the active engine and extraction fails (empty `rcmResults` or missing entry), the code falls through to the generic `'No component found'` / `'No component import found'` error with `docgenError` always `undefined`. Unlike the other two engines, there is no per-component error surfaced from the RCM path. Consider capturing extraction errors in `batchExtract` (even as a Map entry with an error field) so that the manifest can distinguish 'component found but props extraction failed' from 'story has no component reference at all'.",
+      "index": 8
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "In `batchExtract`, `getProjectForFile` is called with the **story file** path to select which tsconfig project to use. In monorepo setups where story files live in `apps/storybook/` and components live in `packages/ui/`, these two directories may belong to different tsconfig projects. The story file's project may not include or resolve the component's TypeScript types correctly, leading to silent extraction failures. The component path (`component.path`) would be a more reliable key for project selection, with the story file added via `ensureFiles` afterward.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 1.3623387999999998,
+  "duration_seconds": 1043.0237619876862
+}

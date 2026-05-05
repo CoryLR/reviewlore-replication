@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "ase/md/velocitydistribution.py",
+      "line_number": 98,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Using `DeprecationWarning` for `MaxwellBoltzmannDistribution` is per ASE convention for the first phase of a phased deprecation. However, Python silences `DeprecationWarning` by default in non-`__main__` code, so the vast majority of users (who haven't explicitly opted into seeing deprecation notices) will receive no signal until the warning is escalated to `FutureWarning` in a subsequent release. Per the project's phased-deprecation guidelines, this is intentional \u2014 but please verify that ASE's pytest configuration (e.g., `filterwarnings` in `pyproject.toml`) surfaces `DeprecationWarning`s in CI so that deprecated call sites across the test suite are caught automatically.",
+      "index": 0
+    },
+    {
+      "file_path": "ase/md/velocitydistribution.py",
+      "line_number": 110,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`.. versionremoved::` is not a standard Sphinx directive. Sphinx ships with `.. deprecated::`, `.. versionadded::`, and `.. versionchanged::` \u2014 nothing named `versionremoved`. ASE's custom Sphinx extensions (`ase/utils/sphinx.py`) only define the `mol` and `git` roles, not a `versionremoved` directive. An unknown directive will either be silently ignored or produce a Sphinx build warning/error. Replace this with a `.. versionchanged:: 3.29.0` noting the removal, or fold the information into the existing `.. deprecated::` block below it.",
+      "index": 1
+    },
+    {
+      "file_path": "ase/md/velocitydistribution.py",
+      "line_number": 179,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The opening line of `thermalize_momenta`'s docstring reads: \"See :func:`MaxwellBoltzmannDistribution` for details of parameters.\" This is both misleading and redundant. It is misleading because it directs readers to the deprecated function \u2014 the exact function users are being asked to migrate away from \u2014 for authoritative parameter documentation. It is redundant because all parameters are fully and correctly documented in `thermalize_momenta`'s own `Parameters` section immediately below. Remove this sentence; the docstring is already self-contained.",
+      "index": 2
+    },
+    {
+      "file_path": "ase/md/velocitydistribution.py",
+      "line_number": 202,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `rng` parameter example recommends `numpy.random.RandomState(seed)`, which is the legacy NumPy random-number interface. The project convention (followed throughout the test files updated in this very PR, e.g., `test_bussi.py`, `test_nose_hoover_chain.py`) is `np.random.default_rng(seed)`. Update the example to match: `rng=numpy.random.default_rng(seed)`.",
+      "index": 3
+    },
+    {
+      "file_path": "ase/test/md/test_maxwellboltzmann.py",
+      "line_number": 24,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`@pytest.mark.filterwarnings('ignore::DeprecationWarning')` silently suppresses deprecation warnings rather than asserting they are emitted. Per the project rules: \"use `pytest.warns(WarningType, match=r'...')` to explicitly assert that expected warnings are raised with the expected message, rather than silently suppressing all warnings.\" Replace the filter decorator with a `pytest.warns(DeprecationWarning, match='Use thermalize_momenta')` context manager wrapping the `MaxwellBoltzmannDistribution(...)` call. This ensures that if the deprecation warning is accidentally removed in a future refactor, the test will catch the regression.",
+      "index": 4
+    },
+    {
+      "file_path": "changelog.d/20260315_145047_yuji.ikeda.ac.jp_init_momenta.rst",
+      "line_number": 36,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The three active bullet points end at line 35, but the file retains all the commented-out template boilerplate for unused categories (I/O, Calculators, Optimizers, GUI, Development, Documentation, Other changes, Bugfixes) below them. These scaffolding comments should be removed before merging to keep the fragment clean and diff-readable.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The changelog entry lists \"Remove the deprecated parameter `temp` from `MaxwellBoltzmannDistribution`\" as a change in this MR (version 3.29.0). The `.. versionremoved:: 3.29.0` directive in the docstring confirms the removal is happening in this release. At the same time, the entire function is being deprecated in 3.29.0 as well. Per the project rules: \"never remove in the same release the deprecation was added.\" Please verify that `temp` was deprecated (with a `FutureWarning`) in a *previously shipped* release \u2014 specifically, that `process_temperature`'s FutureWarning was surfaced to callers of the old `MaxwellBoltzmannDistribution(atoms, temp=..., ...)` signature in a release prior to 3.29.0. If that deprecation has not yet appeared in a shipped release, the `temp` removal must be deferred to a subsequent release.",
+      "index": 6
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The new primary function `thermalize_momenta` is exposed at `ase.md` (via `ase/md/__init__.py`) but not explicitly listed in any `__all__` within `ase/md/velocitydistribution.py` (the file has no `__all__`). This is consistent with the existing style of that module, so no immediate action is needed. However, because the canonical import path (`from ase.md import thermalize_momenta`) is different from where the function is defined (`ase.md.velocitydistribution`), the `doc/ase/md.rst` `.. autofunction::` directive references it under `.. module:: ase.md.velocitydistribution`. The Sphinx output should be verified to confirm the rendered page shows the correct import path to users.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.7644027,
+  "duration_seconds": 557.9362092018127
+}

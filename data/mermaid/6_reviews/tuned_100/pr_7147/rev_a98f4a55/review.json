@@ -1,0 +1,172 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyDb.ts",
+      "line_number": 14,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The module-level `const builder = new WardleyBuilder()` creates a mutable singleton that persists across diagram renders, leaking state when multiple Wardley diagrams are rendered sequentially or in parallel. The project rule (see `packages/mermaid/src/diagrams/packet/db.ts` as the canonical reference) requires wrapping all mutable DB state in `ImperativeState` so each render gets a clean slate via `this.state.reset()`. As written, if `clear()` is somehow not called between renders (e.g., error path), the previous diagram's data bleeds into the next.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyDiagram.ts",
+      "line_number": 3,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The comment `// @ts-ignore: JISON parser lacks type declarations` is factually wrong: `wardleyParser.ts` is a hand-written TypeScript parser, not a JISON-generated one. The `@ts-ignore` is suppressing a real type error (the import lacks a declaration) by giving a false justification. Per project rules, `@ts-ignore` should only be applied with an accurate inline explanation. Either add a proper `.d.ts` for the parser export or fix the type so the suppression is unnecessary.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyParser.ts",
+      "line_number": 566,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The OWM coordinate validation has a gap: `parseOWMCoordinates` converts values `<= 1.0` by multiplying by 100, but passes values `> 1.0` through unchanged. This means `[1.5, 0.5]` produces `visibilityPercent = 1.5`, which passes the `> 100` guard and is silently accepted as 1.5% visibility instead of being rejected. Documentation states the range is 0.0\u20131.0. Values strictly between 1.0 and 100 are ambiguous and should either be rejected with a clear error or have the threshold explicitly documented. The same bug exists in `handleComponent` (single-coordinate pipeline case) and `handleEvolve`.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyParser.ts",
+      "line_number": 415,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "When a link references a node that was never declared, `addNodeIfCoords` silently does nothing (no node is added), and the renderer later silently drops the link in `validLinks.filter`. This is inconsistent with `handleEvolve`, which throws `'Cannot evolve unknown component'` for the same situation. A user with a typo in a component name will get no error and no link rendered \u2014 the diagram just silently omits the connection. Add a validation step either in `handleLink` or in `build()` to throw if a link's source or target ID is not in the node map.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 530,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Inside `data.pipelines.forEach(...)`, `const height = configValues.nodeRadius * 4` shadows the outer `height` variable that holds the canvas height (declared ~25 lines above in `draw()`). While the two are in different scopes and don't interfere in the current code, this shadowing creates a serious maintenance hazard \u2014 future edits inside this callback that intend to reference the canvas height will silently use the pipeline box height instead. Rename the inner variable (e.g., `pipelineBoxHeight`) to eliminate the shadow.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 640,
+      "dimension": "Performance Issue",
+      "importance": "major",
+      "comment": "Inside D3 `.attr()` callbacks for link coordinates (`x1`, `y1`, `x2`, `y2`), the code calls `data.nodes.find((n) => n.id === link.source)` and `data.nodes.find((n) => n.id === link.target)` \u2014 a linear scan through all nodes for every attribute of every link. For a diagram with N nodes and M links, this is O(N\u00d7M\u00d74) comparisons just to draw links. The `positions` Map already stores `{ x, y, node }` keyed by node ID \u2014 use `positions.get(link.source)!.node` instead of `data.nodes.find(...)` to reduce this to O(1) per lookup.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 30,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`getTheme()` and `getConfigValues()` each call `getConfig()` independently. The project rule requires calling `getConfig()` exactly once at the top of the render function and passing sub-values down. Refactor `draw()` to call `const config = getConfig()` once and then derive both the theme and config values from that single result.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 930,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`const textElements: any[] = []` uses `any`, which the project discourages. The array holds D3 `Selection` objects \u2014 type it properly, e.g., `d3.Selection<SVGTextElement, unknown, SVGGElement, unknown>[]`, or use `ReturnType<typeof textBoxGroup.append<'text'>>[]`. This preserves type safety and removes the need for untyped access later.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyDiagram.ts",
+      "line_number": 11,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`styles: () => ''` returns no CSS. Every other diagram type returns at least minimal scoped styles for its generated CSS classes (e.g., font declarations, fill/stroke defaults). Without any styles, the diagram's visual appearance is entirely dependent on SVG attribute-level inline styling, which is harder to override via theming. Consider returning at least a minimal style block covering the wardley-specific CSS classes, following the pattern in `packages/mermaid/src/diagrams/treemap/treemapRenderer.ts`.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyParser.spec.ts",
+      "line_number": 18,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Test 1 (`'parses nodes, links, and trends'`) uses `Alpha(10, 20)` parenthesis-format coordinates and `x-axis`/`y-axis` directives \u2014 a legacy coordinate style that is entirely absent from the documentation. This tests an undocumented/internal code path rather than the primary OWM format (`component Name [visibility, evolution]`) that users will actually write. Replace this test with one using the documented OWM syntax to ensure the primary use-case is covered, and add a separate test if the parenthesis format is intentionally supported.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyParser.spec.ts",
+      "line_number": 60,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Test 4 is titled `'parses pipeline blocks with single-coordinate components'` (test 5 in the file is the boundary test, but test 4 regarding pipeline parsing) \u2014 actually looking at it again, the pipeline test name is accurate. However, the Cypress test `'4: should render Link Types and Annotations'` in `wardley.spec.js` uses a diagram that has no `annotations` or `annotation` blocks \u2014 only links. The test name is misleading; rename it to `'4: should render Link Types'` or add actual annotation syntax to the diagram.",
+      "index": 10
+    },
+    {
+      "file_path": "cypress/integration/rendering/wardley.spec.js",
+      "line_number": 130,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Test `'4: should render Link Types and Annotations'` contains no `annotations [...]` or `annotation N,[...]` syntax in the diagram body \u2014 only link variants. The test name claims to cover annotations but does not. Either rename the test to `'4: should render Link Types'` or add annotation elements to the diagram, since annotations are a non-trivial feature that should have dedicated visual regression coverage.",
+      "index": 11
+    },
+    {
+      "file_path": "packages/mermaid/src/schemas/config.schema.yaml",
+      "line_number": 2340,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `WardleyDiagramConfig` properties `width`, `height`, `padding`, `nodeRadius`, `nodeLabelOffset`, `axisFontSize`, and `labelFontSize` are all declared as `type: number`. Per project rules, non-negative counts and pixel dimensions must use `type: integer` (with a `minimum` constraint) to prevent fractional values from reaching layout code. For example, a `width: 900.5` would pass schema validation but could produce sub-pixel SVG rendering artifacts. Change these to `type: integer`.",
+      "index": 12
+    },
+    {
+      "file_path": "demos/wardley.html",
+      "line_number": 280,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`logLevel: 'debug'` is set in `mermaid.initialize()`. Debug logging should not be committed to demo or production files \u2014 it floods the browser console for all users who open this demo. Remove the `logLevel` key entirely (defaults to a non-verbose level) or set it to `'error'`.",
+      "index": 13
+    },
+    {
+      "file_path": "packages/mermaid/src/docs/syntax/wardley.md",
+      "line_number": 1,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The heading `# Wardley Maps (v11.0.0+)` hardcodes the version string. Per project convention, this should use the placeholder `# Wardley Maps (v<MERMAID_RELEASE_VERSION>+)` so the docs build pipeline substitutes the actual release version automatically. All other recently-added diagram docs (e.g., `treemap.md`) follow this pattern.",
+      "index": 14
+    },
+    {
+      "file_path": "packages/mermaid/src/docs/syntax/wardley.md",
+      "line_number": 59,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Many sections contain both a ```` ```mermaid-example ```` block immediately followed by a separate ```` ```mermaid ```` block with identical content (e.g., the Basic Example at lines ~35 and ~59, and repeated throughout). The docs build pipeline auto-generates the rendered preview from `mermaid-example` \u2014 the extra `mermaid` block is a manual duplicate that will render a second, non-interactive copy of the diagram. Remove all standalone ```` ```mermaid ```` blocks that duplicate a preceding `mermaid-example` block.",
+      "index": 15
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`demos/wardley.html` is not registered in `demos/index.html`. Project rules require that every new demo page added under `demos/` be linked from the index so it appears in the demo listing. Without this, the demo page is unreachable through normal navigation. Add an entry for `wardley.html` to `demos/index.html` alongside the other diagram demo links.",
+      "index": 16
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The new documentation page `packages/mermaid/src/docs/syntax/wardley.md` is not added to the VitePress sidebar configuration in `packages/mermaid/src/docs/.vitepress/config.ts`. Without a sidebar entry, the page is an orphan \u2014 it exists in the source tree but will not appear in the site navigation. Add a `{ text: 'Wardley Maps', link: '/syntax/wardley' }` entry to the `sidebarSyntax()` array alongside the other diagram types (e.g., next to the treemap entry).",
+      "index": 17
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "No entry for `wardley` is added to `packages/mermaid/src/defaultConfig.ts`. The project rule states: \"When registering a new diagram's config entry in `defaultConfig.ts`, explicitly set `useMaxWidth: true` to match all other diagrams.\" Treemap (the most recent comparable addition) has an explicit block in `defaultConfig.ts`. Without this, `wardley.useMaxWidth` resolves from the JSON schema default, which may not align with how `configureSvgSize` is invoked in the renderer (`wardley?.useMaxWidth ?? true`). Add an explicit `wardley: { useMaxWidth: true }` entry to `defaultConfig.ts`.",
+      "index": 18
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `slugify()` function maps labels to IDs by replacing non-alphanumeric characters with underscores. This means distinct component names can collide silently \u2014 for example, `\"Cup of Tea\"` and `\"Cup_of_Tea\"` both produce `\"cup_of_tea\"`. When two components share a slug, `WardleyBuilder.addNode()` silently merges them (later definition overwrites earlier values). This can produce unexplained rendering bugs that are very hard to diagnose. Consider either requiring unique labels or throwing an error in `addNode()` when an existing node's label differs from the incoming node's label for the same ID.",
+      "index": 19
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The renderer does not propagate `accTitle` and `accDescription` from the DB to the SVG as ARIA attributes. Other diagram renderers set `svg.attr('aria-label', title)` (or use `<title>` and `<desc>` child elements) when these values are present, which is required for accessibility. Add `aria-roledescription`, `<title>`, and `<desc>` elements to the rendered SVG using the values from `db.getAccTitle()` and `db.getAccDescription()`, consistent with how other diagram types handle this.",
+      "index": 20
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description claims \"12 visual regression tests with Cypress\" but `cypress/integration/rendering/wardley.spec.js` contains only 6 `it` blocks. The description is inaccurate. Additionally, none of the 6 Cypress tests cover: source strategy decorators (`(build)`, `(buy)`, `(outsource)`, `(market)`), inertia indicators, accelerators/deaccelerators as standalone scenarios, or annotation boxes. These are non-trivial visual features that merit dedicated snapshot tests to prevent regressions.",
+      "index": 21
+    }
+  ],
+  "cost_usd": 0.8697253500000002,
+  "duration_seconds": 644.7442729473114
+}

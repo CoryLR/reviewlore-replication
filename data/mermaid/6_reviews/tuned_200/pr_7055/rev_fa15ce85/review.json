@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/parser/sequenceDiagram.jison",
+      "line_number": 149,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The grammar rule `| INVALID { $$=[]; }` makes invalid participant syntax a valid parse result \u2014 jison will NOT throw, the parse simply succeeds with an empty line. Because `Diagram.fromText` performs no post-parse validation (it just calls `await parser.parse(text)` and immediately returns `new Diagram(...)`), the function will return normally when this input is encountered. This directly contradicts the test at line 2622, which asserts `expect(error).toBe(true)` \u2014 no error is thrown, so `error` stays `false` and the test will fail.\n\nThe two changes are inconsistent: either (a) remove `| INVALID { $$=[]; }` from the grammar and let jison emit a parse error (which propagates as a throw from `Diagram.fromText`), or (b) keep the silent-discard behaviour but fix the test to assert that no error is thrown and that the invalid participant is simply absent from the diagram.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/parser/sequenceDiagram.jison",
+      "line_number": 149,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "When an `INVALID` token is silently swallowed here, no warning or error is emitted. The PR description promises \"a clear console error instead of causing recursion\", but neither a `log.warn(...)` call nor a `throw` is present anywhere in the grammar action or in `sequenceDb`. Per the project's conventions, soft-constraint violations that produce degraded output should call `log.warn` so that users and developers have actionable feedback about why a participant was silently dropped. Consider adding a call such as `yy.parseError('Invalid participant syntax \u2014 angle brackets are not allowed in participant names', {});` or a `log.warn(...)` in a grammar action here.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/parser/sequenceDiagram.jison",
+      "line_number": 35,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The new character class `[^<>:\\n,;@]` is narrower than what the original patterns excluded. The original first rule used `[^\\<->\\->:\\n,;@]`, where `\\<->` is a character-range from `<` (ASCII 60) to `>` (ASCII 62), covering `<`, `=`, and `>`, plus a separate literal `\\-` exclusion \u2014 effectively excluding `<`, `=`, `>`, and `-`. The new rules allow `-` (and `=`) in participant names. This is likely a positive usability improvement, but it is a behavioural change that is not mentioned in the PR description or changeset. Existing diagrams where an author accidentally included a `-` in a participant declaration may now parse differently. Please document this in the changeset or PR description.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/parser/sequenceDiagram.jison",
+      "line_number": 415,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The file is missing a trailing newline (`\\ No newline at end of file` in the diff). All text files in this project should end with a newline to satisfy POSIX conventions and avoid noisy diffs.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+      "line_number": 2612,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The test description \"should handle fail parsing when alias token causes conflicts in participant definition\" is misleading. The actual problem is that angle brackets (`<`, `>`) appear in a participant name (e.g., `<br>` used as inline HTML), not an alias-token conflict. A clearer description would be something like: `'should throw when a participant name contains angle brackets (e.g. HTML tags)'`.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+      "line_number": 2613,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The try/catch + boolean flag pattern is less idiomatic than the Vitest/Jest `rejects` API and produces less informative failure messages. Prefer:\n```js\nawait expect(\n  Diagram.fromText(`\n    sequenceDiagram\n    participant SAS MyServiceWithMoreThan20Chars <br> service decription\n  `)\n).rejects.toThrow();\n```\nThis is the standard pattern used in this project for async error assertions and makes the intent immediately clear.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The core fix (replacing the catastrophically-backtracking regexes `[^\\<->\\->:\\n,;@]+?([\\ -]*[^\\<->\\->:\\n,;@]+?)*?` with simple, anchored patterns) is exactly the right approach and correctly targets the ReDoS root cause. However, the PR conflates two incompatible goals: (1) silently ignore invalid lines and continue rendering, and (2) throw an error to alert the user. The grammar change implements (1); the test asserts (2); the PR description describes (2). These need to be reconciled \u2014 pick one strategy and make both the grammar and the test reflect it consistently.",
+      "index": 6
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The new test only checks that *some* error was thrown (`expect(error).toBe(true)`), not which error or what message it carries. Even if the implementation is corrected to actually throw, the test should assert on the specific error type or message (e.g., `.rejects.toThrow(/invalid participant/i)`) so that future regressions \u2014 such as a different, unrelated parse error masking the intended one \u2014 are not silently accepted as a passing test.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.4756446000000001,
+  "duration_seconds": 306.9442479610443
+}

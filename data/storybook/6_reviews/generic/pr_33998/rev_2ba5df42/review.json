@@ -1,0 +1,52 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/Color.tsx",
+      "line_number": 338,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Invalid values \u2014 negative numbers (`-5`), non-integer floats (`5.7`), and `NaN` \u2014 all silently fall back to `27` with no developer feedback. A user passing `maxPresetColors: -1` as an attempted \"no limit\" sentinel, or a typo like `5.7`, will see 27 presets and have no indication their value was rejected. Consider adding a `console.warn` branch:\n```ts\nconst limit = Number.isInteger(maxPresetColors) && maxPresetColors > 0\n  ? maxPresetColors\n  : (console.warn(`[ColorControl] Invalid maxPresetColors value: ${maxPresetColors}. Falling back to 27.`), 27);\n```",
+      "index": 0
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/Color.tsx",
+      "line_number": 335,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `maxPresetColors === Infinity` check here is load-bearing in a non-obvious way. Without it, `Infinity` would pass `> 0` but fail `Number.isInteger` (which returns `false` for `Infinity`), causing a silent fallback to `27` instead of the intended \"no limit\" behavior. A brief inline comment would help future maintainers understand why the `Infinity` escape hatch must come before the `Number.isInteger` guard:\n```ts\n// Infinity fails Number.isInteger(), so it must be caught here explicitly\nif (maxPresetColors === 0 || maxPresetColors === Infinity) {\n```",
+      "index": 1
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/Color.stories.tsx",
+      "line_number": 106,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `WithInvalidMaxPresetColors` story only provides **5** `presetColors` entries. Because 5 is less than the 27 fallback limit, all five colors render regardless of whether the limit is `-5` or `27`. The story cannot visually demonstrate the claimed \"falls back to 27\" behavior \u2014 a viewer cannot distinguish the fallback from simply showing all colors. To make the fallback observable, `presetColors` needs more than 27 entries (e.g. use `Array.from({ length: 40 }, ...)` as in the `WithUnlimitedPresetColors` story) so that colors beyond the 27th are actually dropped.",
+      "index": 2
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/types.ts",
+      "line_number": 24,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The JSDoc documents `0` and `Infinity` as ways to disable the limit but omits that negative values and non-integer floats (also valid `number` types) silently fall back to `27`. A user who reads the type signature and tries `maxPresetColors: -1` or `maxPresetColors: 5.5` will be confused by the unexpected result. Add a sentence like: _\"Negative values or non-integer values are treated as invalid and fall back to the default of `27`.\"",
+      "index": 3
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The choice to use `0` as a \"no limit\" sentinel is semantically inverted from common intuition. Zero conventionally means \"none\" or \"zero items,\" so a user could reasonably pass `maxPresetColors: 0` intending to hide the preset section entirely, only to discover it shows all presets instead. Relying solely on `Infinity` for the unlimited case (and removing the `=== 0` branch) would eliminate this ambiguity. If `0` must be kept for convenience, the JSDoc and any published changelog should prominently call out this non-standard behavior.",
+      "index": 4
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Non-integer float values (e.g. `maxPresetColors: 5.7`) fail the `Number.isInteger` guard and fall back to `27`. The more intuitive behavior would be to apply `Math.floor` and treat `5.7` as `5`, following the same lenient approach that many numeric props use. The current behavior is neither documented in the JSDoc nor mentioned in the PR description, creating an unexpected edge case for anyone who programmatically computes the limit from a calculation that produces a float.",
+      "index": 5
+    }
+  ],
+  "cost_usd": 0.4687215,
+  "duration_seconds": 433.49029207229614
+}

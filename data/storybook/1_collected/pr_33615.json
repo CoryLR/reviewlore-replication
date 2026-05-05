@@ -1,0 +1,55 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33615,
+  "title": "Core: Fix handling complex viewport sizes",
+  "body": "## What I did\r\n\r\nFixed custom viewports with complex CSS values such as `calc(100% - 100px)`. These values now properly apply to the viewport, even when zooming, but cannot be updated since they aren't URL serializable.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [x] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n> [!CAUTION]\r\n> This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!\r\n\r\n<!-- Please include the steps to test your changes here. For example:\r\n\r\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Open Storybook in your browser\r\n3. Access X story\r\n\r\n-->\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * CSS calc()-based viewport sizing.\n  * Dimension locking to enable/disable width and height independently; drag handles and inputs respond to locks.\n\n* **Improvements**\n  * Clearer disabled styling and not-allowed cursor for numeric inputs.\n  * Simplified, more predictable viewport sizing and resize behavior.\n\n* **Testing**\n  * Added a story demonstrating calculated viewport dimensions; updated preview stories to skip visual snapshotting.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ghengeveld",
+  "merged_at": "2026-03-11T15:58:26Z",
+  "base_ref": "next",
+  "merge_commit_sha": "1ba2d0721a9b5e50dcb3974bae7f40d10d71c043",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "c3424ab6693c7d8a904a5f6de0906bf7837971a6",
+    "ebe0233bbe3e47ad104637d52f6a61f5731936a0"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6hthcQ",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Disable all resizing when either dimension is non-serializable.**\n\nWith the current per-axis lock, a mixed case (e.g., `width: calc(...)`, `height: 400px`) still allows resizing height. That calls `resize(width, height)` with a complex width, producing a non-URL-serializable `value` that later falls back to the first viewport option. This breaks the viewport selection and conflicts with the \u201cresizing disabled for complex values\u201d intent.\n\n<details>\n<summary>\u2705 Suggested fix: lock both axes if either is complex</summary>\n\n```diff\n   const dimensions = useMemo(() => {\n     const [, nx = '', ux = 'px'] = width.match(/^(\\d+(?:\\.\\d+)?)(\\%|[a-z]{1,4})?$/) || [];\n     const [, ny = '', uy = 'px'] = height.match(/^(\\d+(?:\\.\\d+)?)(\\%|[a-z]{1,4})?$/) || [];\n+    const isLocked = !nx || !ny;\n     return {\n       frame: {\n         width: `calc(${width} * ${scale})`,\n         height: `calc(${height} * ${scale})`,\n       },\n       display: {\n         width: `${nx || width}${ux === 'px' ? '' : ux}`,\n         height: `${ny || height}${uy === 'px' ? '' : uy}`,\n       },\n       locked: {\n-        width: !nx,\n-        height: !ny,\n+        width: isLocked,\n+        height: isLocked,\n       },\n     };\n   }, [width, height, scale]);\n```\n\n```diff\n-              disabled={dimensions.locked.width}\n+              disabled={dimensions.locked.width}\n...\n-              disabled={dimensions.locked.height}\n+              disabled={dimensions.locked.height}\n...\n-        {!dimensions.locked.width && (\n+        {!dimensions.locked.width && (\n           <DragHandle ... />\n         )}\n-        {!dimensions.locked.height && (\n+        {!dimensions.locked.height && (\n           <DragHandle ... />\n         )}\n-        {!dimensions.locked.width && !dimensions.locked.height && (\n+        {!dimensions.locked.width && !dimensions.locked.height && (\n           <DragHandle ... />\n         )}\n```\n\n(With `isLocked`, all three checks become false when either axis is complex.)\n</details>\n\n\n\n\nAlso applies to: 311-392\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/core/src/manager/components/preview/Viewport.tsx` around lines 275 -\n292, The per-axis lock in the dimensions useMemo allows resizing when one axis\nis complex; compute an isLocked flag (e.g., const isLocked = !nx || !ny) inside\nthe same useMemo and set locked: { width: isLocked, height: isLocked } so both\naxes are locked if either dimension is non-serializable; update any downstream\nchecks that currently read locked.width or locked.height to use the single\nisLocked value (or the updated locked object) so resizing/resolution logic\ntreats the pair as locked when either axis is complex.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/preview/Viewport.tsx",
+          "line_number": 292,
+          "start_line": 275,
+          "commit_sha": "ebe0233bbe3e47ad104637d52f6a61f5731936a0",
+          "created_at": "2026-01-21T15:23:10Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tq0On",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Keep the calc viewport scenario under automation.**\n\nLine 139 disables Chromatic snapshots and Line 142 opts this story out of story tests, so this new `calc(...)` path is only documented here, not exercised automatically. Since this PR is specifically fixing complex viewport values, please keep this story runnable or add equivalent unit/integration coverage for the same code path.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager/components/preview/Viewport.stories.tsx` around lines\n133 - 142, The Calculated story currently disables Chromatic snapshots and opts\nout of story tests, so the 'calc' viewport path isn't covered; change the story\nconfiguration for Calculated (created via meta.story) to keep it under\nautomation by removing chromatic: { disableSnapshot: true } and removing the\ntags: ['!test'] entry (or alternatively add a dedicated unit/integration test\nthat mounts the same Calculated scenario using the customViewports and the\nviewport: { value: 'calc' } setting to exercise the calc(...) code path). Ensure\nreferences to Calculated, meta.story, customViewports and viewport: { value:\n'calc' } are used so the same behavior is covered by automated tests.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/preview/Viewport.stories.tsx",
+          "line_number": 142,
+          "start_line": null,
+          "commit_sha": "a399e6125072a38e44b908bd7533ff1ca3e02fba",
+          "created_at": "2026-03-10T18:31:47Z",
+          "is_outdated": true
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 2
+}

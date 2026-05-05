@@ -1,0 +1,192 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3945,
+  "title": "BUG: Fix issue with GUI plotting malfunctioning when using an interactive interpreter",
+  "body": "When launching the GUI from a Jupyter notebook or similar interactive tool, an 'inline' backend for matplotlib is used by the default. This captures or breaks the graph windows created by the GUI and doesn't seem to work with the pipe that is used for plotting.\n\nThe existing workaround added in bd2bea0aec4871b2313fbebbf62e81b09129e2b6 no longer works because Jupyter seems to now default to a backend with a different name ('module://matplotlib_inline.backend_inline'). Here, a different test is used to detect an 'inline' backend.\n\nCloses: ase/ase#1854\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [x] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [~] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [x] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)",
+  "author": "lempelto",
+  "merged_at": "2026-01-20T10:02:12.391Z",
+  "base_ref": "master",
+  "merge_commit_sha": "c54a7082c4c278fa67b831e9650c89d340254845",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3010176120",
+          "author": "askhl",
+          "body": "@AndrewRosen Would you be able to take a look to see if it solves the plotting issue?\n\nI wonder if checking the envvar is the best way.  One could also import matplotlib and then call get_backend().  Maybe the docs have something to say about it.\n\nThis check by itself is a little bit difficult to understand (if I accidentally revert the change then \"everything works for me\").  We'd need some explanatory comments to protect against that (even better would be tests, but that may be tricky and we may not have all the infrastructure needed for the test)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-01-15T20:47:42.074Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "high",
+          "label_reasoning": "The reviewer requests explanatory comments to clarify the intent of the envvar check, noting it is difficult to understand without them."
+        },
+        {
+          "id": "3011880524",
+          "author": "lempelto",
+          "body": "At first the envvar seems like a weird way to handle this but I don't know if there are any which are clearly better. `matplotlib.get_backend()` is a slightly more elegant way to retrieve the backend and should always give a value, unlike `MPLBACKEND` which may not exist. But I guess there aren't any downsides to using the envvar either. However, manipulating the variable may the most convenient way to take action once we know which backend is in use. There are three ways to set a backend: `MPLBACKEND`, `rcParams['backend']`, and `matplotlib.use()`. The problem is that one can only use the last two after matplotlib has been imported and a new import statement seems to erase the choice. Thus, all the points in the GUI code where matplotlib is imported and used would need to be modified (which isn't impossible, of course). On the other hand, setting the envvar is global (and also takes priority over rcParams)\n\nA test would be nice, but it probably is tricky since this is a problem that mainly affects specific frameworks. But I'll modify the comments in the code at some point to give an explanation as to what's going on.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-01-16T12:17:09.895Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests using get_backend() instead of checking an envvar, and explicitly requests explanatory comments or tests to protect the logic from accidental reversion."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3011932926",
+          "author": "askhl",
+          "body": "Thanks!  Then the only change I request is a comment describing what actual values of \"backend\" we actually see (or expect to see) that contain the substring 'inline' , since it'll be helpful next time someone has to pass over that code.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-01-16T12:40:02.958Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "high",
+          "label_reasoning": "The reviewer explicitly requests a comment describing what values of 'backend' are expected, to aid future readers of the code."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly requests a comment be added to the code describing what values of 'backend' contain the substring 'inline'."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3019337195",
+          "author": "askhl",
+          "body": "Since we are `main()` in this case, we are actually allowed to set envvars, globals and do other unlibrarylike things.\n\nCleanup should technically be inside try/finally, otherwise our change would leak to the caller in case of a crash (but we are main() there is no caller)\n\nSince this is unimportant I'll merge anyway.",
+          "file_path": "ase/gui/ag.py",
+          "line_number": 120,
+          "commit_sha": "f3d24e4c16c4dd76654778b2cf3f0843d5bfa6db",
+          "base_sha": "2859057c53ab69b0d56423a06888136724927f8a",
+          "created_at": "2026-01-20T10:01:46.190Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Resource Leakage",
+          "label_confidence": "medium",
+          "label_reasoning": "The reviewer notes that cleanup should be inside a try/finally block to prevent environmental state (envvar/global changes) from leaking to the caller in case of a crash, which is a resource/state leakage concern."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that cleanup should technically be inside a try/finally block to prevent leaking state on a crash, which implies a code improvement even though the author says they'll merge anyway."
+    }
+  ],
+  "review_thread_count": 6,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3010176727",
+            "author": "askhl",
+            "body": "(Thanks a lot for investigating this and fixing it!)",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-01-15T20:48:07.746Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure social acknowledgment/thanks with no implied code change."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3010757481",
+            "author": "AndrewRosen",
+            "body": "Just tested the branch, and it seems to work okay for me!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-01-16T02:56:55.437Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Status update confirming the branch works; no code change suggested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3019337274",
+            "author": "askhl",
+            "body": "Thanks a lot @lempelto!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-01-20T10:01:47.236Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure social acknowledgment/thanks with no implied code change."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 6,
+    "stage1_kept": 6,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 3,
+    "stage3_cost_usd": 0.017521750000000003
+  }
+}

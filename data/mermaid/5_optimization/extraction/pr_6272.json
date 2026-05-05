@@ -1,0 +1,15 @@
+{
+  "pr_number": 6272,
+  "source_mr_date": "2025-02-20T07:30:47Z",
+  "candidates": [
+    "In `SequenceDB.addLinks` and `SequenceDB.addALink`, the chained replacements `replace(/&equals;/g, '=')` followed by `replace(/&amp;/g, '&')` can produce double-unescaped values \u2014 input like `&amp;equals;` becomes `&equals;` after the first replacement and then `=` after the second, effectively double-decoding. Prefer a single-pass HTML entity decoder or carefully validate that no chained replacement ordering allows double-decoding before merging such patterns.",
+    "In sequence diagram unit tests, prefer declaring `const diagram = await Diagram.fromText(...)` locally inside each `it` block rather than using a shared `let diagram` at `describe` scope initialized in `beforeEach`. Local declarations make each test self-contained, eliminate setup-order dependencies, and make the diagram source visible at the point of assertion.",
+    "When migrating sequence diagram tests from `mermaidAPI.parse(str)` to `Diagram.fromText(str)`, audit the test file for leftover `mermaidAPI.parse` calls that no longer affect the diagram instance under test and remove them. However, preserve any `mermaidAPI.parse` calls that are still required as a side effect to populate config state that subsequent `mermaidAPI.getConfig()` calls or renderer calls depend on.",
+    "In `SequenceDB`'s constructor, any state initialization (e.g. `this.setWrap(getConfig().wrap)`) must be placed *after* `this.clear()`, because `clear()` calls `this.state.reset()` which resets all `ImperativeState` fields \u2014 including `wrapEnabled` \u2014 back to their defaults, silently overwriting any earlier initialization. The same ordering rule applies to any other diagram DB class that uses `ImperativeState` and calls `clear()` in its constructor.",
+    "In `SequenceDB`, class properties corresponding to what were previously `export const` values (such as `LINETYPE`, `ARROWTYPE`, and `PLACEMENT`) should be declared as `readonly`. They are assigned exactly once in the constructor and should never be reassigned; `readonly` preserves that immutability guarantee at the TypeScript type level.",
+    "When a module-level `as const` object (e.g. `LINETYPE`, `ARROWTYPE`, `PLACEMENT`) is assigned to a class property in `SequenceDB`, declare the property's type as `typeof LINETYPE` rather than duplicating the full object shape inline. Using `typeof` keeps the type automatically in sync with the constant definition and eliminates the maintenance burden of maintaining two copies of the same shape."
+  ],
+  "analysis": [],
+  "cost_usd": 0.18956050000000002,
+  "duration_seconds": 76.70776200294495
+}

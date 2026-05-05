@@ -1,0 +1,218 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33400,
+  "title": "Core: Use canonical links in sidebar and menu",
+  "body": "## What I did\r\n\r\n* Transforms buttons in menu and sidebar into `a` when relevant \r\n* Adds `rel=\"canonical\"` attr to help crawlers index our content\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\u00f8\r\n\r\n#### Manual testing\r\n\r\n1. Run this SB instance\r\n2. Check DOM content of menu entries for shortcuts, what's new and about\r\n3. Check DOM content for docs sidebar entries, and story sidebar entries (compare stories with test children and without; I kept stories with child tests as `button`s to avoid disrupting changes made by @ghengeveld, but we could move these back to be links when we rework the sidebar for consistency)\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [x] Add or update documentation reflecting your changes\r\n- [x] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n## Release Notes\n\n* **Improvements**\n  * Enhanced menu navigation with improved internal link handling and routing behavior.\n\n* **Style**\n  * Refined modal and mobile drawer styling with improved border radius and theme-aware background rendering for better visual consistency across components.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "Sidnioulz",
+  "merged_at": "2026-01-09T09:14:25Z",
+  "base_ref": "next",
+  "merge_commit_sha": "293bfec2ff785586c5eae6a78f785ac23ca601d9",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "251096ee36fe5a14702b8faf2a23295462b3c929",
+    "6d9ccc24d09964e534e03d4628b234bab11bd861"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dH-iM",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Inconsistent `refId` handling between `findSiblingComponent` and `findSiblingStory`.**\n\n`findSiblingComponent` uses `refId` from state directly (line 353), while `findSiblingStory` uses `story.refId` from the resolved story data (line 374). This inconsistency could lead to different behavior when navigating between refs.\n\n<details>\n<summary>\ud83d\udd0e Suggested fix for consistency</summary>\n\n```diff\n  const findSiblingStory = (direction: Direction): StoryId | undefined => {\n    const { filteredIndex, storyId, refs, refId } = store.getState();\n    const story = api.getData(storyId, refId);\n\n    if (!story) {\n      return undefined;\n    }\n\n-   const hash = story.refId ? refs[story.refId].filteredIndex : filteredIndex;\n+   const hash = refId ? refs[refId].filteredIndex || {} : filteredIndex;\n\n    if (!hash) {\n      return undefined;\n    }\n\n    return api.findSiblingStoryId(storyId, hash, direction, false);\n  };\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/manager-api/modules/stories.ts around lines 345 to 380,\nfindSiblingComponent derives the index hash using refId from state while\nfindSiblingStory uses story.refId from the resolved story; make them consistent\nby using story.refId in findSiblingComponent as well (i.e., after resolving\nstory, compute hash as story.refId ? refs[story.refId].filteredIndex :\nfilteredIndex) so both helpers target the same ref context when locating sibling\nstories.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager-api/modules/stories.ts",
+          "line_number": 380,
+          "start_line": null,
+          "commit_sha": "c2f574bcd011146d90bc9ab79b9a9f6169797c4f",
+          "created_at": "2025-12-19T19:47:08Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dH-iP",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Remove `rel=\"canonical\"` from sidebar navigation links.**\n\nThe `rel=\"canonical\"` attribute is designed for SEO canonicalization\u2014specifying the preferred URL when duplicate content exists across multiple URLs. Sidebar navigation links (DocumentNode, StoryLeafNode, TestNode) point to distinct stories with unique content, not duplicates. Using canonical tags on these navigation elements provides no SEO benefit and is semantically incorrect.\n\nAlso applies to: 183-183, 200-200\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/manager/components/sidebar/TreeNode.tsx around lines 143, 183,\nand 200, the sidebar navigation links incorrectly include rel=\"canonical\";\nremove the rel=\"canonical\" attribute from those\nLeafNode/DocumentNode/StoryLeafNode/TestNode JSX elements so the navigation\nlinks no longer emit canonical link hints. Search the file for any other\ninstances of rel=\"canonical\" on sidebar link components and delete those\nattributes (or stop passing them via props) to ensure semantic correctness and\nno unintended SEO effects.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/sidebar/TreeNode.tsx",
+          "line_number": 144,
+          "start_line": null,
+          "commit_sha": "6d9ccc24d09964e534e03d4628b234bab11bd861",
+          "created_at": "2025-12-19T19:47:08Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6dTYYS",
+          "author": "Sidnioulz",
+          "body": "Our URLs use query params and are therefore not treated as canonical by default. Adding canonical is the whole point of the PR.",
+          "file_path": "code/core/src/manager/components/sidebar/TreeNode.tsx",
+          "line_number": 144,
+          "start_line": null,
+          "commit_sha": "6d9ccc24d09964e534e03d4628b234bab11bd861",
+          "created_at": "2025-12-22T08:45:37Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6ebVmZ",
+          "author": "Sidnioulz",
+          "body": "- [ ] Mobile navigation buttons need to be ported too",
+          "file_path": "code/core/src/manager/components/sidebar/Menu.tsx",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "6d9ccc24d09964e534e03d4628b234bab11bd861",
+          "created_at": "2026-01-02T16:00:17Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6emH82",
+          "author": "ndelangen",
+          "body": "Does this code get re-evaluated upon every story navigation?\r\nI suspect it doesn't.\r\n\r\nSo this `href` would upon load be correct, but afterwards as the user navigates become outdated.\r\n\r\nThough I suspect it isn't breaking, it's very unexpected, and likely would lead to bugs in the future.\r\n\r\nI'm wondering if it's worth introducing, or or not.",
+          "file_path": "code/core/src/manager/container/Menu.tsx",
+          "line_number": 169,
+          "start_line": null,
+          "commit_sha": "c2f574bcd011146d90bc9ab79b9a9f6169797c4f",
+          "created_at": "2026-01-05T09:17:38Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6emSBF",
+          "author": "Sidnioulz",
+          "body": "Good catch :fishing_pole_and_fish:\r\n\r\nI'd prefer to have these be proper links (which requires a `href`). Should I read the current story in this menu to force it to recompute hrefs?\r\n\r\nIf we do want to drop this though, it's not _strictly necessary_ for SEO (just good for UX and accessibility), so that can help limit the amount of changes in the module.",
+          "file_path": "code/core/src/manager/container/Menu.tsx",
+          "line_number": 169,
+          "start_line": null,
+          "commit_sha": "c2f574bcd011146d90bc9ab79b9a9f6169797c4f",
+          "created_at": "2026-01-05T09:30:54Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6eo0v6",
+          "author": "ndelangen",
+          "body": "I've seen designs from @MichaelArestad where these items no longer existed in the menu.\r\nIt's likely not really worth investing too much time in getting the URL right then.\r\n\r\nI propose keeping the `href` something like `#next-story` and `#previous-component` and the onClick will actually navigate.\r\n\r\nThen if it becomes clear the option will not be removed, we could invest time in handling those hash-navigation events globally?\r\nOr find a way to keep re-rendering the menu (make it subscribe to state).\r\n\r\nWhat do you think?",
+          "file_path": "code/core/src/manager/container/Menu.tsx",
+          "line_number": 169,
+          "start_line": null,
+          "commit_sha": "c2f574bcd011146d90bc9ab79b9a9f6169797c4f",
+          "created_at": "2026-01-05T13:28:40Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6eo2aH",
+          "author": "Sidnioulz",
+          "body": "I think having fake URLs would be more damaging (also to our SEO as we'd be advertising false URLs to crawlers).\r\n\r\nI'll disable the `href`s for now and we'll see if this survives the next menu iteration and take it from there.",
+          "file_path": "code/core/src/manager/container/Menu.tsx",
+          "line_number": 169,
+          "start_line": null,
+          "commit_sha": "c2f574bcd011146d90bc9ab79b9a9f6169797c4f",
+          "created_at": "2026-01-05T13:31:07Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e3Te6",
+          "author": "ghengeveld",
+          "body": "Looks like you're redefining an already existing variable `refId`. Looks like you don't need this actually.",
+          "file_path": "code/core/src/manager-api/modules/stories.ts",
+          "line_number": 399,
+          "start_line": null,
+          "commit_sha": "82a081c24f5a417032d8a4dc5babf4524c3b0fe5",
+          "created_at": "2026-01-06T15:23:28Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e3WkF",
+          "author": "ghengeveld",
+          "body": "It would be better to use `asChild` (with an `a` child element) rather than `as='a'`.",
+          "file_path": "code/core/src/manager/components/sidebar/Menu.tsx",
+          "line_number": 98,
+          "start_line": null,
+          "commit_sha": "82a081c24f5a417032d8a4dc5babf4524c3b0fe5",
+          "created_at": "2026-01-06T15:27:19Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e3YJQ",
+          "author": "Sidnioulz",
+          "body": "Try and use Link, and make link show href but call nav when `internal`. Also add `canonical` boolean prop",
+          "file_path": "code/core/src/manager/components/sidebar/Menu.tsx",
+          "line_number": 114,
+          "start_line": null,
+          "commit_sha": "82a081c24f5a417032d8a4dc5babf4524c3b0fe5",
+          "created_at": "2026-01-06T15:29:21Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6fdcxM",
+          "author": "Sidnioulz",
+          "body": "This could have side effects on existing Links in users' MDX so I'll abstain.",
+          "file_path": "code/core/src/manager/components/sidebar/Menu.tsx",
+          "line_number": 114,
+          "start_line": null,
+          "commit_sha": "82a081c24f5a417032d8a4dc5babf4524c3b0fe5",
+          "created_at": "2026-01-09T08:30:19Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fdgrx",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Critical: `rel=\"canonical\"` is incorrect for anchor tags.**\n\nThe `rel=\"canonical\"` attribute is semantically invalid on `<a>` elements. The canonical link relation is intended for `<link>` elements in the document `<head>` to indicate the preferred URL for search engine indexing, not for navigation anchors.\n\nFor internal navigation links:\n- Omit the `rel` attribute entirely, OR\n- Use a descriptive value like `rel=\"internal\"` if needed for styling/scripting\n\nThis same issue appears on line 182 for the mobile About button.\n\n\n\n<details>\n<summary>\ud83d\udd27 Suggested fix</summary>\n\n```diff\n                  {link.href ? (\n                    <a\n                      href={link.href}\n                      target={link.internal ? undefined : '_blank'}\n-                     rel={link.internal ? 'canonical' : 'noreferrer'}\n+                     rel={link.internal ? undefined : 'noreferrer'}\n                    >\n                      {linkContent}\n                    </a>\n```\n\nAnd for the mobile button (line 182):\n\n```diff\n-          <a href=\"./?path=/settings/about\" rel=\"canonical\">\n+          <a href=\"./?path=/settings/about\">\n            <CogIcon />\n          </a>\n```\n\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n                      rel={link.internal ? undefined : 'noreferrer'}\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/manager/components/sidebar/Menu.tsx at line 141, The anchor\nrendering in Menu.tsx incorrectly sets rel={link.internal ? 'canonical' :\n'noreferrer'}; change it to omit or neutralize the rel for internal links (e.g.,\nset rel={link.internal ? undefined : 'noreferrer'} or remove the rel prop when\nlink.internal is true) and apply the same fix to the mobile About button\nrendering; update the conditional that produces 'canonical' so internal anchors\ndo not use the canonical rel value.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/sidebar/Menu.tsx",
+          "line_number": 141,
+          "start_line": null,
+          "commit_sha": "6d9ccc24d09964e534e03d4628b234bab11bd861",
+          "created_at": "2026-01-09T08:36:23Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 8
+}

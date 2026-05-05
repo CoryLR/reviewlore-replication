@@ -1,0 +1,160 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33394,
+  "title": "Addon Vitest: Add component info to task meta",
+  "body": "Closes #\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\n<!-- Briefly describe what your PR does -->\r\n\r\nThis PR introduces two new properties in the Vitest task meta: componentPath and componentName.\r\nThey are quite useful for post-processing code e.g. to analyze a vitest test run and group test results, which could be coming from multiple story files but relating to the same component file:\r\n```ts\r\nModal.stories.tsx -> imports from ./Modal\r\nModal.Topbar.stories.tsx -> imports from ./Modal\r\nModal.Backdrop.stories.tsx -> imports from ./Modal\r\n``` \r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n_This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!_\r\n\r\n<!-- Please include the steps to test your changes here. For example:\r\n\r\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Open Storybook in your browser\r\n3. Access X story\r\n\r\n-->\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Breaking Changes**\n  * Test helper API changed to accept a single options object (now accepts optional component path/name).\n\n* **Improvements**\n  * Tests now propagate component identity metadata for richer reporting.\n  * Runtime now supports generating and serving component manifests and an index JSON endpoint.\n\n* **Tests**\n  * Test suites updated to the new object-style API and added coverage for component info extraction.\n\n* **Chores**\n  * Multiple package version bumps and dependency updates.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "yannbf",
+  "merged_at": "2025-12-22T13:16:40Z",
+  "base_ref": "yann/ghost-stories-research",
+  "merge_commit_sha": "940ad620e14b32f044f9c656bcfde85bf5354cb1",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "5a0395ef0aa247751fce7e70cdd4d8e025b45996",
+    "e54f0de790798d7f01805609bfd6c92450214f62"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dUhR6",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Read the codegen-importfn-script.ts file to examine the code\ncat code/builders/builder-vite/src/codegen-importfn-script.ts | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1906\n\n---\n\n\n\n</details>\n\n**Fix path normalization order to prevent unexpected results with relative importPath values.**\n\nThe code computes `relativePath` by calling `relative(process.cwd(), importPath)` directly, but per the comment, `importPath` can be relative paths like `'src/Foo.stories.js'` or `'../src/Foo.stories.js'`. The `relative()` function expects both arguments to be resolvable paths for accurate computation. Instead, compute the absolute path first, then derive the relative path from it:\n\n```typescript\nconst absolutePath = normalize(join(process.cwd(), importPath));\nconst relativePath = normalize(relative(process.cwd(), absolutePath));\n```\n\nThis ensures consistent behavior regardless of whether `importPath` arrives in relative or absolute format.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\ncode/builders/builder-vite/src/codegen-importfn-script.ts around lines 23-35:\nthe current code calls relative(process.cwd(), importPath) before resolving\nimportPath which can be already relative and yields incorrect results; first\ncompute the absolutePath by joining process.cwd() and importPath (and\nnormalizing), then compute relativePath as normalize(relative(process.cwd(),\nabsolutePath)), keep normalizedRelativePath logic the same, and use the\nabsolutePath when generating the dynamic import so relative and absolute input\nforms behave consistently.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/builders/builder-vite/src/codegen-importfn-script.ts",
+          "line_number": 35,
+          "start_line": 23,
+          "commit_sha": "e54f0de790798d7f01805609bfd6c92450214f62",
+          "created_at": "2025-12-22T10:23:57Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The path normalization order is incorrect \u2014 calling relative() on an already-relative importPath produces wrong results. The fix requires resolving to absolute path first before computing relative path."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests a specific code change to fix path normalization order with concrete code snippet provided."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dUhSU",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Clone and read the specific file from Storybook repo\n# First, let's search for the file in common Storybook locations\n\n# Try finding code-generator-plugin.ts in the repository\nfind . -name \"code-generator-plugin.ts\" -type f 2>/dev/null | head -5\n\n# If found, read it\nif [ -f \"code/builders/builder-vite/src/plugins/code-generator-plugin.ts\" ]; then\n  echo \"=== File found at expected location ===\"\n  head -50 \"code/builders/builder-vite/src/plugins/code-generator-plugin.ts\"\nfi\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2308\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Read the complete file to see all usages of storyIndexGeneratorPromise\nwc -l ./code/builders/builder-vite/src/plugins/code-generator-plugin.ts\necho \"=== Full file content ===\"\ncat ./code/builders/builder-vite/src/plugins/code-generator-plugin.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3705\n\n---\n\n\n\n</details>\n\n**Add error handling for module-level promise or document rejection guarantees.**\n\nThe `storyIndexGeneratorPromise` is accessed in two async plugin hooks (`configureServer` and `load`) without try-catch blocks. If `presets.apply` rejects, add explicit error handling at each await site, or add a top-level catch handler to prevent unhandled rejections in the plugin lifecycle.\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/builders/builder-vite/src/plugins/code-generator-plugin.ts",
+          "line_number": 25,
+          "start_line": 24,
+          "commit_sha": "e54f0de790798d7f01805609bfd6c92450214f62",
+          "created_at": "2025-12-22T10:23:57Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Unchecked Return",
+          "label_confidence": "high",
+          "label_reasoning": "The async hooks await a promise without try-catch, meaning if the promise rejects, the error becomes an unhandled rejection that is never caught or handled."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding try-catch blocks or top-level catch handlers for unhandled promise rejections."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dUhSp",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Store and call the onInvalidated cleanup function on server shutdown.**\n\nThe `configureServer` hook can optionally return a cleanup function that is called after internal middlewares are installed. The `onInvalidated` listener at line 31 returns a cleanup function that should be stored and executed to prevent listener accumulation if the dev server restarts or the plugin is recreated. Consider either:\n- Storing the cleanup function and returning it from `configureServer`\n- Using the `closeBundle` hook (which runs when the server is closed) to unsubscribe\n\nThe TODO comment about double HMR events should also be addressed.\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/builders/builder-vite/src/plugins/code-generator-plugin.ts",
+          "line_number": 38,
+          "start_line": 30,
+          "commit_sha": "e54f0de790798d7f01805609bfd6c92450214f62",
+          "created_at": "2025-12-22T10:23:57Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Resource Leakage",
+          "label_confidence": "high",
+          "label_reasoning": "The onInvalidated listener is registered but the cleanup/unsubscribe function it returns is never stored or called, leading to listener accumulation if the dev server restarts or the plugin is recreated."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests storing and calling the cleanup function from onInvalidated to prevent listener accumulation, and addressing a TODO comment."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dUhS3",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the actual implementation of storyIndexGenerator\ncat code/core/src/core-server/presets/common-preset.ts | head -n 350 | tail -n 80\n\n# Search for tests related to storyIndexGenerator\nfind code -name '*.test.ts' -o -name '*.test.js' | xargs grep -l 'storyIndexGenerator' 2>/dev/null | head -20\n\n# Check for other singleton patterns in presets directory\ngrep -rn 'let.*Promise.*undefined' code/core/src/core-server/presets/ --include='*.ts' --include='*.js'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2763\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the test files that mention storyIndexGenerator\ncat code/core/src/core-server/utils/index-json.test.ts | grep -A20 -B5 'storyIndexGenerator'\n\n# Check manifests test\ncat code/core/src/core-server/utils/manifests/manifests.test.ts | grep -A20 -B5 'storyIndexGenerator'\n\n# Check if there's any module reset/cleanup logic in the presets file\ncat code/core/src/core-server/presets/common-preset.ts | grep -n 'reset\\|clear\\|cleanup' -i\n\n# Check how the storyIndexGenerator is being used in the broader codebase\nrg -n 'storyIndexGeneratorPromise' code/core/src/core-server/ --type=ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 9042\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check what getStoryIndexGeneratorPromise does in the test\ngrep -B10 -A10 'function getStoryIndexGeneratorPromise\\|const getStoryIndexGeneratorPromise' code/core/src/core-server/utils/index-json.test.ts\n\n# Check if there's any beforeEach/afterEach that resets the module variable\ngrep -B5 -A5 'beforeEach\\|afterEach' code/core/src/core-server/utils/index-json.test.ts | head -40\n\n# Check build-static.ts to see if it handles reset\ncat code/core/src/core-server/build-static.ts | grep -B10 -A10 'storyIndexGeneratorPromise'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2832\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check dev-server.ts more closely to understand the actual usage context\ncat code/core/src/core-server/dev-server.ts | grep -B5 -A15 'storyIndexGeneratorPromise.*='\n\n# Check if dev server is restarted or if process is long-lived\ngrep -rn 'process.exit\\|process.kill' code/core/src/core-server/dev-server.ts\n\n# Look for error handling in the preset function\ncat code/core/src/core-server/presets/common-preset.ts | sed -n '297,335p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1562\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's any try-catch or error handling around the storyIndexGenerator call\ngrep -B10 -A10 'storyIndexGenerator' code/core/src/core-server/dev-server.ts | head -50\n\n# Check what happens if the promise rejects\ngrep -rn 'catch\\|\\.then' code/core/src/core-server/utils/index-json.ts | head -20\n\n# Verify if tests actually call the preset function or mock it\ngrep -B20 'getStoryIndexGeneratorPromise' code/core/src/core-server/utils/index-json.test.ts | grep -E 'mock|vi\\.|spy'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3003\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if error handling/retry is attempted elsewhere\ngrep -rn 'storyIndexGeneratorPromise' code/core/src/core-server/ --include='*.ts' | grep -i 'catch\\|retry\\|error'\n\n# Check how the dev-server handles the error from storyIndexGeneratorPromise rejection\ncat code/core/src/core-server/dev-server.ts | sed -n '145,180p'\n\n# Check the actual manifest test to see if it resets properly\ngrep -B30 'beforeEach\\|afterEach' code/core/src/core-server/utils/manifests/manifests.test.ts | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2831\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's verify the actual behavior when storyIndexGenerator fails - check if there's middleware that catches it\ngrep -rn 'storyIndexGenerator' code/core/src/core-server/utils/index-json.ts | grep -A5 'catch\\|error'\n\n# Check if there's any documentation or comments about why this singleton pattern is needed\ncat code/core/src/core-server/presets/common-preset.ts | sed -n '290,335p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1276\n\n---\n\n\n\n</details>\n\n**The singleton caching prevents race conditions but has limited practical risk in actual usage.**\n\nThe module-level `storyIndexGeneratorPromise` is intentionally designed to prevent initialization race conditions, as documented in the code comments. However, the original concerns deserve clarification:\n\n1. **Test isolation**: Tests don't actually test the singleton\u2014they mock it or create new instances via `getStoryIndexGeneratorPromise()`, so test pollution risk is minimal.\n\n2. **Multi-instance scenarios**: The actual usage is narrower than the pattern suggests. `build-static.ts` avoids the module singleton entirely (uses a local variable), and `dev-server.ts` is the primary consumer. In practice, multiple Storybook instances in the same process is not a typical scenario.\n\n3. **Error recovery**: If initialization fails, the rejected promise is cached and all subsequent callers receive the same rejection. However, `dev-server.ts` catches this at startup and exits, so recovery is only relevant if failures occur post-initialization (unlikely during normal operation).\n\nThe pattern is architecturally stronger than necessary for a single dev-server process, but the practical risks are lower than initially assessed.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/core-server/presets/common-preset.ts around lines 294 to 331,\nexpand the top comment for the module-level storyIndexGeneratorPromise to\nexplicitly document why the async-singleton is acceptable: state that tests mock\nor obtain fresh instances so test pollution is not a concern, build-static.ts\nintentionally uses a local generator (so multi-instance processes are rare),\ndev-server.ts is the primary consumer, and explain how a rejected initialization\npromise is intentionally cached (and that dev-server handles failures at startup\nby exiting) so callers will see the same rejection; update the comment to\ninclude these points and, if desired, add a short note explaining when to change\nthis behavior (e.g., clear the cached promise on failure or expose a test-only\ngetter) so future maintainers understand the trade-offs.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/presets/common-preset.ts",
+          "line_number": 331,
+          "start_line": 294,
+          "commit_sha": "e54f0de790798d7f01805609bfd6c92450214f62",
+          "created_at": "2025-12-22T10:23:57Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "high",
+          "label_reasoning": "The comment primarily recommends expanding the documentation/comments around the singleton pattern to clarify design intent, trade-offs, and error recovery behavior for future maintainers."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests expanding code comments to document the singleton pattern's rationale and trade-offs, with a specific prompt for what to add."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dUhTM",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Find and read the index-json.ts file\nfind . -name \"index-json.ts\" -type f | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 112\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Read the file to see the context around lines 44-54\ncat -n ./code/core/src/core-server/utils/index-json.ts | head -80\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2692\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for where storyIndexGeneratorPromise is created/initialized\nrg -n \"storyIndexGeneratorPromise\" --type ts -B3 -A3 | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 7664\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Read the common-preset.ts file to see the full promise creation context\ncat -n ./code/core/src/core-server/presets/common-preset.ts | sed -n '290,335p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1570\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check if there are any error handlers or .catch() on the promise elsewhere\nrg -n \"storyIndexGeneratorPromise.*catch|\\.catch.*storyIndexGenerator\" --type ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check the watchStorySpecifiers and watchConfig functions to understand error handling expectations\nrg -n \"export.*watchStorySpecifiers|export.*watchConfig\" --type ts -A15 | head -80\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2969\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check the watchConfig callback signature and how errors are handled\ncat -n ./code/core/src/core-server/utils/watchConfig.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1015\n\n---\n\n\n\n</details>\n\n**Add error handling to watch callbacks.**\n\nThe async watch callbacks (lines 44-47, 49-54) await `storyIndexGeneratorPromise` without try-catch blocks. If the promise rejects or the invalidate methods throw, these errors will be unhandled rejections. The `/index.json` route handler has proper error handling (lines 57-66), but the watch callbacks should too. Wrap the await expressions in try-catch blocks or use `.catch()` to handle potential rejections.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/core-server/utils/index-json.ts around lines 44 to 54, the\nasync watch callbacks call (await storyIndexGeneratorPromise).invalidate(...)\nand invalidateAll() without error handling; if the promise rejects or invalidate\nthrows the error becomes an unhandled rejection. Wrap each await call in a\ntry-catch (or append .catch()) inside the watch callbacks, and on catch log the\nerror (using the existing server/logger or console.error) and avoid throwing so\nthe watcher loop continues; still call maybeInvalidate() only when invalidate\nsucceeds or as appropriate after handling the error.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/index-json.ts",
+          "line_number": 54,
+          "start_line": 44,
+          "commit_sha": "e54f0de790798d7f01805609bfd6c92450214f62",
+          "created_at": "2025-12-22T10:23:57Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Unchecked Return",
+          "label_confidence": "high",
+          "label_reasoning": "Async watch callbacks await promises without try-catch, causing unhandled promise rejections if the awaited promise rejects or if the invalidate methods throw."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding error handling (try-catch or .catch()) to async watch callbacks to prevent unhandled rejections."
+    }
+  ],
+  "review_thread_count": 5,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 5,
+    "stage1_kept": 5,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

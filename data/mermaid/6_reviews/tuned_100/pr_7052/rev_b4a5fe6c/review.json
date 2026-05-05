@@ -1,0 +1,60 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+      "line_number": 612,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This unconditionally appends a new tooltip `div` to the body on every call to `setupToolTips`, with no guard for whether one already exists. The original conditional check at the top of the function (using the `_groups` pattern) is still present and unchanged \u2014 so after this PR, the function may create two tooltip elements per call, and will always create at least one new one. `setupToolTips` is pushed into `funs`/`functions` and re-executed on each `clear()` + re-render cycle, so this will accumulate unbounded duplicate `.mermaidTooltip` divs in the `body`. Compare with the `classDb.ts` fix in this same PR, which correctly guards with `if (tooltipElem.empty())` before appending. Apply the same pattern here and remove the existing `_groups` check at the top of the function.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+      "line_number": 612,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `// @ts-ignore TODO: fix this` comment does not explain why the suppression is needed, which violates the project rule requiring an inline reason whenever `@ts-ignore` is used. Given that this line is reassigning `tooltipElem` with a `.append()` call whose inferred type differs from the `.select()` result at the top of the function, the right fix is to align the declaration type (e.g. `let tooltipElem: Selection<HTMLDivElement, unknown, HTMLElement, unknown>`) rather than silencing the error.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+      "line_number": 506,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`if (!title)` is a falsy check that will silently suppress tooltip rendering when `title` is an empty string `''`, which differs from the original `if (title === null)`. While an empty-string title is unlikely in practice, the project rule is to use a strict `=== undefined` or `!= null` guard rather than a truthy/falsy test when detecting whether a value is absent. Prefer `if (title === null)` (matching the original intent) or `if (title == null)` to cover both `null` and `undefined`.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+      "line_number": 483,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The tooltip styles are now hardcoded as inline values (`background: '#ffffde'`, `border: '1px solid #333'`, etc.), bypassing the theme system. The flowchart `styles.ts` already defines `.mermaidTooltip` using theme variables (`options.tertiaryColor`, `options.border2`, `options.fontFamily`), so a user who configures a dark or custom theme will see a jarring hard-coded yellow tooltip. The correct approach is to let the existing CSS class (injected by `styles.ts`) provide these values, and only set `position: absolute` and `opacity: 0` inline \u2014 the properties that cannot be driven by the stylesheet.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+      "line_number": 613,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The 10-line inline style block added here is identical to the one added in `classDb.ts`. This duplication means any future change to tooltip appearance must be made in at least two places. Extract a shared helper (e.g. `appendTooltipElement()` in `diagrams/common/common.ts`) that both files can call. This also applies the same theming concern: a shared helper could accept theme-aware style values rather than hardcoding them in two places.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The tooltip is now positioned at `rect.bottom + 4` (below the hovered element) with no viewport-boundary detection. For nodes near the bottom of the visible area the tooltip will be clipped or scroll off-screen without any fallback to flip it above the element. The old placement (`rect.top - 14`) had the same problem in the opposite direction, but since this PR is intentionally changing the positioning behavior it should also add a simple check: if `rect.bottom + tooltipHeight > window.innerHeight`, position above (`rect.top - tooltipHeight`) instead.",
+      "index": 5
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description checklist explicitly leaves \"have added necessary unit/e2e tests\" unchecked. The tooltip positioning logic is the core fix, yet there are no new tests covering it. At minimum, a unit test asserting that `setupToolTips` does not append duplicate `.mermaidTooltip` elements when called multiple times (e.g. after `clear()`) would have caught the `flowDb.ts` unconditional-append regression described above.",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.28376429999999997,
+  "duration_seconds": 146.05647206306458
+}

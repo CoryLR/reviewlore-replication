@@ -1,0 +1,118 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33418,
+  "title": "Core: Track vision simulator state through globals and apply styles in preview",
+  "body": "## What I did\r\n\r\nSynchronize vision simulator state with globals and apply vision filters in the preview rather than on the manager's preview iframe. This allows stories to specify a vision deficiency via `globals` and have Chromatic snapshot it as such.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [x] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n1. Change the vision simulator's state\r\n2. Open the story in isolation mode\r\n3. Confirm the styles still apply\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Added a global vision simulator decorator and initial global setting to apply vision filters across stories.\n  * Added preset vision simulations (various color-vision types, grayscale, blur) and story examples demonstrating selections.\n\n* **Refactor**\n  * Simulator state moved from local component state to global store for consistent behavior across the UI.\n  * Centralized filter definitions into an embeddable resource and removed the standalone color-filter component.\n\n* **Tests**\n  * Removed existing VisionSimulator tests.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ghengeveld",
+  "merged_at": "2026-01-08T09:53:41Z",
+  "base_ref": "next",
+  "merge_commit_sha": "d03a3eee5d15ed46a18f283d50ffb83e70f03713",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "73828b0d8d5b72e707c2502a5e6a3aa526084eca",
+    "e3601eabde591d55486d2e149f4e57853e1a04fb"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dkPd2",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Verify the filter key exists before accessing.**\n\nThe code assumes the filter key exists in the `filters` object, but if `$filter` is invalid, this could throw at runtime.\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed defensive fix</summary>\n\n```diff\n  ({ $filter }) => ({\n-    filter: filters[$filter as keyof typeof filters].filter || 'none',\n+    filter: filters[$filter as keyof typeof filters]?.filter || 'none',\n  }),\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  ({ $filter }) => ({\n    filter: filters[$filter as keyof typeof filters]?.filter || 'none',\n  }),\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/addons/a11y/src/components/VisionSimulator.tsx around line 35, the\nlookup filters[$filter as keyof typeof filters].filter assumes $filter is a\nvalid key and may throw if it's invalid; first check that $filter exists in the\nfilters object (e.g. use \"if ($filter in filters)\" or\nObject.prototype.hasOwnProperty.call(filters, $filter)) and only access .filter\nwhen present, otherwise fall back to 'none' (or use optional chaining like\nfilters[$filter as keyof typeof filters]?.filter ?? 'none'); ensure the check is\ntyped so TypeScript accepts the access and keep the 'none' fallback.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/a11y/src/components/VisionSimulator.tsx",
+          "line_number": 30,
+          "start_line": null,
+          "commit_sha": "e3601eabde591d55486d2e149f4e57853e1a04fb",
+          "created_at": "2025-12-23T15:16:16Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding optional chaining to prevent a runtime error when the filter key doesn't exist."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dkPd_",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Add defensive checks for DOM manipulation.**\n\nThe cleanup function uses a non-null assertion when removing the filter element. If the element was already removed (e.g., by another story or external code), this will throw a runtime error. Additionally, if multiple stories mount simultaneously, `insertAdjacentHTML` could insert duplicate elements with the same ID.\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix with existence checks</summary>\n\n```diff\n  useEffect(() => {\n-    document.body.insertAdjacentHTML('beforeend', filterDefs);\n+    const existingFilters = document.getElementById('storybook-a11y-vision-filters');\n+    if (!existingFilters) {\n+      document.body.insertAdjacentHTML('beforeend', filterDefs);\n+    }\n\n    return () => {\n-      document.body.removeChild(document.getElementById('storybook-a11y-vision-filters')!);\n+      const element = document.getElementById('storybook-a11y-vision-filters');\n+      if (element && element.parentNode) {\n+        element.parentNode.removeChild(element);\n+      }\n    };\n  }, []);\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/addons/a11y/src/withVisionSimulator.ts around lines 12\u201318, the effect\nunconditionally inserts filterDefs and uses a non-null assertion when removing\nthe element; change it to first check if an element with id\n'storybook-a11y-vision-filters' already exists before inserting (skip insertion\nif present) and in the cleanup use getElementById/querySelector to find the\nelement and only call removeChild if the element is found (no non-null\nassertion). This prevents duplicate inserts when multiple stories mount and\navoids runtime errors if the element was removed elsewhere.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/a11y/src/withVisionSimulator.ts",
+          "line_number": 18,
+          "start_line": null,
+          "commit_sha": "fbb88021e3e323aacd5179e62d6f3b697c22ffee",
+          "created_at": "2025-12-23T15:16:16Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags potential runtime error from non-null assertion and duplicate element insertion, with specific code fixes proposed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dk0JC",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Cleanup function is never used and filter parsing is naive.**\n\nTwo critical issues:\n\n1. **Unused cleanup**: The cleanup function returned by `applyVisionFilter` (lines 24-26) is never captured or used. Line 29 calls `applyVisionFilter()` without storing its return value, so filters won't be properly restored when `vision` changes or the component unmounts.\n\n2. **Naive parsing**: Line 13 splits `document.body.style.filter` by space, which breaks if existing filters contain spaces (e.g., `drop-shadow(2px 2px 4px black)` would be split incorrectly).\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n-  const applyVisionFilter = useCallback(() => {\n+  const applyVisionFilter = useCallback((previousFilter?: string) => {\n+    const savedFilter = previousFilter ?? document.body.style.filter;\n     const existingFilters = document.body.style.filter.split(' ').filter((filter) => {\n       return filter && filter !== 'none' && !knownFilters.includes(filter);\n     });\n \n     const visionFilter = filters[vision as keyof typeof filters]?.filter;\n     if (visionFilter && document.body.classList.contains('sb-show-main')) {\n       document.body.style.filter = [...existingFilters, visionFilter].join(' ');\n     } else {\n       document.body.style.filter = existingFilters.join(' ');\n     }\n-\n-    return () => {\n-      document.body.style.filter = existingFilters.join(' ');\n-    };\n+    return savedFilter;\n   }, [vision]);\n \n-  useEffect(applyVisionFilter, [vision]);\n+  useEffect(() => {\n+    const savedFilter = applyVisionFilter();\n+    return () => {\n+      document.body.style.filter = savedFilter;\n+    };\n+  }, [applyVisionFilter]);\n```\n\nFor the parsing issue, consider using a more robust approach to preserve complex filters, such as tracking the original filter value before any modifications or using a CSS parser library.\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  const applyVisionFilter = useCallback((previousFilter?: string) => {\n    const savedFilter = previousFilter ?? document.body.style.filter;\n    const existingFilters = document.body.style.filter.split(' ').filter((filter) => {\n      return filter && filter !== 'none' && !knownFilters.includes(filter);\n    });\n\n    const visionFilter = filters[vision as keyof typeof filters]?.filter;\n    if (visionFilter && document.body.classList.contains('sb-show-main')) {\n      document.body.style.filter = [...existingFilters, visionFilter].join(' ');\n    } else {\n      document.body.style.filter = existingFilters.join(' ');\n    }\n\n    return savedFilter;\n  }, [vision]);\n\n  useEffect(() => {\n    const savedFilter = applyVisionFilter();\n    return () => {\n      document.body.style.filter = savedFilter;\n    };\n  }, [applyVisionFilter]);\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/addons/a11y/src/withVisionSimulator.ts around lines 12 to 29, the\ncleanup returned by applyVisionFilter is never used and the filter parsing is\nbrittle; fix by capturing the original document.body.style.filter (as a single\nstring, defaulting to empty) before any changes instead of splitting by spaces,\nthen in the effect call applyVisionFilter and return its cleanup so the original\nfilter is restored on vision changes/unmount, and when applying the vision\nfilter concatenate the original filter and the new vision filter with a single\nspace only when the original is non-empty, while still ensuring you only apply\nwhen document.body.classList.contains('sb-show-main').\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit b17cdb0",
+          "file_path": "code/addons/a11y/src/withVisionSimulator.ts",
+          "line_number": 29,
+          "start_line": null,
+          "commit_sha": "db0548d2c961710510ab6eb402e42c31aa8a6d41",
+          "created_at": "2025-12-23T16:11:32Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies two critical bugs: unused cleanup function and naive filter string parsing, with specific code changes proposed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fB46m",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Remove the semicolon from the triple-slash directive.**\n\nTriple-slash directives are special TypeScript comments and should not be terminated with a semicolon. The current syntax is invalid.\n\n\n\n<details>\n<summary>\ud83d\udc1b Fix the syntax error</summary>\n\n```diff\n-/// <reference types=\"@testing-library/jest-dom\" />;\n+/// <reference types=\"@testing-library/jest-dom\" />\n```\n\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n/// <reference types=\"@testing-library/jest-dom\" />\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/addons/a11y/src/components/A11YPanel.test.tsx at line 2, The\ntriple-slash TypeScript directive at the top of the test file is terminated with\nan extra semicolon which makes the directive invalid; remove the trailing\nsemicolon from the triple-slash reference directive (the line starting with ///\n<reference types=\"@testing-library/jest-dom\">) so it becomes a proper TS\ntriple-slash directive without a semicolon.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit e3601ea",
+          "file_path": "code/addons/a11y/src/components/A11YPanel.test.tsx",
+          "line_number": 2,
+          "start_line": null,
+          "commit_sha": "b7a6c6ac0b77fc396cddaebdbcb8e184f5cf7f4d",
+          "created_at": "2026-01-07T11:29:51Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags an invalid syntax error (trailing semicolon on triple-slash directive) and requests it be removed."
+    }
+  ],
+  "review_thread_count": 4,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 4,
+    "stage1_kept": 4,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

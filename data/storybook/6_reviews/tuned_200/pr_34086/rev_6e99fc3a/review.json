@@ -1,0 +1,52 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/docs/src/blocks/blocks/Canvas.tsx",
+      "line_number": 5,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The PR description explicitly states it uses `FORCE_REMOUNT` \"matching the existing Story canvas reload behavior,\" but the code imports and emits `RESET_STORY_ARGS` instead. These events have meaningfully different behavior:\n\n- `RESET_STORY_ARGS` resets arg values back to `story.initialArgs` and triggers a re-render (preserving the component instance unless it uses `mount`).\n- `FORCE_REMOUNT` calls `r.remount()` on the StoryRender, fully tearing down and recreating the component from scratch.\n\nIf the goal is to \"reset the story from scratch\" (as the button label and PR intent suggest), `FORCE_REMOUNT` is the correct event \u2014 it already exists and is used by the Story-view toolbar's Remount button. Using `RESET_STORY_ARGS` here will leave component-internal state (e.g. local `useState`, refs, subscriptions) untouched between resets, which is likely not what users expect from a \"reset\" button.",
+      "index": 0
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/blocks/Canvas.tsx",
+      "line_number": 87,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The handler fires two independent reset mechanisms simultaneously:\n\n1. `docsContext.channel.emit(RESET_STORY_ARGS, ...)` \u2014 instructs the preview API to reset args and re-render the story via `onResetArgs`.\n2. `setResetKey(prev => prev + 1)` \u2014 causes the `useEffect` in `InlineStory` to re-run, tearing down and re-mounting the story via `renderStoryToElement`.\n\nThese two paths can race: the channel event triggers an async re-render in the preview engine at the same time React schedules a cleanup + re-mount of the inline story element. This can produce double mounts, flickering, or conflicting renders depending on event-loop timing.\n\nPick one mechanism. Given inline docs stories render via `renderStoryToElement`, the `resetKey` \u2192 `useEffect` path is self-contained and reliable. If the channel event is kept, the `resetKey` increment is redundant. If `resetKey` is the mechanism, the channel emit should be removed (or swapped for `FORCE_REMOUNT` on the main render if that is also desired).",
+      "index": 1
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/components/Story.tsx",
+      "line_number": 19,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`resetKey` is added to `CommonProps`, which is extended by both `InlineStoryProps` and `IFrameStoryProps`. Only `InlineStory` ever reads or uses `resetKey`; `IFrameStory` receives it as a prop but ignores it entirely. Move `resetKey` into `InlineStoryProps` exclusively so the unused prop doesn't leak into the iframe story type and mislead future readers.",
+      "index": 2
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/components/Preview.tsx",
+      "line_number": 266,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`UndoIcon` semantically means \"reverse the most recent action\" (undo), not \"restart from scratch.\" For a reset/remount action a `ReloadIcon`, `RefreshIcon`, or `SyncIcon` from `@storybook/icons` would better communicate the intent to users. Check what icons the `@storybook/icons` package exposes \u2014 the Story-view toolbar's existing Remount button may already use an appropriate icon that could be reused here for visual consistency.",
+      "index": 3
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "All testing checkboxes in the PR checklist are unchecked, and no automated tests are included. At minimum the PR should add:\n\n1. A story in `Preview.stories.tsx` showing `onResetStory` set (analogous to the existing `WithAdditionalActions` story) so the action bar renders and can be visually tested.\n2. A story or play-function test in `Canvas.stories.tsx` that exercises the reset button for an inline story and asserts the button appears only when `inline` is true.\n\nWithout coverage, visual regressions in the action bar layout and behavioral regressions in the reset path will go undetected.",
+      "index": 4
+    },
+    {
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Terminology is inconsistent across the PR and codebase:\n\n- The PR title says \"Reload story button.\"\n- The rendered button text says \"Reset story.\"\n- The existing toolbar button for the equivalent action is labeled \"Remount component.\"\n\nChoose one term and apply it consistently across button text, prop names (`onResetStory` / `onReloadStory`), CSS class names (`docblock-reset-story`), and the PR description. \"Remount story\" would align with the existing toolbar vocabulary and make it clear that component state is destroyed, not just args reset.",
+      "index": 5
+    }
+  ],
+  "cost_usd": 0.447988,
+  "duration_seconds": 333.4663128852844
+}

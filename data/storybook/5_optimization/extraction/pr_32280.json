@@ -1,0 +1,16 @@
+{
+  "pr_number": 32280,
+  "source_mr_date": "2025-12-24T09:13:35Z",
+  "candidates": [
+    "When reading a file to derive metadata needed for a subsequent write (e.g., reading package.json to detect indentation before rewriting it), wrap the read in a try/catch and return a sensible default on failure. This guards against cases where the target path does not yet exist or the file has moved.",
+    "When loading a structured file such as package.json and needing to propagate raw-content metadata (e.g., indentation style) to later write operations, compute that metadata at parse/load time and attach it to the returned object using a module-level Symbol constant as the key. This makes the metadata available downstream without a second file read.",
+    "When defaulting a value that could legitimately be 0 or another falsy number, use the nullish coalescing operator `??` rather than logical OR `||`. For example, `detectIndent(content).indent ?? 2` is correct; `|| 2` would incorrectly override valid zero-width indentation.",
+    "When adding a new npm package import inside a monorepo workspace, verify that the package is declared in the `dependencies` (or `devDependencies`) of the specific workspace package that contains the importing file, not only at the repository root.",
+    "When a type needs to carry symbol-keyed metadata alongside strongly-typed string keys (e.g., extending a TypeFest-based type with internal Symbol metadata), use a symbol-only index signature `{ [k: symbol]: unknown }` rather than `Record<string | symbol, any>`. The latter widens all string-keyed properties to `any`, defeating the original type's guarantees.",
+    "When attaching metadata to an object via a Symbol key in order to exploit `JSON.stringify`'s silent omission of symbol-keyed properties, add a brief inline comment explaining this behavior (e.g., `// Symbol key keeps this metadata non-enumerable so JSON.stringify omits it`). The serialization behavior of symbol keys is not universally known and the intent is otherwise opaque.",
+    "For module-private metadata attached to objects, define a symbol as a module-level constant (`const mySymbol = Symbol('description')`) rather than using `Symbol.for('description')`. `Symbol.for` registers the symbol in a global registry shared across the entire runtime, which is only appropriate when the symbol must be shared across module or package boundaries."
+  ],
+  "analysis": [],
+  "cost_usd": 0.08739125,
+  "duration_seconds": 63.938334941864014
+}

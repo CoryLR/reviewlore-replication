@@ -1,0 +1,100 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/create-storybook/src/bin/run.ts",
+      "line_number": 12,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`std-env` is imported here but is not declared as a dependency in `code/lib/create-storybook/package.json`. The package's `dependencies` block only contains `semver` and `storybook`. While `std-env` happens to be hoisted in the monorepo (it's a dependency of `code/core`), published consumers will not have it available. Add `\"std-env\": \"^4.0.0\"` to the `dependencies` section of `create-storybook/package.json`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/initiate.ts",
+      "line_number": 118,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`await import('../../cli-storybook/src/ai')` is a deep relative path that crosses package boundaries, importing directly from `cli-storybook`'s source directory. This violates the monorepo convention (see `AGENTS.md`) that cross-package imports must go through the public package export (e.g., `import { aiPrepare } from '@storybook/cli'`). The import path also resolves to `.ts` source files rather than compiled `.js` output, which will break in the distributed build since `create-storybook`'s compiled output in `dist/` cannot reach another package's `src/` via relative paths. Export `aiPrepare` from `cli-storybook`'s public API surface and import it via the package specifier.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/index.ts",
+      "line_number": 54,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "When `projectInfo.framework` is not `@storybook/react-vite`, the function silently returns with no output and no error. Users running `storybook ai prepare` on Angular, Vue, Svelte, or React/webpack projects will see nothing \u2014 no output, no exit code distinguishing success from unsupported state, no guidance. At minimum, emit a `logger.warn` or `logger.log` explaining which frameworks are currently supported, so users aren't left wondering whether the command silently failed.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/services/AddonService.ts",
+      "line_number": 47,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`@storybook/addon-mcp` does not exist as a package in this monorepo or as a published npm package. Pushing it into the addons list means the package manager's install step will fail with a resolution error for every user who opts in to `Feature.AI`. Either create the package before merging, guard this push behind an availability check, or remove it until the package is published.",
+      "index": 3
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/bin/run.ts",
+      "line_number": 95,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`resolvedAgent` is computed here in the `preAction` hook but is not written back into `options`. Then, identically, `const resolvedAgent = options.agent ?? isAgent; options.agent = resolvedAgent;` is recomputed from scratch in the `.action()` handler (lines 133\u2013134). The `preAction` hook should set `options.agent = options.agent ?? isAgent;` once and read it back consistently \u2014 the duplication risks the two computations diverging if the logic changes.",
+      "index": 4
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/commands/UserPreferencesCommand.ts",
+      "line_number": 186,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "When `skipPrompt` is `true` (non-interactive / `--yes` / CI), `promptAiSetup` silently returns `true`, opting the user into the AI feature without any disclosure. For a `--yes` flag specifically, users expect defaults for well-established features, but adding an AI opt-in as a silent default is a strong assumption. Consider defaulting to `false` in non-interactive mode and only defaulting to `true` when `--agent` is explicitly passed, so automated installs don't unexpectedly install `@storybook/addon-mcp`.",
+      "index": 5
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/commands/UserPreferencesCommand.test.ts",
+      "line_number": 355,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "In the 'should not include AI feature in minimal installs' test, `vi.mocked(prompt.confirm).mockResolvedValueOnce(true); // AI setup: yes` queues a mock that will never be consumed because `promptAiSetup` is not called for a `light` install (the guard `installType === 'recommended' ? await this.promptAiSetup(skipPrompt) : false` short-circuits). The unused mock setup is misleading. Either remove it and add an explicit `expect(prompt.confirm).not.toHaveBeenCalled()` assertion, or add a comment explaining why the mock is present but not consumed.",
+      "index": 6
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/initiate.ts",
+      "line_number": 26,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`import { dedent } from 'ts-dedent'` is placed after all `storybook/internal/*` imports. Project convention groups third-party imports before internal/workspace imports. Move this import above the `storybook/internal/node-logger` and `storybook/internal/types` lines.",
+      "index": 7
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/types.ts",
+      "line_number": 20,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The JSDoc comment says \"Represents a skill category that can be expanded in the future.\" This is stale wording left over from the previous `skill` command that this PR replaces. Update it to describe `AiPrompt` accurately \u2014 e.g., \"A named prompt block with instructions for an AI agent to follow during Storybook setup.\"",
+      "index": 8
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/types.ts",
+      "line_number": 13,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`storiesPaths: string[]` is defined on `ProjectInfo` and is populated from `data.storiesPaths` in `aiPrepare`. However, it is never referenced anywhere in `prompt.ts` \u2014 not in `getSetupInstructions`, `getProjectOverview`, or `generateMarkdownOutput`. Either remove the field (dead data) or actively use it in the instructions, for example to show the user the exact glob patterns their stories must match.",
+      "index": 9
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "There are no automated tests for the core AI functionality introduced in this PR: `aiPrepare` (`ai/index.ts`), `generateMarkdownOutput`, `getSetupInstructions`, `getPrompts`, or `getPreviewConfigExample` (`ai/prompt.ts`). The PR checklist confirms no stories, unit tests, integration tests, or e2e tests are checked. These functions are non-trivial \u2014 they branch on `hasCsfFactoryPreview`, `framework`, `majorVersion`, and several other conditions \u2014 and are the primary user-facing output of the `storybook ai prepare` command. Add unit tests covering at minimum: the react-vite path, the CSF factory vs. standard CSF path, missing framework/renderer/builder detection, and the version URL formatting in `getDocsUrl`.",
+      "index": 10
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The preview config code examples in `getPreviewConfigExample` (both the CSF Factory and standard CSF variants) contain bare JSX (`<ThemeProvider>`, `<MemoryRouter>`, `<Story />`) in `.ts`-typed template strings \u2014 no JSX runtime is available and the consumer is told to put this in `preview.ts`, not `preview.tsx`. The examples should either use a `.tsx` file extension in the comment, or be rewritten without JSX (using `React.createElement` or noting the file must be renamed to `.tsx`), to avoid sending users on a debugging detour when their TypeScript compiler rejects JSX in a `.ts` file.",
+      "index": 11
+    }
+  ],
+  "cost_usd": 0.7224099000000002,
+  "duration_seconds": 327.7538161277771
+}

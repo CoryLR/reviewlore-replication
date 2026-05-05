@@ -1,0 +1,98 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "ase/visualize/plot.py",
+      "line_number": 70,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `Axes | None` union syntax requires Python 3.10+ at runtime. While `from __future__ import annotations` defers evaluation and avoids a runtime error here, the project-specific rule says to use `Optional[Axes]` (from `typing`) rather than the `|` syntax, since the project targets older Python versions and enforces mypy type-checking. Use `Optional[Axes]` from `typing` instead.",
+      "index": 0
+    },
+    {
+      "file_path": "ase/visualize/plot.py",
+      "line_number": 100,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`matplotlib.pyplot` is imported unconditionally on every call to `plot_atoms`, even when `ax` is already provided by the caller (in which case `plt` is never used). Move the import inside the `if ax is None:` block to avoid the unnecessary import in the common case where the caller supplies their own axes.",
+      "index": 1
+    },
+    {
+      "file_path": "ase/visualize/plot.py",
+      "line_number": 105,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`assert len(atoms) == 1` uses Python's `assert` statement for input validation. Asserts can be silently disabled when running with `python -O`, turning this into a confusing downstream error rather than a clear message. Replace with an explicit check: `if len(atoms) != 1: raise ValueError(f'Expected a single Atoms object but got a list of {len(atoms)}.')`.",
+      "index": 2
+    },
+    {
+      "file_path": "ase/visualize/plot.py",
+      "line_number": 109,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`ax.set_axis_off()` is called unconditionally even when the caller passes their own `ax`. A caller who deliberately wants axis decorations visible \u2014 for example, to label an atoms subplot within a labelled composite figure \u2014 has no way to suppress this. The new `plot_atoms_raw` exists for that use case, but it's worth documenting this constraint in the `ax` parameter description rather than only in the top-level note, which is easy to miss.",
+      "index": 3
+    },
+    {
+      "file_path": "ase/visualize/plot.py",
+      "line_number": 76,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The prose reference `plot_atoms_raw()` in the docstring is plain text. For generated documentation to include a working hyperlink, use a Sphinx cross-reference: `:func:`plot_atoms_raw`` (or the fully qualified `:func:`ase.visualize.plot.plot_atoms_raw``).",
+      "index": 4
+    },
+    {
+      "file_path": "ase/visualize/plot.py",
+      "line_number": 148,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`plot_atoms_raw` passes `atoms` directly into `Matplotlib(atoms, ax, **kwargs).write()` without checking whether `atoms` is a list. Unlike `plot_atoms`, which checks for a single-element list and unwraps it, `plot_atoms_raw` will propagate a list straight into the `Matplotlib` constructor, producing an unintelligible AttributeError deep inside `PlottingVariables` rather than a clear user-facing error. Since `plot_atoms_raw` is a public API, either add the same list-handling guard as `plot_atoms`, or explicitly document in the docstring that `atoms` must be an `Atoms` instance and add a guard with `isinstance` + a `TypeError`.",
+      "index": 5
+    },
+    {
+      "file_path": "changelog.d/20260302_142033_a.j.jackson_new_plotting_function_no_plt_axis.rst",
+      "line_number": 1,
+      "dimension": "Code Style",
+      "importance": "major",
+      "comment": "The section heading `I/O` is incorrect. The changed functions (`plot_atoms`, `plot_atoms_raw`) live in `ase/visualize/plot.py` and are visualization utilities, not I/O readers/writers. Per project rules, changelog entries must be under the correct heading. Use a heading such as `Visualization` or `Other changes`.",
+      "index": 6
+    },
+    {
+      "file_path": "changelog.d/20260302_142033_a.j.jackson_new_plotting_function_no_plt_axis.rst",
+      "line_number": 7,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "There are two spaces between `material.` and `(:mr:\\`3979\\`)`. The project changelog convention requires exactly one space before the MR reference.",
+      "index": 7
+    },
+    {
+      "file_path": "changelog.d/20260302_142033_a.j.jackson_new_plotting_function_no_plt_axis.rst",
+      "line_number": 19,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Typo: `unweildy` should be `unwieldy`.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The new public function `plot_atoms_raw` has no test coverage at all \u2014 it does not appear anywhere in the test suite. Per project guidelines, MRs adding new code must include at least one test. `ase/test/test_matplotlib_plot.py` already contains tests for `plot_atoms` and is the natural place to add a test exercising `plot_atoms_raw` directly (e.g., verify that it renders to a supplied axes without modifying axis visibility state).",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Approximately 20 tutorial and documentation scripts in the repo contain the pattern `plot_atoms(atoms, ax, ...); ax.set_axis_off()`. With `plot_atoms` now unconditionally calling `set_axis_off()`, those trailing calls become redundant. This MR should either update those call sites or note in the changelog that they are safe but unnecessary, so that documentation built from those scripts doesn't silently teach a stale idiom to readers.",
+      "index": 10
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description is the unfilled template placeholder text ('Here: Your concise description of the content of this merge request.') and none of the checklist items are ticked. The changelog itself does describe the changes well, but the MR form should be completed so reviewers and future readers of the git history can understand the intent without digging into the changelog fragment.",
+      "index": 11
+    }
+  ],
+  "cost_usd": 0.5459908500000001,
+  "duration_seconds": 379.698823928833
+}

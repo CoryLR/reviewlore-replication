@@ -1,0 +1,78 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 44,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Commented-out debug log left in: `// logger.info(\\`Story ${entry.id} absolute path: ${absolutePath}\\`);`. Project rules require all debugging artifacts (commented-out code, active console/logger calls added for debugging) to be removed before merging. Delete this line.",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 130,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`startChangeDetection(options)` is intentionally not awaited, but it also has no `.catch()` handler. If `options.presets.apply<StoryIndexGenerator>('storyIndexGenerator')` rejects or `indexGenerator.getIndex()` throws, the resulting rejected promise is unhandled, which emits an `unhandledRejection` warning (or crashes the process in stricter Node.js configurations). Add a `.catch((err) => logger.warn(...))` to surface the failure gracefully:\n```ts\nstartChangeDetection(options).catch((err) => {\n  logger.warn(`Change detection startup failed: ${err.message}`);\n});\n```",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 242,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`changedFile.replace(\\`${repoRoot}/\\`, '')` uses a hardcoded `/` separator to strip the repo-root prefix. On Windows, `node:path`'s `resolve()` produces backslash-separated paths (e.g., `C:\\Users\\user\\project`), so the template literal `${repoRoot}/` never matches and `changedFile` is stored verbatim instead of as a relative path. Replace with `path.relative(repoRoot, changedFile)` (using the platform-aware `node:path`) to correctly handle both Unix and Windows paths.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 233,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`newFiles.includes(storyFile)` performs an O(n) linear scan on every iteration of the inner loop. Since this runs once per `changedFile` \u00d7 once per affected story file, the worst-case complexity is O(changedFiles \u00d7 affectedStories \u00d7 newFiles). Convert `newFiles` to a `Set<string>` at its declaration site (line 214) and use `newFilesSet.has(storyFile)` for O(1) lookups:\n```ts\nconst newFilesSet = new Set(\n  Array.from(changes.new).map((filePath) => resolve(repoRoot, filePath))\n);\n```",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 208,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`gitDiffProvider.getChangedFiles()` and `gitDiffProvider.getRepoRoot()` are launched concurrently via `Promise.all`, but `getChangedFiles()` already calls `getRepoRoot()` internally. Before `this.repoRoot` is cached, both parallel executions can race and each spawn a separate `git rev-parse --show-toplevel` subprocess. The standalone `gitDiffProvider.getRepoRoot()` call is redundant; `repoRoot` is already guaranteed to be cached by the time `getChangedFiles()` resolves. Drop the explicit `getRepoRoot()` from `Promise.all` and instead call `gitDiffProvider.getRepoRoot()` sequentially after `getChangedFiles()` resolves (the cache hit makes it synchronous in practice).",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/index.ts",
+      "line_number": 32,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`ChangeDetectionService` is exported without any API-stability prefix, while `getChangeDetectionReadiness` in the adjacent block is re-exported as `experimental_getChangeDetectionReadiness`. Since `ChangeDetectionService` is an internal implementation detail wired up by the dev server (not intended for end-user consumption), it should use the `internal_` prefix \u2014 i.e., `export { ChangeDetectionService as internal_ChangeDetectionService }` \u2014 to be consistent with other internal exports in this file (`internal_fullStatusStore`, `internal_universalStatusStore`, etc.).",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/git-diff-provider.test.ts",
+      "line_number": 18,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`vi.clearAllMocks()` is called in both `beforeEach` and `afterEach`, which is redundant. Per project convention, a single `beforeEach(() => { vi.clearAllMocks(); })` is sufficient to reset mock state before each test. The `afterEach` duplicate should be removed.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/core-server/dev-server.ts",
+      "line_number": 188,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The empty `} catch {}` block silently swallows any error thrown while collecting story stats for the cancellation telemetry payload. Project rules require at minimum a `logger.debug(err)` call inside catch blocks so failures remain visible during troubleshooting, even for non-critical paths. Either log at debug level or add a short inline comment (e.g., `// best-effort; process is exiting immediately`) so the intentional swallow is explicit to future readers.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `readiness.ts` module holds the change-detection readiness state as module-level singletons (`readinessDeferred`, `readinessState`). `ChangeDetectionService`'s constructor unconditionally calls `resetChangeDetectionReadiness()`, which creates a new deferred and discards the previous one. Any caller still awaiting the old `getChangeDetectionReadiness()` promise will be silently abandoned \u2014 that promise will never settle. This design implicitly requires exactly one active `ChangeDetectionService` instance at a time. Adding a JSDoc block on `resetChangeDetectionReadiness` (and ideally on `getChangeDetectionReadiness`) documenting this contract would prevent accidental misuse if a second service is ever instantiated (e.g., in tests that forget `internal_resetChangeDetectionReadiness` in `beforeEach`).",
+      "index": 8
+    }
+  ],
+  "cost_usd": 0.8756995500000001,
+  "duration_seconds": 586.6400701999664
+}

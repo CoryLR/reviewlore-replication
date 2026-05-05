@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/createLabel.js",
+      "line_number": 91,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`tempSvg.remove()` is called on the happy path only. If `configureLabelImages` throws (or any other `await` in the function rejects), the hidden `<svg>` element appended to `document.body` at line 68 is never removed, leaking a DOM node on every failure. Wrap the measurement block in a `try/finally` so the cleanup is guaranteed:\n```js\ntry {\n  await configureLabelImages(div.node(), node.label);\n  // ... bbox measurement ...\n  fo.attr('width', bbox.width).attr('height', bbox.height);\n} finally {\n  tempSvg.remove();\n}\nreturn fo.node();\n```",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/labelImageUtils.ts",
+      "line_number": 34,
+      "dimension": "Performance Issue",
+      "importance": "major",
+      "comment": "`getConfig()` is called twice inside `setupImage` (lines 34\u201335), which is itself called once per image element via the `.map()` callback. The project rule is: call `getConfig()` at most once per function and never inside a loop. Hoist the call to the top of `configureLabelImages` and reuse the result:\n```ts\nexport async function configureLabelImages(container: HTMLElement, labelText: string): Promise<void> {\n  const config = getConfig();   // \u2190 call once here\n  ...\n  const bodyFontSize = config.fontSize\n    ? config.fontSize\n    : window.getComputedStyle(document.body).fontSize;\n```",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/createLabel.js",
+      "line_number": 60,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `padding-right: 1px` style that was on the `div` in the original `addHtmlLabel` has been silently dropped in the new chain (lines 58\u201363). That padding was almost certainly added as a browser workaround (text measurement in Firefox can clip the last pixel of an inline-block element). Removing it without an explanation or a corresponding regression test risks subtle visual breakage in Firefox. Either restore it with a comment explaining why it was safe to remove, or add a regression test that covers the Firefox measurement path.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/edges.js",
+      "line_number": 53,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`edge.width || getConfig().flowchart?.wrappingWidth` uses a falsy check. If `edge.width` is `0` (a legitimate zero-width edge), it will incorrectly fall through to the config value. Per the project style guide, use the nullish-coalescing operator:\n```js\nconst width = edge.width ?? getConfig().flowchart?.wrappingWidth;\n```",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/createLabel.js",
+      "line_number": 29,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`getWrappingWidth()` reads exclusively from `getConfig().flowchart?.wrappingWidth`. However, `createLabel` is called from ER diagrams (`erBox.ts`), cluster titles (`clusters.js`), and edge terminal labels \u2014 none of which are flowchart diagrams. For those callers, `getConfig().flowchart?.wrappingWidth` will be `undefined`, silently falling back to the hardcoded `DEFAULT_WRAPPING_WIDTH = 200`. Consider accepting the diagram-specific config key as a parameter, or reading a shared/top-level wrapping width that applies across diagram types.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/util.ts",
+      "line_number": 10,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The JSDoc block added at lines 10\u201317 describes the parameters `container` and `labelText` and the return type of `configureLabelImages` \u2014 but `configureLabelImages` is defined in `labelImageUtils.ts`, not here. The comment is orphaned: it immediately precedes `labelHelper` in this file, so tools and readers will mistakenly associate it with `labelHelper`. Either move the JSDoc to `labelImageUtils.ts` alongside the actual function definition, or remove it from `util.ts` entirely.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/clusters.js",
+      "line_number": 488,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`getClusterTitleWidth` is a synchronous function but calls the async `createLabel` without `await`. The variable `label` holds a `Promise`, not a DOM element, so the subsequent `label.getBBox()` call on line 500 will throw a TypeError at runtime. This is a pre-existing bug that this PR's signature change does not fix. Consider either making `getClusterTitleWidth` async and adding `await`, or flagging it with a `// TODO: this must be awaited` comment so the breakage is clearly visible to the next reviewer.",
+      "index": 6
+    },
+    {
+      "file_path": ".changeset/vast-masks-say.md",
+      "line_number": 2,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The changeset is marked `patch` but the PR description states it adds new capabilities to `createLabel` (KaTeX support, FontAwesome iconpack rendering) that previously did not work in this code path. Adding visible features to users is a `minor` semver bump per the project's changeset rules. Additionally, the message prefix `fix:` is misleading for new feature additions \u2014 `feat:` would be more accurate. The message itself says \"no markdown-specific changes\" which appears to contradict the PR title's claim of KaTeX + iconpack support; please align the changeset description with the actual observable behavior change.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR's stated goal is to make `createLabel` a thin wrapper around `createText`, but the implementation in the diff still contains a substantial independent HTML-label rendering pipeline in `addHtmlLabel` (foreign-object creation, span construction, image waiting, wrapping logic). This duplication is the very thing the PR aims to eliminate. The final state of `createLabel.js` visible in the repository (where `createLabel` delegates entirely to `createText`) is the cleaner end-state the PR description promises \u2014 consider whether the intermediate form in this diff is the right stopping point, or whether the full delegation approach should be the target.",
+      "index": 8
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The new `addHtmlLabel` constructs a span element and then calls `applyStyle(span, node.labelStyle)` AND `applyStyle(div, node.labelStyle)`, applying the same user-supplied style to both the `<span>` and its parent `<div>`. This double-application was present in the original code too (style on the inline `labelSpan` string + `applyStyle(div, ...)`) but is worth auditing here since the span and div now both receive identical `fill:`/`color:` style overrides, which could produce unexpected cascaded values for some style properties.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.67715115,
+  "duration_seconds": 470.7154200077057
+}

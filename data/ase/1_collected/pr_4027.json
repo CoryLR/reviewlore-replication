@@ -1,0 +1,261 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 4027,
+  "title": "Add stress to Plumed calculator",
+  "body": "This MR adds the capability of computing stresses to the Plumed calculator. This is needed for NPT molecular dynamics with ASE. The new code obtains the stress from the base calculator and adds the additional stress from bias potentials computed by the Plumed calculator.\n\nThe implementation has been tested by comparing the numerical and analytical stress. Also, previous unit tests have been updated and new unit tests have been added.\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [x] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [x] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [x] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [~] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "PabloPiaggi",
+  "merged_at": "2026-03-22T01:48:13.103Z",
+  "base_ref": "master",
+  "merge_commit_sha": "55ba9e739e3fbf7053fe19e33df43cb63e4df13f",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3179141386",
+          "author": "yuzie007",
+          "body": "Please use `full_3x3_to_voigt_6_stress` imported from `ase.stress`.",
+          "file_path": "ase/calculators/plumed.py",
+          "line_number": 197,
+          "commit_sha": "c3433ef361e079ae2d6da08caad1d71969520215",
+          "base_sha": "920a1fa8b9121a0ebf4639ff136677c7e4bc983e",
+          "created_at": "2026-03-21T06:44:47.381Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3181009739",
+          "author": "PabloPiaggi",
+          "body": "Implemented as requested.",
+          "file_path": "ase/calculators/plumed.py",
+          "line_number": 197,
+          "commit_sha": "c3433ef361e079ae2d6da08caad1d71969520215",
+          "base_sha": "920a1fa8b9121a0ebf4639ff136677c7e4bc983e",
+          "created_at": "2026-03-21T23:03:18.572Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3179141388",
+          "author": "yuzie007",
+          "body": "Please change the section title as\n```rst\nCalculators\n-----------\n```\nLikely `scriv` can recognize only those registerted in `pyproject.toml`.",
+          "file_path": "changelog.d/20260321_005528_ppiaggi_plumed_stress.rst",
+          "line_number": 2,
+          "commit_sha": "c3433ef361e079ae2d6da08caad1d71969520215",
+          "base_sha": "920a1fa8b9121a0ebf4639ff136677c7e4bc983e",
+          "created_at": "2026-03-21T06:44:47.894Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3181009783",
+          "author": "PabloPiaggi",
+          "body": "Implemented as requested.",
+          "file_path": "changelog.d/20260321_005528_ppiaggi_plumed_stress.rst",
+          "line_number": 2,
+          "commit_sha": "c3433ef361e079ae2d6da08caad1d71969520215",
+          "base_sha": "920a1fa8b9121a0ebf4639ff136677c7e4bc983e",
+          "created_at": "2026-03-21T23:03:27.425Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3179141391",
+          "author": "yuzie007",
+          "body": "It is not reasonable to define `stress` for systems without the cell. As written in the docstring of `Calculator`, in such a case, the calculator should return `PropertyNotImplementedError`.\n\nI would suggest the following revisions:\n\n1. The test on the present `H2` should rather test if `atoms.get_stress()` raises `PropertyNotImplementedError`.\n\n```python\nwith pytest.raises(PropertyNotImplementedError):\n    atoms.get_stress()\n```\nPlease refer to e.g. [`test_isolated_atom` in `test_tersoff.py`](ase/test/calculator/test_tersoff.py).\n\n2. The present test for the shape should be done rather for a bulk system made by e.g. `atoms = bulk('Cu')` or a system with cell e.g. `Atoms('H2', positions=[[0, 0, 0], [0, 0, 0.74]], cell=10.0 * np.eye())`, possibly with `pbc=True`.",
+          "file_path": "ase/test/calculator/plumed/test_plumed.py",
+          "line_number": 329,
+          "commit_sha": "31952fbdb60a3b1bd3f1dc68bbca9393388cc550",
+          "base_sha": "920a1fa8b9121a0ebf4639ff136677c7e4bc983e",
+          "created_at": "2026-03-21T06:44:48.076Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3181010262",
+          "author": "PabloPiaggi",
+          "body": "Now there are two tests: test_stress_nobox and test_stress_shape. The first tests that  PropertyNotImplementedError is returned when there is not box. The second has a box and pbc, and checks the stress shape.",
+          "file_path": "ase/test/calculator/plumed/test_plumed.py",
+          "line_number": 329,
+          "commit_sha": "31952fbdb60a3b1bd3f1dc68bbca9393388cc550",
+          "base_sha": "920a1fa8b9121a0ebf4639ff136677c7e4bc983e",
+          "created_at": "2026-03-21T23:05:10.506Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3179141392",
+          "author": "yuzie007",
+          "body": "Please also add\n```rst\n(:mr:`4027`)\n```\nto have a link to this MR.",
+          "file_path": "changelog.d/20260321_005528_ppiaggi_plumed_stress.rst",
+          "line_number": 3,
+          "commit_sha": "c3433ef361e079ae2d6da08caad1d71969520215",
+          "base_sha": "920a1fa8b9121a0ebf4639ff136677c7e4bc983e",
+          "created_at": "2026-03-21T06:44:48.213Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3181010311",
+          "author": "PabloPiaggi",
+          "body": "Implemented as requested.",
+          "file_path": "changelog.d/20260321_005528_ppiaggi_plumed_stress.rst",
+          "line_number": 3,
+          "commit_sha": "c3433ef361e079ae2d6da08caad1d71969520215",
+          "base_sha": "920a1fa8b9121a0ebf4639ff136677c7e4bc983e",
+          "created_at": "2026-03-21T23:05:23.742Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3179141394",
+          "author": "yuzie007",
+          "body": "Apart from the present tests, it would be also good to have a comparison of the biased stress to those computed numerically by the finite-difference method. Please refer to [`test_forces_and_stress` in `test_tersoff.py`](https://gitlab.com/ase/ase/-/blob/3.28.0/ase/test/calculator/test_tersoff.py?ref_type=tags#L241-249).",
+          "file_path": "ase/test/calculator/plumed/test_plumed.py",
+          "line_number": 363,
+          "commit_sha": "31952fbdb60a3b1bd3f1dc68bbca9393388cc550",
+          "base_sha": "920a1fa8b9121a0ebf4639ff136677c7e4bc983e",
+          "created_at": "2026-03-21T06:44:48.346Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3181010416",
+          "author": "PabloPiaggi",
+          "body": "I added this test.",
+          "file_path": "ase/test/calculator/plumed/test_plumed.py",
+          "line_number": 363,
+          "commit_sha": "31952fbdb60a3b1bd3f1dc68bbca9393388cc550",
+          "base_sha": "920a1fa8b9121a0ebf4639ff136677c7e4bc983e",
+          "created_at": "2026-03-21T23:05:54.763Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3179141395",
+          "author": "yuzie007",
+          "body": "Maybe the method name should be revised, and this can be a private method e.g. `def _compute_properties` or maybe `def _add_biases`.",
+          "file_path": "ase/calculators/plumed.py",
+          "line_number": 177,
+          "commit_sha": "55df88d26e24648258f82f6a926ab40b454dee26",
+          "base_sha": "920a1fa8b9121a0ebf4639ff136677c7e4bc983e",
+          "created_at": "2026-03-21T06:44:48.476Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3181013751",
+          "author": "PabloPiaggi",
+          "body": "I updated the method name as requested.",
+          "file_path": "ase/calculators/plumed.py",
+          "line_number": 177,
+          "commit_sha": "55df88d26e24648258f82f6a926ab40b454dee26",
+          "base_sha": "920a1fa8b9121a0ebf4639ff136677c7e4bc983e",
+          "created_at": "2026-03-21T23:17:10.142Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3179141401",
+          "author": "yuzie007",
+          "body": "Thank you @PabloPiaggi for the great addition! The changes look mostly reasonable, and it is also nice that you've added tests. I have left a few requests. After addressing them, We should be able to merge. (Before merging I will also test GitLab pipelines on my forked repo.)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-21T06:44:48.758Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3181016038",
+          "author": "PabloPiaggi",
+          "body": "Thanks @yuzie007 for your very useful comments! I implemented all the requested changes. I would be grateful if you could test the GitLab pipelines.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-21T23:20:27.773Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3181067434",
+          "author": "yuzie007",
+          "body": "Thank you @PabloPiaggi for the revision! LGTM. I have checked that all the tests pass locally and also run the pipeline on https://gitlab.com/ase/ase/-/pipelines/2400586384, which will hopefully pass as well. Once we confirm it passes, I would like to merge soon.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-22T01:12:46.076Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3181082473",
+          "author": "yuzie007",
+          "body": "I added a few stylistic changes (based on Ruff) and confirmed the pipeline passes (https://gitlab.com/ase/ase/-/pipelines/2400607993), so I merge it now :rocket:",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-22T01:47:39.221Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 10
+}

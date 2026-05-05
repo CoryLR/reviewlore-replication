@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/LiveRegion.tsx",
+      "line_number": 52,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`role=\"status\"` carries an implicit `aria-live=\"polite\"`, so rendering it together with `aria-live=\"assertive\"` sends contradictory signals to assistive technology. Screen readers that honour the role's implicit politeness may ignore the explicit attribute, or behave inconsistently.\n\nFix: derive the role from the politeness prop:\n```tsx\nrole={politeness === 'assertive' ? 'alert' : 'status'}\n```\n`role=\"alert\"` is the ARIA-specified equivalent for assertive live regions, and the WAI-ARIA spec lists it as carrying an implicit `aria-live=\"assertive\"` \u2014 consistent with the explicit attribute value.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/LiveRegion.tsx",
+      "line_number": 79,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The JSDoc promises \"Cleans up the announcer on unmount\", but no cleanup is implemented \u2014 there is no `useEffect` returning a teardown that calls `destroyAnnouncer()` or `clearAnnouncer()`. This is simultaneously incorrect documentation and a real resource leak: the hidden live-region DOM nodes injected by `@react-aria/live-announcer` are never removed when the consuming component unmounts.\n\nAdd a cleanup effect:\n```tsx\nuseEffect(() => {\n  return () => destroyAnnouncer();\n}, []);\n```",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/LiveRegion.tsx",
+      "line_number": 99,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Using `useState` to create a stable function reference is non-idiomatic and misleads readers into expecting state-driven re-renders. `useCallback` is the standard React primitive for a stable, memoised callback:\n```tsx\n// Instead of:\nconst [stableAnnounce] = useState(() => (message: string) => announceFn.current(message));\n\n// Prefer:\nconst stableAnnounce = useCallback((message: string) => announceFn.current(message), []);\n```\nThe semantics are identical \u2014 both produce a function whose identity is stable across renders \u2014 but `useCallback` communicates the intent clearly.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/toHaveLiveRegion.ts",
+      "line_number": 20,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The JSDoc comment says \"string for exact match\" but the implementation uses `content.includes(text)`, which is a substring match. This mismatch can cause false positives: for example `{ text: 'pass' }` would match a region containing `'3 tests passed'`.\n\nEither correct the implementation to use strict equality (`content === text`) for string inputs, or update the comment to say \"substring match\" so callers have accurate expectations.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/LiveRegion.test.tsx",
+      "line_number": 20,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`expect(el).toBeDefined()` passes for any non-`undefined` value, including stale detached nodes. For asserting a DOM element is present in the document, prefer jest-dom's `expect(el).toBeInTheDocument()`, which is consistent with the rest of this project's test suite and fails meaningfully when the element has been removed.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/LiveRegion.test.tsx",
+      "line_number": 72,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The description `'fails when no matching live region is found'` is ambiguous \u2014 it reads as though the test itself is expected to fail. A clearer name would be `'throws when no matching live region is found'` or `'rejects when text does not match any live region'`.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/LiveRegion.stories.tsx",
+      "line_number": 156,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`args: {}` is redundant \u2014 omitting the `args` key entirely is equivalent and keeps the story object minimal. If no default args are needed for `PolitenessToggle`, remove the property.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/components/index.ts",
+      "line_number": 136,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`toHaveLiveRegion` and `LiveRegionMatcherOptions` are test-only utilities (custom Vitest/jest matchers) being re-exported from the production components barrel. Per the project's conventions, testing utilities should live under a `test-utils/` path rather than the main bundle entry so they are not shipped to end-user builds. Consider moving them behind a dedicated test-utils export (e.g. `storybook/internal/test-utils`) and removing them from this file.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The PR description lists three significant pieces of work that are entirely absent from the diff: (1) adding `extend-to-be-announced` as a devDependency and registering it in `code/.storybook/storybook.setup.ts`, (2) the `TestProviderRender` announcement integration (announce test-run lifecycle events), and (3) the three accompanying `AnnouncesTestRunStart` / `AnnouncesTestRunFinished` / `AnnouncesTestRunCrashed` stories. If these are coming in a follow-up PR the description is misleading; if they are required for the feature to be functional end-to-end, the PR is incomplete. The diff as shown only adds the base `LiveRegion` component, which is not wired into any live Storybook surface.",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Two distinct announcement mechanisms are now exported side-by-side with no guidance on when to use each:\n- **Declarative** `<LiveRegion>` renders an `aria-live` div inside the React tree; changes to `children` trigger announcements.\n- **Imperative** `announce()` (re-exported from `@react-aria/live-announcer`) injects hidden live-region nodes directly into `document.body`.\n\nUsing both for the same event \u2014 e.g. updating a `<LiveRegion>` child AND calling `announce()` \u2014 will cause the message to be announced twice. The JSDoc on each export should explicitly guide consumers: prefer the declarative component when inside a React render; use the imperative function for side-effects outside the render cycle. Add a note warning against combining them for the same message.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.4783247,
+  "duration_seconds": 357.16940784454346
+}

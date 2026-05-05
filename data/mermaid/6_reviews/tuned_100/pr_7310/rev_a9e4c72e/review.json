@@ -1,0 +1,60 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/parser/src/language/architecture/valueConverter.ts",
+      "line_number": 16,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The replacement `/[\"'[\\]]/g` strips **every** occurrence of `\"` and `'` from the entire string, not just the outer delimiters. This silently destroys embedded apostrophes and inner quotes. For example, `[\"It's great\"]` becomes `Its great`, and `['say \"hello\"']` becomes `say hello`. The correct fix is to remove only the outer brackets, then conditionally peel off just the outermost quote pair:\n\n```ts\nlet result = input.replace(/^\\[|]$/g, '').trim();\nif (\n  (result.startsWith('\"') && result.endsWith('\"')) ||\n  (result.startsWith(\"'\") && result.endsWith(\"'\"))\n) {\n  result = result.slice(1, -1);\n}\nreturn result.trim();\n```\n\nThis preserves apostrophes inside double-quoted labels and double quotes inside single-quoted labels.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/parser/src/language/architecture/arch.langium",
+      "line_number": 2,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The inner alternation arms contain unnecessary capturing groups: `\"([^\"\\\\]|\\\\.)*\"` and `'([^'\\\\]|\\\\.)*'`. Since Langium passes the full token text to the value converter (not individual capture groups), these groups capture nothing useful and add noise. Replace them with non-capturing groups to match the style of the rest of the codebase:\n\n```langium\nterminal ARCH_TITLE: /\\[(?:\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'|[\\w ]+)\\]/;\n```",
+      "index": 1
+    },
+    {
+      "file_path": "packages/parser/tests/architecture.test.ts",
+      "line_number": 100,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "After `expect(service).toBeDefined()`, TypeScript's type for `service` is not narrowed, so `service?.title` uses optional chaining unnecessarily. Per project convention, avoid `?.` on values already guarded \u2014 use `assert(service !== undefined)` (imported from `vitest`) to narrow the type, then access `service.title` unconditionally. The same pattern applies on lines 113, 126, 138.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/parser/tests/architecture.test.ts",
+      "line_number": 89,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "None of the new test cases exercise the primary practical benefit of quoted strings: labels that contain characters outside the `[\\w ]` set (e.g. hyphens, dots, slashes, commas). A test like `service db(database)[\"API v2.0\"]` expecting `API v2.0` would directly demonstrate why quoted strings are needed beyond unquoted ones. Without such a test, the regression coverage for the reported issue is incomplete.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/parser/tests/architecture.test.ts",
+      "line_number": 89,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "There is no test for a label containing an apostrophe or an inner quote character \u2014 the exact cases that expose the value converter bug in this diff. Adding a test such as:\n\n```ts\nit('should preserve apostrophes inside a double-quoted title', () => {\n  const context = `architecture-beta\n    service db(database)[\"It's great\"] in api\n    `;\n  const result = parse(context);\n  expectNoErrorsOrAlternatives(result);\n  expect(result.value.services?.[0]?.title).toBe(\"It's great\");\n});\n```\n\nwould have caught the fact that `input.replace(/[\"'[\\]]/g, '')` strips the apostrophe.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The root cause of all the correctness issues here is that the value converter treats quote characters as pure syntax markers that should always be removed, rather than as optional delimiters that wrap \u2014 but are not part of \u2014 the label text. The Langium terminal regex correctly distinguishes quoted from unquoted forms at the grammar level, but the converter then discards that structural information and applies a flat global strip. The fix should model the two forms explicitly: (1) strip `[` and `]` from the ends, (2) if what remains is delimited by a matched quote pair, slice off exactly those two characters. This mirrors how every other string-terminal value converter in Langium-based parsers works and is consistent with the project rule 'strip only the necessary wrapper characters'.",
+      "index": 5
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The changeset level of `patch` is appropriate for a bug fix. However, the changeset message `fix: Allow quoted string labels in architecture-beta diagrams` could be more precise about what was broken (a syntax error when the `[\"...\"]` form was used) to help readers scanning the changelog understand the concrete behaviour change.",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.27283775,
+  "duration_seconds": 240.72109079360962
+}

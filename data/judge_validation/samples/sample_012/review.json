@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": ".lintstagedrc.mjs",
+      "line_number": 3,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The `fmtCmd` logic inverts the typical lint-staged pattern: humans get `oxfmt --check` (commit fails if files aren't formatted; developer must format manually and re-stage), while AI agents get `oxfmt` (auto-fix). Standard lint-staged usage auto-fixes for all users so the commit succeeds silently. The asymmetry is documented in `AGENTS.md`, but it is surprising and will likely confuse contributors whose commits are unexpectedly rejected just because they haven't run `oxfmt` manually first. If the intent is to make developers consciously aware of unformatted code, a comment explaining the deliberate choice would help. Consider also whether `detectAgent()` from `std-env` can match non-AI environments (e.g. certain CI runners) and whether that would be desirable.",
+      "index": 0
+    },
+    {
+      "file_path": ".lintstagedrc.mjs",
+      "line_number": 10,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`'**/package.json': ['yarn --cwd scripts lint:package']` matches every `package.json` in the entire repository (including ones inside `code/` sub-packages like `code/core/package.json`, `code/renderers/*/package.json`, etc.). The original behaviour ran `lint:package` only for the single `package.json` in each of the `code/` and `scripts/` workspace roots. Running the scripts-workspace validator against every sub-package's `package.json` on each commit is likely unintended and may produce false failures. Consider scoping the pattern, e.g. `'{code,scripts,docs}/package.json'`.",
+      "index": 1
+    },
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 48,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The override block `{ \"files\": [\"*.md\", \"*.mdx\"], \"options\": { ... } }` is unreachable dead configuration. Both `\"*.md\"` and `\"*.mdx\"` appear in `ignorePatterns` earlier in the same file, so oxfmt will never process those file types and the override options (`importOrderSeparation`, `importOrderSortSpecifiers`) will never be applied. Either remove the block or, if those options are needed for `.md`/`.mdx` files in `docs/_snippets`, add a more-specific scoped override like `{ \"files\": [\"docs/_snippets/**/*.md\"] }` and ensure those files are not excluded.",
+      "index": 2
+    },
+    {
+      "file_path": "code/builders/builder-vite/input/iframe.html",
+      "line_number": 73,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The formatter added 6 spaces of leading indentation to lines inside this template literal, changing the runtime string value. The message is rendered in the browser via `.replaceAll('\\n', '<br/>')`. After each `<br/>`, the 6 leading spaces will remain in the HTML source. Browsers collapse runs of whitespace to a single space in normal text flow, so the user will see one unexpected leading space at the start of each of these lines in the error panel. The original author intentionally placed these lines at column 0 to avoid this. Since template-literal content is user-visible output, the formatter should not reindent it; the `// oxfmt-ignore` directive (or equivalent) should be used to preserve the original formatting.",
+      "index": 3
+    },
+    {
+      "file_path": ".vscode/extensions.json",
+      "line_number": 9,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "File is missing a trailing newline (`\\ No newline at end of file`). Ironically, in a PR whose purpose is to unify formatting, both `.vscode/extensions.json` and `.vscode/settings.json` end without a newline. This will cause a diff noise whenever another tool (e.g. an editor with `insertFinalNewline = true` from `.editorconfig`) touches these files.",
+      "index": 4
+    },
+    {
+      "file_path": ".vscode/settings.json",
+      "line_number": 57,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Same as `.vscode/extensions.json`: trailing newline is missing. Both VSCode config files should end with a newline to comply with standard POSIX text-file conventions and to avoid spurious diffs.",
+      "index": 5
+    },
+    {
+      "file_path": "code/package.json",
+      "line_number": 27,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`\"lint\": \"yarn lint:js && cd .. && yarn fmt:check\"` uses a shell `cd` inside a yarn script. This works in bash, but it is fragile: if the script is ever invoked from a different working directory or on Windows (where `cd` behaves differently in `cmd.exe` vs PowerShell), it can silently use the wrong directory. The rest of this codebase consistently uses the `--cwd` flag instead (e.g. `\"yarn --cwd ../scripts lint:package\"`). Prefer `yarn lint:js && yarn --cwd .. fmt:check` for consistency and portability.",
+      "index": 6
+    },
+    {
+      "file_path": "scripts/ci/common-jobs.ts",
+      "line_number": 196,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "Both the `lint` job (this step) and the standalone `fmt` job now independently run `yarn fmt:check`. For workflows that schedule both jobs (e.g. `normal` and above), format checking is executed twice, wasting CI time and credits on a `medium+` executor. Consider whether the `fmt:check` step inside `lint` is still necessary given that the dedicated `fmt` job covers it, or document explicitly why both are needed.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "This PR bundles two categories of changes: (1) intentional structural/config changes (moving oxfmtrc, centralising lint-staged, updating CI jobs) and (2) automated formatter output across dozens of documentation `.md` files (single \u2192 double quotes, trailing commas, re-indentation). The volume of formatter noise makes it significantly harder to identify whether any logic change is intentional or an accidental side-effect of the new formatter config. In future, consider landing the config migration first and the bulk reformatting in a separate, clearly labeled commit so reviewers can focus on each independently.",
+      "index": 8
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `!docs/_snippets/**` negation entry in `ignorePatterns` is intended to re-include code files under `docs/_snippets` that would otherwise be caught by the `*.md`/`*.mdx` (and potentially other) exclusion patterns. However, the `docs/_snippets` directory contains `.ts`/`.js`/`.json` files \u2014 not Markdown \u2014 so none of those would have been excluded by the `*.md`/`*.mdx` rules in the first place. Verify that this negation entry is actually doing useful work; if not, it adds confusion about what `ignorePatterns` covers and can be safely removed.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.43997545,
+  "duration_seconds": 346.40546894073486
+}

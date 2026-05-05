@@ -1,0 +1,122 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 215,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`status-value:new` can never be assigned in practice. `changes.new` comes from `git ls-files --others` (untracked files), while `changes.changed` comes from `git diff --cached` + `git diff` (staged/unstaged modifications). A file cannot simultaneously be untracked and staged/unstaged-modified in a real git repo, so `newFiles.includes(storyFile)` is always `false`. The service test masks this by manually including the same file in both `changed` and `new` in the mock \u2014 a scenario the real `GitDiffProvider` cannot produce. To fix this, either (a) include untracked files in `changes.changed` inside `GitDiffProvider`, or (b) add a second loop in `buildStatuses` over files that are in `changes.new` but not in `changedFiles`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 244,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Hardcoded forward-slash separator breaks on Windows. `changedFile` is an absolute path produced by `path.resolve(repoRoot, filePath)`, which uses backslashes on Windows (e.g. `C:\\Users\\...\\src\\Button.tsx`). The template `` `${repoRoot}/` `` never matches, so the full absolute path is stored in `data.changedFiles` instead of a relative path. Use `path.relative(repoRoot, changedFile)` instead \u2014 it is portable, handles the separator correctly, and is semantically clearer than a manual string strip.",
+      "index": 1
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 89,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Silent failure when the module graph does not populate within 30 seconds. When `process.hrtime(startTime)[0] > 30` is true the interval is cleared and the watcher is never attached, but no `logger.warn` or `logger.error` is emitted. The user has no way to know that change detection silently stopped working. Add a warning such as `logger.warn('Change detection timed out waiting for module graph \u2014 disabling')` before the `clearInterval` call.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/dev-server.ts",
+      "line_number": 126,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`changeDetectionService.dispose()` is only called in the `.catch()` error path (line 137). In the normal happy path the service is never disposed: the `onModuleGraphChange` subscription registered in `ChangeDetectionService.start()` remains alive for the lifetime of the process, and the debounce timer can fire after the server is logically stopped. Add `changeDetectionService.dispose()` to the normal-exit path (e.g. alongside the existing SIGINT handler) and to any server-close logic.",
+      "index": 3
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 80,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Per project rules, after calling `options.presets.apply(...)` for a preset whose return value is immediately used, validate the result is non-null/non-undefined before proceeding. `indexGenerator` could be `undefined` if the preset was not registered, and calling `indexGenerator.getIndex()` without a guard would throw an unhandled error. Add `if (!indexGenerator) { logger.warn('storyIndexGenerator preset not found, skipping change detection'); return; }` after the `apply` call.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 44,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Commented-out debug log `// logger.info(...)` was left in. Per project style rules, remove commented-out code before merging or replace with a `// TODO:` comment explaining conditions for re-enabling it.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 216,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`newFiles` is declared as `Array<string>` and used with `Array.prototype.includes` (O(n) linear scan) on every story file at line 235 inside a nested loop. With many story files this compounds. Declare it as `const newFiles = new Set(...)` instead so the lookup is O(1).",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 162,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`getGitDiffProvider()` constructs a `new GitDiffProvider(...)` on every invocation. `GitDiffProvider` caches `repoRoot` internally via `this.repoRoot`, but because a fresh instance is created each scan, that cache is discarded and `git rev-parse --show-toplevel` is shelled out on every scan. Either cache the provider instance as a private field, or promote it to a constructor-time field: `private readonly gitDiffProvider = this.options.gitDiffProvider ?? new GitDiffProvider(...)`.",
+      "index": 7
+    },
+    {
+      "file_path": "code/core/src/core-server/index.ts",
+      "line_number": 32,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`ChangeDetectionService` is re-exported via a deep path (`'./change-detection/service'`) rather than through the module's own public index (`'./change-detection'`), which already exports it. The adjacent exports in the same block correctly use `'./change-detection'`. Deep imports bypass the intended API surface and are fragile under internal restructuring. Change to `export { ChangeDetectionService } from './change-detection';`.",
+      "index": 8
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/git-diff-provider.test.ts",
+      "line_number": 17,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`vi.clearAllMocks()` is called in both `beforeEach` (line 13) and `afterEach` (line 17). The `afterEach` call is redundant \u2014 clearing before each test already ensures a clean slate. Per project spy-mocking conventions, use only a top-level `beforeEach` with `vi.clearAllMocks()` and remove the `afterEach` duplicate.",
+      "index": 9
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.test.ts",
+      "line_number": 93,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Same redundant `vi.clearAllMocks()` pattern as in `git-diff-provider.test.ts`: both `beforeEach` (line 82) and `afterEach` (line 93) call `vi.clearAllMocks()`. Remove the one in `afterEach`.",
+      "index": 10
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/trace-changed.ts",
+      "line_number": 22,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The BFS queue is a plain `Array` used as a FIFO via `.shift()`, which is O(n) per dequeue. For large module graphs this degrades to O(n\u00b2) overall. Using `splice(0, 1)` is equally slow. Consider a simple linked-list queue or noting this limitation in a comment. For typical project sizes this is unlikely to matter, but it is worth documenting.",
+      "index": 11
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The contract between `GitDiffProvider.getChangedFiles()` and `ChangeDetectionService.buildStatuses()` is broken for genuinely new (untracked, not yet staged) story files. `GitDiffProvider` returns untracked files only in `changes.new` (not `changes.changed`), but `buildStatuses` iterates exclusively over `changes.changed`. The service test papers over this by providing a mock where the same file appears in both sets \u2014 an impossible state from the real provider. A dedicated integration-level test (or at minimum an updated `GitDiffProvider` unit test showing an untracked-only scenario) would have caught this. Before merging, decide the canonical contract: should the provider include untracked files in `changed`, or should the service process `new` files independently?",
+      "index": 12
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The module-level singleton state in `readiness.ts` (`readinessDeferred`, `readinessState`) is reset in the `ChangeDetectionService` constructor via `resetChangeDetectionReadiness()`. This coupling between a class constructor and shared module-level state is fragile: constructing a second instance (e.g. during a test that forgot to call `internal_resetChangeDetectionReadiness`) silently resets readiness for any concurrent consumers. Consider accepting the deferred/state as a constructor parameter or scoping it to the service instance rather than the module.",
+      "index": 13
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `ChangeDetectionReadiness` promise is one-shot: once resolved to `'ready'` it never reflects subsequent `'error'` or `'unavailable'` states because `resolveReadiness` becomes a no-op after the first resolution. This is architecturally intentional (startup readiness, not live health), but it means that a consumer awaiting `getChangeDetectionReadiness()` after a later scan failure will still see `{ status: 'ready' }` with no indication that change detection is now broken. If live health is a future requirement, the current one-shot deferred will need to be replaced with an observable or event-based API.",
+      "index": 14
+    }
+  ],
+  "cost_usd": 1.8182144999999998,
+  "duration_seconds": 1274.996810913086
+}

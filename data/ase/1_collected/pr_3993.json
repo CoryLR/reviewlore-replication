@@ -1,0 +1,33 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3993,
+  "title": "Update `ase.geometry.rdf.get_rdf` to accept chemical symbols as `elements` and deprecate `ase.geometry.analysis.Analysis.get_rdf` due to its bugs",
+  "body": "# Summary\n\nWhile `ase.geometry.analysis.Analysis.get_rdf` is a wrapper of `ase.geometry.rdf.get_rdf` with additional handling of `elements`, this handling causes a bug for partial RDF calculations. Specifically, `elements=['C', 'H']` in `ase.geometry.Analysis.get_rdf` computes *not* a partial RDF of C-H *but* the full RDF of the partial system with C and H, thus including also C-C and H-H contributions.\nTo compute the partial RDF correctly, we need to give atomic numbers `elements=[6, 1]`, which has however another issue described below.\n\n`ase.geometry.rdf.get_rdf` calculates partial RDFs correctly (in ASE 3.27.0, after https://gitlab.com/ase/ase/-/merge_requests/3921). This has however a limitation that `elements` can so far take only atomic numbers like `[6, 1]` and not `['C', 'H']`, despite its name `elements`.\n\nThe present MR addresses these two issues by:\n\n1. Updating `ase.geometry.rdf.get_rdf` so that it can take a list of chemical symbols for `elements`\n2. Deprecating / removing `ase.geometry.analysis.Analysis.get_rdf` due to its bugs\n\nThank you so much @drFaustroll for reporting the issue!\n\n@askhl May I shortly ask your opinion, particulalry about the deprecation and the removal of `ase.geometry.Analysis.get_rdf`?\n\nSince the changes are rather straightforward, let me set it as a milestone for ASE 3.28.0.\n\n# Details\n\nThe bugs of `ase.geometry.analysis.Analysis.get_rdf` comes from [here](https://gitlab.com/ase/ase/-/blob/3.27.0/ase/geometry/analysis.py?ref_type=tags#L637-639):\n```python\n                    for element in elements:\n                        for idx in self._get_symbol_idxs(image, element):\n                            tmp_image.append(image[idx])\n```\nand then\n```python\n            rdf = get_rdf(tmp_image, rmax, nbins, elements=el, no_dists=(not return_dists),\n                          volume=volume)\n```\nwhere `el` still remains `None`.\nThis means that, when we set e.g. `elements=['C', 'H']`, this method considers a partial system containing only C and H, but then it considers the full RDF for this partial system, which contains contributions also from C-C and H-H.\n\nThe partial RDF can be obtained with `elements=[6, 1]`. However, this also has a potential issue. [Here](https://gitlab.com/ase/ase/-/blob/3.27.0/ase/geometry/analysis.py?ref_type=tags#L622-632)\n```python\n                if all(isinstance(x, int) for x in elements):\n                    if len(elements) == 2:\n                        # use builtin get_rdf mask\n                        el = elements\n                        tmp_image = image\n                    else:\n                        # create dummy image\n                        tmp_image = Atoms(\n                            cell=image.get_cell(), pbc=image.get_pbc())\n                        for idx in elements:\n                            tmp_image.append(image[idx])\n```\nThis considers a partial RDF if the length of `elements` is equal to 2; in this case `elements` are interpreted as an atomic number pair. On the other hand, if the length of `elements` differs from 2, this is recognized as indices of atoms, and the full RDF for the partial system specified by the indices is computed.\nIt is, however, in principle possible that we want to give two items for `elements` as indices of atoms. In the present design, this is misinterpeted as two atomic numbers.\n\nSo, there are multiple bugs or issues in `ase.geometry.analysis.Analysis.get_rdf`.\nAlso, since the original implementation (https://gitlab.com/ase/ase/-/merge_requests/881), this part has not been tested.\n\nAlso, we can replace most special usages for `ase.geometry.analysis.Analysis.get_rdf` with `ase.geometry.rdf.get_rdf` with ASE-standardized manners.\nFor example, to select one configuration from a list of `Atoms` (`images`), instead of\n```python\nanalysis = Analysis(images)\nrdf = analysis.get_rdf(rmax, nbins, imageIdx=2)\n```\nwe can do\n```python\nrdf = get_rdf(images[2], rmax, nbins)\n```\nAlso, to compute a full RDF for a partial system, we can do\n```python\nrdf = get_rdf(atoms[atoms.symbols.search({'C', 'H'})], rmax, nbins)\n```\n\nHaving these in mind, I think we can reasonably deprecate `ase.geometry.analysis.Analysis.get_rdf` and soon remove it (rather quickly, maybe ASE 3.29.0).\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [x] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [x] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [x] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [~] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "yuzie007",
+  "merged_at": "2026-03-04T07:13:18.613Z",
+  "base_ref": "master",
+  "merge_commit_sha": "842ee5c1d621f0edde4db3e8b7e2a0c1d675a5e1",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3128191946",
+          "author": "yuzie007",
+          "body": "@askhl I believe the deprecation of `ase.geometry.analysis.Analysis.get_rdf` due to its buggy `elements` handling is reasonable, so let me merge if we get no further comments within today (CET). Then I will also probably merge !3994.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-03T15:52:43.295Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 1
+}

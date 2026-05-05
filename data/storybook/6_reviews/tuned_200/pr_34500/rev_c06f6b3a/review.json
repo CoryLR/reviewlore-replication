@@ -1,0 +1,44 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 19,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `vi.mock` path `'../helpers/mainConfigFile'` does not exactly match the import path used in the production module (`'../helpers/mainConfigFile.ts'`, with the `.ts` extension). Per project rules, these must match exactly. A mismatch can silently leave the real `updateMainConfig` implementation in place, causing tests to invoke the actual file-system-touching code rather than the mock, and producing confusing failures.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 19,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Per project coding guidelines, all `vi.mock()` calls must include the `{ spy: true }` option, including factory-style mocks. This call is missing it. Add it as the third argument: `vi.mock('../helpers/mainConfigFile.ts', () => ({ ... }), { spy: true })`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 160,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test title `'handles the case where @storybook/react-native is in dependencies (not devDependencies)'` is misleading. `getAllDependencies()` already returns both `dependencies` and `devDependencies`, so this test is functionally identical to the other positive test cases \u2014 there is nothing special about the package being in regular `dependencies` vs `devDependencies`. The title implies a previously-existing (or potential) bug that does not exist with the current implementation. Either rename it to something like `'detects ondevice addons when only one addon is present'` to reflect what the test actually exercises, or remove the redundant test.",
+      "index": 2
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test file's `beforeEach` restores `mocks.updateMainConfig.mockImplementation(...)` on every test \u2014 this is good practice and follows the project convention. However, the comment above it (`// Restore the implementation that invokes the callback with our mock ConfigFile`) says \"Restore\" but this is actually the initial setup of the mock (not a restoration of a previous state). A more accurate label would be `// Set up the updateMainConfig mock to invoke the callback synchronously` to avoid confusing future readers.",
+      "index": 3
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `check` function does not validate that `mainConfig.addons` entries of the object form actually have a `name` property before calling `getAddonName`. While the `Preset` type requires `name` on the object variant, a comment noting the assumption (or a runtime guard with `typeof addon !== 'string' && addon.name`) would make the code more robust against malformed configs and easier to understand for future maintainers.",
+      "index": 4
+    }
+  ],
+  "cost_usd": 0.4850236,
+  "duration_seconds": 321.5595052242279
+}

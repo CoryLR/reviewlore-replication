@@ -1,0 +1,44 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/create-storybook/src/generators/configure.ts",
+      "line_number": 110,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The Angular framework's `.storybook/tsconfig.json` templates hardcode `\"./preview.ts\"` in their `include` array (see `code/lib/create-storybook/templates/angular/application/template-csf/.storybook/tsconfig.json` and the library variant). Those template files are not updated in this PR. As a result, newly initialized Angular projects will have a `preview.tsx` file (generated here) that TypeScript's language server cannot find or type-check, because the generated tsconfig still includes only `\"./preview.ts\"`. TypeScript will silently skip type-checking the preview file. The templates need to be updated to `\"./preview.tsx\"` (or a broader glob like `\"./preview.*\"`) in lockstep with this change.",
+      "index": 0
+    },
+    {
+      "file_path": "docs/_snippets/storybook-preview-use-global-type.md",
+      "line_number": 30,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The mechanical replacement turns `preview.js|jsx` into `preview.jsx|jsx` and `preview.ts|tsx` into `preview.tsx|tsx`. The pipe notation was a documentation convention meaning \"the file can be named with either extension\"; `preview.js|jsx` meant \".js or .jsx\". After the substitution, `preview.jsx|jsx` means \".jsx or .jsx\" \u2014 which is redundant and meaningless. These entries should be simplified to `preview.jsx` and `preview.tsx` respectively (without the pipe). The same pattern recurs for the CSF Next variants a few lines further down in the same file.",
+      "index": 1
+    },
+    {
+      "file_path": "docs/_snippets/storybook-addons-preset-preview.md",
+      "line_number": 1,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "This snippet documents an *addon author's* internal preview file (`example-addon/src/preview.js`), not a user's `.storybook/preview` file. Renaming it to `preview.jsx`/`preview.tsx` goes beyond this PR's stated scope and unnecessarily prescribes JSX-capable extensions for addon previews that may target Angular, Vue, Svelte, or web-components renderers where JSX is not used. Leave addon source file examples as `.ts`/`.js` unless they actually contain JSX.",
+      "index": 2
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The Angular `.storybook/tsconfig.json` templates (`code/lib/create-storybook/templates/angular/application/template-csf/.storybook/tsconfig.json` and the library equivalent) hardcode `\"include\": [\"../src/**/*.stories.*\", \"./preview.ts\"]`. Because those files are not updated in this PR, every newly scaffolded Angular project will have a mismatch: the generator emits `preview.tsx`, but the tsconfig include list only covers `preview.ts`. TypeScript will not find or check the preview file in Angular projects created after this change. This should be treated as a blocking omission \u2014 the template files must be updated (or the include glob broadened to `./preview.*`) before merging.",
+      "index": 3
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Across the updated documentation, references to `main.js|ts` are left unchanged (since `main` is not getting a JSX extension) while `preview.js|ts` is now `preview.jsx|tsx`. This creates an inconsistent notation style in the same sentences \u2014 e.g., \"upgrade your `.storybook/main.js|ts` and `.storybook/preview.jsx|tsx` files.\" Readers unfamiliar with the rationale may find the asymmetry confusing. A short inline note in key places (e.g., in `AGENTS.md` or the configure story-rendering page) explaining why `preview` uses `jsx`/`tsx` while `main` does not would eliminate that confusion.",
+      "index": 4
+    }
+  ],
+  "cost_usd": 0.9636206,
+  "duration_seconds": 275.7875111103058
+}

@@ -1,0 +1,273 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33206,
+  "title": "Addon-Vitest: Add channel API to programmatically trigger test runs",
+  "body": "Works on https://github.com/storybookjs/mcp/issues/138\r\n\r\nCompanion PR: https://github.com/storybookjs/mcp/pull/131\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\nAdded a new programmatic trigger to `addon-vitest`, which allows external actors (like addon-mcp) to trigger a test run and get results back via events on the channel.\r\n\r\nTo support this, I had to make additional modifications:\r\n\r\n1. Add the channel to the `options`, so that any preset property (like `experimental_devServer`) automatically has access to the channel and can do stuff with it.\r\n2. Replaced the flow for how addon-vitest gets the index on the server.\r\n \r\nPreviously, it would _fetch_ the `index.json` when necessary; however, it wouldn't know which origin/url to fetch from. To know that, the manager would send the origin to the server (`indexUrl`) on startup, because the client _does_ know where to fetch the index from. If this sounds bad, it's because it was, but it was a good compromise at the time.\r\n\r\nBut not anymore, because now you can trigger tests without even opening the manager UI once, which would leave `indexUrl` undefined, and crash the test run. So now it does the more clear thing, which is possible as of recently, but wasn't before. Now `addon-vitest` gets the index directly from `StoryIndexGenerator` on the server, and subscribes to changes to the index, so that when tests are triggered, the index is already available and up-to-date.\r\n\r\n\r\n<!-- Briefly describe what your PR does -->\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [ ] unit tests\r\n- [x] integration tests\r\n- [x] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n1. Have a react-vite Storybook with `addon-mcp` installed from https://github.com/storybookjs/mcp/pull/131\r\n2. Start the dev server and configure the MCP server for your agent\r\n3. Prompt your agent with _\"Run tests for the Button component stories using the Storybook MCP testing tool. Use the `run-story-tests` tool and report which stories passed or failed.\"_\r\n4. See that it runs tests and reports results back. See that in the Storybook UI, you can see the statuses too in the sidebar/testing widget, because they are all connected.\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\nThis pull request has been released as version `0.0.0-pr-33206-sha-06900f2a`. Try it out in a new sandbox by running `npx storybook@0.0.0-pr-33206-sha-06900f2a sandbox` or in an existing project with `npx storybook@0.0.0-pr-33206-sha-06900f2a upgrade`.\r\n<details>\r\n<summary>More information</summary>\r\n\r\n| | |\r\n| --- | --- |\r\n| **Published version** | [`0.0.0-pr-33206-sha-06900f2a`](https://npmjs.com/package/storybook/v/0.0.0-pr-33206-sha-06900f2a) |\r\n| **Triggered by** | @JReinhold |\r\n| **Repository** | [storybookjs/storybook](https://github.com/storybookjs/storybook) |\r\n| **Branch** | [`jeppe/addon-vitest-trigger-api`](https://github.com/storybookjs/storybook/tree/jeppe/addon-vitest-trigger-api) |\r\n| **Commit** | [`06900f2a`](https://github.com/storybookjs/storybook/commit/06900f2a11acb34abb46f9cd49642306045e4acd) |\r\n| **Datetime** | Fri Feb  6 12:53:21 UTC 2026 (`1770382401`) |\r\n| **Workflow run** | [21751255283](https://github.com/storybookjs/storybook/actions/runs/21751255283) |\r\n\r\nTo request a new release of this pull request, mention the `@storybookjs/core` team.\r\n\r\n_core team members can create a new canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=33206`_\r\n</details>\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Programmatic Vitest test-run API with trigger/response flow, optional config override, and new run/result types\n  * A11y addon exposes an opt-in preset and a runtime flag; per-run a11y statuses and reports are surfaced\n  * In-memory story index for faster lookup and focused-run filtering\n\n* **Refactor**\n  * Standardized accessibility type names\n  * Streamlined channel plumbing across server, build, and presets\n\n* **Tests**\n  * New tests for selective/focused test triggering and result handling\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "JReinhold",
+  "merged_at": "2026-02-19T19:44:12Z",
+  "base_ref": "next",
+  "merge_commit_sha": "6b058844bbc7e0425400acb7277c8ae7ce214270",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "c01a36000351d9545fc30b3799c71d7310fa8f5f",
+    "a3aad1624a8a5951c8bc9e5f2a70cb9935fd9b47"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6n3IfU",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Preserve backward compatibility with a deprecated `A11YReport` alias.**  \nRenaming a public type breaks downstream imports; consider keeping a deprecated alias during the transition.  \n\n\n<details>\n<summary>\ud83d\udca1 Suggested compatibility alias</summary>\n\n```diff\n export type A11yReport = EnhancedResults | { error: Error };\n+/** `@deprecated` Use A11yReport */\n+export type A11YReport = A11yReport;\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nexport type A11yReport = EnhancedResults | { error: Error };\n/** `@deprecated` Use A11yReport */\nexport type A11YReport = A11yReport;\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/a11y/src/types.ts` at line 5, Add a deprecated compatibility\nalias so existing imports using the old A11YReport name continue to work: export\na new type alias A11YReport that points to the new A11yReport (and optionally\nannotate it with a JSDoc `@deprecated` tag). Update the same types file where\nA11yReport is defined to include this alias (referencing the A11yReport type) so\ndownstream code isn't broken by the rename.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/a11y/src/types.ts",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "a3aad1624a8a5951c8bc9e5f2a70cb9935fd9b47",
+          "created_at": "2026-02-17T10:34:29Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "high",
+          "label_reasoning": "The comment is about preserving backward compatibility after a public type rename (A11YReport \u2192 A11yReport), suggesting a deprecated alias to avoid breaking downstream imports."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6n4oA-",
+          "author": "JReinhold",
+          "body": "This was never externally exported until now.",
+          "file_path": "code/addons/a11y/src/types.ts",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "a3aad1624a8a5951c8bc9e5f2a70cb9935fd9b47",
+          "created_at": "2026-02-17T11:49:01Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding a deprecated type alias to preserve backward compatibility after a rename."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6n3Ifn",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Potential undefined entries when story IDs don't exist in the index.**\n\nWhen `requestStoryIds` is provided, the map operation on line 224 will return `undefined` for any ID that doesn't exist in `index.entries`. The cast to `StoryIndexEntry[]` masks this issue, potentially causing runtime errors when downstream code accesses properties on these undefined entries.\n\nConsider filtering out undefined entries:\n\n\n<details>\n<summary>\ud83d\udee1\ufe0f Proposed fix to handle missing entries</summary>\n\n```diff\n private getStories(requestStoryIds?: string[]): StoryIndexEntry[] {\n   const index = this.testManager.store.getState().index;\n   if (requestStoryIds) {\n-    return requestStoryIds.map((id) => index.entries[id]) as StoryIndexEntry[];\n+    return requestStoryIds\n+      .map((id) => index.entries[id])\n+      .filter((entry): entry is StoryIndexEntry => entry !== undefined);\n   }\n   return Object.values(index.entries).filter((entry) => entry.type === 'story');\n }\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/vitest/src/node/vitest-manager.ts` around lines 221 - 227,\ngetStories may return undefined items when requestStoryIds contains IDs not\npresent in this.testManager.store.getState().index.entries; change the mapping\nlogic in getStories to skip missing entries (e.g., map then filter out undefined\nor use flatMap to only include found StoryIndexEntry) so the returned array\ncontains only StoryIndexEntry objects and not undefined values. Update the code\npath that uses getStories to rely on the cleaned array but do not rely on the\nprevious cast to StoryIndexEntry[] to hide missing entries. Ensure you reference\nthe getStories method and the index.entries lookup when making the fix.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 1947630",
+          "file_path": "code/addons/vitest/src/node/vitest-manager.ts",
+          "line_number": 235,
+          "start_line": 222,
+          "commit_sha": "84571aad989c254ec95899950b479789223969ab",
+          "created_at": "2026-02-17T10:34:29Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Null Pointer",
+          "label_confidence": "high",
+          "label_reasoning": "The map operation can return undefined for missing IDs, and the cast to StoryIndexEntry[] masks this, potentially causing null/undefined dereference errors in downstream code."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where undefined entries can appear in the returned array and proposes a specific fix using filter."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6n3Ift",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Read the preset.ts file to see the actual implementation\nhead -n 150 code/addons/vitest/src/preset.ts | tail -n +80\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2425\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Get more context around the lines mentioned\ncat -n code/addons/vitest/src/preset.ts | sed -n '80,125p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2118\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for how storyIndexGenerator is defined in the codebase\nrg -n \"storyIndexGenerator\" code/ -t ts -t tsx --max-count=20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check what the presets.apply() function returns\nrg -n \"apply.*<Promise\" code/addons/vitest/src/preset.ts -A 2 -B 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 239\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for presets.apply patterns to understand how they're handled\nrg -n \"presets\\.apply\" code/ --max-count=30 -B 1 -A 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 44451\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for other presets applied and see if they have null checks\nrg -n \"options\\.presets\\.apply\" code/addons/ -B 1 -A 5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3530\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/antml/bash\n# Look for the storyIndexGenerator preset definition/registration\nrg -n \"storyIndexGenerator\" code/core/src/presets --max-count=20 -B 2 -A 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 126\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for other uses of storyIndexGenerator in the codebase to see how it's typically handled\nrg -n \"storyIndexGenerator\\.\" code/ --max-count=20 -B 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 948\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Look at the manifests.ts file to understand the proper null checking pattern\ncat -n code/core/src/core-server/utils/manifests/manifests.ts | head -n 30\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1344\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Get the full length to understand context\nwc -l code/addons/vitest/src/preset.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 101\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check the imports and see if logger is available\nhead -n 30 code/addons/vitest/src/preset.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 937\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for all uses of storyIndexGenerator in the vitest preset file\ngrep -n \"storyIndexGenerator\" code/addons/vitest/src/preset.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 357\n\n---\n\n\n\n</details>\n\n**Add null check for `storyIndexGenerator` before calling methods.**\n\nThe `storyIndexGenerator` preset result is not validated before being used on lines 106 and 118. If the preset doesn't provide a generator, calling `getIndex()` and `onInvalidated()` will throw at runtime.\n\n<details>\n<summary>\ud83d\udc1b Proposed fix</summary>\n\n```diff\n  const storyIndexGenerator =\n    await options.presets.apply<Promise<StoryIndexGenerator>>('storyIndexGenerator');\n+\n+  if (!storyIndexGenerator) {\n+    throw new Error('storyIndexGenerator preset is required for addon-vitest');\n+  }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  const storyIndexGenerator =\n    await options.presets.apply<Promise<StoryIndexGenerator>>('storyIndexGenerator');\n\n  if (!storyIndexGenerator) {\n    throw new Error('storyIndexGenerator preset is required for addon-vitest');\n  }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/vitest/src/preset.ts` around lines 86 - 88, The result of\noptions.presets.apply('storyIndexGenerator') (stored in storyIndexGenerator) may\nbe null/undefined; before calling storyIndexGenerator.getIndex(...) and\nstoryIndexGenerator.onInvalidated(...), add a null check (e.g., if\n(!storyIndexGenerator) return or skip those calls) so you don't invoke methods\non undefined; update the code paths that call getIndex and onInvalidated\n(referencing storyIndexGenerator, getIndex, onInvalidated, and\noptions.presets.apply) to guard them and handle the absent generator case\ngracefully (either no-op, log a warning, or provide a fallback).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/vitest/src/preset.ts",
+          "line_number": 87,
+          "start_line": 85,
+          "commit_sha": "a3aad1624a8a5951c8bc9e5f2a70cb9935fd9b47",
+          "created_at": "2026-02-17T10:34:30Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Null Pointer",
+          "label_confidence": "high",
+          "label_reasoning": "The storyIndexGenerator result from presets.apply() is not checked for null/undefined before calling methods on it, which would throw a runtime error if the preset doesn't provide a generator."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a missing null check before calling methods on storyIndexGenerator and provides a concrete fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6n3IgA",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Locate StoreState initialization and ensure `index` is set to a valid StoryIndex\nrg -n -C3 \"experimental_UniversalStore\\.create<StoreState\" -g '*.ts' code/addons/vitest\nrg -n -C3 \"index:\\s\" -g '*.ts' code/addons/vitest/src\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2781\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check store subscription updates and prepareIndex function\nrg -n \"prepareIndex\\(\" -g '*.ts' code/addons/vitest -A 2 -B 2\nrg -n \"store\\.setState\\|store\\.setPartial\" -g '*.ts' -g '*.tsx' code/addons/vitest\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/addons/vitest/src/main.tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 128\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/addons/vitest/src/storeSubscriber.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 138\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg -n \"storeSubscriber\\.next\\|storeSubscriber\\.error\" -g '*.ts' -g '*.tsx' code/addons/vitest -B 3 -A 3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg -n \"fatalError\" -g '*.ts' -g '*.tsx' code/addons/vitest -B 2 -A 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 7609\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/addons/vitest/src/main.tsx | tail -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 128\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg -n \"setPartial.*fatalError\\|index.*undefined\" -g '*.ts' -g '*.tsx' code/addons/vitest\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg -n \"export const store = experimental_UniversalStore.create<StoreState, StoreEvent>\" -g '*.ts' code/addons/vitest/src\n\n# Also check manager-store.ts initialization\nrg -n \"store = experimental_UniversalStore.create\" code/addons/vitest/src/manager-store.ts -A 10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 638\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg -n \"const storeOptions\" code/addons/vitest/src -B 2 -A 15\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1162\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check where manager-store.ts is used and if index is ever updated\nrg -n \"import.*manager-store\\|from.*manager-store\" code/addons/vitest/src -B 2 -A 5\n\n# Also check if there's try-catch around getIndex()\nrg -n \"getIndex\\|try\\|catch\" code/addons/vitest/src/preset.ts | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find the function that contains the store creation and check for error handling\nrg -n \"async.*function\\|const.*async\\|^export\" code/addons/vitest/src/preset.ts | grep -B 1 -A 1 \"98\\|103\\|105\"\n\n# Get broader context around store creation\nsed -n '80,120p' code/addons/vitest/src/preset.ts | cat -n\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1881\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check where storyIndexGenerator comes from and its type\nrg -n \"storyIndexGenerator\" code/addons/vitest/src/preset.ts | head -5\n\n# Get more context around that line\nsed -n '1,40p' code/addons/vitest/src/preset.ts | cat -n\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1794\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nsed -n '1,50p' code/addons/vitest/src/preset.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1523\n\n---\n\n\n\n</details>\n\n**Add error handling around `storyIndexGenerator.getIndex()` call in store initialization.**\n\nThe initial store creation uses `await storyIndexGenerator.getIndex()` without error handling, while subsequent updates in the `onInvalidated` callback have try-catch protection. If `storyIndexGenerator.getIndex()` fails or returns undefined, the store initialization will fail and `index.entries` access in components will cause runtime errors. Apply the same error handling pattern used in the `onInvalidated` callback, with a fallback to the default index from `storeOptions.initialState` (`{ entries: {}, v: 5 }`).\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/vitest/src/types.ts` around lines 69 - 78, The initial call to\nstoryIndexGenerator.getIndex() should be wrapped in the same try-catch used in\nthe onInvalidated callback: call await storyIndexGenerator.getIndex() inside a\ntry block and if it throws or returns undefined, set index to the fallback\ndefault from storeOptions.initialState (e.g. { entries: {}, v: 5 }) and populate\nthe store's fatalError field with the caught error; update the store\ninitialization logic that sets index (and fatalError) so the rest of the store\n(and components reading index.entries) never sees undefined.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/vitest/src/types.ts",
+          "line_number": 78,
+          "start_line": 69,
+          "commit_sha": "a3aad1624a8a5951c8bc9e5f2a70cb9935fd9b47",
+          "created_at": "2026-02-17T10:34:30Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Unchecked Return",
+          "label_confidence": "high",
+          "label_reasoning": "The initial storyIndexGenerator.getIndex() call lacks error handling (no try-catch), while the onInvalidated callback is protected. If getIndex() fails or returns undefined, store initialization fails and index.entries access causes runtime errors."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Points out missing error handling around getIndex() during store initialization and suggests applying the same try-catch pattern used in the onInvalidated callback."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6ogtLX",
+          "author": "kasperpeulen",
+          "body": "Do we need the relative part here?",
+          "file_path": "code/addons/vitest/src/preset.ts",
+          "line_number": 28,
+          "start_line": null,
+          "commit_sha": "aaa74100052f891ab44596e0a90cbced698d8a12",
+          "created_at": "2026-02-19T11:06:54Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "low",
+          "label_reasoning": "A brief question about whether the relative part of a path is needed \u2014 likely a code clarity/redundancy concern about an import or path reference."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Question implying the relative path part may be unnecessary and should be removed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6oimJN",
+          "author": "kasperpeulen",
+          "body": "If the test run hangs (Vitest never fires `TEST_RUN_COMPLETED`, `FATAL_ERROR`, or `CANCEL_RUN`), this subscriber leaks \u2014 it never unsubscribes and the response is never sent. The MCP side has its own 15s timeout so it won't block the agent, but this side keeps listening forever. Maybe add a timeout here too that calls `unsubscribe()` and sends an error response?",
+          "file_path": "code/addons/vitest/src/preset.ts",
+          "line_number": 241,
+          "start_line": null,
+          "commit_sha": "a3aad1624a8a5951c8bc9e5f2a70cb9935fd9b47",
+          "created_at": "2026-02-19T12:40:41Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Resource Leakage",
+          "label_confidence": "high",
+          "label_reasoning": "If the test run hangs and none of the completion events fire, the subscriber never unsubscribes, resulting in a leaked subscription that listens indefinitely."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a subscriber leak when a test run hangs and explicitly suggests adding a timeout that calls unsubscribe() and sends an error response."
+    }
+  ],
+  "review_thread_count": 8,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6n1lRT",
+            "author": "JReinhold",
+            "body": "Maybe @kasperpeulen has ideas for how to fix this.",
+            "file_path": "code/addons/vitest/src/types.ts",
+            "line_number": 7,
+            "start_line": 5,
+            "commit_sha": "a3aad1624a8a5951c8bc9e5f2a70cb9935fd9b47",
+            "created_at": "2026-02-17T09:27:23Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6oi1os",
+            "author": "kasperpeulen",
+            "body": "I think any is okay for now.",
+            "file_path": "code/addons/vitest/src/types.ts",
+            "line_number": 7,
+            "start_line": 5,
+            "commit_sha": "a3aad1624a8a5951c8bc9e5f2a70cb9935fd9b47",
+            "created_at": "2026-02-19T12:52:19Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6n6LwZ",
+            "author": "JReinhold",
+            "body": "I'm not a huge fan of these type fixes, that are now necessary becauseo of the new Channel in options. If you have better solutions @kasperpeulen, please let me know.\n\nHere's a summary of the issue:\n\n---\n\n## Root issue\n\n- The failing `core` type checks were caused by a **TypeScript type identity mismatch**, not a runtime bug.\n- Two different `Channel` declarations were being mixed in the same typed flows:\n  - one from internal/source typing\n  - one from generated `dist` typing\n- `Channel` has a private field (`sender`), so TypeScript treats them as nominally incompatible even when they look structurally similar.\n- That produced errors like:  \n  `Type '...Channel' is not assignable to type 'Channel'` and  \n  `Types have separate declarations of a private property 'sender'`.\n\n## Why this fix was necessary\n\n- Critical paths (`loadAllPresets`, `Options` objects, telemetry `presetOptions`) require a **single consistent channel type**.\n- Without normalization at those boundaries, `nx check core -c production` fails even though runtime behavior is fine.\n- The fix aligned typing at boundaries and used explicit boundary casts where TS could not infer safe overlap.\n- This was necessary to:\n  - remove false-positive type failures,\n  - preserve existing runtime behavior,\n  - keep CI (`core:check:production`) green.\n\n## What changed (high level)\n\n- Normalized `channel` typing at `loadAllPresets` / `Options` boundaries in core server build/load flows.\n- Normalized telemetry `presetOptions` typing in the error-reporting/telemetry call sites.\n- No intended behavior changes at runtime; this is a type-system consistency fix.\n\n## Outcome\n\n- `npx nx check core -c production --outputStyle=stream` now passes.\n- The fix resolves the private-field `Channel` incompatibility errors that were blocking CI/type-check.",
+            "file_path": "code/core/src/core-server/utils/doTelemetry.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "82421a98e737f321ca19bc1d15d4cf783f20a27f",
+            "created_at": "2026-02-17T13:28:47Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6og4pJ",
+            "author": "kasperpeulen",
+            "body": "The root cause is that `Channel` has a `private sender` field, so TypeScript treats the source-level and dist-level declarations as nominally incompatible even though they're structurally identical.\r\n\r\nI tried `protected` \u2014 same issue (\"Property 'sender' is protected but type 'Channel' is not a class derived from 'Channel'\").\r\n\r\nBut adding `ChannelLike` interface works. I tested this locally. This makes sure we use structural typing instead of nominal everywhere.",
+            "file_path": "code/core/src/core-server/utils/doTelemetry.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "82421a98e737f321ca19bc1d15d4cf783f20a27f",
+            "created_at": "2026-02-19T11:15:34Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6oikDK",
+            "author": "kasperpeulen",
+            "body": "Pushed a commit that implements the `ChannelLike` interface approach: https://github.com/storybookjs/storybook/pull/33206/commits/d955fd45d4b\n\nThis removes all `as unknown as` channel casts across 5 files. Type check passes clean.",
+            "file_path": "code/core/src/core-server/utils/doTelemetry.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "82421a98e737f321ca19bc1d15d4cf783f20a27f",
+            "created_at": "2026-02-19T12:39:04Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 8,
+    "stage1_kept": 6,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 2,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

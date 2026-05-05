@@ -1,0 +1,248 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34172,
+  "title": "Build: Move vitest to repo root and upgrade to 4.1.0",
+  "body": "<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\n\n<!--\n\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\n\n-->\n\n## What I did\n\nMoved the vitest workspace config from `code/` to the repo root and upgraded vitest to 4.1.0, so `code/` packages and `scripts/` tests all run from a single vitest invocation.\n\n### Changes:\n- **Moved `vitest.config.ts`** from `code/` to repo root, updated all project globs with `code/` prefix, added `scripts/vitest.config.ts` as a project\n- **Upgraded vitest** from 4.0.14 to 4.1.0 (including addon-vitest devDeps to deduplicate)\n- **Moved scripts to root `package.json`**: `test`, `test:watch`, `storybook:vitest`, `storybook:vitest:inspect`\n- **Removed from `code/package.json`**: `test`, `test:watch`, `affected:test`, `storybook:vitest`, `storybook:vitest:inspect`\n- **Moved `vite`** from resolutions to devDependencies\n- **Updated CircleCI** jobs to run from repo root (removed `working_directory: code`)\n- **Removed `scripts/project.json` test target** (scripts tests now run via root vitest)\n- **Fixed `BrowserCommands` type augmentation** by deduplicating vitest across the monorepo\n- **Fixed tests** that relied on `process.cwd()` being `code/`\n- **Removed `reactDocgenTypescript.test.ts`** (covered by other tests)\n- **Updated `AGENTS.md`** to reflect root-level test commands\n\n## Checklist for Contributors\n\n### Testing\n\n#### The changes in this PR are covered in the following automated tests:\n\n- [ ] stories\n- [x] unit tests\n- [ ] integration tests\n- [ ] end-to-end tests\n\n#### Manual testing\n\n1. Run `yarn test` from repo root \u2014 all tests pass (except `detect-agent.test.ts` which fails in any AI agent environment)\n2. Run `yarn storybook:vitest` from repo root \u2014 storybook browser tests run in watch mode\n\n### Documentation\n\n- [x] Add or update documentation reflecting your changes\n- [ ] If you are deprecating/removing a feature, make sure to update\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\n\n## Checklist for Maintainers\n\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\n- [ ] Make sure this PR contains **one** of the labels below:\n   <details>\n     <summary>Available labels</summary>\n\n  - `bug`: Internal changes that fixes incorrect behavior.\n  - `maintenance`: User-facing maintenance tasks.\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\n  - `feature request`: Introducing a new feature.\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\n  - `other`: Changes that don't fit in the above categories.\n\n   </details>\n\n### \ud83e\udd8b Canary release\n\n<!-- CANARY_RELEASE_SECTION -->\n\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\n\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\n\n<!-- CANARY_RELEASE_SECTION -->\n\n<!-- BENCHMARK_SECTION -->\n<!-- BENCHMARK_SECTION -->",
+  "author": "kasperpeulen",
+  "merged_at": "2026-03-18T10:36:34Z",
+  "base_ref": "next",
+  "merge_commit_sha": "fefa2f5add47fc4fffd56e71ec3cf3185fcd195f",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "37c4bdcacd8481e98f38f73f854cd00663975837",
+    "4e27527629edefddfb29a41ffedb66184f50bf0b"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6vj22Y",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udf10 Web query:\n\n`In Vitest 4.1.0, when using `vi.mock('vitest/node', { spy: true })`, is `vi.mocked(module.createVitest).mockResolvedValue(...)` the recommended way to override that export in tests?`\n\n\ud83d\udca1 Result:\n\nYes\u2014when you use `vi.mock('vitest/node', { spy: true })`, Vitest keeps the real implementations but turns exports into spies, and the intended way to override a specific export in your test is to set a mock implementation on that spied export (e.g. `vi.mocked(ns.createVitest).mockResolvedValue(...)`). This is the same pattern shown in Vitest\u2019s docs (`{ spy: true }` + `vi.mocked(...).mockReturnValue(...)`). [1], [2]\n\nIf you want to *fully replace* exports (rather than \u201cspy but optionally override\u201d), prefer `vi.mock('vitest/node', async (importOriginal) => ({ ...await importOriginal(), createVitest: vi.fn() }))` instead of `{ spy: true }`. [2]\n\n**Sources**:  \n[1] https://vitest.dev/guide/mocking/modules.html  \n[2] https://vitest.dev/api/vi.html\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, let's examine the test file to understand the context and current implementation\ncat -n code/addons/vitest/src/node/test-manager.test.ts | head -80\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2576\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check how createVitest is used in the test file\nrg \"createVitest\" code/addons/vitest/src/node/test-manager.test.ts -A 2 -B 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1752\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check other test files in the vitest addon to see their mocking patterns\nfind code/addons/vitest -name \"*.test.ts\" -o -name \"*.test.tsx\" | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 313\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check how other test files in the vitest addon handle mocking patterns\nhead -100 code/addons/vitest/src/node/boot-test-runner.test.ts | grep -A 10 \"vi.mock\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 925\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the pattern of vi.mock usage across test files in the repo to understand compliance\nrg \"vi\\.mock\\(\" code/addons/vitest/src --type ts -A 2 | head -60\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2170\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's check if there are any test files in the repo that DO use spy: true pattern to understand adoption\nrg \"vi\\.mock\\([^,]+,\\s*{.*spy:\\s*true\" code/addons/vitest -A 2 | head -40\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 200\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's search for spy: true pattern more simply\nrg \"spy.*true\" code/addons/vitest --type ts | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if any test files in the codebase use spy: true pattern\nrg \"spy.*true\" code --type ts -l | head -10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 572\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's check the specific tests that use spy: true to understand the pattern\nhead -50 code/core/src/telemetry/event-cache.test.ts | grep -A 5 \"spy.*true\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 252\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check how event-cache.test.ts uses the spied mock\ngrep -A 5 \"vi.mocked\" code/core/src/telemetry/event-cache.test.ts | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 348\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's verify the current test-manager.test.ts more fully to understand what needs to change\nsed -n '1,100p' code/addons/vitest/src/node/test-manager.test.ts | tail -60\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1318\n\n---\n\n\n\n</details>\n\n**Update this mock to follow the repository's spy-mocking convention.**\n\nAt lines 47-49, the mock should use `spy: true` and access the export via `vi.mocked()`. This aligns with the coding guidelines for Vitest test files and matches the pattern used elsewhere in the codebase.\n\n<details>\n<summary>Suggested refactor</summary>\n\n```diff\n+import * as vitestNode from 'vitest/node';\n import type { TestResult } from 'vitest/node';\n ...\n-const mockCreateVitest = vi.fn();\n-\n-vi.mock('vitest/node', () => ({\n-  createVitest: mockCreateVitest,\n-}));\n-\n-// Use the mock function directly\n-const createVitest = mockCreateVitest;\n+vi.mock('vitest/node', { spy: true });\n+const createVitest = vi.mocked(vitestNode.createVitest);\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/vitest/src/node/test-manager.test.ts` around lines 47 - 49, The\ncurrent vi.mock call directly returns an object for createVitest; update it to\nuse spy-mocking by passing { spy: true } to vi.mock and return the export via\nvi.mocked(...) so tests use the repository's spy convention. Specifically,\nreplace the direct mock of createVitest with a spy-enabled mock of 'vitest/node'\nand reference the mocked export using vi.mocked(require('vitest/node')) or\nvi.mocked(importedModule) to map createVitest to mockCreateVitest, ensuring\nmockCreateVitest remains the implementation used by the spy.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/vitest/src/node/test-manager.test.ts",
+          "line_number": 49,
+          "start_line": 47,
+          "commit_sha": "4e27527629edefddfb29a41ffedb66184f50bf0b",
+          "created_at": "2026-03-17T09:22:18Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Function Consistency",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment points out that the mocking pattern used is inconsistent with the repository's established spy-mocking convention used elsewhere in the codebase."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6vuUaJ",
+          "author": "kasperpeulen",
+          "body": "Addressed \u2014 vitest devDeps bumped to ^4.1.0 to deduplicate, using docs-recommended `declare module 'vitest/browser'` augmentation.",
+          "file_path": "code/addons/vitest/src/node/test-manager.test.ts",
+          "line_number": 49,
+          "start_line": 47,
+          "commit_sha": "4e27527629edefddfb29a41ffedb66184f50bf0b",
+          "created_at": "2026-03-17T16:45:49Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests a specific code change: replace the current vi.mock pattern with spy: true and vi.mocked() convention, with a concrete diff provided."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6v6xE8",
+          "author": "AriPerkkio",
+          "body": "You can also set these in Vitest config on project level:\n\n```ts\nimport { defineConfig } from \"vitest/config\";\n\nexport default defineConfig({\n  test: {\n    projects: [\n      {\n        test: {\n          name: \"scripts\",\n          execArgv: [\"--max_old_space_size=4096\"]\n        }\n      }\n    ]\n  },\n});\n```",
+          "file_path": "scripts/package.json",
+          "line_number": 41,
+          "start_line": 40,
+          "commit_sha": "4e27527629edefddfb29a41ffedb66184f50bf0b",
+          "created_at": "2026-03-18T07:21:42Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Modularity and Architecture",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment suggests an alternative architectural approach to configuring test execution arguments \u2014 moving them into the Vitest config at the project level rather than in package.json scripts."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests an alternative approach: moving execArgv settings into the Vitest config at the project level instead of in package.json, with a code example."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6v684N",
+          "author": "AriPerkkio",
+          "body": "Instead of `cd`, you could use package manager's workspace commands.\r\n\r\nI've set this kind of setup in https://github.com/chromaui/chromatic-e2e.\r\n\r\n```\r\n\u251c\u2500\u2500 package.json \r\n\u251c\u2500\u2500 vitest.config.ts\r\n\u2502\r\n\u2514\u2500\u2500 packages\r\n    \u2502\r\n    \u251c\u2500\u2500 client\r\n    \u2502   \u251c\u2500\u2500 package.json\r\n    \u2502   \u2514\u2500\u2500 vitest.config.ts\r\n    \u2502\r\n    \u2514\u2500\u2500 server\r\n        \u251c\u2500\u2500 package.json\r\n        \u2514\u2500\u2500 vitest.config.ts\r\n```\r\n\r\n### `/vitest.config.ts`\r\n\r\n```js\r\nimport { defineConfig } from \"vitest/config\";\r\n\r\nexport default defineConfig({\r\n  test: {\r\n    projects: [\"./packages\"]\r\n  }\r\n});\r\n```\r\n\r\n### `/package.json`\r\n\r\n```js\r\n{\r\n  \"name\": \"@scoped/monorepo-root\",\r\n  \"private\": true,\r\n  \"test\": \"vitest run\",\r\n}\r\n```\r\n\r\n\r\n### `/packages/client/vitest.config.ts`\r\n\r\n```js\r\nimport { defineProject } from \"vitest/config\"; // NOTE: defineProject, not defineConfig\r\n\r\nexport default defineConfig({\r\n  test: {\r\n    name: \"Client Stuff\",\r\n    environment: \"jsdom\",\r\n    // ... and so on\r\n  }\r\n});\r\n```\r\n\r\n### `/packages/client/package.json`\r\n\r\n```js\r\n{\r\n  \"name\": \"@scoped/client\",\r\n  \"test\": \"yarn workspace @scoped/monorepo-root test --project 'Client Stuff'\",\r\n\r\n  \"Or depending on package manager\": \"\",\r\n  \"test\": \"pnpm --filter @scoped/monorepo-root test --project 'Client Stuff'\",\r\n  \"test\": \"npm --workspace @scoped/monorepo-root test -- --project 'Client Stuff'\"\r\n}\r\n```\r\n\r\n### `/packages/server/vitest.config.ts`\r\n\r\n```js\r\nimport { defineProject } from \"vitest/config\";\r\n\r\nexport default defineConfig({\r\n  test: {\r\n    name: \"Server\",\r\n    environment: \"node\",\r\n    // ... and so on\r\n  }\r\n});\r\n```\r\n\r\n### `/packages/server/package.json`\r\n\r\n```js\r\n{\r\n  \"name\": \"@scoped/server\",\r\n  \"test\": \"yarn workspace @scoped/monorepo-root test --project Server\",\r\n}\r\n```\r\n",
+          "file_path": "scripts/package.json",
+          "line_number": 40,
+          "start_line": null,
+          "commit_sha": "4e27527629edefddfb29a41ffedb66184f50bf0b",
+          "created_at": "2026-03-18T07:33:13Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Modularity and Architecture",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment recommends restructuring how vitest projects are configured and run by leveraging workspace commands and per-project vitest configs instead of using `cd` in scripts, which is an architectural/structural improvement suggestion."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests refactoring the setup to use package manager workspace commands instead of cd, with a detailed alternative configuration example."
+    }
+  ],
+  "review_thread_count": 7,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6vkpWx",
+            "author": "kasperpeulen",
+            "body": "I don\u2019t understand",
+            "file_path": "code/addons/pseudo-states/vitest.config.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "6079fbd674de5708d967ea9e3fb003ad23ced669",
+            "created_at": "2026-03-17T09:58:08Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6vuUdL",
+            "author": "kasperpeulen",
+            "body": "Removed `ignoreSourceErrors`.",
+            "file_path": "code/addons/pseudo-states/vitest.config.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "6079fbd674de5708d967ea9e3fb003ad23ced669",
+            "created_at": "2026-03-17T16:45:51Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6vkq-I",
+            "author": "kasperpeulen",
+            "body": "just have a yarn test comment",
+            "file_path": "code/project.json",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "6079fbd674de5708d967ea9e3fb003ad23ced669",
+            "created_at": "2026-03-17T09:59:12Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6vuUe8",
+            "author": "kasperpeulen",
+            "body": "Done \u2014 changed to `yarn test`.",
+            "file_path": "code/project.json",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "6079fbd674de5708d967ea9e3fb003ad23ced669",
+            "created_at": "2026-03-17T16:45:52Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6vkr8O",
+            "author": "kasperpeulen",
+            "body": "don\u2019t use __dirname",
+            "file_path": "code/vitest.config.storybook.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "6079fbd674de5708d967ea9e3fb003ad23ced669",
+            "created_at": "2026-03-17T09:59:52Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6vuUhq",
+            "author": "kasperpeulen",
+            "body": "Removed \u2014 not needed, the plugin infers configDir from the config file location.",
+            "file_path": "code/vitest.config.storybook.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "6079fbd674de5708d967ea9e3fb003ad23ced669",
+            "created_at": "2026-03-17T16:45:54Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6vkvhg",
+            "author": "kasperpeulen",
+            "body": "is this really needed as a resolution, can it not just be a normal dep?",
+            "file_path": "package.json",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "6079fbd674de5708d967ea9e3fb003ad23ced669",
+            "created_at": "2026-03-17T10:02:29Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6vuUkU",
+            "author": "kasperpeulen",
+            "body": "Moved to devDependencies.",
+            "file_path": "package.json",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "6079fbd674de5708d967ea9e3fb003ad23ced669",
+            "created_at": "2026-03-17T16:45:56Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 7,
+    "stage1_kept": 3,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 4,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

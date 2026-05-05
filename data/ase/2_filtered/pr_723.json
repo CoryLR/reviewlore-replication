@@ -1,0 +1,114 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 723,
+  "title": "ENH: Add new xyz key_value string parser",
+  "body": "Replace the regex based string parser with a character-by-character one. The main cases where a regex fails are escaped values and nested quotes or brackets. In addition it has the benefit of accepting a much more complex variety of strings, including unicode characters, for keys and values, and parsing comma separated lists. The original parser would also silently truncate the rest of the string if it encountered an error, the new parser does not.\n\nThis covers all the cases presented in #53 as seen in the tests. A test for reading from a file was written, but depends on the encoding of the io, routines which are not guaranteed to be compatible with the character encoding of the test strings, so it has been disabled.\n\nThe parser is about 50% slower than the regex (tested with short and very long strings), however that only applies to one line per frame so will be a marginal slowdown overall. To compensate for this, the old parser can be passed as an argument to `io.read` to revert to the old behaviour.\n\nThe other issue is that this probably makes the parser much more lenient and robust than the ones in QUIP and ovito, but that would just make `ase` a useful tool in reading and writing back more compatible `.xyz` files.\n\nObviously, any comments from @jameskermode are appreciated. This was mostly a bit of toy code that I didn't want to see go to waste!",
+  "author": "tdaff",
+  "merged_at": "2018-01-26T14:47:24.400Z",
+  "base_ref": "master",
+  "merge_commit_sha": "31a187711761b7a2ed331e1b171c6ca750c4646c",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "55992920",
+          "author": "askhl",
+          "body": "This sounds fine; I assume it corrects some specific cases where the old one failed.\n\nJust a word of warning that regex works very well with unicode and probably better than any hand-written replacement: Unicode regexes will independently of locale settings know that \u00f8 is a letter (and not punctuation), that \u00d8 is an uppercase \u00f8 (for case insensitive matching), and so on.\n\nOne comment: It says that arrays with *exactly* 9 elements become 3x3 while others presumably remain flat.  I would leave it to the outer layer to reshape the arrays (cf. principle of least surprise).",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2018-01-24T16:43:54.631Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment flags a specific concern about arrays with exactly 9 elements being reshaped to 3x3, suggesting this behavior should be removed and left to the outer layer instead (principle of least surprise). It also suggests considering regex for unicode handling."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "56311804",
+          "author": "askhl",
+          "body": "(Merging; I still recommend changing the 3x3 thing in the future.)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2018-01-26T14:47:12.975Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Though it is primarily a merge announcement, it explicitly recommends a future code change regarding the 3x3 reshaping behavior flagged in the previous comment."
+    }
+  ],
+  "review_thread_count": 4,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "55993361",
+            "author": "askhl",
+            "body": "Very nice!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2018-01-24T16:46:56.970Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_too_short"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "55998459",
+            "author": "tdaff",
+            "body": "Good point about the locale settings. Most characters are passed through and it's only `\\`, `=` and the predefined pairs of delimiters that do anything. I *think* it shouldn't be an issue! I've also just changed it to use `isspace()` for splitting which will be locale aware.\n\nThe 3x3 array is a fortran thing, as extxyz uses fortran ordering and flat representations. This was included in the previous implementation, so I'll leave it up to @jameskermode to defend that!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2018-01-24T17:21:34.907Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 4,
+    "stage1_kept": 2,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 1,
+    "stage1_filtered_too_short": 1,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0,
+    "stage3_cost_usd": 0.013231
+  }
+}

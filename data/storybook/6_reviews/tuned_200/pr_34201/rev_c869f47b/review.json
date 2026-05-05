@@ -1,0 +1,60 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/manager/components/preview/tools/menu.tsx",
+      "line_number": 24,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Commented-out code block left in the diff. Per project standards, all commented-out debug blocks must be removed before merging. These three lines should be deleted entirely:\n```typescript\n// if (success) {\n// animateLandmark?.(document.getElementById(focusableUIElements.sidebarRegion));\n// }\n```\nNote that the equivalent code in `addons.tsx` was cleanly removed (no commented-out remnant), so this is inconsistent.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager/components/preview/tools/addons.tsx",
+      "line_number": 21,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`showPanel` is declared `async` but no longer contains any `await` expression \u2014 the `focusOnUIElement` call is now fire-and-forget. The `async` keyword is dead weight: it wraps the return value in a resolved `Promise<void>` unnecessarily and signals to readers that something is being awaited when nothing is. Either drop `async` entirely, or (if the `Consumer`/`menuMapper` type requires a `Promise`-returning function) add a comment explaining that constraint. The same issue exists in `menu.tsx`'s `showSidebar`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager/components/preview/tools/menu.tsx",
+      "line_number": 18,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Same as the note in `addons.tsx`: `showSidebar` is marked `async` but contains no `await`. Remove `async` or document why the Promise return type is required.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager/components/preview/tools/addons.tsx",
+      "line_number": 43,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "On the `onClick` path, `showPanel(false)` is called, which triggers `api.focusOnUIElement(focusableUIElements.addonPanel, { forceFocus: false, poll: true })`. The `addonPanel` element (`storybook-panel-region`) is an `<aside>` / landmark div that is not natively focusable. With `forceFocus: false`, the browser will not focus it, so the polling loop will retry every 50 ms and time out after 500 ms on every button click \u2014 doing no useful work. Previously, the click path used `forceFocus: true` and always succeeded on the first poll. Consider skipping the `focusOnUIElement` call entirely when `forceFocus` is `false` (i.e., restructure `showPanel` to only call `focusOnUIElement` in the `forceFocus === true` branch), or remove the `poll: true` option so it returns immediately on failure. The same applies to `menu.tsx`'s `showSidebar`.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/shortcuts.ts",
+      "line_number": 384,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`focusOnUIElement` with `poll: true` returns a `Promise<boolean>`. The return value is silently discarded here (and at the corresponding `wasNavShown` block). This is fine functionally since we don't need the result, but it would be clearer to add a `void` prefix (`void fullAPI.focusOnUIElement(...)`) to signal the intentional discard and avoid a no-floating-promises lint warning.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "This PR changes the click behavior of both the 'Show addon panel' and 'Show sidebar' toolbar buttons: previously a mouse click moved keyboard focus to the newly-revealed panel/sidebar region (the old code hardcoded `forceFocus: true` regardless of how `showPanel`/`showSidebar` was called); now a click leaves focus on the button. The PR description calls this intentional ('clicks focus controls'), but it is a potentially user-facing regression for people who mix mouse and keyboard navigation and expect focus to follow the newly revealed content. The change is worth a dedicated accessibility QA step \u2014 in particular, verify behavior with a screen reader (VoiceOver / NVDA) to confirm the change aligns with ARIA best practices for disclosure widgets, where focus is typically moved into the revealed region.",
+      "index": 5
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The animated landmark indicator (`useRegionFocusAnimation`) has been removed from both `addons.tsx` and `menu.tsx` with no replacement. The animation (2 px colored border, 1500 ms, respecting `prefers-reduced-motion`) provided an explicit visual cue to low-vision users about which region gained focus. The PR description notes this is intentional, but it would be worth documenting in a comment or issue why the animation was dropped \u2014 particularly since the `useLandmarkIndicator` hook that powers F6/Shift+F6 landmark navigation still uses the same animation. Without that context, a future developer might re-add the animation to be consistent with the F6 path.",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.3001376499999999,
+  "duration_seconds": 305.5386788845062
+}

@@ -1,0 +1,884 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 2686,
+  "title": "BUG: Fix CASTEP IO to read and write custom masses",
+  "body": "A fix for #1079",
+  "author": "anish-mudaraddi",
+  "merged_at": "2022-06-09T16:02:10.702Z",
+  "base_ref": "master",
+  "merge_commit_sha": "ca38c75a67dc58aa6080f889eb25588db94198b0",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "925855800",
+          "author": "elichad",
+          "body": "I think we might need to support and convert other units here - I assume those listed in the [mass_unit documentation](https://www.tcm.phy.cam.ac.uk/castep/documentation/WebHelp/content/modules/castep/keywords/k_mass_unit_castep.htm) for the .param file, but the actual [species_mass page](https://www.tcm.phy.cam.ac.uk/castep/documentation/WebHelp/content/modules/castep/keywords/k_species_mass_castep.htm) doesn't specify. @ajjackson can you advise?",
+          "file_path": "ase/io/castep.py",
+          "line_number": 623,
+          "commit_sha": "eafa7ef7264970542654a33bc41697bf3151bcb5",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-04-27T10:57:55.152Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "medium",
+          "label_reasoning": "Comment raises concern about missing unit conversion support, meaning the code may not handle all valid input formats correctly."
+        },
+        {
+          "id": "946341792",
+          "author": "ajjackson",
+          "body": "Perhaps this should be a hard error rather than a warning; I don't see a good reason to proceed with incorrect units.\n\nLooking at the CASTEP source code it does seem that those are the four supported mass units for .cell as well. If we're feeling helpful it wouldn't be that much extra code to support them with conversions from ase.units. I can't imagine it will be a real problem for users, though.",
+          "file_path": "ase/io/castep.py",
+          "line_number": 623,
+          "commit_sha": "eafa7ef7264970542654a33bc41697bf3151bcb5",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-05-13T16:52:58.626Z",
+          "is_outdated": false
+        },
+        {
+          "id": "967681360",
+          "author": "ajjackson",
+          "body": "@anish-mudaraddi can we get a full-on ValueError here instead of the warning? If we _know_ it's an unsupported unit it doesn't make sense to proceed with incorrect values.",
+          "file_path": "ase/io/castep.py",
+          "line_number": 623,
+          "commit_sha": "eafa7ef7264970542654a33bc41697bf3151bcb5",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-06-01T12:14:26.421Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Raises a concern about needing to support and convert other units, implying a code change may be needed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "925856910",
+          "author": "elichad",
+          "body": "This is a good start. We need a similar check for the case where castep_custom_species has not been set.",
+          "file_path": "ase/io/castep.py",
+          "line_number": 226,
+          "commit_sha": "89367df201c62bb9abce2f8d7d893c77efe9c4e0",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-04-27T10:58:46.097Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Missing edge case check for when castep_custom_species has not been set, leading to incomplete logic coverage."
+        },
+        {
+          "id": "926214828",
+          "author": "anish-mudaraddi",
+          "body": "I edited the write step take into account custom masses for both custom species and standard species\n\nWe build a dictionary of species with custom defined masses, if we find more than one custom mass defined for a standard species we create a corresponding custom species. e.g. for `C` custom species will go `C:0, C:1` etc",
+          "file_path": "ase/io/castep.py",
+          "line_number": 226,
+          "commit_sha": "89367df201c62bb9abce2f8d7d893c77efe9c4e0",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-04-27T14:46:23.742Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly requests a similar check be added for the case where castep_custom_species has not been set."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "925874275",
+          "author": "elichad",
+          "body": "To share with reviewers, the criteria we talked about in our original discussion:\n\nWRITE\n1. check masses against ASE defaults \u2013 if there's no difference, skip the species_mass block\n2. if there are custom masses, check that all elements of the same species (standard or castep_custom_species) have the same mass\n3. if there are multiple masses for a species and castep_custom_species _is not_ set, create custom species for each mass\n4. if there are multiple masses for a species and castep_custom_species _is_ set, raise an error and ask the user to fix the masses\n5. if castep_custom_species is set or custom masses are used, write the species_mass block with those customizations\n\n\nREAD\n1. If species_mass block is present, update the masses of the specified species accordingly.\n2. If species_mass is not present, or a species is not included in the species_mass block, use ASE defaults.\n\nCurrently there's a bit more work needed to meet all of these",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2022-04-27T11:12:20.869Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "This is a general review comment outlining criteria/requirements that are not yet fully implemented, indicating missing or incomplete specification alignment."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Outlines a detailed list of criteria that still need to be met, indicating missing functionality that should be implemented."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "925888196",
+          "author": "elichad",
+          "body": "We should fall back on ASE defaults for anything that doesn't appear in `line_tokens`/the species_mass block. We can't assume that all species in the file will have their masses explicitly set (e.g. the example in https://gitlab.com/ase/ase/-/issues/1079 doesn't set the mass for Si)",
+          "file_path": "ase/io/castep.py",
+          "line_number": 628,
+          "commit_sha": "eafa7ef7264970542654a33bc41697bf3151bcb5",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-04-27T11:23:34.508Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The code doesn't fall back to ASE defaults for species not listed in the species_mass block, which is an incorrect logic/missing edge case."
+        },
+        {
+          "id": "925905291",
+          "author": "anish-mudaraddi",
+          "body": "Yes, setting `aargs['masses']` to `None` for a custom_species which don't have explicitly set masses allows ASE to set default mass.",
+          "file_path": "ase/io/castep.py",
+          "line_number": 628,
+          "commit_sha": "eafa7ef7264970542654a33bc41697bf3151bcb5",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-04-27T11:37:13.363Z",
+          "is_outdated": false
+        },
+        {
+          "id": "926048937",
+          "author": "elichad",
+          "body": "Ah, my mistake! Thanks.",
+          "file_path": "ase/io/castep.py",
+          "line_number": 628,
+          "commit_sha": "eafa7ef7264970542654a33bc41697bf3151bcb5",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-04-27T13:17:28.344Z",
+          "is_outdated": false
+        },
+        {
+          "id": "926252678",
+          "author": "anish-mudaraddi",
+          "body": "I changed the read step slightly to work allow custom masses for all species, not just custom species as before",
+          "file_path": "ase/io/castep.py",
+          "line_number": 628,
+          "commit_sha": "eafa7ef7264970542654a33bc41697bf3151bcb5",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-04-27T15:00:16.832Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests a fallback to ASE defaults for species not appearing in the species_mass block."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "927809161",
+          "author": "elichad",
+          "body": "I'm happy with these updates. My one remaining comment is that it would be good to have tests to confirm that the read/write of this block works as expected. \n\nPaging @ajjackson for a 'proper' review :smile:",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2022-04-28T11:40:18.678Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "low",
+          "label_reasoning": "General review comment requesting tests; closest fit is maintainability/documentation concern."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests addition of tests to confirm read/write of the species_mass block works as expected."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "935245130",
+          "author": "ajjackson",
+          "body": "Will take a look soon, thanks. I ran into something today that may or may not be a problem for masses, but is certainly an issue for forces and should be tested!\n\nI was discussing this MR with Dominik and he raised the issue of re-sorting. I'm not sure if it is a problem in this implementation, but a bit of investigation suggests it's definitely a problem when reading forces and so quite likely to pop up in isotopic workflows. https://gitlab.com/ase/ase/-/issues/1093",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2022-05-04T16:59:21.492Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "medium",
+          "label_reasoning": "Re-sorting issue when reading forces/masses is flagged as a potential correctness bug in the implementation."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential bug with re-sorting affecting forces (and possibly masses) and implies it should be investigated and tested."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "946073080",
+          "author": "ajjackson",
+          "body": "There's something a bit funny going on with the warning messages.\n\n```\nIn [21]: import ase.build\n\nIn [22]: atoms = ase.build.molecule('CH4', vacuum=4.)\n\nIn [23]: atoms[3].mass = 2.\n\nIn [24]: atoms.write('CDH3.cell')\n/home/adamjackson/opt/ase-fork/ase/io/castep.py:255: UserWarning: Warning: custom mass specified forstandard species C, creating custom species\n  warnings.warn('Warning: custom mass specified for'\n/home/adamjackson/opt/ase-fork/ase/io/castep.py:255: UserWarning: Warning: custom mass specified forstandard species H, creating custom species\n  warnings.warn('Warning: custom mass specified for'\n/home/adamjackson/opt/ase-fork/ase/io/castep.py:261: UserWarning: Warning: creating custom species H:0 with mass {2.0: [3]}\n  warnings.warn('Warning: creating custom species {0} with mass {1}'.format(custom_species_name, str(mass_dict)))\n```\n\nWhen only changing one mass, I get a custom species warning for every species. Yet the resulting .cell file does only use one custom species.\n\n```\n#######################################################\n#CASTEP cell file: CDH3.cell\n#Created using the Atomic Simulation Environment (ASE)#\n#######################################################\n\n%BLOCK LATTICE_CART\n 9.258236  0.000000  0.000000\n 0.000000  9.258236  0.000000\n 0.000000  0.000000  9.258236\n%ENDBLOCK LATTICE_CART\n\n%BLOCK POSITIONS_ABS\nC  4.629118  4.629118  4.629118\nH  5.258236  5.258236  5.258236\nH  4.000000  4.000000  5.258236\nH:0  5.258236  4.000000  4.000000\nH  4.000000  5.258236  4.000000\n%ENDBLOCK POSITIONS_ABS\n\n%BLOCK SPECIES_MASS\nH:0 2.0\n%ENDBLOCK SPECIES_MASS\n```\n\n(Also, there should be a space in the middle of \"forstandard\" and we don't need to include the word \"Warning:\".)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2022-05-13T13:33:49.959Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Warning messages are incorrectly triggered for every species even when only one mass is changed, indicating a logic error in the condition for emitting warnings. Also includes a string formatting bug ('forstandard')."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Reports a bug with incorrect/excessive warning messages, a missing space in a string ('forstandard'), and suggests removing the redundant 'Warning:' prefix \u2014 all concrete fixes."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "946104389",
+          "author": "ajjackson",
+          "body": "I was able to raise\n`ValueError: write_cell: error writing custom masses found custom species H with inconsistent masses (2.0 and 1.008) please fix manually`\n\nby loading a .cell file with custom species and changing a mass. As discussed I think it's good for us to bow out of interpreting this situation. The error message could however be more helpful. How about something like:\n\n> ValueError: custom mass(es) were set, but an inconsistent set of castep_custom_species was already defined. If using both features, ensure that each species type in atoms.arrays['castep_custom_species'] has consistent mass values and that each atom with non-standard mass belongs to a custom species type.\n\n(Try to avoid beginning an error message with e.g. \"write_cell: \", as to a troubleshooter this could look like something that was produced by the stacktrace. In fact this hard-coded string can easily become outdated as things are moved and renamed.)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2022-05-13T13:55:50.432Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "The error message is unhelpful and misleading to troubleshooters; the comment requests a clearer, more actionable error message."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests improving the error message with specific recommended wording and advises against prefixing messages with function names."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "947953558",
+          "author": "ajjackson",
+          "body": "Thanks Anish, this is looking promising. We should add some tests.\n\nGenerally in ASE tests involve little reference data; they rely on generating appropriate data with ASE features and specifically checking the correctness of the functionality being tested.\n\nSo for this, I think we'll want\n- Create Atoms with a custom mass (from a list of positions or using ase.build.molecule), write to .cell, check that the .cell file has a species_mass block in it with the right content.\n- Read the .cell file, check that the positions and masses match the original Atoms\n- Repeat the above with an existing custom species on multiple atoms being changed, ensure custom species name survives round-trip\n- Repeat the above, changing e.g. _all_ Hydrogen atoms, check mass block didn't invent a new label\n- Try setting a custom species on _different_ atom before write, assert error is raised (`with pytest.raises(AppropriateException): ...`).\n\nThere is an existing ase/test/calculator/castep directory, but I think ideally this would go in a new ase/test/io/test_castep.py to indicate that it doesn't involve calling the calculator. (Hopefully more CASTEP tests can live there over time...)\n\n[ase/test/fio/text_xyz.py](https://gitlab.com/ase/ase/-/blob/master/ase/test/fio/test_xyz.py) is a reasonably simple/clean example of some reader tests; [ase/test/cell/test_cell.py](https://gitlab.com/ase/ase/-/blob/master/ase/test/cell/test_cell.py) is another clean example using a couple more Pytest features.\n `pytest` will run any function with a name beginning with `test_` and `pytest.mark.parametrize` can be used to pass parameters to repetitive tests. Bare assert statements can be used with `pytest.approx()` for many comparisons.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2022-05-16T13:17:05.645Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "low",
+          "label_reasoning": "General comment requesting tests be added; primarily a documentation/coverage concern."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests multiple specific tests be added with detailed descriptions of what each test should cover and where the test file should live."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "966723386",
+          "author": "ajjackson",
+          "body": "I find the regular padding easier to read, was this a PEP8 violation or something?",
+          "file_path": "ase/io/castep.py",
+          "line_number": null,
+          "commit_sha": "281acb3417edcec37a5e8fb2d5d1ef2f8dc10841",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-05-31T20:28:49.916Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Space Formatting Placement",
+          "label_confidence": "medium",
+          "label_reasoning": "Comment questions a formatting/padding change, likely related to spacing or alignment style."
+        },
+        {
+          "id": "967453935",
+          "author": "anish-mudaraddi",
+          "body": "Yes sorry - I ran an auto formatting script on that file.\n\nI'll remove these changes",
+          "file_path": "ase/io/castep.py",
+          "line_number": null,
+          "commit_sha": "281acb3417edcec37a5e8fb2d5d1ef2f8dc10841",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-06-01T09:38:57.098Z",
+          "is_outdated": false
+        },
+        {
+          "id": "967535656",
+          "author": "ajjackson",
+          "body": "Some of the other changes it made seem good, especially the indentation of slice ranges like\n```python\nx = y[alpha:beta\n            +c]\n```\nis much less misleading than\n```python\nx = y[alpha:beta\n      +c]\n```\n\nBut for review purposes it's good to look at these tweaks separately from new functionality.",
+          "file_path": "ase/io/castep.py",
+          "line_number": null,
+          "commit_sha": "281acb3417edcec37a5e8fb2d5d1ef2f8dc10841",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-06-01T10:30:31.456Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions a formatting change, implying it may should be reverted to the original padding style."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "966723395",
+          "author": "ajjackson",
+          "body": "Should this be \"atoms\" (plural)? This is quite an important convention in ASE because `Atom` and `Atoms` are different classes.",
+          "file_path": "ase/test/io/test_castep.py",
+          "line_number": 9,
+          "commit_sha": "281acb3417edcec37a5e8fb2d5d1ef2f8dc10841",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-05-31T20:28:50.177Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "high",
+          "label_reasoning": "Variable named 'atom' should be 'atoms' to match ASE conventions, where Atom and Atoms are distinct classes."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests renaming a variable from singular to plural ('atoms') to follow ASE conventions."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "966723399",
+          "author": "ajjackson",
+          "body": "Rather than filter all warnings, would it be better to use `pytest.warns` to check that warnings are raised when expected? What other warnings are we filtering here?",
+          "file_path": "ase/test/io/test_castep.py",
+          "line_number": 29,
+          "commit_sha": "281acb3417edcec37a5e8fb2d5d1ef2f8dc10841",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-05-31T20:28:50.283Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Redundancy Handling",
+          "label_confidence": "medium",
+          "label_reasoning": "Filtering all warnings is overly broad; suggests using pytest.warns for targeted warning assertion instead."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests replacing a broad warning filter with `pytest.warns` to explicitly check that expected warnings are raised."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "966723401",
+          "author": "ajjackson",
+          "body": "Again, in ase we usually refer to this object as plural \"atoms\"",
+          "file_path": "ase/test/io/test_castep.py",
+          "line_number": 34,
+          "commit_sha": "281acb3417edcec37a5e8fb2d5d1ef2f8dc10841",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-05-31T20:28:50.390Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "high",
+          "label_reasoning": "Same naming convention issue as index 10 \u2014 variable should be 'atoms' per ASE convention."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Again suggests renaming a variable to 'atoms' (plural) per ASE convention."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "966723403",
+          "author": "ajjackson",
+          "body": "Maybe \"for i in indices\"?",
+          "file_path": "ase/test/io/test_castep.py",
+          "line_number": 38,
+          "commit_sha": "281acb3417edcec37a5e8fb2d5d1ef2f8dc10841",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-05-31T20:28:50.483Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "high",
+          "label_reasoning": "Loop variable name should be more descriptive ('i' \u2192 'i in indices') for clarity."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests renaming a loop variable to 'i' to 'for i in indices' for clarity."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "966723408",
+          "author": "ajjackson",
+          "body": "Comparing arrays of floating-point numbers can be a bit delicate when running on different machines etc. Probably better to use something like `np.testing.assert_allclose()` for these position/mass comparisons.\n\n(For many objects, `pytest.approx` is handy and readable.)",
+          "file_path": "ase/test/io/test_castep.py",
+          "line_number": 46,
+          "commit_sha": "281acb3417edcec37a5e8fb2d5d1ef2f8dc10841",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-05-31T20:28:50.588Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Direct float array comparison can fail due to floating-point precision differences across machines; should use approximate comparison."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests use of `np.testing.assert_allclose()` or `pytest.approx` instead of direct float array comparisons for robustness."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "966723412",
+          "author": "ajjackson",
+          "body": "This looks like another comparison of float arrays.",
+          "file_path": "ase/test/io/test_castep.py",
+          "line_number": 63,
+          "commit_sha": "281acb3417edcec37a5e8fb2d5d1ef2f8dc10841",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-05-31T20:28:50.786Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Another float array comparison that may fail due to precision issues, same as index 14."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags another direct float array comparison that should be replaced with a tolerance-aware comparison."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "966723416",
+          "author": "ajjackson",
+          "body": "Rather than catching e and writing another assert statement, could this be done more cleanly with `pytest.raises(ValueError, match=...)`?\n\nhttps://docs.pytest.org/en/6.2.x/reference.html#pytest.raises",
+          "file_path": "ase/test/io/test_castep.py",
+          "line_number": 75,
+          "commit_sha": "281acb3417edcec37a5e8fb2d5d1ef2f8dc10841",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-05-31T20:28:50.877Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Smelling",
+          "label_confidence": "medium",
+          "label_reasoning": "Manual try/except with assert is less clean than using pytest.raises; code smell in test style."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests replacing the manual try/except pattern with `pytest.raises(ValueError, match=...)` for cleaner test code."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "966727911",
+          "author": "ajjackson",
+          "body": "Looking at the test failures, the \"oldlibs\" suite failed but it seems unrelated to these changes; the new tests actually passed in that suite. Calculators-lite also has a funny message about the `io` module. It's probably a coincidence, but anyway try moving this test into `ase/tests/fio` where it belongs and we'll see what happens when the CI runs again!\n\nApart from that, I've made a few comments about style and alternative ways of doing things. But basically this looks like a very suitable set of tests, thanks for putting them together!",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2022-05-31T20:33:36.417Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "medium",
+          "label_reasoning": "Test file is in the wrong directory; should be moved to ase/tests/fio where it belongs."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests moving the test file to a different directory (`ase/tests/fio`) to resolve CI failures."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "967538872",
+          "author": "ajjackson",
+          "body": "Did you mean to leave this print statement in?",
+          "file_path": "ase/test/fio/test_castep.py",
+          "line_number": 67,
+          "commit_sha": "ebb80f1b8e5a3d14643faef7ac25196b5e307b9e",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-06-01T10:32:00.007Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Dead-Code Related Issues",
+          "label_confidence": "high",
+          "label_reasoning": "A print statement was left in the code unintentionally, which is debug/dead code."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Points out an accidentally left-in print statement that should be removed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "967550768",
+          "author": "ajjackson",
+          "body": "This could alternatively be something like\n```python\nfor line, expected_line in zip(masses, expected_mass_block):\n```\nand avoid indexing altogether. (I don't mind, the existing version is clear enough.)",
+          "file_path": "ase/test/fio/test_castep.py",
+          "line_number": 64,
+          "commit_sha": "1b06f12b570ef7d618bda89b8dd953b3700b72a1",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-06-01T10:37:42.630Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Redundancy Handling",
+          "label_confidence": "low",
+          "label_reasoning": "Suggests using zip to avoid manual indexing, a minor style/readability improvement."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests an alternative loop pattern using zip to avoid indexing, implying a refactor opportunity."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "967693598",
+          "author": "ajjackson",
+          "body": "What warning does this actually catch? Is it the CASTEP keyword JSON stuff?",
+          "file_path": "ase/test/fio/test_castep.py",
+          "line_number": 75,
+          "commit_sha": "285f42e81460376308b195baeb8110dc46f8e577",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-06-01T12:21:53.908Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "The purpose of the warning filter is unclear; reviewer is asking what warning is actually being caught, indicating insufficient documentation of intent."
+        },
+        {
+          "id": "967760257",
+          "author": "anish-mudaraddi",
+          "body": "yes that's correct",
+          "file_path": "ase/test/fio/test_castep.py",
+          "line_number": 75,
+          "commit_sha": "285f42e81460376308b195baeb8110dc46f8e577",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-06-01T13:03:02.376Z",
+          "is_outdated": false
+        },
+        {
+          "id": "967854285",
+          "author": "ajjackson",
+          "body": "Right. It's a bit annoying that this means we potentially miss unexpected warnings raised by the new functionality. But the problem is out-of-scope for this MR. Sorry to keep asking for more tweaks but can we have a comment here to explain that? Something like\n\n```python\nwith pytest.warns(UserWarning):  # CASTEP IO is noisy while handling keywords JSON\n\n```",
+          "file_path": "ase/test/fio/test_castep.py",
+          "line_number": 75,
+          "commit_sha": "285f42e81460376308b195baeb8110dc46f8e577",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-06-01T13:58:17.413Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions what warning is being caught, implying the warning suppression may be unclear or incorrect and should be investigated/documented."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "981424512",
+          "author": "askhl",
+          "body": "I know I'm late to the party, sorry.\n\nI would suggest moving the whole `if atoms.has('masses'):` block to a function, so the very long function doesn't become longer.  Also, there's no reason to use setattr() when we know the name of the attribute: just do `cell.species_mass = mass_block`",
+          "file_path": "ase/io/castep.py",
+          "line_number": 271,
+          "commit_sha": "eafa7ef7264970542654a33bc41697bf3151bcb5",
+          "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+          "created_at": "2022-06-09T16:41:02.222Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Smelling",
+          "label_confidence": "high",
+          "label_reasoning": "Suggests extracting a block into a function to avoid making an already long function longer, and flags unnecessary use of setattr when direct attribute assignment is clearer."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests refactoring a long block into a separate function and replacing setattr() with direct attribute assignment \u2014 two concrete code changes."
+    }
+  ],
+  "review_thread_count": 28,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "925985367",
+            "author": "anish-mudaraddi",
+            "body": "It looks like when we read in a cell file which contains a custom species like `H:mu` (like in #1079), every other species (Si in this case) get treated as custom species, why is that?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2022-04-27T12:36:59.000Z",
+            "is_outdated": false
+          },
+          {
+            "id": "926206389",
+            "author": "elichad",
+            "body": "It's because the `castep_custom_species` array needs to be interchangeable with the result of `get_chemical_symbols()` \u2013 see how `elems` is used in the writer \u2013 so it must have the same length and be in the same order as the other arrays associated with the atoms object (masses, positions, etc)",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2022-04-27T14:42:57.500Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "949858537",
+            "author": "anish-mudaraddi",
+            "body": "I had a question about an edge case I found:\n\nIf we run something like:\n\n```\natoms = ase.build.molecule('H2')\natoms[0].mass = 1\nase.io.write('new.cell', atoms)\n\natoms = ase.io.read('new.cell')\natoms[1].mass = 2\nase.io.write('new2.cell', atoms)\n```\n\nDo we want to produce an error? Currently we produce this output:\n```\n%BLOCK LATTICE_CART\n 0.000000  0.000000  0.000000\n 0.000000  0.000000  0.000000\n 0.000000  0.000000  0.000000\n%ENDBLOCK LATTICE_CART\n\n%BLOCK POSITIONS_ABS\nH:0  0.000000  0.000000  0.000000\nH  0.000000  0.000000  0.250000\n%ENDBLOCK POSITIONS_ABS\n\n%BLOCK SPECIES_MASS\nH:0 1.0\nH 2.0\n%ENDBLOCK SPECIES_MASS\n```\n\nIn this case, because we have no more H with default mass, we create another label 'H' with mass as 2.0 instead of 1.008. Is this the correct thing to do?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2022-05-17T16:08:27.265Z",
+            "is_outdated": false
+          },
+          {
+            "id": "966595038",
+            "author": "ajjackson",
+            "body": "Ooh, nice edge-case!\n\nI suppose it would be slightly more consistent to error/complain in this case. But for practical purposes, the user has made it clear what they want and we are able to satisfy it - albeit not in the most attractive way.\n\nIt seems harmless. If we can't distinguish between \"set this atomic mass to 2\" and \"set all remaining atomic masses to 2\", and the result will be a valid calculation with the expected behaviour, I think we should err in the user's favour :wink:",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2022-05-31T18:16:05.597Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "960849101",
+            "author": "anish-mudaraddi",
+            "body": "@ajjackson Added tests, not sure why the pipeline fails \nI think naming the testing directory `io` causes issues?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2022-05-26T09:53:59.674Z",
+            "is_outdated": false
+          },
+          {
+            "id": "966609396",
+            "author": "ajjackson",
+            "body": "Why not use the existing `ase/tests/fio` directory? I think it stands for \"file input/output\" so would be the appropriate home for this.\n\nThe tests pass for me locally, I'll take a look at the CI logs.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2022-05-31T18:26:45.150Z",
+            "is_outdated": false
+          },
+          {
+            "id": "967686633",
+            "author": "ajjackson",
+            "body": "Seems to pass now it's in `fio`!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2022-06-01T12:18:07.525Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "967596765",
+            "author": "anish-mudaraddi",
+            "body": "I believe I've made the required changes, thanks for all your help!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2022-06-01T11:09:33.162Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "967987938",
+            "author": "ajjackson",
+            "body": "Approved! Will give @askhl and others a few days to object and merge if not.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2022-06-01T15:14:25.756Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_non_substantive"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_inline": true,
+        "comments": [
+          {
+            "id": "966619729",
+            "author": "ajjackson",
+            "body": "Very nice parametrisation, this is easy to follow.",
+            "file_path": "ase/test/io/test_castep.py",
+            "line_number": 16,
+            "commit_sha": "281acb3417edcec37a5e8fb2d5d1ef2f8dc10841",
+            "base_sha": "50cc74191c3f9cdcad1a2a708f7da3324bb2889d",
+            "created_at": "2022-05-31T18:38:12.486Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "A pure compliment praising the parametrisation with no suggested change."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 28,
+    "stage1_kept": 23,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 4,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 1,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1,
+    "stage3_cost_usd": 0.046090250000000006
+  }
+}

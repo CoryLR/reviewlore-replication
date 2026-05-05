@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "ase/md/velocitydistribution.py",
+      "line_number": 179,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The line `See :func:`MaxwellBoltzmannDistribution` for details of parameters.` is both redundant and misleading. All parameters are already fully documented in the section that immediately follows this line, so the cross-reference adds nothing. More importantly, pointing users of the *new* canonical function to the *deprecated* function as the authoritative reference is backwards. This line should simply be removed.",
+      "index": 0
+    },
+    {
+      "file_path": "ase/md/velocitydistribution.py",
+      "line_number": 205,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`thermalize_momenta` accepts any `float` for `temperature_K` without validation. A negative value (e.g., `thermalize_momenta(atoms, -300.0)`) produces `temp < 0`, which causes `np.sqrt(masses * temp)` in `_maxwellboltzmanndistribution` to return NaN for all momenta \u2014 silently, aside from a numpy RuntimeWarning. This NaN state then propagates through the simulation, making diagnosis very difficult. Consider adding an explicit guard at the top of the function:\n```python\nif temperature_K < 0:\n    raise ValueError(f'temperature_K must be non-negative, got {temperature_K}')\n```",
+      "index": 1
+    },
+    {
+      "file_path": "ase/md/velocitydistribution.py",
+      "line_number": 202,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `rng` docstring example uses `numpy.random.RandomState(seed)`, which is the legacy numpy random API. The codebase has already adopted the new-style generator in multiple updated test files (e.g., `np.random.default_rng(seed=42)` in `test_bussi.py`). The example should be updated to `numpy.random.default_rng(seed)` to stay consistent and steer users toward the modern API.",
+      "index": 2
+    },
+    {
+      "file_path": "ase/md/velocitydistribution.py",
+      "line_number": 98,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The deprecation message `'Use thermalize_momenta'` doesn't tell users *how* to import the replacement. `MaxwellBoltzmannDistribution` was typically imported from `ase.md.velocitydistribution`, while `thermalize_momenta` lives at `ase.md`. A user who sees the warning in their logs and searches for where to import from would benefit from a more complete message, e.g. `'Use thermalize_momenta (from ase.md import thermalize_momenta)'`.",
+      "index": 3
+    },
+    {
+      "file_path": "ase/md/velocitydistribution.py",
+      "line_number": 149,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `communicator` deprecation message says `'will be removed in ASE 3.27.0'` \u2014 a version that has already passed. Now that `MaxwellBoltzmannDistribution` itself is deprecated since 3.29.0, this inner message is stale and could confuse users about the actual timeline. It should either be updated to a future version or reworded to reflect that the whole outer function is deprecated.",
+      "index": 4
+    },
+    {
+      "file_path": "ase/test/md/test_maxwellboltzmann.py",
+      "line_number": 50,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The function `test_maxwellboltzmann_dof` still contains `maxwellboltzmann` in its name but now exclusively exercises `thermalize_momenta`. A name like `test_thermalize_momenta_dof` would be more accurate and consistent with the renaming done for the other tests in this file.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`examples/tutorials/md.py` still imports and calls `MaxwellBoltzmannDistribution` (lines 62, 98, and 299). Users who follow the tutorial will now see `DeprecationWarning: Use thermalize_momenta` without any guidance in the tutorial text about what changed or where the new function lives. The tutorial should be updated alongside the library change so that it continues to model current best practice.",
+      "index": 6
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `temp` parameter (temperature in eV) was previously deprecated with a `FutureWarning` and is now fully removed from `MaxwellBoltzmannDistribution`. Any existing code that still passes `temp` as a positional argument \u2014 e.g., `MaxwellBoltzmannDistribution(atoms, 0.026)` \u2014 will first receive `DeprecationWarning: Use thermalize_momenta` and then a confusing `TypeError: MaxwellBoltzmannDistribution() takes 1 positional argument but 2 positional arguments were given`, with no mention of the removed `temp`. Since `temp` was a documented public parameter, a `**kwargs` guard that intercepts the old name and raises an explicit `TypeError('The temp argument has been removed; use temperature_K=... in Kelvin')` would give users much clearer guidance.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.5851045500000001,
+  "duration_seconds": 315.8685779571533
+}

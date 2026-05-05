@@ -1,0 +1,44 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/cli-storybook/src/bin/run.ts",
+      "line_number": 309,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `--output` option is attached to the parent `aiCommand` rather than the `prepare` subcommand. In Commander.js, options are parsed in the context of the command they are defined on \u2014 passing them after a different command name is an error. This means `storybook ai prepare --output file.md` (the intuitive form, and what the PR description documents) will throw `error: unknown option '--output'` at runtime, because `--output` is not registered on `prepare`. The only form that would actually work is `storybook ai --output file.md prepare`, which is counter-intuitive and inconsistent with how every other subcommand option in this file behaves. The fix is to move the `.option('-o, --output <path>', ...)` call into the `prepare` subcommand chain (alongside `--config-dir`) and remove the parent option merging logic added in the action handler.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/bin/run.ts",
+      "line_number": 326,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `{ ...parentOptions, ...options }` spread means child options silently win on any name collision with parent options. Today there's no collision (`output` is parent-only, `configDir` is child-only), but the `command()` factory also injects global options (e.g., `--logfile`, `--debug`) onto `aiCommand` via hooks. If a future child option shares a name with any of those, the child value would silently shadow it. This pattern is novel \u2014 it's the only instance of `cmd.parent?.opts()` merging in the codebase \u2014 and the fragility is a good reason to instead place `--output` directly on `prepare` and remove this merge entirely.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/index.ts",
+      "line_number": 72,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`writeFile` will throw `ENOENT: no such file or directory` if any parent directory in the output path does not exist (e.g., `storybook ai prepare -o new-dir/prompt.md`). The raw Node.js error surfaces through `handleCommandFailure` and is not user-friendly. Consider either (a) calling `await mkdir(dirname(outputPath), { recursive: true })` before `writeFile` (requires importing `mkdir` and `dirname`), or (b) catching the `ENOENT` and re-throwing with a clearer message such as `\"Output directory does not exist: ${dirname(outputPath)}\"`.",
+      "index": 2
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Because `--output` is defined on the parent `ai` command, it will appear in the help text for every future `ai` subcommand, even those where writing to a file is irrelevant. Subcommand-specific options should live on their own subcommand to keep `--help` output accurate and scoped.",
+      "index": 3
+    },
+    {
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "No tests were added for the new `--output` code path. At minimum, there should be unit tests covering: (1) the file-write branch completes successfully and writes the correct content, and (2) the stdout-log branch is exercised when `output` is absent. Edge cases like a non-existent parent directory are also worth covering once error handling is added.",
+      "index": 4
+    }
+  ],
+  "cost_usd": 0.44195460000000003,
+  "duration_seconds": 269.37973713874817
+}

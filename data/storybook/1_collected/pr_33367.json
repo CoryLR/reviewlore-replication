@@ -1,0 +1,131 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33367,
+  "title": "Core: Fix play function `mount` detection when destructuring in the function body",
+  "body": "Closes #33366 \r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\nBesides looking for `mount` in an inline-destructured play function argument, I added support for destructuring `mount` on the first line of the play function body.\r\n\r\nPreviously only this was legal:\r\n```js\r\nplay: async ({ mount }) => {\r\n  await mount();\r\n}\r\n```\r\n\r\nNow also this is legal:\r\n```js\r\nplay: async (context) => {\r\n  const { mount } = context;\r\n  await mount();\r\n}\r\n```\r\n\r\nThis is still not legal (destructuring is required):\r\n```js\r\nplay: async (context) => {\r\n  await context.mount();\r\n}\r\n```\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n_This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!_\r\n\r\n<!-- Please include the steps to test your changes here. For example:\r\n\r\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Open Storybook in your browser\r\n3. Access X story\r\n\r\n-->\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Bug Fixes**\n  * Improved detection of destructured properties used by component play routines, covering inline, multiline, transpiled and nested patterns.\n\n* **Refactor**\n  * Hardened parsing for extracting used props and tightened function typing for safety.\n\n* **Tests**\n  * Added fixtures and test cases for basic, multiline, transpiled, late destructuring and comment-handling scenarios; updated snapshots.\n\n* **Chores**\n  * Removed an automatic transpilation compatibility workaround in build/preset configs.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ghengeveld",
+  "merged_at": "2026-01-09T13:38:48Z",
+  "base_ref": "next",
+  "merge_commit_sha": "18a094270c19ec05ea055b98cc08415e8725bc81",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "17efa74f75b24dbeaf9e99da73fefa0297203142",
+    "7311877b12fc876fc69ff2648edcf1b5a52c8768"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6cYa8e",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Identifier validation is incomplete.**\n\nThe regex `/^[^a-z_]|[^0-9a-z_]$/i` only validates the first and last characters of `firstArg`, allowing invalid identifiers like `foo-bar` or `a#b` to pass through. While the risk is low in this context (the input comes from parsing the function string), more complete validation would improve robustness and mitigate the ReDoS concern on line 34.\n\n\n\nConsider this more complete pattern:\n\n```diff\n-  if (!firstArg.match(/^[^a-z_]|[^0-9a-z_]$/i)) {\n+  if (!firstArg.match(/^[a-z_$][0-9a-z_$]*$/i)) {\n     return [];\n   }\n```\n\nOr if the current logic is intentional, add a comment explaining why partial validation is sufficient.\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  if (!firstArg.match(/^[a-z_$][0-9a-z_$]*$/i)) {\n    return [];\n  }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/preview-api/modules/preview-web/render/mount-utils.ts around\nlines 30 to 32, the current regex only checks the first and last character of\nfirstArg and allows invalid identifiers (e.g., \"foo-bar\" or \"a#b\"); replace the\npartial-pattern with a full identifier validation such as enforcing the first\nchar is a letter or underscore and the rest are alphanumeric or underscore (e.g.\n/^[A-Za-z_][A-Za-z0-9_]*$/) to reject invalid names, or if the partial check was\nintentional, add a brief comment explaining why full validation is unnecessary\nfor this input source and that the limited pattern avoids ReDoS concerns.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/preview-api/modules/preview-web/render/mount-utils.ts",
+          "line_number": 32,
+          "start_line": null,
+          "commit_sha": "c3fc2b787fe49a0db3a2daf04bf939b1f30def43",
+          "created_at": "2025-12-16T15:02:51Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6cYa8z",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Escape or validate `firstArg` before using in RegExp constructor.**\n\nConstructing a regular expression from the variable `firstArg` without escaping can lead to regex injection or parsing errors if `firstArg` contains special regex characters. While the risk is low in this context (the input is derived from the function's own source code), it's a best practice to sanitize dynamic regex inputs.\n\n\n\n**Solution 1 (recommended)**: Escape `firstArg` before using it in the RegExp:\n\n```diff\n+  const escapedFirstArg = firstArg.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n   const [, destructuredArg] =\n-    body?.trim()?.match(new RegExp(`^(?:const|let|var)\\\\s*{([^}]+)}\\\\s*=\\\\s*${firstArg};`)) || [];\n+    body?.trim()?.match(new RegExp(`^(?:const|let|var)\\\\s*{([^}]+)}\\\\s*=\\\\s*${escapedFirstArg};`)) || [];\n```\n\n**Solution 2**: Strengthen the validation on line 30 (see previous comment) to ensure `firstArg` contains only valid identifier characters.\n\nBased on static analysis hints from ast-grep.\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  const escapedFirstArg = firstArg.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n  const [, destructuredArg] =\n    body?.trim()?.match(new RegExp(`^(?:const|let|var)\\\\s*{([^}]+)}\\\\s*=\\\\s*${escapedFirstArg};`)) || [];\n  if (destructuredArg) {\n    return splitByComma(destructuredArg).map((prop) => prop.replace(/:.*|=.*/g, ''));\n  }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\uddf0 Tools</summary>\n\n<details>\n<summary>\ud83e\ude9b ast-grep (0.40.0)</summary>\n\n[warning] 34-34: Regular expression constructed from variable input detected. This can lead to Regular Expression Denial of Service (ReDoS) attacks if the variable contains malicious patterns. Use libraries like 'recheck' to validate regex safety or use static patterns.\nContext: new RegExp(`^(?:const|let|var)\\\\s*{([^}]+)}\\\\s*=\\\\s*${firstArg};`)\nNote: [CWE-1333] Inefficient Regular Expression Complexity [REFERENCES]\n    - https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS\n    - https://cwe.mitre.org/data/definitions/1333.html\n\n(regexp-from-variable)\n\n</details>\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/preview-api/modules/preview-web/render/mount-utils.ts around\nlines 34 to 38, the RegExp is built directly from the dynamic variable firstArg\nwhich can contain regex-special characters; escape firstArg before inserting it\ninto the RegExp (or alternatively validate that firstArg matches a valid JS\nidentifier pattern) to prevent regex injection/parsing errors\u2014implement a small\nescape function that replaces all RegExp metacharacters with escaped versions\nand use that escaped string when constructing the RegExp (or add a strict\nidentifier check and bail if it fails).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/preview-api/modules/preview-web/render/mount-utils.ts",
+          "line_number": 43,
+          "start_line": 37,
+          "commit_sha": "7311877b12fc876fc69ff2648edcf1b5a52c8768",
+          "created_at": "2025-12-16T15:02:51Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6clR7N",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Previous regex injection concern has been addressed; minor edge case remains.**\n\nLine 34 now escapes all regex metacharacters in `firstArg` before constructing the RegExp, which addresses the security concern from the previous review. The ast-grep ReDoS warning is a false positive since the escaping prevents malicious patterns.\n\nHowever, the pattern `[^}]+` on line 36 will not correctly handle nested braces in destructuring patterns. For example:\n```js\nconst { mount, options = { nested: true } } = context;\n```\nwould only capture up to the first `}`, missing `options`.\n\n\n\n\nWhile this is likely an edge case (nested destructuring in play functions is uncommon), consider documenting this limitation or enhancing the regex if such patterns are expected.\n\n**Note:** Based on past review comments, the escaping on line 34 successfully resolves the previously flagged security concern.\n\n<details>\n<summary>\ud83e\uddf0 Tools</summary>\n\n<details>\n<summary>\ud83e\ude9b ast-grep (0.40.0)</summary>\n\n[warning] 35-35: Regular expression constructed from variable input detected. This can lead to Regular Expression Denial of Service (ReDoS) attacks if the variable contains malicious patterns. Use libraries like 'recheck' to validate regex safety or use static patterns.\nContext: new RegExp(`^(?:const|let|var)\\\\s*{([^}]+)}\\\\s*=\\\\s*${escapedArg};`)\nNote: [CWE-1333] Inefficient Regular Expression Complexity [REFERENCES]\n    - https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS\n    - https://cwe.mitre.org/data/definitions/1333.html\n\n(regexp-from-variable)\n\n</details>\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/preview-api/modules/preview-web/render/mount-utils.ts",
+          "line_number": 43,
+          "start_line": 36,
+          "commit_sha": "7311877b12fc876fc69ff2648edcf1b5a52c8768",
+          "created_at": "2025-12-17T13:11:17Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dsI2m",
+          "author": "ndelangen",
+          "body": "Hopefully I'm understanding the code correctly, if not my comment might not make sense:\r\n\r\nYou're testing a 2 happy paths of your code:\r\n- the old methodology, where de-structure happens in the function arguments\r\n- the new, where de-structuring happens on the first line, I suppose this is what SWC outputs when the `bugfixes` is turned off?\r\n\r\nThen you test a single \"non-happy\" path, by adding a `console.log`-call above the de-structure, and your test correctly shows, it's not detected.\r\n\r\nThere are cases possible where the code can get \"confused\", and get triggered in an happy path incorrectly, or potentially crash?\r\n\r\nHere are some scenarios, that would be worth having a test for:\r\n```\r\n// I'd expect this to return ['mount']\r\nplay: async (context: any) => {\r\n  const {\r\n    mount, // a comment\r\n  } = context;\r\n  await mount();\r\n},\r\n\r\n// No trailing comma! I'd expect this to still return ['mount']\r\nplay: async (context: any) => {\r\n  const {\r\n    mount // a comment\r\n  } = context;\r\n  await mount();\r\n},\r\n\r\n// I'd expect this to return ['mount']\r\nplay: async (context: any) => {\r\n  const {\r\n    // a comment\r\n    mount,\r\n  } = context;\r\n  await mount();\r\n},\r\n\r\n// I'd expect this to return [], even though \"mount\" is destructured, it's not from the context\r\nplay: async (context: any) => {\r\n  const { mount } = await import('unrelated-module');\r\n  const {\r\n    mount: sbMount,\r\n  } = context;\r\n  await sbMount();\r\n},\r\n\r\n// I'm unsure what to expect, but the preferred return is ['mount']\r\nplay: async (context: any) => {\r\n  const {\r\n    mount: sbMount,\r\n  } = context;\r\n  await sbMount();\r\n},\r\n```\r\n\r\nI don't know if these would work correctly with the implementation, \r\nI understand that there's only so much we can do with a stringified fn and regexp.\r\n\r\nPerhaps we should add a bit more resilience to more failure cases, and I suggest adding a try-catch block around `getUsedProps`. That is unless any thrown errors would already be handled further up the code chain, which I'm not too familiar with. ",
+          "file_path": "code/core/src/preview-api/modules/preview-web/render/mount-utils.test.ts",
+          "line_number": 72,
+          "start_line": 60,
+          "commit_sha": "7311877b12fc876fc69ff2648edcf1b5a52c8768",
+          "created_at": "2025-12-24T12:26:02Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6dyFkY",
+          "author": "ghengeveld",
+          "body": "Comments are disregarded, they don't appear in the code we're operating on.",
+          "file_path": "code/core/src/preview-api/modules/preview-web/render/mount-utils.test.ts",
+          "line_number": 72,
+          "start_line": 60,
+          "commit_sha": "7311877b12fc876fc69ff2648edcf1b5a52c8768",
+          "created_at": "2025-12-25T16:30:32Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6d_CcE",
+          "author": "ndelangen",
+          "body": "I agree, I'm fairly sure that by default comments are discarded.\r\n\r\nBut, code of stories files are bundled by the preview builders, which are configurable, I think we can't make the assumption that comments will always be removed. \r\n\r\nCan you point me to some code that guarantees they will be discarded irregardless of the preview builder configuration?\r\n\r\nIf the point on code-comments I made above is not an issue, was not my only example.\r\n\r\nThe code can produce false-positives, false-negatives as well as throw errors.\r\nMy key suggestion is to add resilience with a try-catch (unless this makes no sense), and add more tests.",
+          "file_path": "code/core/src/preview-api/modules/preview-web/render/mount-utils.test.ts",
+          "line_number": 72,
+          "start_line": 60,
+          "commit_sha": "7311877b12fc876fc69ff2648edcf1b5a52c8768",
+          "created_at": "2025-12-29T09:28:22Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fg0zi",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Fix Biome regex errors + make body-capture robust for single-line play functions**  \n\n- `[^]+` trips Biome (`noEmptyCharacterClassInRegex`) at Line 15 and Line 25.  \n- Current body capture can fail when the entire function is on one line and contains additional `{}` (e.g., `const { mount } = context;`).  \n\n\n\n<details>\n<summary>Proposed diff</summary>\n\n```diff\n-export function getUsedProps(fn: (...args: unknown[]) => unknown) {\n-  const [, args, body] = fn.toString().match(/[^(]*\\(([^)]+)\\)(?:.*{([^]+)})?/) || [];\n+export function getUsedProps(fn: (...args: unknown[]) => unknown): string[] {\n+  const src = fn.toString();\n+  const [, args] = src.match(/^[^(]*\\(([^)]*)\\)/) || [];\n+  const [, body] = src.match(/^[^(]*\\([^)]*\\)[^{]*{([\\s\\S]*)}\\s*$/) || [];\n   if (!args) {\n     return [];\n   }\n\n   const [firstArg] = splitByComma(args);\n   if (!firstArg) {\n     return [];\n   }\n\n-  const [, destructuredProps] = firstArg.match(/^{([^]+)}$/) || [];\n+  const [, destructuredProps] = firstArg.match(/^{([\\s\\S]*)}$/) || [];\n   if (destructuredProps) {\n     return splitByComma(stripComments(destructuredProps)).map((prop) =>\n       prop.replace(/:.*|=.*/g, '').trim()\n     );\n   }\n\n   if (!firstArg.match(/^[a-z_$][0-9a-z_$]*$/i)) {\n     return [];\n   }\n\n   const escapedArg = firstArg.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n   const [, destructuredArg] =\n-    body?.trim()?.match(new RegExp(`^(?:const|let|var)\\\\s*{([^}]+)}\\\\s*=\\\\s*${escapedArg};`)) || [];\n+    body?.trim()?.match(\n+      new RegExp(`^(?:const|let|var)\\\\s*{([\\\\s\\\\S]*?)}\\\\s*=\\\\s*${escapedArg}\\\\s*;?`)\n+    ) || [];\n   if (destructuredArg) {\n     return splitByComma(stripComments(destructuredArg)).map((prop) =>\n       prop.replace(/:.*|=.*/g, '').trim()\n     );\n   }\n\n   return [];\n }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nexport function getUsedProps(fn: (...args: unknown[]) => unknown): string[] {\n  const src = fn.toString();\n  const [, args] = src.match(/^[^(]*\\(([^)]*)\\)/) || [];\n  const [, body] = src.match(/^[^(]*\\([^)]*\\)[^{]*{([\\s\\S]*)}\\s*$/) || [];\n  if (!args) {\n    return [];\n  }\n\n  const [firstArg] = splitByComma(args);\n  if (!firstArg) {\n    return [];\n  }\n\n  const [, destructuredProps] = firstArg.match(/^{([\\s\\S]*)}$/) || [];\n  if (destructuredProps) {\n    return splitByComma(stripComments(destructuredProps)).map((prop) =>\n      prop.replace(/:.*|=.*/g, '').trim()\n    );\n  }\n\n  if (!firstArg.match(/^[a-z_$][0-9a-z_$]*$/i)) {\n    return [];\n  }\n\n  const escapedArg = firstArg.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n  const [, destructuredArg] =\n    body?.trim()?.match(\n      new RegExp(`^(?:const|let|var)\\\\s*{([\\\\s\\\\S]*?)}\\\\s*=\\\\s*${escapedArg}\\\\s*;?`)\n    ) || [];\n  if (destructuredArg) {\n    return splitByComma(stripComments(destructuredArg)).map((prop) =>\n      prop.replace(/:.*|=.*/g, '').trim()\n    );\n  }\n\n  return [];\n}\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\uddf0 Tools</summary>\n\n<details>\n<summary>\ud83e\ude9b ast-grep (0.40.4)</summary>\n\n[warning] 37-37: Regular expression constructed from variable input detected. This can lead to Regular Expression Denial of Service (ReDoS) attacks if the variable contains malicious patterns. Use libraries like 'recheck' to validate regex safety or use static patterns.\nContext: new RegExp(`^(?:const|let|var)\\\\s*{([^}]+)}\\\\s*=\\\\s*${escapedArg};`)\nNote: [CWE-1333] Inefficient Regular Expression Complexity [REFERENCES]\n    - https://owasp.org/www-community/attacks/Regular_expression_Denial_of_Service_-_ReDoS\n    - https://cwe.mitre.org/data/definitions/1333.html\n\n(regexp-from-variable)\n\n</details>\n<details>\n<summary>\ud83e\ude9b Biome (2.1.2)</summary>\n\n[error] 15-15: The regular expression includes this negated empty character class.\n\nNegated empty character classes match anything.\nIf you want to match against [, escape it \\[.\nOtherwise, remove the character class or fill it.\n\n(lint/correctness/noEmptyCharacterClassInRegex)\n\n---\n\n[error] 25-25: The regular expression includes this negated empty character class.\n\nNegated empty character classes match anything.\nIf you want to match against [, escape it \\[.\nOtherwise, remove the character class or fill it.\n\n(lint/correctness/noEmptyCharacterClassInRegex)\n\n</details>\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/preview-api/modules/preview-web/render/mount-utils.ts",
+          "line_number": 46,
+          "start_line": 14,
+          "commit_sha": "7311877b12fc876fc69ff2648edcf1b5a52c8768",
+          "created_at": "2026-01-09T13:22:21Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 5
+}

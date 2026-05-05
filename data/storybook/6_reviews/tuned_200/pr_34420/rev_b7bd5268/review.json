@@ -1,0 +1,98 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.ts",
+      "line_number": 49,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This commented-out `logger.info` call is a debugging artifact that must be removed before merging. Per project conventions, no commented-out debug blocks should be present in merged code.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 138,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This empty `catch {}` block silently swallows all errors from `setupWatchers`, including unexpected failures in `getGitDir()`, `watchFile()`, or `configureBranchWatcher()`. The project rule is explicit: catch blocks must never be empty\u2014even for opportunistic/best-effort code paths. Errors should be logged at minimum with `logger.debug` from `storybook/internal/node-logger`. The comment explains the rationale but does not satisfy the logging requirement. Example fix:\n```ts\n} catch (error) {\n  logger.debug(`Git state watcher setup failed: ${error instanceof Error ? error.message : String(error)}`);\n}\n```",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 225,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `.catch()` handler in `reconfigureBranchWatcher` discards the caught error entirely. If `configureBranchWatcher` fails for an unexpected reason (e.g., a non-ENOENT I/O error from `readHeadRef`), there is no diagnostic signal\u2014only a silent watcher rebuild. Per project rules, errors must be logged at debug level before continuing. Example fix:\n```ts\nvoid this.configureBranchWatcher(gitDir, generation).catch((error) => {\n  logger.debug(`Branch watcher reconfiguration failed: ${error instanceof Error ? error.message : String(error)}`);\n  if (this.isWatcherSetupCurrent(generation)) {\n    this.scheduleWatcherRebuild();\n  }\n});\n```",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 129,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Both the `'head'` and `'packedRefs'` watchers are registered on the exact same path (`gitDir`, the `.git` directory). `fs.watch` on a directory fires for any change to any file within that directory, so any single git event (e.g., a branch switch touching `HEAD`) will fire both watcher callbacks, resulting in two `emitGitStateChange()` calls and an unnecessary `reconfigureBranchWatcher()` invocation for the packed-refs change case. The debounce in `ChangeDetectionService` absorbs the duplicate emissions, but the design is wasteful and the `WatcherKey` names (`'head'`, `'packedRefs'`) are misleading\u2014they imply file-specific watches, but both actually watch the entire directory. Consider consolidating into a single directory watcher with one callback that handles both concerns, or add an inline comment explaining the double-watch rationale and the reliance on debouncing.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 98,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `gitDiffProvider` field (`options.gitDiffProvider`) is no longer `readonly` because lazy initialization via `??=` requires mutation after construction. However, removing `readonly` opens the door to accidental reassignment outside `getGitDiffProvider()`. A pattern that preserves the intent more explicitly would be a separate private backing field with a private getter, or at minimum a comment noting that only `getGitDiffProvider()` should ever assign this field.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 154,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`getGitDiffProvider()` is called from both `start()` and `buildStatuses()`. In `start()`, the call registers a git state watcher as a side effect. In `buildStatuses()`, the same instance is used for querying. The lazy-initialization pattern works correctly here (`??=` guarantees a single instance), but having a side-effecting call (`onGitStateChange`) triggered through what looks like an accessor is non-obvious. Consider calling `getGitDiffProvider()` once at the top of `start()`, storing the result in a local variable, and using that variable for both subscription and later queries.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.test.ts",
+      "line_number": 1,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`FSWatcher` and `watch` are both exported from `'node:fs'` but appear in two separate `import type` lines (lines 1 and 3). These should be merged into a single statement:\n```ts\nimport type { FSWatcher, watch } from 'node:fs';\nimport type { readFile, stat } from 'node:fs/promises';\n```",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.test.ts",
+      "line_number": 103,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`void callback` is used here to suppress an \"unused parameter\" lint warning, but this is non-idiomatic. The established TypeScript/project convention for acknowledging an unused parameter without using it is to prefix the parameter name with `_`. Replace the lambda with `(_callback: () => void) => vi.fn()` and remove the `void callback` statement. This makes the intent immediately clear to readers.",
+      "index": 7
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.test.ts",
+      "line_number": 405,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `'rebuilds watchers after a watcher error while callbacks are still registered'` test calls `vi.useFakeTimers()` inside its own body and restores with `vi.useRealTimers()` in a `finally` block. The surrounding `describe` block uses `beforeEach` with `vi.clearAllMocks()` for setup. Switching to fake timers mid-describe and restoring in a test-local `finally` is fragile\u2014if a `waitFor` timeout fires before the `finally` runs, the timer state could leak. Consider moving `vi.useFakeTimers()` / `vi.useRealTimers()` to a dedicated `describe` sub-block with `beforeEach`/`afterEach` for this test.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `WatcherKey` type (`'branch' | 'head' | 'packedRefs'`) creates a false impression that each key corresponds to a distinct watched file. In practice, `'head'` and `'packedRefs'` both watch the same `gitDir` directory (as confirmed by the test asserting `['/repo/.git', '/repo/.git', '/repo/.git/refs/heads']`). Only `'branch'` watches a distinct, dynamically-determined path. A comment at the type definition explaining the semantic\u2014that `'head'` and `'packedRefs'` are logical roles for two callbacks on the same directory rather than separate file watches\u2014would help future maintainers understand the design without needing to trace the call sites.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `--diff-filter=ad` (lowercase `a` + `d`) change to exclude Added files from the `changed` set is a meaningful behavioral correction that prevents newly-added files from appearing in both `changed` and `new` simultaneously. This is a breaking behavior change relative to the previous `--diff-filter=d`. The intent is well-captured by the renamed test (`'returns changed and new files without overlap'`), but it is worth noting in the PR description or a code comment why lowercase `a` was added\u2014specifically that without it, staged-added files were erroneously classified as both changed and new.",
+      "index": 10
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The new `MockGitDiffProvider` class in the test file extends the real `GitDiffProvider` and overrides three methods with mock delegates. This approach works well and ensures the mock stays structurally in sync with the real class via the `override` keyword. One subtlety: the `MockGitDiffProvider` constructor calls `super('/repo')`, which means the real `GitDiffProvider` constructor runs with a live `process.cwd` fallback path, even though none of its real behavior is used. This is harmless today but could become a problem if the real constructor gains any side-effectful initialization (e.g., file reads). A brief comment noting this dependency would be defensive.",
+      "index": 11
+    }
+  ],
+  "cost_usd": 0.7745183,
+  "duration_seconds": 494.307813167572
+}

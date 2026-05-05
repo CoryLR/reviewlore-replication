@@ -1,0 +1,92 @@
+{
+  "inline_comments": [
+    {
+      "file_path": ".changeset/legal-rockets-train.md",
+      "line_number": 5,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Per project changeset conventions, the first word of the description after the type prefix must be capitalized. Change `feat: implement` to `feat: Implement`.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/requirement/styles.js",
+      "line_number": 4,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`genColor` calls `configApi.getConfig()` here, and `getStyles` (its caller) also calls `configApi.getConfig()` at line 31. The project rule is to call `getConfig()` once at the entry point and pass the result down. Refactor `genColor` to accept the already-resolved `config` (or just `{ themeVariables, look }`) as a parameter instead of re-fetching it.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/requirement/styles.js",
+      "line_number": 13,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The loop bound is `options.THEME_COLOR_LIMIT` (always 12 in current themes), but the guard above only confirms `borderColorArray.length > 0` \u2014 not that it has exactly 12 entries. If any theme populates `borderColorArray` with fewer elements than `THEME_COLOR_LIMIT`, `borderColorArray[i]` will be `undefined` for the out-of-range indices, producing invalid CSS like `stroke: undefined;`. Cap the loop with `Math.min(options.THEME_COLOR_LIMIT, borderColorArray.length)` to make this defensive.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/requirement/styles.js",
+      "line_number": 18,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`fill: ${bkgColorArray?.length ? bkgColorArray[i] : ''};` produces `fill: ;` (an empty property value) when there is no background color array. An empty value is invalid CSS and browser handling is undefined \u2014 some browsers ignore the entire declaration block. Use `fill: none` as the fallback: `fill: ${bkgColorArray?.length ? bkgColorArray[i] : 'none'};`. The same issue appears on line 23 for the `rect` selector.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/requirement/styles.js",
+      "line_number": 21,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The selector `[data-look=\"${look}\"][data-color-id=\"color-${i}\"].node  rect` has two spaces between `.node` and `rect`. The equivalent `path` selector on line 16 uses a single space. Use a single space for consistency.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/requirement/styles.js",
+      "line_number": 76,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `.edgeLabel` rule is indented with 4 spaces while every surrounding CSS rule in the same template literal uses 2-space indentation. Revert to 2-space indentation to match the rest of the file.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/markers.js",
+      "line_number": 438,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`.attr('viewBox', '0 0 25 20')` violates the project rule that `viewBox` must be set via the native DOM API because d3's `.attr()` can lowercase attribute names to `viewbox`, which SVG does not recognize, silently breaking the marker viewport. Use `markerSel.node().setAttribute('viewBox', '0 0 25 20')` on a saved reference to the marker selection. (Note: all existing markers in this file share this same pattern \u2014 those are also non-conformant \u2014 but the project rule still applies to new code.)",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/requirementBox.ts",
+      "line_number": 172,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The divider previously received `attr('style', nodeStyles)`, so user-applied `style` statements (e.g., `style req_a fill:#f9f,...`) propagated to the divider line. Replacing that with `attr('class', 'divider')` means user-defined CSS styles no longer affect the divider for any look \u2014 including classic and handDrawn. If excluding divider from user styles is intentional for neo, scope the change: keep the original `attr('style', nodeStyles)` for non-neo and add the class-only path only for neo.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/requirementBox.ts",
+      "line_number": 188,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`requirementEdgeLabelBackground` is an edge-label background color \u2014 it is semantically unrelated to whether node path styles should be applied. Using it as a gate for applying `nodeStyles` to `.outer-path path` is misleading and fragile: a theme that omits `requirementEdgeLabelBackground` but has `borderColorArray` would still apply styles, making the condition's intent opaque. Simplify to just `nodeStyles && node.look !== 'handDrawn'` to make the intent clear: apply node inline styles whenever they exist and the look supports them.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "No regression test covers the `handDrawn` look. The PR changes the divider-rendering branch (`rc.polygon` for neo, `rc.line` for else) and replaces the divider's inline style with a CSS class \u2014 both of which affect `handDrawn` paths. A Cypress `imgSnapshotTest` with `{ look: 'handDrawn' }` analogous to the existing classic regression test (bottom of the spec file) would confirm that handDrawn rendering is unaffected.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`nodeStyles` is applied twice to the requirement box: once on the roughjs wrapper `<g>` element via the pre-existing `rect.attr('class', 'basic label-container outer-path').attr('style', nodeStyles)`, and again on the `<path>` children inside that wrapper via the new `shapeSvg.selectAll('.outer-path path').attr('style', nodeStyles)`. Since child inline styles have higher specificity, the `<g>`-level application is now redundant. Consider removing `.attr('style', nodeStyles)` from the `rect.attr(...)` call to keep the styling responsibility in one place.",
+      "index": 10
+    }
+  ],
+  "cost_usd": 0.82582925,
+  "duration_seconds": 565.8581190109253
+}

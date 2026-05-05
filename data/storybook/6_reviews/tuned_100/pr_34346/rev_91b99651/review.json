@@ -1,0 +1,76 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 181,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`groupStatus: Record<StoryId, StatusValue>` still exists in `NodeProps`, is still computed by a `useMemo` call in `Tree` (via `getGroupStatus`), and is still forwarded as a prop \u2014 but it is no longer destructured or referenced anywhere inside `Node` after this refactor. The `useMemo` traverses the entire collapsed dataset on every update for zero benefit. Remove `groupStatus` from `NodeProps`, delete the corresponding `useMemo` in `Tree`, and drop the prop forwarding.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 238,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`getChangeDetectionStatus` is a pure business-logic utility that performs the same change/test status splitting as `getGroupDualStatus` in `status.tsx`, yet it lives in and is exported from the React component file `Tree.tsx`. This creates an awkward import in `status.test.ts` (`import { getChangeDetectionStatus } from '../components/sidebar/Tree.tsx'`). Move it to `status.tsx` alongside `getGroupDualStatus`, `getGroupStatus`, and `getMostCriticalStatusValue`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 193,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `key=\"icon\"` prop on each standalone `<svg>` inside `StatusIconMap` is meaningless. React's `key` prop only affects reconciliation within a list (elements produced by `.map()` or inside an array literal). On a static, non-list JSX element it has no effect and may mislead reviewers into thinking reconciliation issues were being addressed. Remove the `key` prop from every SVG entry in `StatusIconMap`.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 445,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "When only one icon slot is occupied, it is always placed in the **right** (second) slot regardless of whether it is a change or test status \u2014 the left slot gets a `StatusSlotPlaceholder`. This means a branch that has only change-detection status shows the change icon in the same visual position as a test icon, making spatial position unreliable as a status-type signal. Consider keeping each icon type in its own fixed slot:\n- `[change | <empty>]` \u2014 change only\n- `[<empty> | test]` \u2014 test only\n- `[change | test]` \u2014 both\nThis way users can build a stable spatial mental model.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/manager/utils/status.tsx",
+      "line_number": 169,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Both `// @ts-expect-error (non strict)` comments describe the suppression only as \"non strict\" without naming the actual type mismatch. Per project convention the comment should explain the specific gap (e.g. \"`getDescendantIds` expects `Record<string, API_HashEntry>` but values here are `Partial<API_HashEntry>`\"). Also: the first occurrence is paired with `as any` on the same line \u2014 if `as any` already satisfies the compiler, the `@ts-expect-error` directive will itself become an error when the project tightens to strict mode (TypeScript will complain that there is no error to suppress). Verify which suppression is actually load-bearing.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/manager/utils/status.test.ts",
+      "line_number": 237,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The \"priority within change-detection slot\" test populates a `StatusByTypeId` with three different map keys (`first`, `second`, `third`) all carrying `typeId: 'storybook/change-detection'`. In production `StatusByTypeId` is `Record<typeId, Status>` \u2014 its keys *are* the typeIds \u2014 so there can be at most one `storybook/change-detection` entry per story. This scenario cannot occur at runtime, and `getChangeDetectionStatus` would see at most one change-detection value, making priority irrelevant. The test is effectively re-testing `getMostCriticalStatusValue` (which already has its own suite) rather than a real splitting scenario. Replace it with a test that uses a single change-detection status entry alongside a single non-change entry with a lower-priority value, and verify the right value wins in each slot independently.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.stories.tsx",
+      "line_number": 456,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`BranchWithChangeDetectionPriority.render = ...` mutates an already-exported story object after creation. The only difference from the `makeDualSlotStory` default render is the initial `selectedId` (`dualSlotParentId` vs `dualSlotStoryId`). A cleaner approach is to add an optional `selectedId` parameter to `makeDualSlotStory` so the render function can be specified at definition time, keeping all story configuration in one place.",
+      "index": 6
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`getGroupDualStatus` in `status.tsx` has no unit tests despite containing non-trivial logic: recursive descendant collection, dual-bucket aggregation, and two TypeScript-suppressed casts. All test coverage added in this PR targets only `getChangeDetectionStatus`. At minimum, add cases for: (1) a group whose descendants have only change-detection statuses \u2014 expects the correct critical change value and `unknown` for test; (2) a group whose descendants have only test statuses \u2014 expects `unknown` for change and the correct critical test value; (3) a group with mixed descendants \u2014 expects both slots populated; (4) a group with no descendant statuses \u2014 expects `unknown` in both slots.",
+      "index": 7
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description and two of the new story names (`WithChangeDetectionOnly`, `WithAffectedStatus`) imply that change-detection icons appear on individual story leaf nodes, but the leaf-node rendering path only ever shows the test-status slot. The stories select a leaf story as `selectedStoryId`, yet that leaf will render no visible icon for a change-detection-only status. Either update the leaf-node rendering to also show the change-detection slot (matching the described behaviour and the branch implementation), or rename the stories and update the PR description to clarify that the dual-slot feature applies to branch/group nodes only.",
+      "index": 8
+    }
+  ],
+  "cost_usd": 0.6549157499999999,
+  "duration_seconds": 443.1197781562805
+}

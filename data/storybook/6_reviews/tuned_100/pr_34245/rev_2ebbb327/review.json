@@ -1,0 +1,86 @@
+{
+  "inline_comments": [
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 50,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `overrides` block for `[\"*.md\", \"*.mdx\"]` is dead configuration. Both patterns are already listed in `ignorePatterns` (lines 38\u201339 in the diff's proposed version), so oxfmt never processes these files and the override for `importOrderSeparation` / `importOrderSortSpecifiers` will never apply. Remove this entry to avoid misleading readers into thinking Markdown files receive any oxfmt treatment.",
+      "index": 0
+    },
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 63,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `**/frameworks/angular/template/**/*.ts` pattern in this override is unreachable. `ignorePatterns` already includes `\"code/frameworks/angular/template/**\"`, so template files are excluded before override resolution runs. The `parser: \"babel-ts\"` override is only effective for the `**/frameworks/angular/src/**/*.ts` half. Remove the template path from this `files` array so the config reflects what actually happens.",
+      "index": 1
+    },
+    {
+      "file_path": "package.json",
+      "line_number": 46,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The lint-staged config uses `oxfmt --check` (read-only / fail mode) instead of `oxfmt` (write / auto-fix mode). The previous configs in `code/package.json` and `scripts/package.json` used plain `oxfmt`, so staged files were auto-formatted and re-staged before the commit completed \u2014 the expected developer workflow. Switching to `--check` means every commit will fail when a file isn't pre-formatted, silently breaking the workflow for contributors who rely on the hook to handle formatting. The project rule about `--check` targets CI validation scripts; pre-commit hooks should use write mode. A better approach is environment-aware: use `oxfmt` in interactive shells and `oxfmt --check` in CI (the `std-env` / `detectAgent` pattern achieves this cleanly).",
+      "index": 2
+    },
+    {
+      "file_path": ".vscode/extensions.json",
+      "line_number": 9,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "File is missing a trailing newline (`}\\n`). The diff explicitly marks this with `\\ No newline at end of file`. This violates the POSIX text-file standard and `.editorconfig` rules enforced by the project. Add a newline at the end of the file.",
+      "index": 3
+    },
+    {
+      "file_path": ".vscode/settings.json",
+      "line_number": 58,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Same missing-trailing-newline issue as `.vscode/extensions.json`. The closing `}` on the last line has no `\\n` after it. Add a trailing newline.",
+      "index": 4
+    },
+    {
+      "file_path": "code/package.json",
+      "line_number": 27,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `lint` script chains `cd .. && yarn fmt:check` to navigate to the monorepo root. While this works in the same subshell, it is fragile: if the script is invoked from a different working directory (e.g., via `yarn workspace @storybook/code lint`), `cd ..` resolves to an unexpected path. The idiomatic pattern in this monorepo is `yarn --cwd .. fmt:check`, which uses Yarn's built-in workspace CWD resolution and is immune to caller CWD.",
+      "index": 5
+    },
+    {
+      "file_path": "scripts/ci/common-jobs.ts",
+      "line_number": 79,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `prettyDocs` CI job previously ran `yarn docs:fmt:check` from the `scripts/` working directory, which executed `cd ../docs && oxfmt --check ./_snippets` using the docs-specific config. It now runs `yarn fmt:check` from the root (no `working_directory`), which is `oxfmt --check .`. The root `.oxfmtrc.json` lists `\"docs\"` in `ignorePatterns`, so the entire `docs/` directory \u2014 including the snippets \u2014 is excluded. Docs snippet formatting is silently no longer validated by this CI job. If the intent is to defer docs formatting checks pending the DX team review, this should be documented and the job should be disabled or renamed; if docs checks should still run, restore the `scripts`-scoped command or point the step at the NX `scripts/project.json` `pretty-docs` target.",
+      "index": 6
+    },
+    {
+      "file_path": "scripts/ci/common-jobs.ts",
+      "line_number": 199,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "Both the `prettyDocs` job (line 79 in the diff's new version) and the `lint` job (this line) now execute `yarn fmt:check`, which runs `oxfmt --check .` over the entire codebase. This is an identical, redundant check running in two separate CI jobs and wasting compute on every CI run. Keep the format check in one dedicated job (e.g., a renamed `fmt` job) and remove it from the other, or let the `lint` job restrict itself to linting only.",
+      "index": 7
+    },
+    {
+      "file_path": "code/builders/builder-vite/input/iframe.html",
+      "line_number": 73,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The formatter added 6 spaces of leading whitespace to the template literal continuation lines of `message`. In the original source the lines `It looks like you're visiting...` and `Please re-run your Storybook...` began at column 0; in the reformatted version they begin with `      ` (6 spaces). Because these lines are inside a template literal, those spaces become part of the runtime string value. The `console.error` output will now display inconsistently indented error text, and the `innerHTML` assignment will include the extra spaces before each `<br/>`-separated line. `embeddedLanguageFormatting: \"off\"` prevents JS-syntax reformatting but does not prevent the formatter from adjusting block indentation relative to the HTML structure, inadvertently mutating the string. The continuation lines must be manually restored so the template literal content is unindented.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "A functional bug fix is bundled silently into this formatting-only PR. In `code/builders/builder-vite/input/iframe.html` line 88, the original `<ul></p>` (an unclosed list with a second opening `<ul>` tag) was corrected to `</ul></p>`. While this is a genuine improvement, it changes observable HTML output, is not mentioned in the PR description, and is not covered by any automated test. Functional changes should be called out explicitly in the PR description \u2014 even minor HTML fixes \u2014 so reviewers can assess them intentionally and so CI has the opportunity to catch regressions.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 1.1451764499999997,
+  "duration_seconds": 735.4166121482849
+}

@@ -1,0 +1,152 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "PR_READY.md",
+      "line_number": 1,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "This file (along with `PR_SUBMISSION_GUIDE.md`, `WARDLEY_MAPS_MEDIUM_GUIDE.md`, and `WARDLEY_MAPS_USER_GUIDE.md`) is a developer scratch/workflow artifact that documents how to submit this PR and contains blog-post-style content. None of these belong in the repository. They should be removed before merging \u2014 they will become permanent clutter in the repo's git history and show up in searches.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyParser.ts",
+      "line_number": 1,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Imports from `@mermaid-js/parser` instead of the published package alias `mermaid-parser`. The project-specific rule requires: `import { parse } from 'mermaid-parser'` when inside `packages/mermaid/src/`. Using the scoped name `@mermaid-js/parser` bypasses the intended package boundary. Both line 1 (`import type { Wardley }`) and line 2 (`import { parse }`) need to be updated.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyDb.ts",
+      "line_number": 15,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `builder` is a module-level mutable singleton. This leaks state across parallel diagram renders \u2014 if two Wardley diagrams are rendered concurrently (e.g., on a page with multiple diagrams), they will share and corrupt each other's builder state. Per project rules, all mutable diagram DB state must be wrapped in `ImperativeState` (see `packages/mermaid/src/utils/imperativeState.ts`) so each diagram render gets an independent state instance. The `clear()` function cannot fix this because concurrent renders won't call it at the right time.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 57,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Both `getConfigValues()` (line 57) and `getTheme()` (line 58) each call `getConfig()` internally, resulting in two `getConfig()` invocations at the start of every render. The project rule requires calling `getConfig()` exactly once per render function and reusing the result. Refactor both helpers to accept the config object as a parameter, call `getConfig()` once at the top of `draw`, and pass the result down: `const config = getConfig(); const configValues = getConfigValues(config); const theme = getTheme(config);`.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 1063,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The renderer uses `export default { draw }` (a default export of an object), but the project convention for diagram renderers is a named export: `export const renderer: DiagramRenderer = { draw };`. The consuming `wardleyDiagram.ts` should then use `import * as renderer from './wardleyRenderer.js'` to get a namespace object that satisfies `DiagramRenderer`. Using a default export here breaks the standard pattern used by every other diagram type.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyDiagram.ts",
+      "line_number": 4,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Follows from the renderer export issue above: `import renderer from './wardleyRenderer.js'` uses a default import. Once the renderer is updated to use a named export, this should become `import * as renderer from './wardleyRenderer.js'` to match the pattern used by all other diagram types (e.g., `radarDiagram.ts`, `pieDiagram.ts`).",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 420,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Throughout the `linksGroup.selectAll('line')` D3 chain and the trend rendering section, `Map.get()` results are accessed with the `!` non-null assertion (e.g., `positions.get(link.source)!`, `data.nodes.find(...)!`). While `validLinks` has been pre-filtered to guarantee positions exist, the project rule explicitly prohibits `!` on `Map.get()` results. Instead, cache with a guard: `const sourcePos = positions.get(link.source); if (!sourcePos) return 0;`. The same pattern is repeated at least a dozen times across the attribute callbacks \u2014 all need the same fix.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 810,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`const textElements: any[] = [];` uses the `any` type. The elements are D3 text selections \u2014 type them as `d3.Selection<SVGTextElement, unknown, null, undefined>[]` (or the project's equivalent `Selection` type) to preserve type safety and satisfy the `@typescript-eslint/no-explicit-any` rule.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyBuilder.ts",
+      "line_number": 55,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`WardleyDeaccelerator` is structurally identical to `WardleyAccelerator` (both have `name: string; x: number; y: number`). Define a single shared interface (e.g., `WardleyForce`) and alias or extend it: `export interface WardleyAccelerator extends WardleyForce {}` / `export interface WardleyDeaccelerator extends WardleyForce {}`. This avoids silent drift if either interface ever changes.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/parser/src/language/wardley/wardley.langium",
+      "line_number": 4,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The grammar file uses 4-space indentation throughout (e.g., `    NEWLINE*`), but the project convention for `.langium` files is 2-space indentation. All other Langium grammar files in `packages/parser/src/language/` use 2-space indentation. Please reformat to 2 spaces.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/parser/src/language/wardley/wardley.langium",
+      "line_number": 143,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Several blocks of commented-out dead code remain in the grammar file (the `TEXT_UNTIL_BRACKET` and `TEXT_LINE` terminal definitions and their surrounding explanatory comments like \"But for now, commenting them out to see if that fixes the issue\"). These are investigation artifacts and should be deleted before merging. If the reasoning needs to be documented, convert to a concise architectural comment without the commented-out code.",
+      "index": 10
+    },
+    {
+      "file_path": "demos/wardley.html",
+      "line_number": 1,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The new demo page `demos/wardley.html` is not linked from `demos/index.html`. Per project rules, every new demo file must be registered in the index so it appears in the demo listing. Add a link entry to `demos/index.html` alongside the other diagram demos.",
+      "index": 11
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyParser.spec.ts",
+      "line_number": 1,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The unit test suite has no test cases for the accessibility metadata methods `getAccTitle()` and `getAccDescription()`. Per project rules, diagram unit test files must include explicit test cases for these fields. Add two tests: one asserting the default (empty) state, and one asserting the correct value after parsing a diagram that sets `accTitle` and `accDescr` via the common syntax.",
+      "index": 12
+    },
+    {
+      "file_path": "docs/syntax/wardley.md",
+      "line_number": 1,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "This file is auto-generated from `packages/mermaid/src/docs/syntax/wardley.md` and carries a `## THIS IS AN AUTOGENERATED FILE. DO NOT EDIT.` warning. The generated `docs/` tree should only be committed if it was produced by the docs-build pipeline and is fully in sync with the source. Verify the generated output matches what the pipeline would produce, and ensure it was not hand-edited. The corresponding `docs/config/setup/mermaid/interfaces/MermaidConfig.md` changes appear to be auto-generated line-number updates and are acceptable.",
+      "index": 13
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyDb.ts",
+      "line_number": 18,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`textSanitizer` calls `getGlobalConfig()` on every invocation, and it is called once per node, link, note, annotation, accelerator, and deaccelerator during parsing. Hoist the config retrieval to a single call at the module or function level rather than re-fetching it inside a utility that is invoked in a tight loop.",
+      "index": 14
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Four root-level markdown files \u2014 `PR_READY.md`, `PR_SUBMISSION_GUIDE.md`, `WARDLEY_MAPS_MEDIUM_GUIDE.md`, and `WARDLEY_MAPS_USER_GUIDE.md` \u2014 are committed to the repository. These are pre-submission workflow artifacts (PR checklists, submission templates, and a blog-post-style user guide) that have no place in the source tree. `PR_READY.md` and `PR_SUBMISSION_GUIDE.md` contain duplicate PR descriptions and commit hashes. `WARDLEY_MAPS_MEDIUM_GUIDE.md` and `WARDLEY_MAPS_USER_GUIDE.md` are long-form tutorial content that belongs in docs, not at the repo root. All four files must be removed before this PR can merge.",
+      "index": 15
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `pnpm-lock.yaml` diff includes version bumps for `@babel/core` (7.28.4 \u2192 7.28.5), `vue` (3.5.21 \u2192 3.5.25), and `rollup` (4.50.2 \u2192 4.52.5) \u2014 dependencies unrelated to Wardley Maps. Spurious lockfile changes significantly increase merge-conflict risk and inflate review diffs. If these bumps occurred locally due to a `pnpm install` run, the lockfile should be reverted to its upstream state so only changes necessary for this feature are included.",
+      "index": 16
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The renderer's D3 link-drawing section repeats expensive computations (source/target position lookups, distance calculation, radius determination) independently in each `.attr('x1')`, `.attr('y1')`, `.attr('x2')`, `.attr('y2')` callback for the same datum. In diagrams with many links this becomes O(links \u00d7 4) repeated work. Consider using `.each()` or precomputing a richer link data structure (with projected coordinates attached) before entering the D3 selection, so each datum already carries the values it needs.",
+      "index": 17
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `WardleyBuildResult.nodes` array is typed as `WardleyNode[]` even though `WardleyBuilder.build()` validates and throws if any node is missing `x` or `y`. The `Required<WardleyNode>` cast inside `build()` is immediately lost because the return type is `WardleyNode[]`. Define a narrower `WardleyPlacedNode` interface (or `Required<Pick<WardleyNode, 'x' | 'y'>> & WardleyNode`) as the element type of `WardleyBuildResult.nodes`. This would eliminate every `node.x!` / `node.y!` assertion in the renderer, since TypeScript would know the coordinates are guaranteed.",
+      "index": 18
+    }
+  ],
+  "cost_usd": 1.63525845,
+  "duration_seconds": 923.5345869064331
+}

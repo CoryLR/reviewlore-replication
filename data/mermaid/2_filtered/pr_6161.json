@@ -1,0 +1,678 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 6161,
+  "title": " Refactor: Change flowDB to class based architecture.",
+  "body": "## :bookmark_tabs: Summary\r\n\r\n- Refactors the existing flowDb implementation from a functional approach to a class-based architecture to improve code organization, maintainability, and extensibility.\r\n- Return a new DB object when `diagramObject.db` is called.\r\n- Introduces new FlowDB class to encapsulate database operations and state\r\n- Migrates existing functions to class methods\r\n- Maintains existing API interface for backwards compatibility\r\n- Following functions still uses common DB:\r\n  - defaultConfig\r\n  - setAccTitle\r\n  - setAccDescription\r\n  - setDiagramTitle\r\n  - getAccTitle\r\n  - getAccDescription\r\n  - getDiagramTitle\r\n- Reason why above functions still uses common DB: https://github.com/mermaid-js/mermaid/pull/6161#discussion_r1913261481\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\n- The flowDb module previously relied on functions and global variables. Consequently, each call to mermaid.parse or mermaid.render resulted in changes to global variables.\r\n- This behavior caused issues when rendering multiple diagrams using the same Mermaid API, as the database object (DB) for the diagrams would get mixed up.\r\n- To address this, flowDb was refactored into a class-based structure. This change ensures that each diagramObject.db call creates a new instance of the database (DB), preventing conflicts between diagrams.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [X] :book: have read the [contribution guidelines](https://mermaid.js.org/community/contributing.html)\r\n- [X] :computer: have added necessary unit/e2e tests.\r\n- [ ] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://mermaid.js.org/community/contributing.html#update-documentation) is used for all new features.\r\n- [X] :butterfly: If your PR makes a change that should be noted in one or more packages' changelogs, generate a changeset by running `pnpm changeset` and following the prompts. Changesets that add features should be `minor` and those that fix bugs should be `patch`. Please prefix changeset messages with `feat:`, `fix:`, or `chore:`.\r\n",
+  "author": "saurabhg772244",
+  "merged_at": "2025-01-22T21:41:52Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "5120ed09abd263531b2bba628f47ed40a186b265",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "e9e663ffa3a8d2e2ba7996f5800ee9c4b3d176e1",
+    "1575a931363df47b30ebe7dee21feab09c9750ad"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85xetSB",
+          "author": "aloisklink",
+          "body": "**nitpick**: typo here!\r\n\r\n```suggestion\r\n      const flowDiagram1 = await mermaidAPI.getDiagramFromText(\r\n```",
+          "file_path": "packages/mermaid/src/mermaidAPI.spec.ts",
+          "line_number": 837,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-06T09:03:26Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a specific code change via a suggestion block to fix a typo."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85xetn-",
+          "author": "aloisklink",
+          "body": "**nitpick**: :laughing: I love this test name, but maybe we should use a bit more of a polite name just in case somebody complains!\r\n\r\n```suggestion\r\n    it('should not modify db when rendering different diagrams', async () => {\r\n```\r\n\r\nMaybe we should also add `flowchart` in the name somewhere (or make this a `describe()` and add a `it('flowchart')`.",
+          "file_path": "packages/mermaid/src/mermaidAPI.spec.ts",
+          "line_number": 836,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-06T09:04:52Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests renaming the test and potentially restructuring it with a describe block."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85xeyqa",
+          "author": "aloisklink",
+          "body": "**suggestion**: Maybe we can also test some of the values in the DB to make sure they are different?\r\n\r\n```suggestion\r\n        `flowchart LR\r\n      A -- text --> B -- text2 --> C`\r\n      );\r\n      const flwoDiagram2 = await mermaidAPI.getDiagramFromText(\r\n        `flowchart TD\r\n      A -- text --> B -- text2 --> C`\r\n      );\r\n      // Since flowDiagram will return new Db object each time, we can compare the db to be different.\r\n      expect(flwoDiagram1.db).not.toBe(flwoDiagram2.db);\r\n      assert(flwoDiagram1.db instanceof FlowDb);\r\n      assert(flwoDiagram2.db instanceof FlowDb);\r\n      expect(flwoDiagram1.db.getDirection()).not.toEqual(flwoDiagram2.db.getDirection());\r\n```",
+          "file_path": "packages/mermaid/src/mermaidAPI.spec.ts",
+          "line_number": 848,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-06T09:23:51Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85xi_mV",
+          "author": "saurabhg772244",
+          "body": "Updated in https://github.com/mermaid-js/mermaid/pull/6161/commits/6836e9c7a89d125aea2d230a3f7e58889358f528",
+          "file_path": "packages/mermaid/src/mermaidAPI.spec.ts",
+          "line_number": 848,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-07T07:12:32Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding additional assertions to the test via a concrete suggestion block."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85xe05I",
+          "author": "aloisklink",
+          "body": "I'm guessing you're going to do state diagrams next?\r\n\r\nMaybe it's worth putting this in a separate test, marking it with `it.fails` and have a comment that says something like: `// Sequence Diagram currently uses a singleton DB, so this test will fail`.",
+          "file_path": "packages/mermaid/src/mermaidAPI.spec.ts",
+          "line_number": 871,
+          "start_line": 852,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-06T09:27:14Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85xjAbj",
+          "author": "saurabhg772244",
+          "body": "Added in https://github.com/mermaid-js/mermaid/pull/6161/commits/6836e9c7a89d125aea2d230a3f7e58889358f528",
+          "file_path": "packages/mermaid/src/mermaidAPI.spec.ts",
+          "line_number": 871,
+          "start_line": 852,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-07T07:16:45Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests separating code into a distinct test marked with it.fails and adding a comment explaining why."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85xe2yP",
+          "author": "aloisklink",
+          "body": "You can leave this for this PR, but please try not to make commits/changes to files like `cypress/platform/saurabh.html`. Nobody else needs to see them and it just adds noise to our git repo/source-code!",
+          "file_path": "cypress/platform/saurabh.html",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "f5bae98098de984bb177b7fbd4cf802447155ae7",
+          "created_at": "2025-01-06T09:30:47Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85xjAfE",
+          "author": "saurabhg772244",
+          "body": "Sure",
+          "file_path": "cypress/platform/saurabh.html",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "f5bae98098de984bb177b7fbd4cf802447155ae7",
+          "created_at": "2025-01-07T07:17:00Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removal of the file from the repository to avoid adding noise to the git history."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85xe47k",
+          "author": "aloisklink",
+          "body": "**issue(potentially-blocking)**:\r\n\r\nWhy are we using public class fields with arrow functions, instead of just using function methods?\r\n\r\nThis syntax is a bit unusual in JavaScript and it's only supported with newer browsers!\r\n\r\n```suggestion\r\n  private sanitizeText(txt: string) {\r\n    return common.sanitizeText(txt, this.config);\r\n  }\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 58,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-06T09:38:25Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85xi_uJ",
+          "author": "saurabhg772244",
+          "body": "Will do this as a separate PR",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 58,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-07T07:13:04Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85yCxgr",
+          "author": "aloisklink",
+          "body": "Hey @saurabhg772244, can you update your PR description on why we're using public class instance fields with arrow functions instead of class methods? (please also remove \"class methods\" from your PR description, unless you are planning on using them!).\r\n\r\nE.g. that since https://github.com/zaach/jison/commit/157cdd6bf23920c6282f06534b3f12204b31e90a and https://github.com/zaach/jison/blob/cbf9d933677fb14b8526ee146586348139e2fb73/lib/jison.js#L1390-L1395, JISON instead makes a copy of the passed object, but only copies direct properties, not class methods which are part of object's `prototype`.\r\n\r\nSo all functions used in the `flowchart.jison` file can't be class methods.\r\n\r\nFor the other functions (e.g. private functions), please also add your reasoning (but it could just be as simple as consistency with the other public values that have to be instance fields).\r\n\r\n---\r\n\r\nCan you also add proof that class instance fields won't break Mermaid on older browsers? Looking at https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Public_class_fields, it sounds like there's a chance that this could break Mermaid on Safari 15.6 and earlier, so I think we need to be sure that this isn't a breaking change, otherwise we might need to rethink how this PR is implemented.",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 58,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-13T14:59:04Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potentially blocking issue with using arrow function class fields and suggests switching to regular method syntax."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85xe7Nx",
+          "author": "aloisklink",
+          "body": "**question(blocking)**: Is this correct? We're changing the default value for `clear` to `gen-2`?",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 524,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-06T09:46:47Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85xfXnD",
+          "author": "saurabhg772244",
+          "body": "Yes we are not using 'gen-1' for flowcharts. Even the `setGen` was default to `gen-2`",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 524,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-06T11:37:26Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85xfdS2",
+          "author": "aloisklink",
+          "body": "Maybe we can fix this in another PR?\r\n\r\nI think there are some `if (version === 'gen-1') {}` code paths, so we could probably delete this and the entire `version` field to simplify the code.",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 524,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-06T12:03:41Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85xi1K3",
+          "author": "saurabhg772244",
+          "body": "Probably better to do separate PR.",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 524,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-07T06:19:30Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Labeled as blocking; questions whether a default value change is correct, implying it may need to be reverted or verified."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85xe8NH",
+          "author": "aloisklink",
+          "body": "**nitpick**: This should probably have a `implements DiagramDB` in it, e.g. like:\r\n\r\n```ts\r\nexport class FlowDb implements DiagramDB {\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 31,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-06T09:50:23Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85xjAJc",
+          "author": "saurabhg772244",
+          "body": "updated in https://github.com/mermaid-js/mermaid/pull/6161/commits/6836e9c7a89d125aea2d230a3f7e58889358f528",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 31,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-07T07:15:18Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding 'implements DiagramDB' to the class declaration with a concrete code example."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85xfCBz",
+          "author": "aloisklink",
+          "body": "**nitpick**: Once you turn `this.setupToolTips` into a proper method, you'd probably want to add `.bind(this);` to it.\r\n\r\n```suggestion\r\n    this.funs.push(this.setupToolTips.bind(this));\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 53,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-06T10:09:45Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85xjAOx",
+          "author": "saurabhg772244",
+          "body": "Will not require this as we are still using functions",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 53,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-07T07:15:42Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding .bind(this) to the method push via a concrete suggestion block."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85yBoVy",
+          "author": "sidharthv96",
+          "body": "Consitency\r\n\r\n```suggestion\r\nexport class FlowDB implements DiagramDB {\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 37,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-13T11:16:00Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85yGlvJ",
+          "author": "saurabhg772244",
+          "body": "Updated in https://github.com/mermaid-js/mermaid/pull/6161/commits/c8697301ee6468e7054840295f966b7ac16e3ade",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 37,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-14T06:53:03Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a concrete code change to add 'implements DiagramDB' for consistency via a suggestion block."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85yBo2u",
+          "author": "sidharthv96",
+          "body": "Why do we need to update the config when adding every vertex?\r\n\r\nI see this is from the old code, so you can leave it in now, and fix later. ",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 161,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-13T11:17:51Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a concern about unnecessary config updates on every vertex addition; suggests fixing it later, implying a future code change is needed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85yBpL0",
+          "author": "sidharthv96",
+          "body": "getConfig is called when initailizing, and also inside this.clear function, so one call is redundant. ",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 60,
+          "start_line": 39,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-13T11:19:00Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85yC7C7",
+          "author": "aloisklink",
+          "body": "I think that in order to keep this PR's change surface as small as possible, we could leave this in and fix this in another PR.\r\n\r\nWith this new class style, we might not even need a `.clear()` function (except maybe to clear the common DB values?).",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 60,
+          "start_line": 39,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-13T15:22:26Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a redundant getConfig call, implying it should be removed."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85yBqhI",
+          "author": "sidharthv96",
+          "body": "Hhhhmmmmmmmmmmmm, this means part of the DB will be tied to a diagram, and some parts will change based on the last rendered diagram. ",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 1098,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-13T11:24:05Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85yCg2p",
+          "author": "aloisklink",
+          "body": "Yep, it's probably something to fix next.\r\n\r\nI'd imagine it would be more difficult, though, since I believe the Langium parsers also modify this shared state.\r\n\r\nAnd since it's part of the `DiagramAPI` in https://github.com/mermaid-js/mermaid/blob/037ba2fa9cf40905bd1c35b1a450c5218a698f0f/packages/mermaid/src/diagram-api/types.ts#L43-L57, it might be a breaking change to change it? I'm not 100% sure though.\r\n\r\n@saurabhg772244, I know you've already documented in the PR description that you haven't changed these functions. Can you maybe add a link to this comment thread to explain why we haven't changed them in this PR?",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 1098,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-13T14:16:53Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags a concern that part of the DB state will be tied to a diagram while other parts change globally, implying a potential design issue that should be addressed."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85yBq_j",
+          "author": "sidharthv96",
+          "body": "This is already done inside clear, so why do we need to do it here?",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 61,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-13T11:25:42Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85yCm2E",
+          "author": "aloisklink",
+          "body": "They're copied from the old `init` call in:\r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/bc2cc61240987ac956c69e262c93971cd254f00a/packages/mermaid/src/diagrams/flowchart/flowDiagram.ts#L23-L24\r\n\r\nBut @saurabhg772244 has changed `.clear()` to use `'gen-2'` by default, see https://github.com/mermaid-js/mermaid/pull/6161#discussion_r1903932273\r\n\r\nIMO, my gut feeling is that it's probably better to change as little as possible in this PR, and maybe do the `gen-1`/`gen-2` cleanup in a separate PR, to keep this PR as small as possible.",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 61,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-13T14:32:18Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85yGe4j",
+          "author": "saurabhg772244",
+          "body": "We require `gen-2` as `gen-1` is deprecated and will break sub-graphs. https://mermaidchart.slack.com/archives/C06FGFCQVSR/p1735895537015209\r\n",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 61,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-14T06:19:31Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Points out duplicate logic (already done inside clear), implying the redundant call should be removed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85yBrI-",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n  private direction: string | undefined;\r\n  private version: string | undefined; // As in graph\r\n  private secCount = -1;\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 52,
+          "start_line": 48,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-13T11:26:13Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85yGlki",
+          "author": "saurabhg772244",
+          "body": "Updated in https://github.com/mermaid-js/mermaid/pull/6161/commits/c8697301ee6468e7054840295f966b7ac16e3ade",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+          "line_number": 52,
+          "start_line": 48,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-14T06:52:39Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests specific type changes for class fields via a concrete suggestion block."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85yC0p6",
+          "author": "aloisklink",
+          "body": "**suggestion(non-blocking)**: To make this change more obvious to any users of Mermaid, do you think this changeset entry is better?\r\n\r\n```suggestion\r\nfix: `mermaidAPI.getDiagramFromText()` now returns a new different db for each flowchart\r\n```",
+          "file_path": ".changeset/new-kiwis-listen.md",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-13T15:07:23Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85yGrD1",
+          "author": "saurabhg772244",
+          "body": "Updated in https://github.com/mermaid-js/mermaid/pull/6161/commits/e1aab25144e60f36755ed5be1be56cd87c73318b",
+          "file_path": ".changeset/new-kiwis-listen.md",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+          "created_at": "2025-01-14T07:17:55Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a more descriptive changeset entry text via a concrete suggestion block, though labeled non-blocking."
+    }
+  ],
+  "review_thread_count": 19,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85xe62I",
+            "author": "aloisklink",
+            "body": "**question(non-blocking)**: This is not a big deal, but why are we changing this? I feel like the TypeScript types of using `function()` might have actually been cleaner!",
+            "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+            "line_number": 587,
+            "start_line": 586,
+            "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+            "created_at": "2025-01-06T09:45:28Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85xjAGe",
+            "author": "saurabhg772244",
+            "body": "It will be mixture of arrow functions and regular functions. May be we can do when converting functions to methods",
+            "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+            "line_number": 587,
+            "start_line": 586,
+            "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+            "created_at": "2025-01-07T07:15:03Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Explicitly labeled non-blocking; asks why the change was made without implying a reversal or concrete code change is needed."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85xfChN",
+            "author": "aloisklink",
+            "body": "**question(non-blocking)**: Do you need these two method calls in the constructor? I'm guessing these are from the old `init()` call.",
+            "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+            "line_number": 81,
+            "start_line": 80,
+            "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+            "created_at": "2025-01-06T10:11:33Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85xjATT",
+            "author": "saurabhg772244",
+            "body": "Yes. These are from old init call.",
+            "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+            "line_number": 81,
+            "start_line": 80,
+            "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+            "created_at": "2025-01-07T07:16:06Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Explicitly labeled non-blocking; asks a clarifying question about constructor calls without implying they must be removed."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85xfFvO",
+            "author": "aloisklink",
+            "body": "**question(non-blocking)**: Mainly for future reviewers, but you've moved this code into the constructor of `FlowDB()`, e.g.:\r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/f5bae98098de984bb177b7fbd4cf802447155ae7/packages/mermaid/src/diagrams/flowchart/flowDb.ts#L54-L55\r\n\r\nFrom the way Mermaid uses the code, this looks fine to me. The only issue I could potentially see is that this might cause unit tests to fail, but if they're not failing, then this is fine!",
+            "file_path": "packages/mermaid/src/diagrams/flowchart/flowDiagram.ts",
+            "line_number": 25,
+            "start_line": 24,
+            "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+            "created_at": "2025-01-06T10:24:30Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85xjB0_",
+            "author": "saurabhg772244",
+            "body": "They are not failing.",
+            "file_path": "packages/mermaid/src/diagrams/flowchart/flowDiagram.ts",
+            "line_number": 25,
+            "start_line": 24,
+            "commit_sha": "1575a931363df47b30ebe7dee21feab09c9750ad",
+            "created_at": "2025-01-07T07:23:38Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Explicitly labeled non-blocking and concluded as fine; it's an informational note for future reviewers with no implied code change."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 19,
+    "stage1_kept": 19,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 3
+  }
+}

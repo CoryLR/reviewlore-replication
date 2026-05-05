@@ -1,0 +1,118 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33557,
+  "title": "Core: Viewport UX fixes",
+  "body": "## What I did\r\n\r\n- Ensure values on drag handles respect minimum viewport size\r\n- Update values on drag handles to account for zoom scale factor\r\n- Fix scrollIntoView when dragging\r\n- Prevent panel drag handle from rendering outside of container\r\n- Prevent floating point numbers on drag handles\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n> [!CAUTION]\r\n> This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!\r\n\r\n<!-- Please include the steps to test your changes here. For example:\r\n\r\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Open Storybook in your browser\r\n3. Access X story\r\n\r\n-->\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Bug Fixes**\n  * Resizing enforces minimum dimensions, aborts invalid drags early, and applies correct final size when dragging ends.\n\n* **Improvements**\n  * Edge-drag behavior and auto-scrolling are more reliable with edge tracking; drag handles show scaled, rounded dimensions and react to canvas scale changes.\n  * Overlapping resizer behavior refined for panel placements.\n\n* **Refactor**\n  * Layout sizing centralized via CSS-variable driven styles, simplifying component props.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ghengeveld",
+  "merged_at": "2026-01-19T09:41:54Z",
+  "base_ref": "next",
+  "merge_commit_sha": "a9bb0661f9575328b2eaf8d38e553500d26c1d7c",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "0d4cc0e3a78dd2edf89ef989f7f5cab89b725b28",
+    "f337cff7b30aec973eac67f8bb633c37c14fd949"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6gtRiV",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Clamp minimums in logical units before scaling.**\n\nWith `scale \u2260 1`, clamping against `VIEWPORT_MIN_*` after scaling can allow logical values below the minimum (e.g., scale=2 \u21d2 320px min shows as 160), or inflate the minimum when zoomed out. That contradicts the \u201cminimum viewport size\u201d requirement and can make drag-handle values drift from the true min.\n\nIf `VIEWPORT_MIN_*` are intended to be logical (unscaled) px, clamp pre-scale and then multiply by `scale`.\n\n\n\n<details>\n<summary>\ud83d\udee0\ufe0f Suggested fix</summary>\n\n```diff\n-        const newWidth = Math.max(VIEWPORT_MIN_WIDTH, dragStart.current![0] + e.clientX);\n+        const newWidth = Math.max(\n+          VIEWPORT_MIN_WIDTH * scale,\n+          dragStart.current![0] + e.clientX\n+        );\n         targetRef.current!.style.width = `${newWidth}px`;\n         dragRefX.current!.dataset.value = `${newWidth / scale}`;\n...\n-        const newHeight = Math.max(VIEWPORT_MIN_HEIGHT, dragStart.current![1] + e.clientY);\n+        const newHeight = Math.max(\n+          VIEWPORT_MIN_HEIGHT * scale,\n+          dragStart.current![1] + e.clientY\n+        );\n         targetRef.current!.style.height = `${newHeight}px`;\n         dragRefY.current!.dataset.value = `${newHeight / scale}`;\n```\n\n```diff\n-    const { number: nx, unit: ux = 'px' } = parseNumber(width) ?? { number: 0, unit: 'px' };\n-    const { number: ny, unit: uy = 'px' } = parseNumber(height) ?? { number: 0, unit: 'px' };\n-    const vw = Math.max(VIEWPORT_MIN_WIDTH, nx * scale);\n-    const vh = Math.max(VIEWPORT_MIN_HEIGHT, ny * scale);\n-    return { nx, ny, ux, uy, vw, vh };\n+    const { number: nxRaw, unit: ux = 'px' } = parseNumber(width) ?? { number: 0, unit: 'px' };\n+    const { number: nyRaw, unit: uy = 'px' } = parseNumber(height) ?? { number: 0, unit: 'px' };\n+    const nx = ux === 'px' ? Math.max(VIEWPORT_MIN_WIDTH, nxRaw) : nxRaw;\n+    const ny = uy === 'px' ? Math.max(VIEWPORT_MIN_HEIGHT, nyRaw) : nyRaw;\n+    const vw = nx * scale;\n+    const vh = ny * scale;\n+    return { nx, ny, ux, uy, vw, vh };\n```\n</details>\n\n\nAlso applies to: 281-292, 376-382\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/core/src/manager/components/preview/Viewport.tsx` around lines 233 -\n242, Clamp the minimums in logical (unscaled) units before applying scale: when\ncomputing width/height in the drag handlers (use symbols dragSide, dragStart,\nscale, targetRef, dragRefX, dragRefY, VIEWPORT_MIN_WIDTH, VIEWPORT_MIN_HEIGHT),\nconvert the raw pixel measurement to logical units by dividing by scale, apply\nMath.max with VIEWPORT_MIN_*, then multiply back by scale for the DOM size; set\ntargetRef.current.style.width/height using the scaled value and set\ndragRefX.current.dataset.value / dragRefY.current.dataset.value to the logical\nvalue. Apply the same pattern to the other drag blocks referenced (around the\nother occurrences noted).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/preview/Viewport.tsx",
+          "line_number": 242,
+          "start_line": null,
+          "commit_sha": "4f956a44d3d0a3eb2fbd95bf5032286ba80a4b15",
+          "created_at": "2026-01-15T22:43:21Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug with scaling/clamping logic and provides a concrete suggested fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6g3tFA",
+          "author": "ndelangen",
+          "body": "I'd prefer if we would use more descriptive names.\r\n\r\nI do not know what the `n`, `u`, `v` prefixes stand for.",
+          "file_path": "code/core/src/manager/components/preview/Viewport.tsx",
+          "line_number": 286,
+          "start_line": null,
+          "commit_sha": "4f956a44d3d0a3eb2fbd95bf5032286ba80a4b15",
+          "created_at": "2026-01-16T15:27:53Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests renaming variables to be more descriptive \u2014 a concrete style/naming change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6hKfTe",
+          "author": "ndelangen",
+          "body": "```suggestion\r\n    // we use css-custom-properties here, to prevent Emotion from generating a new CSS-className on every resize\r\n    gridTemplateColumns: `minmax(0, var(--nav-width)) minmax(${MINIMUM_CONTENT_WIDTH_PX}px, 1fr) minmax(0, var(--right-panel-width))`,\r\n    gridTemplateRows: `1fr minmax(0, var(--bottom-panel-height))`,\r\n```",
+          "file_path": "code/core/src/manager/components/layout/Layout.tsx",
+          "line_number": 229,
+          "start_line": 228,
+          "commit_sha": "f337cff7b30aec973eac67f8bb633c37c14fd949",
+          "created_at": "2026-01-19T09:12:25Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Provides a direct code suggestion to change the CSS template strings."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6hKjdX",
+          "author": "ndelangen",
+          "body": "Let's explain what overlapping means here in a JS-doc comment?",
+          "file_path": "code/core/src/manager/components/layout/Layout.tsx",
+          "line_number": 300,
+          "start_line": 296,
+          "commit_sha": "f337cff7b30aec973eac67f8bb633c37c14fd949",
+          "created_at": "2026-01-19T09:17:29Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding a JSDoc comment to explain what 'overlapping' means \u2014 a concrete documentation addition."
+    }
+  ],
+  "review_thread_count": 4,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 4,
+    "stage1_kept": 4,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

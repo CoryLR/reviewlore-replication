@@ -1,0 +1,181 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4552,
+  "title": "convert `cypress/helpers/util.js` to ts",
+  "body": "## :bookmark_tabs: Summary\r\n\r\n- add types for parameter and returned value and variables\r\n- change the deprecated `unescape` into `decodeURIComponent`\r\n- change the deprecated `btoa` into `Buffer.from`\r\n- create `CypressConfig` and `CypressMermaidConfig` and `CodeObject` types\r\n- add default value for some parameter\r\n- fix wrong config paramater in some cypress spec  \r\n  - flowchart\r\n  - mindmap\r\n- allow import ts in ts files\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nDescribe the way your implementation works or what design decisions you made if applicable.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added unit/e2e tests (if appropriate)\r\n- [ ] :notebook: have added documentation (if appropriate)\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "Yokozuna59",
+  "merged_at": "2023-07-19T17:53:53Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "477bb4308d96785842e0f482c732719c6c5d50ca",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "e66135b67e1f949615930777ba6b3d66f709cd40",
+    "8cd8714aaf9c1b344ce3359fd192536525303df6"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85K0XGr",
+          "author": "sidharthv96",
+          "body": "We should use the commit hash or some env variable that Github actions exposes. \r\nAs our E2E tests run in different machines, the batchID will be different for each shard. ",
+          "file_path": "cypress/helpers/util.ts",
+          "line_number": 19,
+          "start_line": null,
+          "commit_sha": "8cd8714aaf9c1b344ce3359fd192536525303df6",
+          "created_at": "2023-07-07T04:44:02Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Using a non-deterministic value (e.g., random or local timestamp) for batchID causes different shards in CI to generate different IDs, breaking the intended grouping logic. This is a logical/semantic error in how the batchID is derived."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85K1DcT",
+          "author": "Yokozuna59",
+          "body": "I wasn't really sure what `batchId` so left it as it is.\r\n\r\nI think this looks good:\r\n\r\n```suggestion\r\nconst batchId: string = 'mermaid-batch' + execSync('git rev-parse HEAD').toString().trim();\r\n```\r\n\r\n---\r\n\r\nTo import `execSync`, you could to the following:\r\n```ts\r\nimport { execSync } from 'child_process';\r\n```\r\n\r\n---\r\n\r\nSorry but didn't bring my laptop with me so you can update the branch as you wish :)",
+          "file_path": "cypress/helpers/util.ts",
+          "line_number": 19,
+          "start_line": null,
+          "commit_sha": "8cd8714aaf9c1b344ce3359fd192536525303df6",
+          "created_at": "2023-07-07T08:06:25Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85K1yYI",
+          "author": "sidharthv96",
+          "body": "I think we have to use Cypress.env here as it's gonna run in the browser. Have pushed https://github.com/mermaid-js/mermaid/pull/4552/commits/962ff73fc3d6a1813f364359ed3b7aeec176c631",
+          "file_path": "cypress/helpers/util.ts",
+          "line_number": 19,
+          "start_line": null,
+          "commit_sha": "8cd8714aaf9c1b344ce3359fd192536525303df6",
+          "created_at": "2023-07-07T10:28:19Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a bug (different batchIDs across shards) and suggests a concrete fix: use the commit hash or a GitHub Actions environment variable instead."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85LmeVq",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\ninterface CypressConfig {\r\n  listUrl?: boolean;\r\n  listId?: string;\r\n  name?: string;\r\n};\r\n```",
+          "file_path": "cypress/helpers/util.ts",
+          "line_number": 9,
+          "start_line": null,
+          "commit_sha": "8cd8714aaf9c1b344ce3359fd192536525303df6",
+          "created_at": "2023-07-19T17:06:39Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "high",
+          "label_reasoning": "The suggestion updates the TypeScript interface definition to follow proper TS conventions (using optional properties with `?`), which is a language-specific standards improvement."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment provides a direct code suggestion to modify the interface definition, making all properties optional with '?' modifiers."
+    }
+  ],
+  "review_thread_count": 3,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85KKH4s",
+            "author": "Yokozuna59",
+            "body": "I'm not sure about `validation`, I haven't see any diagram uses it so I setted it to `any`.\r\n\r\nI saw one that used it as `boolean` but it doesn't seem right:\r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/d9db2edf5a07e19c3f5a41db0e375ca844a2754e/cypress/integration/other/external-diagrams.spec.js#L7\r\n",
+            "file_path": "cypress/helpers/util.ts",
+            "line_number": 101,
+            "start_line": null,
+            "commit_sha": "8cd8714aaf9c1b344ce3359fd192536525303df6",
+            "created_at": "2023-06-27T18:16:00Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85KMiXk",
+            "author": "sidharthv96",
+            "body": "Validation should have the type we can pass into `cy.should`.\r\n\r\nhttps://docs.cypress.io/api/commands/should\r\n\r\n\r\neg: `'have.property', 'rendered', true`. \r\n\r\nMaybe it should be an `unknown[]`, which we can pass in like `cy.get('svg').should(...validation);`.\r\n\r\nI'm not 100% sure here. \r\n",
+            "file_path": "cypress/helpers/util.ts",
+            "line_number": 101,
+            "start_line": null,
+            "commit_sha": "8cd8714aaf9c1b344ce3359fd192536525303df6",
+            "created_at": "2023-06-28T07:26:07Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85KNS6d",
+            "author": "Yokozuna59",
+            "body": "It would work fine for basic one-time validation, but I don't think we can pass current custom validations into the function as a parameter. Some diagrams have more than one `.should` or function validation.\r\nI think we need deeper validation; using `imgSnapshotTest` isn't enough some times, e.g., configure styles (#4527) or diagrams (#4263).\r\n\u00a0\r\nI'm suggesting making the parameter an object; the first parameter is a helper function, and the second is options passed to it. Since each diagram has its own attributes, maybe create a helper function with some `.should`s and `expect`s that verifies the passed arguments are as expected. For example:\r\n\u00a0\r\n```ts\r\n// cypress/helpers/pie.ts\r\nexport const pieHelper: CypressHelperFunc = (svg, options: PieAttributes) => {\r\n\u00a0\u00a0 if (options.width !== undefined) {\r\n\u00a0\u00a0 \u00a0 expect(svg).to.have.attr('width', options.width);\r\n\u00a0\u00a0 }\r\n\u00a0\u00a0 ...\r\n}\r\n```\r\n\u00a0\r\nWe could add their helper method at the top of each spec file, or maybe add it to `cypress/helpers` with the name of the spec itself.\r\n\r\nWhat do you think?\r\n\r\n",
+            "file_path": "cypress/helpers/util.ts",
+            "line_number": 101,
+            "start_line": null,
+            "commit_sha": "8cd8714aaf9c1b344ce3359fd192536525303df6",
+            "created_at": "2023-06-28T10:11:43Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85K0XT5",
+            "author": "sidharthv96",
+            "body": "That seems like a great idea. ",
+            "file_path": "cypress/helpers/util.ts",
+            "line_number": 101,
+            "start_line": null,
+            "commit_sha": "8cd8714aaf9c1b344ce3359fd192536525303df6",
+            "created_at": "2023-07-07T04:46:07Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85K0yMX",
+            "author": "Yokozuna59",
+            "body": "It would need more work, so it would be off the PR topic. Let's file an issue, discuss it there, and implement it when we have time.",
+            "file_path": "cypress/helpers/util.ts",
+            "line_number": 101,
+            "start_line": null,
+            "commit_sha": "8cd8714aaf9c1b344ce3359fd192536525303df6",
+            "created_at": "2023-07-07T07:08:51Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85K1bvq",
+            "author": "Yokozuna59",
+            "body": "created one here #4614. Let's leave it any for now, when applying those changes we'll, update it.\r\n\r\nI'll resolve this conversation.\r\n",
+            "file_path": "cypress/helpers/util.ts",
+            "line_number": 101,
+            "start_line": null,
+            "commit_sha": "8cd8714aaf9c1b344ce3359fd192536525303df6",
+            "created_at": "2023-07-07T09:16:50Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 3,
+    "stage1_kept": 2,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 1,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

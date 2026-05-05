@@ -1,0 +1,17 @@
+{
+  "pr_number": 33292,
+  "source_mr_date": "2026-01-12T08:21:22Z",
+  "candidates": [
+    "When extending the `BROWSER` environment variable handler (`getBrowserEnv` / the `Actions` dispatch in `opener.ts`), route each script type to the correct runtime: `.js`, `.mjs`, `.cjs`, and `.ts` files go to `executeNodeScript` (spawned with `process.execPath`); `.sh` files go to `executeShellScript` (spawned with `'sh'`). Never pass shell scripts to the Node runtime \u2014 Node cannot parse shell syntax and will fail with a syntax error.",
+    "In Vitest test files in this codebase, always pass `{ spy: true }` to `vi.mock()` for package mocks (e.g., `vi.mock('open', { spy: true })`). Configure mock behavior in `beforeEach` using `vi.mocked()` after `vi.resetAllMocks()`, rather than providing factory functions that return `vi.fn()` directly.",
+    "In the `isWsl()` helper (`opener.ts`), the early-return guard must be `if (isWindows) return false` \u2014 not `if (!isWindows) return false`. WSL reports `process.platform === 'linux'`, so the inverted guard causes the function to exit immediately on WSL and never reach the actual WSL detection logic (env-var and `/proc/version` checks).",
+    "Mock `process.platform` in Vitest tests using a getter spy \u2014 `vi.spyOn(process, 'platform', 'get').mockReturnValue('...')` \u2014 rather than `Object.defineProperty`. The getter spy integrates with `vi.restoreAllMocks()` / `vi.resetAllMocks()`, is reliably reversible across Node versions, and prevents the mock from leaking into subsequent tests.",
+    "When calling `spawn()` for user-provided BROWSER scripts, always attach both an `'error'` listener and a `'close'` listener to the returned child process. Without an `'error'` handler, a spawn failure (bad interpreter path, missing file, permission denied) emits an unhandled `error` event that crashes the Node process. The `'error'` handler should log via `logger.error` without rethrowing.",
+    "When tests mutate `process.env` or `process.argv`, save shallow copies of the originals before each test (`const originalEnv = { ...process.env }`) and restore them in `afterEach` (`process.env = originalEnv`). Omitting the teardown causes environment state to leak across tests in the same runner, producing intermittent failures.",
+    "When spawning shell scripts via `spawn()`, pass the bare interpreter name `'sh'` rather than an absolute path like `'/bin/sh'`. POSIX does not require `sh` to live in `/bin/`, and Node.js `spawn` resolves bare command names through `$PATH`, making the invocation portable across Linux, macOS, BSD, and WSL. Tests asserting on the spawn call must likewise use `'sh'`.",
+    "When adding support for executing `.ts` files as BROWSER scripts (via `executeNodeScript`), document or enforce a Node.js version requirement: native TypeScript execution requires v22.18.0+ with `--experimental-strip-types` (erasable syntax only) or v24+; enums and other transform-only syntax additionally require `--experimental-transform-types`. Without this caveat, users on older Node versions will see confusing parse errors."
+  ],
+  "analysis": [],
+  "cost_usd": 0.12601,
+  "duration_seconds": 75.74993371963501
+}

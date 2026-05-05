@@ -1,0 +1,54 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/storybook-package-name-conflict.ts",
+      "line_number": 23,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`packageManager.primaryPackageJson.packageJson.name` has no guard against `primaryPackageJson` (or `packageJson`) being absent. If the automigrate runs in a project where this property is unexpectedly missing, this line throws an uncaught exception instead of gracefully returning `null`. Prefer optional chaining: `packageManager.primaryPackageJson?.packageJson?.name ?? null` then check `packageName === 'storybook'`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/storybook-package-name-conflict.ts",
+      "line_number": 6,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`StorybookPackageNameOptions` with `packageName: string` is never actually consumed. The `Fix` interface's `prompt()` takes no parameters and there is no `run()` method on this `notification`-type fix, so the check result is used only to signal non-null (i.e., the fix should be surfaced). The returned `{ packageName }` data goes nowhere. Simplify `check()` to return a plain `{}` (using a minimal type like `Record<string, never>`) to make the intent explicit and avoid a misleading interface.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/commands/PreflightCheckCommand.ts",
+      "line_number": 93,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Same null-safety concern as the automigrate fix: `packageManager.primaryPackageJson.packageJson.name` has no guard against `primaryPackageJson` being undefined. Although `sb init` should always have a `package.json` present by this point, using optional chaining (`packageManager.primaryPackageJson?.packageJson?.name`) makes the guard explicit and prevents a hard throw if the invariant is ever violated.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/commands/PreflightCheckCommand.ts",
+      "line_number": 92,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The warning message in `checkPackageNameConflict` duplicates the message logic already defined in `storybookPackageNameConflict.prompt()`. Because `prompt()` is a public method that returns a plain string, `PreflightCheckCommand` could call it directly (stripping ANSI codes if needed, or accepting the colored output). Duplicating the prose means the two messages can silently drift \u2014 e.g., the automigrate version already says 'To fix this, rename\u2026' while the preflight version says 'Please rename\u2026' for the same instruction.",
+      "index": 3
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/storybook-package-name-conflict.test.ts",
+      "line_number": 50,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`expect(message).toContain('storybook')` is trivially true \u2014 the word \"storybook\" appears many times in the message and this assertion would pass for virtually any non-empty prompt string. Replace with something more specific that actually validates the key content, for example `expect(message).toContain('Your package.json')` or `expect(message).toContain('Cannot find module storybook/internal')`, to meaningfully distinguish a correct prompt from a generic one.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The changes to `code/lib/eslint-plugin/docs/rules/no-stories-of.md` and `docs/configure/integration/eslint-plugin.mdx` (single \u2192 double quotes in JSON code examples) are unrelated to the package-name conflict feature. Bundling these in the same PR makes the diff harder to review and muddies the commit history. These cosmetic corrections should be in a separate commit or PR.",
+      "index": 5
+    }
+  ],
+  "cost_usd": 0.26078559999999995,
+  "duration_seconds": 169.3728048801422
+}

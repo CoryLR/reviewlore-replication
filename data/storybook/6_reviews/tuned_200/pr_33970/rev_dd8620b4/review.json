@@ -1,0 +1,66 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.tsx",
+      "line_number": 200,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The assertive/polite decision only considers component test errors (`errorCount`), but `a11yErrorCount` is scoped inside the `if (hasA11yAddon)` block above and is inaccessible here. The PR description states announcements should be `assertive` when component test errors **or** accessibility errors are present, but accessibility errors will always be announced as `polite`. Fix by hoisting `a11yErrorCount` out of the conditional block and including it in the condition:\n```ts\nlet a11yErrorCount = 0;\nif (hasA11yAddon) {\n  a11yErrorCount = a11yStatusValueToStoryIds['status-value:error'].length;\n  // ...push to parts...\n}\n...\nannounce(message, errorCount > 0 || a11yErrorCount > 0 ? 'assertive' : 'polite');\n```\nThe existing `AnnouncesTestRunFinished` story doesn't catch this because it exercises the `errorCount > 0` path; a story with only a11y errors would expose the bug.",
+      "index": 0
+    },
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.stories.tsx",
+      "line_number": 348,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`@react-aria/live-announcer` populates live-region DOM elements via an internal `setTimeout` (to force screen-reader re-reads). `await userEvent.click(btn)` drains React's microtask queue but does **not** advance macro-task timers, so this assertion runs before the announcement text is written to the DOM and will be flaky. The same issue exists in the `AnnouncesTestRunFinished` play function (line 380) and `AnnouncesTestRunCrashed` (line 414). Wrap each assertion with `waitFor` from `storybook/test`:\n```ts\nimport { expect, fn, userEvent, waitFor } from 'storybook/test';\n...\nawait userEvent.click(btn);\nawait waitFor(() =>\n  expect(document.body).toHaveLiveRegion({ text: 'Test run started.', level: 'polite' })\n);\n```",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager/globals/exports.ts",
+      "line_number": 575,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Per project rules, `code/core/src/manager/globals/exports.ts` is **auto-generated** by `code/core/scripts/generate-source-files.ts` and must not be manually edited \u2014 changes will be overwritten on the next codegen run. All four new entries (`announce`, `clearAnnouncer`, `destroyAnnouncer`, `toHaveLiveRegion`) should be picked up automatically once `code/core/src/components/index.ts` exports them; run the generator script to regenerate this file rather than hand-editing it.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager/globals/exports.ts",
+      "line_number": 575,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`toHaveLiveRegion` is a Vitest custom matcher \u2014 a test-only utility. Globalizing it in the production manager runtime is inappropriate: it ships test-assertion code to end users and expands the manager's runtime surface with a symbol that has no meaning outside of tests. The other three additions (`announce`, `clearAnnouncer`, `destroyAnnouncer`) are legitimate runtime functions. The stories already register the matcher locally via `expect.extend({ toHaveLiveRegion })` at module scope (line 17 of the stories file), which is the correct place for it. Remove `toHaveLiveRegion` from this globals list and rely on the per-file `expect.extend` call in stories.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/toHaveLiveRegion.ts",
+      "line_number": 18,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The JSDoc says **\"string for exact match\"** but the implementation on line 60 uses `content.includes(text)`, which is a **substring** match. A string like `'Tests passed'` will match an element whose `textContent` is `'3 Tests passed, 0 failed'`. Either change the JSDoc to say \"substring match\" or tighten the implementation to use `content === text` (or `content.trim() === text`) for true exact matching. Exact matching is usually safer for announcement assertions to prevent false positives.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The PR description claims `extend-to-be-announced` was added as a devDependency in `code/core/package.json` and registered in `code/.storybook/storybook.setup.ts` via `import 'extend-to-be-announced/vitest'`, but neither is present in the diff. The actual implementation uses a hand-rolled `toHaveLiveRegion` DOM-inspection matcher instead. The custom matcher checks whether an `aria-live` element with the expected text **currently exists in the DOM**, but `@react-aria/live-announcer` clears its live-region content after a short delay. This means the test window is narrow and relies on timing. `extend-to-be-announced` captures announcements at the moment they are made (via `MutationObserver`) and makes them available regardless of subsequent DOM cleanup \u2014 which is a fundamentally more reliable approach for testing announcements. If `extend-to-be-announced` was intentionally dropped, the PR description should be updated and the architectural trade-off documented.",
+      "index": 5
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `toHaveLiveRegion` test utility is exported from `storybook/internal/components` (a production bundle). Test-only matchers add unnecessary bytes to the components bundle shipped to every Storybook user. Consider moving `toHaveLiveRegion` and `LiveRegionMatcherOptions` to a dedicated testing-utilities entry point (e.g., `storybook/internal/test-utils`) so they can be tree-shaken from production builds.",
+      "index": 6
+    },
+    {
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`code/core/src/components/components/LiveRegion/LiveRegion.tsx` contains no JSX \u2014 it is purely a re-export barrel. The `.tsx` extension is misleading; rename it to `LiveRegion.ts` to correctly signal that it contains no markup.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.7842489500000001,
+  "duration_seconds": 369.553288936615
+}

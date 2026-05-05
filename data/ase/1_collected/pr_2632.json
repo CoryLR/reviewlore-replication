@@ -1,0 +1,113 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 2632,
+  "title": "Fix conservation of momentum in Langevin dynamics (closes #1044)",
+  "body": "This fixes issue #1044.\n\nThe main problem was that the wrong arrays were forced to sum to zero, it should not have been the original random number arrays, but the processed ones actually added to the momenta and positions.\n\nComments:\n- In ``Langevin`` itself:  Now it is not the arrays ``xi`` and ``eta`` that are instance variables, but the new arrays ``rnd_pos`` and ``rnd_vel``.  They are instance variables so Langevin continues to work with Asap: Any array that is used both before and after the call to ``atoms.get_forces()`` must be an instance variable, so Asap can register it with its migration mechanism, when atoms are distributed between cores.  An update to Asap will be made to accommodate this fix in ASE\n\n- A new test has been added checking for issue #1044.\n\n- The test ``test_CO2linear_Au111_langevin`` has been updated.  It is sensitive to the random numbers in ``Langevin`` always behaving in an identical way.",
+  "author": "schiotz",
+  "merged_at": "2022-03-20T14:34:40.552Z",
+  "base_ref": "master",
+  "merge_commit_sha": "5eda17e77e5a46e6810bc7b16d473772442a021b",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "834748122",
+          "author": "askhl",
+          "body": "What are we *really* testing, is it a particular property of the center of mass, such as whether it drifts?  Can this be clarified via naming and/or docstring?",
+          "file_path": "ase/test/md/test_langevin_com.py",
+          "line_number": 10,
+          "commit_sha": "e81a1f45b5aae474627bc9621a510e0294a3a0fc",
+          "base_sha": "51aaa4acbb811e4e3ea525a54faa230fff2e2beb",
+          "created_at": "2022-02-07T18:47:26.140Z",
+          "is_outdated": false
+        },
+        {
+          "id": "834759079",
+          "author": "schiotz",
+          "body": "I\u2019ll add a docstring tomorrow morning.",
+          "file_path": "ase/test/md/test_langevin_com.py",
+          "line_number": 10,
+          "commit_sha": "e81a1f45b5aae474627bc9621a510e0294a3a0fc",
+          "base_sha": "51aaa4acbb811e4e3ea525a54faa230fff2e2beb",
+          "created_at": "2022-02-07T19:03:34.816Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "834748132",
+          "author": "askhl",
+          "body": "`self.rnd_vel` appears to be used only in this method, is that right?  So it might as well be a local variable rather than an instance variable, making it easier to grok the flow of information.  Same for `rnd_pos`.",
+          "file_path": "ase/md/langevin.py",
+          "line_number": 166,
+          "commit_sha": "e81a1f45b5aae474627bc9621a510e0294a3a0fc",
+          "base_sha": "51aaa4acbb811e4e3ea525a54faa230fff2e2beb",
+          "created_at": "2022-02-07T18:47:26.618Z",
+          "is_outdated": false
+        },
+        {
+          "id": "834758677",
+          "author": "schiotz",
+          "body": "Nope. Asap critically relies on it being an instance variable, so it can override its getter and setter, and register the array with the Asap migration mechanism. Calling atoms.get_force() in this method will trigger migration of atoms between the domains of the different cores.  Any array used both before and after that call would become invalid unless Asap can also migrate its elements.  Making it an instance variable insures that.  The same for self.v.",
+          "file_path": "ase/md/langevin.py",
+          "line_number": 166,
+          "commit_sha": "e81a1f45b5aae474627bc9621a510e0294a3a0fc",
+          "base_sha": "51aaa4acbb811e4e3ea525a54faa230fff2e2beb",
+          "created_at": "2022-02-07T19:02:59.919Z",
+          "is_outdated": false
+        },
+        {
+          "id": "834942323",
+          "author": "askhl",
+          "body": "Dear me.  That sounds like it could break.  Could we make this more explicit by having a documented interface?  If we really want to nail it down like Tom & Jerry locking a door in a humorously overzealous fashion, there could be a unittest which would descriptively fail should the needs not be met.\n\nRight now at most we might fail an integration test (since those use Asap for performance reasons), but it sounds like I would have a hard time debugging the failure.",
+          "file_path": "ase/md/langevin.py",
+          "line_number": 166,
+          "commit_sha": "e81a1f45b5aae474627bc9621a510e0294a3a0fc",
+          "base_sha": "51aaa4acbb811e4e3ea525a54faa230fff2e2beb",
+          "created_at": "2022-02-07T21:55:30.100Z",
+          "is_outdated": false
+        },
+        {
+          "id": "835583278",
+          "author": "schiotz",
+          "body": "Just added a unit test for this - it would not even be found by the integration test, since only parallel Asap simulations would fail (I think).  There is already a comment in the actual code warning about this, but you are right, this is fragile as hell.",
+          "file_path": "ase/md/langevin.py",
+          "line_number": 166,
+          "commit_sha": "e81a1f45b5aae474627bc9621a510e0294a3a0fc",
+          "base_sha": "51aaa4acbb811e4e3ea525a54faa230fff2e2beb",
+          "created_at": "2022-02-08T12:01:35.719Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "881257570",
+          "author": "askhl",
+          "body": "Thanks @schiotz!",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2022-03-20T14:34:45.821Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 3
+}

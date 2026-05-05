@@ -1,0 +1,120 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/util.ts",
+      "line_number": 17,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This change swaps the authoritative root-level `htmlLabels` setting for the deprecated `flowchart.htmlLabels` path. According to the config schema (`config.schema.yaml`, lines 164\u2013168), `flowchart.htmlLabels` is explicitly marked deprecated; the root-level `htmlLabels` is the correct field and takes precedence. Using `getConfig()?.flowchart?.htmlLabels` will silently ignore users who only set the recommended top-level setting.\n\nThe project already has `getEffectiveHtmlLabels(config)` in `config.ts` that correctly handles the fallback chain (`htmlLabels \u2192 flowchart.htmlLabels \u2192 true`). The line should be:\n```ts\nconst useHtmlLabels = node.useHtmlLabels || getEffectiveHtmlLabels(getConfig());\n```",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/labelImageUtils.ts",
+      "line_number": 34,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`getConfig()` is called twice per image inside `setupImage()` \u2014 once for the truthiness check and once to read the value. Per the project's performance guidelines, `getConfig()` should be called once and the result cached:\n```ts\nconst cfg = getConfig();\nconst bodyFontSize = cfg.fontSize\n  ? cfg.fontSize\n  : window.getComputedStyle(document.body).fontSize;\n```",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/labelImageUtils.ts",
+      "line_number": 47,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `setTimeout` fires once; if the image is not yet `complete` at that moment it never calls `setupImage`, so the Promise will never resolve (it's neither resolved nor rejected). The load/error listeners cover images that complete after they're registered, but an image that is in-flight when the listeners are added and completes *before* the listeners fire will be missed if `img.complete` happens to be false at `setTimeout` time (extremely unlikely but theoretically possible on slow JS engines). The original code had the same pattern, but since this is being extracted into a shared utility it's worth documenting the assumption, or using a more robust guard:\n```ts\nsetTimeout(() => {\n  if (img.complete) {\n    setupImage();\n  } else if (img.naturalWidth > 0) {\n    // already decoded, missed the event\n    setupImage();\n  }\n});\n```",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/createLabel.js",
+      "line_number": 97,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`log.debug` was changed to `log.info` here (and in the corresponding dagre-wrapper file). Per the project's logging convention, development-tracing statements like `'vertexText' + vertexText` should use `log.debug()` or `log.trace()`, not `log.info()`. `log.info` is for meaningful operational messages, not per-call shape data.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/dagre-wrapper/createLabel.js",
+      "line_number": 97,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Same issue as the rendering-util copy: `log.debug` was changed to `log.info` for a verbose per-invocation trace message. This should remain `log.debug`.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/createLabel.js",
+      "line_number": 50,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `padding-right: 1px` style that existed in the previous implementation has been silently removed (replaced with `line-height: 1.5` and `text-align: center`). The original padding comment said 'Fix for firefox'. Removing it without a note explaining why the Firefox fix is no longer needed (or that it's been superseded) makes it hard to audit visually and may cause subtle regressions on Firefox.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/createLabel.js",
+      "line_number": 64,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`await configureLabelImages(div.node(), node.label)` \u2014 `div.node()` returns `Element | null` (the D3 contract), while `configureLabelImages` is typed as `container: HTMLElement`. If the selection were somehow empty, passing `null` here would crash at `container.getElementsByTagName('img')`. A null guard before the call would close the type gap:\n```js\nconst divNode = div.node();\nif (divNode) { await configureLabelImages(divNode, node.label); }\n```\nThe same pattern applies in `dagre-wrapper/createLabel.js`.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/clusters.js",
+      "line_number": 498,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`getClusterTitleWidth` is a synchronous function, but `createLabel` is `async`. Without `await`, `label` is a `Promise` object, not a DOM element, so `label.getBBox()` will throw `TypeError: label.getBBox is not a function` at runtime. The function must be made `async` and `createLabel` must be awaited:\n```js\nexport const getClusterTitleWidth = async (elem, node) => {\n  const label = await createLabel(node.label, node.labelStyle, undefined, true, false, node.width);\n  ...\n};\n```\n(The pre-existing TODO comment on the file's current `main` already acknowledges this; the PR adds parameters but doesn't fix the fundamental issue.)",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/edges.js",
+      "line_number": 43,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The added `typeof styleArray === 'string'` branch now returns the raw string instead of throwing (the old `reduce` on a plain string would have thrown). This is a silent behaviour change; the additional branch is a real bug fix but isn't mentioned in the changeset or PR description. Worth calling out explicitly so reviewers know this is intentional.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid/src/dagre-wrapper/createLabel.js",
+      "line_number": 128,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "In the SVG (non-HTML) label path: `svgLabel.setAttribute('style', style.replace('color:', 'fill:'))` \u2014 if `style` is `undefined` or `null` this will throw. The null guard added for the HTML path (`style ? style.replace(...) : style`) was not applied here. The HTML path defensively handles `undefined` style now, but the SVG path is still unguarded.",
+      "index": 9
+    },
+    {
+      "file_path": ".changeset/vast-masks-say.md",
+      "line_number": 2,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The changeset bump type is `'mermaid': patch` (lowercase \u2014 correct). However, the description says 'Refactor shared label rendering logic \u2026 with no markdown-specific changes'. The PR actually adds KaTeX and icon-pack support to previously unsupported label paths and silently removes `padding-right: 1px`, changes text alignment, and modifies logging levels. Calling this a pure refactor with no functional changes is misleading; consider a `minor` bump since it adds new capabilities.",
+      "index": 10
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Both `packages/mermaid/src/rendering-util/rendering-elements/createLabel.js` and `packages/mermaid/src/dagre-wrapper/createLabel.js` are modified in this PR and now contain nearly identical `addHtmlLabel` implementations (same body, line-for-line). The stated goal of the PR is to reduce duplication, but instead it produces two copies of the new implementation. If the intention is for the dagre-wrapper path to eventually be removed or both to delegate to a shared utility, that should be tracked with a `// TODO:` comment referencing an issue.",
+      "index": 11
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The new `addHtmlLabel` in both `createLabel.js` files appends a hidden SVG to `document.body` for measurement and removes it afterward with `tempSvg.remove()`. If an exception is thrown between the append and the remove (e.g., inside `configureLabelImages`), the temp SVG will leak into the DOM. Although `configureLabelImages` always resolves rather than rejects, a `try/finally` block would make the cleanup unconditional and resilient to future changes:\n```js\ntry {\n  tempSvg.node().appendChild(fo.node());\n  await configureLabelImages(...);\n  ...\n} finally {\n  tempSvg.remove();\n}\n```",
+      "index": 12
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `DEFAULT_WRAPPING_WIDTH = 200` constant is duplicated at the top of both `createLabel.js` files and also inside `getWrappingWidth()`, which is itself duplicated across both files. Extracting this constant (and the helper function) into a shared module would avoid the dual-maintenance burden introduced by this PR.",
+      "index": 13
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "In `dagre-wrapper/createLabel.js`, the FontAwesome icon replacement regex `/fa[blrs]?:fa-[\\w-]+/g` is applied inline to `node.label` rather than going through `replaceIconSubstring` from `createText.js`. `replaceIconSubstring` (which was previously imported and used here) does additional work \u2014 it fetches icon SVG data from registered icon packs \u2014 so inlining a simplified regex silently loses iconpack support that `replaceIconSubstring` provides. The PR removes that import and replaces it with a regex that only handles FontAwesome class-based icons, not SVG-based icon packs.",
+      "index": 14
+    }
+  ],
+  "cost_usd": 1.1327303499999999,
+  "duration_seconds": 701.894113779068
+}

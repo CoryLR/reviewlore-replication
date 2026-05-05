@@ -1,0 +1,108 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/util.ts",
+      "line_number": 25,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Changing `getConfig()?.htmlLabels` to `getConfig()?.flowchart?.htmlLabels` is a silent behavioral regression. The original expression accessed a non-existent top-level `htmlLabels` property, which returned `undefined` and made `evaluate(undefined)` resolve to `false` \u2014 effectively making `node.useHtmlLabels` the sole enabler. Now `getConfig()?.flowchart?.htmlLabels` returns `true` (the flowchart default), so every diagram using this `labelHelper` will have HTML labels **force-enabled** by default. Worse, the `||` operator means that even a node that explicitly sets `useHtmlLabels = false` (evaluates to `false`) will have the right-hand side evaluated, and `true` will win. Non-flowchart diagrams that deliberately opted out of HTML labels will be silently switched over. If the goal is to read `htmlLabels` from config, this should use the diagram-specific config path or stay gated behind `node.useHtmlLabels`.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/createLabel.js",
+      "line_number": 72,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The temp SVG element appended to `document.body` on line 69 is only removed at line 92, with no `try/finally` guard. If `configureLabelImages()`, `getBoundingClientRect()`, or any intervening operation throws an exception, `tempSvg.remove()` is never called and the hidden `<svg>` element remains in the document permanently, leaking DOM nodes across every label render that encounters an error. Wrap the block in a `try/finally` block to ensure cleanup:\n```js\ntry {\n  await configureLabelImages(div.node(), node.label);\n  let bbox = div.node().getBoundingClientRect();\n  // ...\n} finally {\n  tempSvg.remove();\n}\n```",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/createLabel.js",
+      "line_number": 55,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`applyStyle(span, node.labelStyle)` and `applyStyle(div, node.labelStyle)` on lines 55 and 58 both write the same `style` attribute to the `<span>` and its parent `<div>`. The original code only applied the style to the outer `div`. Inherited CSS properties like `font-size`, `color`, and `font-weight` will now be set on both elements, meaning they may appear on the span twice through direct assignment and CSS inheritance simultaneously. This can cause unintended visual differences \u2014 for example, a `font-size` value that is compounded through nesting. The span only needs the class assignment (`span.attr('class', labelClass)`); the style should remain on the div only.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/edges.js",
+      "line_number": 98,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The 5th argument passed to `createLabel` for all four terminal edge labels (start/end, left/right) is `useHtmlLabels`, but the 5th parameter in `createLabel`'s new signature is `addBackground`. These mean completely different things. `addBackground` controls whether `div.attr('class', 'labelBkg')` is applied \u2014 i.e., it's a visual styling flag. `useHtmlLabels` indicates whether HTML rendering is active. The result is that when `htmlLabels` is enabled, every terminal edge label now gets the `labelBkg` CSS background class applied, which was not the previous behavior. If the intent is to add a background to terminal labels only when using HTML mode, that should be explicitly documented and named. If not, this should be `false`.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/labelImageUtils.ts",
+      "line_number": 26,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`getConfig()` is called twice in rapid succession on lines 26\u201327 inside `setupImage()` \u2014 once for the truthiness check and once for the actual value. Per the project's established convention, `getConfig()` should only be called once per function and the result cached in a local variable:\n```ts\nconst config = getConfig();\nconst bodyFontSize = config.fontSize\n  ? config.fontSize\n  : window.getComputedStyle(document.body).fontSize;\n```\nThis is especially relevant here because `setupImage` runs once per image element inside a `Promise.all`, so `getConfig()` is being invoked multiple times per label render.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/clusters.js",
+      "line_number": 489,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`getClusterTitleWidth` is a synchronous function calling async `createLabel` without `await`. The `label` variable holds a `Promise`, not a DOM element, so `label.getBBox()` on line 491 will throw or return meaningless results. While this was a pre-existing issue, this PR is modifying the call signature of this line and should take the opportunity to fix the root cause. `getClusterTitleWidth` needs to be made `async` and the call needs an `await`:\n```js\nexport const getClusterTitleWidth = async (elem, node) => {\n  const label = await createLabel(node.label, node.labelStyle, undefined, true, false, node.width);\n  // ...\n};\n```\nAll callers will need to be updated accordingly.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/edges.js",
+      "line_number": 54,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`edge.width || getConfig().flowchart?.wrappingWidth` uses logical OR (`||`), which will fall through to the config value if `edge.width` is `0` (a potentially valid falsy number). Prefer the nullish coalescing operator (`??`) so that only `null` and `undefined` trigger the fallback, consistent with how `width ?? getWrappingWidth()` is used in `addHtmlLabel`:\n```js\nconst width = edge.width ?? getConfig().flowchart?.wrappingWidth;\n```",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/createLabel.js",
+      "line_number": 47,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`hasKatex(node.label)` is called without a null/falsy guard, whereas the original code checked `node.label && hasKatex(node.label)`. While `node.label` is coerced to `''` earlier in `createLabel`, `addHtmlLabel` is a separate function that could be called independently. The original defensive guard should be preserved:\n```js\nconst sanitizedLabel = node.label && hasKatex(node.label)\n  ? await renderKatexSanitized(...)\n  : sanitizeText(node.label, config);\n```",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/createLabel.js",
+      "line_number": 60,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The original `addHtmlLabel` included `div.style('padding-right', '1px')` with an explicit `// Fix for firefox` comment. This style has been silently removed with no explanation or replacement. If the Firefox rendering issue that necessitated this workaround has been resolved (e.g., by a browser update or by the new DOM measurement approach), that should be documented in a comment. If it's still needed, removing it is a regression.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/util.ts",
+      "line_number": 10,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The JSDoc block on lines 10\u201317 describes the `configureLabelImages` function \u2014 but that function was moved into `labelImageUtils.ts`. This JSDoc is now a free-floating comment attached to nothing in `util.ts`. It should either be removed or moved to the function definition in `labelImageUtils.ts` where it actually belongs.",
+      "index": 9
+    },
+    {
+      "file_path": ".changeset/vast-masks-say.md",
+      "line_number": 2,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The bump type is `patch`, but the PR description explicitly states that labels now gain **KaTeX support** and **FontAwesome iconpack support** that were previously unavailable. These are new user-facing features, not just bug fixes. Per the project's changeset conventions, feature additions should use `minor`. Using `patch` for a feature bump will result in an incorrect version increment and misleading CHANGELOG entries.",
+      "index": 10
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "No unit tests are added for the new `configureLabelImages` utility in `labelImageUtils.ts`. Per project conventions, new utility functions should have dedicated unit tests covering at least: a container with no images (early return path), a container with images and accompanying text (`img.style.width = '100%'` path), and a container with only images (the default-width/font-size path). The current PR relies entirely on implicit integration coverage through existing Cypress snapshot tests, making it difficult to detect regressions in the new module in isolation.",
+      "index": 11
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "In `addHtmlLabel` (`createLabel.js`), the `foreignObject` is given initial dimensions of `width: 10000, height: 10000` while attached to the hidden temp SVG for measurement. This is a common pattern but means that if any browser extension, accessibility tool, or test environment observes the DOM during this window, it sees an enormous invisible SVG element. A smaller sentinel value like `1` (or omitting the dimensions until after measurement) would be less surprising and more consistent with how other measurement utilities in the project work.",
+      "index": 12
+    }
+  ],
+  "cost_usd": 0.6116381500000001,
+  "duration_seconds": 310.1898422241211
+}

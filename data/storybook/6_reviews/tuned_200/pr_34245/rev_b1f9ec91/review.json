@@ -1,0 +1,108 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "package.json",
+      "line_number": 46,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The lint-staged hooks use `oxfmt --check` (validate-only) instead of `oxfmt` (format-in-place). The previous config in `code/package.json` ran `oxfmt` to auto-format staged files before committing. With `--check`, any file that isn't already perfectly formatted will cause the commit to fail with no automatic fix applied. Developers without a format-on-save editor setup will have their commits blocked rather than silently corrected. This is a significant DX regression. Either revert to `oxfmt` (write mode) so lint-staged fixes files automatically, or add a prominent note to docs/CONTRIBUTING.md that format-on-save is now mandatory.",
+      "index": 0
+    },
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 18,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`\"docs\"` is added to `ignorePatterns`, which means `yarn fmt:check` (i.e., `oxfmt --check .` from the repo root) will never inspect any file under `docs/`. However, the `prettyDocs` CI job in `scripts/ci/common-jobs.ts` was updated to run `yarn fmt:check` (root-level) and `scripts/project.json` still declares `inputs: [\"{workspaceRoot}/docs/**/*\"]`. The net effect is that the CI job: (a) only re-runs when docs files change, but (b) never actually checks docs formatting when it does run\u2014because docs are excluded. Docs snippet formatting, previously validated via `docs:fmt:check \u2192 oxfmt ./_snippets`, is now silently unvalidated in CI. If the intention is to defer docs formatting to a follow-up PR, leave the old `docs:fmt:check` step in place until that follow-up lands, or keep `docs/_snippets` out of `ignorePatterns`.",
+      "index": 1
+    },
+    {
+      "file_path": "scripts/project.json",
+      "line_number": 10,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `inputs` for the `pretty-docs` Nx target is still `[\"{workspaceRoot}/docs/**/*\"]`, but the command is now `yarn fmt:check` from `{workspaceRoot}`, which runs `oxfmt --check .` and inspects all files (except those in `ignorePatterns`, including `docs/` itself\u2014see the `.oxfmtrc.json` comment). This creates two compounding problems: (1) Nx will use the cached result and skip the task entirely whenever docs files haven't changed, even if other source files have formatting violations. (2) When the task does execute (a docs file changed), it checks source code but not docs, making the task name `pretty-docs` entirely misleading. Either update `inputs` to `[\"**/*\"]` to reflect the actual scope, or scope the command back to only check docs snippets as before.",
+      "index": 2
+    },
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 43,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `overrides` entry for `[\"*.md\", \"*.mdx\"]` (with `importOrderSeparation: false` and `importOrderSortSpecifiers: false`) is dead configuration. Both `*.md` and `*.mdx` also appear in `ignorePatterns` (lines 38\u201339), so oxfmt will never process these files and the override will never be applied. Remove the dead block to avoid confusion.",
+      "index": 3
+    },
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 56,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The override entry for `\"**/frameworks/angular/template/**/*.ts\"` (parser: `babel-ts`) is unreachable. `\"code/frameworks/angular/template/**\"` is listed in `ignorePatterns` (line 33), so all files matching that path are excluded before overrides are evaluated. Remove this unreachable entry or add a comment if the intent is to handle template files outside the `code/` prefix.",
+      "index": 4
+    },
+    {
+      "file_path": "code/builders/builder-vite/input/iframe.html",
+      "line_number": 68,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The embedded `<script>` content was reformatted with 12-space indentation (the function declaration alone is at 12 leading spaces, nested content deeper still). This appears to be oxfmt treating the script as nested HTML content and applying indentation based on the HTML element depth. The `embeddedLanguageFormatting: \"off\"` setting in `.oxfmtrc.json` was intended to prevent this, but the indentation shift still occurred. The result makes the script body significantly harder to read and goes against conventional embedded-JS formatting (where script content is typically at minimal or zero additional indent). Consider whether `*.html` files in `code/builders/` should be added to `ignorePatterns`, or investigate why `embeddedLanguageFormatting: \"off\"` did not suppress the indentation change.",
+      "index": 5
+    },
+    {
+      "file_path": "code/package.json",
+      "line_number": 27,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`\"lint\": \"yarn lint:js && cd .. && yarn fmt:check\"` uses shell `cd ..` to escape the `code/` subdirectory and invoke the root-level script. This is fragile on Windows (`cd ..` works in `cmd` but is not idiomatic in npm scripts on all platforms) and unconventional\u2014a workspace `package.json` script should not reach up to its parent. Prefer `yarn --cwd .. fmt:check` (which Yarn resolves safely) or, better, restructure CI to call root-level scripts directly so the `code/` package doesn't need to know about its parent.",
+      "index": 6
+    },
+    {
+      "file_path": "scripts/ci/common-jobs.ts",
+      "line_number": 73,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "Changed from `npm.installScripts()` (installs only the lightweight `scripts/` workspace dependencies) to `npm.install('.')` (installs all root `devDependencies`, including `vite`, `vitest`, `nx`, and many others). The `prettyDocs` CI job only needs to run a format check; installing the full root dependency tree significantly increases job setup time for no benefit. If `oxfmt` is now a root dependency, prefer a targeted install of just what the format-check step needs, or check whether the existing `install` step in a parent job can be reused via the Nx cache/remote cache rather than installing from scratch.",
+      "index": 7
+    },
+    {
+      "file_path": "scripts/package.json",
+      "line_number": 12,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The previous `docs:fmt:check` script appended `|| echo 'Please run \"docs:fmt:write\" in the \"scripts\" directory to fix the issues'` as a fallback message. This made CI failures immediately actionable. The new `fmt:check` script drops this hint entirely. When the format check fails in CI, developers will only see the raw oxfmt output without guidance on how to fix it. Consider adding `|| echo 'Run \"yarn fmt:write\" from the repo root to fix formatting issues.'` to `scripts/package.json`'s `fmt:check` or to the root-level `fmt:check` script.",
+      "index": 8
+    },
+    {
+      "file_path": ".vscode/extensions.json",
+      "line_number": 9,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The file is missing a trailing newline (`\\ No newline at end of file`). Most editors and POSIX tools expect text files to end with a newline; its absence will generate warnings in some git configurations and violates the project's EditorConfig settings (which typically enforce `insert_final_newline = true`).",
+      "index": 9
+    },
+    {
+      "file_path": ".vscode/settings.json",
+      "line_number": 75,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Same as `.vscode/extensions.json`: the file is missing a trailing newline (`\\ No newline at end of file`). Please add a final newline to both `.vscode` files to comply with EditorConfig and avoid noisy git diffs.",
+      "index": 10
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `prettyDocs` CI job is now effectively a no-op for its stated purpose. Previously the pipeline was: install scripts deps \u2192 `yarn docs:fmt:check` \u2192 `oxfmt --check docs/_snippets`. After this PR: install all root deps \u2192 `yarn fmt:check` \u2192 `oxfmt --check .` (which skips `docs/` via `ignorePatterns`). The job still only re-runs when docs files change (unchanged `inputs`), but when it does run it no longer validates docs formatting at all. Three separate changes combined to silently break this: (1) `docs` added to `ignorePatterns`, (2) command changed to root `fmt:check`, (3) `inputs` not updated to match new scope. Recommend either keeping a separate `docs:fmt:check` step that explicitly targets `docs/_snippets` (bypassing `ignorePatterns`) or deferring this entire change until the follow-up 'check with DX team on formatting docs' work is done.",
+      "index": 11
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The project-rule convention says: 'When transitioning to a new formatter or linter but retaining the old tool for programmatic use in codegen scripts or codemod utilities (e.g., `formatFile`, `formatFileContent`), preserve the old tool's config file (e.g., `.prettierrc.json`) at the appropriate root so that programmatically invoked formatting produces expected output.' `prettier` was removed from the root `package.json` devDependencies but it remains in `code/package.json`. If any scripts or codemod utilities (e.g., under `code/lib/codemod/`) call Prettier programmatically, those code paths remain functional via `code/`'s own dependency. However, the root `.prettierrc.json` (or `.prettierrc`) is listed in `.oxfmtrc.json`'s `ignorePatterns`, which suggests it still exists. Confirm that no utility relies on the root-level Prettier install, and if the root config file is still needed, add an explanatory comment to `.oxfmtrc.json` explaining why `.prettierrc` is excluded rather than deleted.",
+      "index": 12
+    }
+  ],
+  "cost_usd": 0.54687035,
+  "duration_seconds": 393.94557785987854
+}

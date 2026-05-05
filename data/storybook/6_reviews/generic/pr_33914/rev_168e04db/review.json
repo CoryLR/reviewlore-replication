@@ -1,0 +1,128 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/renderers/react/src/componentManifest/componentMeta/ComponentMetaManager.ts",
+      "line_number": 494,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`fs.watch` with `{ recursive: true }` is **not supported on Linux**. Node.js throws `ERR_FEATURE_UNAVAILABLE_ON_PLATFORM` on Linux for recursive watches. The error is caught and logged, so watching silently does nothing on Linux \u2014 the most common CI/CD and server environment. The feature will appear to work on macOS/Windows but break in production pipelines.\n\nConsider using a cross-platform file watching library (e.g. `chokidar`, which is already in the Storybook dependency tree) or explicitly falling back to non-recursive watches with manual subdirectory enumeration on Linux.",
+      "index": 0
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/componentMeta/ComponentMetaProject.ts",
+      "line_number": 454,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`arrayItemsEqual` has a false-positive for arrays with duplicate entries. Consider:\n```ts\narrayItemsEqual(['a', 'b'], ['a', 'a']) // returns true \u2014 WRONG\n```\nBecause `set = new Set(['a', 'b'])`, and both `'a'` elements in the second array pass `set.has`. Length check passes (both are 2), so the function incorrectly reports equality.\n\nWhile TypeScript `fileNames` rarely contain duplicates in practice, this is a correctness bug. Fix by checking both directions, or by comparing sorted arrays:\n```ts\nfunction arrayItemsEqual(a: string[], b: string[]) {\n  if (a.length !== b.length) return false;\n  const sortedA = [...a].sort();\n  const sortedB = [...b].sort();\n  return sortedA.every((v, i) => v === sortedB[i]);\n}\n```",
+      "index": 1
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 35,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The module-level `componentMetaManager` singleton is never cleared when the module is reloaded. In a Vite HMR scenario or Jest watch mode where module instances are recycled, the old `ComponentMetaManager` with its file watchers and TS LanguageService instances will be orphaned \u2014 neither `stopWatching()` nor `dispose()` is called on the previous instance before the new one is created.\n\nConsider registering a cleanup handler (e.g. via a `process.on('exit')` hook or exposing a `disposeComponentMetaManager()` that callers can invoke on shutdown) so that dangling watchers do not accumulate.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/utils/manifests/render-components-manifest.ts",
+      "line_number": 9,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "This import crosses a package boundary via a deep relative path (`../../../../../renderers/react/src/\u2026`). The path traverses from `core` into `renderers/react`, coupling two separate packages at the source level. It will silently break if either file is renamed or moved, and it cannot be validated by standard package resolution tools.\n\nThe comment says this avoids a \"runtime dependency\", but the coupling already exists at build time. Consider instead duplicating the minimal type shape in-package, or extracting the shared type into a `storybook/internal/types` module where it can be properly versioned and imported from both packages.",
+      "index": 3
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/componentMeta/ComponentMetaProject.ts",
+      "line_number": 145,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`this.commandLine.fileNames.includes(fileName)` is an O(n) linear scan repeated for every file in the batch. In large projects (e.g. Mantine with 9 tsconfig projects) this can be called hundreds of times per extraction pass.\n\nConsider maintaining a `Set<string>` parallel to `commandLine.fileNames`:\n```ts\nprivate fileNameSet = new Set(this.commandLine.fileNames);\n\nensureFiles(fileNames: string[]): void {\n  let added = false;\n  for (const fileName of fileNames) {\n    if (!this.fileNameSet.has(fileName)) {\n      this.commandLine.fileNames.push(fileName);\n      this.fileNameSet.add(fileName);\n      added = true;\n    }\n  }\n  if (added) this.projectVersion++;\n}\n```",
+      "index": 4
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/componentMeta/ComponentMetaProject.ts",
+      "line_number": 254,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`this.entries = entries` overwrites the stored entry list on every call to `extractPropsFromStories`. If the manager calls this method more than once during a batch (possible in `batchExtract` since it dispatches per-project), only the last call's entries are stored for the warmup timer.\n\nFor the warmup to correctly re-extract all components that changed, consider accumulating entries rather than replacing them:\n```ts\nextractPropsFromStories(entries: StoryRef[]): void {\n  for (const e of entries) {\n    if (!this.entries.includes(e)) this.entries.push(e);\n  }\n  // \u2026 rest of method\n}\n```\nor store entries by storyPath key for deduplication.",
+      "index": 5
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/utils.ts",
+      "line_number": 136,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `logger.verbose` message inside the `.then()` callback says `[cache] hit` but this branch runs on a **cache miss** (when the function was actually invoked). The genuine cache-hit log is a few lines above at the `if (existing)` early return. This inversion makes the verbose log output misleading when debugging cache behavior.\n\nChange to something like `[cache] computed` or `[cache] miss \u2192 resolved`.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/core-server/utils/manifests/manifests.ts",
+      "line_number": 11,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`isDocsManifest` requires the object to have a `docs` key (`'docs' in manifest`), but `DocsManifest.docs` is declared optional (`docs?: Record<\u2026>`). A valid `DocsManifest` equal to `{}` (no `docs` key) would fail this guard and be treated as `undefined`, silently suppressing the manifest HTML render.\n\nIf the intent is only to guard against non-object values, the check should be:\n```ts\nfunction isDocsManifest(manifest: unknown): manifest is DocsManifest {\n  return typeof manifest === 'object' && manifest !== null;\n}\n```\nIf you intentionally want to skip empty manifests, rename it to `hasDocsContent` to clarify the semantics.",
+      "index": 7
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/utils.ts",
+      "line_number": 182,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`cachedReadFileSync` (the old, untyped variant accepting an encoding argument) is still exported but has been superseded by the new `cachedReadTextFileSync` (which always returns `string`). All call sites in this PR have migrated to `cachedReadTextFileSync`. If `cachedReadFileSync` is not used elsewhere, consider deprecating or removing it to avoid future callers accidentally reaching for the looser version.",
+      "index": 8
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.ts",
+      "line_number": 460,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The JSDoc `@param` tags on `resolvePropsFromStoryFile` describe `importSpecifier`, `importName`, and `memberAccess` as separate parameters, but the function signature takes a single `componentRef: ComponentRef`. These sub-properties are extracted inside the function. The param docs are stale from an earlier iteration and should be updated to reflect the actual parameter:\n```ts\n* @param componentRef - The component reference containing importId, importName, and optional member.\n```",
+      "index": 9
+    },
+    {
+      "file_path": "code/package.json",
+      "line_number": 37,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `--max_old_space_size` for the UI build script was bumped from 4096 MB to 5120 MB with no comment or explanation. This suggests the new persistent TS LanguageService instances have a meaningful heap impact. It would be helpful to document why the bump is needed (e.g. \"Increased for react-component-meta LanguageService instances\") so future contributors understand the constraint before adjusting it.",
+      "index": 10
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/componentMeta/ComponentMetaManager.ts",
+      "line_number": 37,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`createLanguage` from `@volar/language-core` and several symbols from `@volar/typescript` are imported in `ComponentMetaProject.ts`. Both packages are pinned to `~2.4.28` in `package.json`, but the Volar ecosystem moves quickly and minor bumps (e.g. `2.4.29`) can introduce API changes. The tilde range (`~`) allows patch-level updates \u2014 consider using an exact version (`2.4.28`) and documenting the minimum known-compatible version so upgraders know what to validate.",
+      "index": 11
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "**Test infrastructure was silently global before; it is now per-file.** The old `vitest.setup.ts` applied `vi.mock('node:fs')`, `vi.mock('node:fs/promises')`, and all the memfs wiring globally to every test file in the renderer. The new setup is gutted to a single comment, and test files must explicitly opt in via `vi.mock` calls + `setupMemfsMocks()`. This is an improvement in isolation, but the migration is incomplete: `reactDocgen.test.ts` now calls `invalidateCache()` in `beforeEach` (added in the diff) but doesn't mock `node:fs` \u2014 so it runs against the real filesystem. Any test that previously relied on the global mocks silently without opting in could now behave differently. A clear migration guide or shared vitest `project`-level setup for the memfs-dependent test group would prevent future regressions.",
+      "index": 12
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "**`batchExtract` receives `resolvedEntries` directly rather than `StoryRef[]`.** In `generator.ts`, `manager.batchExtract(resolvedEntries)` passes the wider object `{ storyPath, component, entry, storyFilePath, \u2026 }` where `StoryRef` only requires `{ storyPath, component }`. TypeScript's structural typing accepts this, and it works at runtime because `batchExtract` only reads `storyPath` and `component`. However, it means `resolvedEntries` is implicitly typed as `StoryRef[]`-compatible \u2014 if `StoryRef` grows new required fields, the silent assignment would break. Consider explicitly mapping to `StoryRef[]` before passing:\n```ts\nmanager.batchExtract(resolvedEntries.map(({ storyPath, component }) => ({ storyPath, component })));\n```",
+      "index": 13
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**`manifests.test.ts` uses `mockApp as Polka` to paper over a type mismatch.** The mock is correctly typed as `Pick<Polka, 'get'>` since the test only exercises the `.get()` method, but `registerManifests` still requires the full `Polka` type. The four cast sites in the test suggest `registerManifests`'s own signature should be widened to `{ app: Pick<Polka, 'get'>; presets: Presets }`. That would make both the implementation and tests structurally honest and remove the casts.",
+      "index": 14
+    },
+    {
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "**`getComponents` is now `async` and uses `Promise.all` over all components.** For `react-docgen` and `react-component-meta` paths the inner work is synchronous \u2014 wrapping synchronous code in `async` and materialising a `Promise.all` adds microtask overhead with no benefit for those paths. Consider keeping a synchronous fast path for engines that don't require async I/O and only going async for `react-docgen-typescript` where `parseWithReactDocgenTypescript` is genuinely async.",
+      "index": 15
+    }
+  ],
+  "cost_usd": 1.0718158500000001,
+  "duration_seconds": 383.79556679725647
+}

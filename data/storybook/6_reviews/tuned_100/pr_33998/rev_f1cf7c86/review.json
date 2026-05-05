@@ -1,0 +1,60 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/Color.stories.tsx",
+      "line_number": 103,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `WithInvalidMaxPresetColors` story provides only 5 preset colors, but the fallback limit is 27. Because 5 < 27, every color renders regardless of which limit is applied \u2014 the story is visually identical whether the limit is correctly 27 or incorrectly -5. To actually demonstrate that an invalid negative value falls back to 27, the story needs more than 27 preset colors so observers (and automated tests) can see that exactly 27 are shown. Consider reusing the `Array.from({ length: 40 }, ...)` pattern from `WithUnlimitedPresetColors`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/Color.tsx",
+      "line_number": 338,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The JSDoc on `maxPresetColors` in `types.ts` does not document the silent fallback-to-27 behavior for invalid values (negative numbers, non-integers, `NaN`). The implementation silently treats those as `27`, which will surprise users who, for example, make a copy-paste error and pass a float. At minimum, the JSDoc should say something like: 'Non-positive or non-integer values fall back to the default of `27`.' If the intent is to accept any positive number and round it, `Math.floor` would be less surprising than a hard fallback.",
+      "index": 1
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/types.ts",
+      "line_number": 28,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `maxPresetColors` prop is only typed in the `addons/docs`-local `ColorConfig` interface. The canonical `Control` union type used by Storybook consumers lives in `code/core/src/csf/story.ts` under the `type: 'color'` branch (line 86-89). That branch only declares `presetColors?: string[]` and does not include `maxPresetColors`. Consumers writing argTypes in TypeScript will not get autocomplete or type-checking for `maxPresetColors` at the point where they actually configure it. The type needs to be added there as well.",
+      "index": 2
+    },
+    {
+      "file_path": "code/frameworks/svelte-vite/package.json",
+      "line_number": 70,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Adding `^7.0.0` to the `@sveltejs/vite-plugin-svelte` peer dependency range is unrelated to the `maxPresetColors` feature and is not mentioned anywhere in the PR description. Per project rules, before widening a peer dependency to cover a new major version the changelog/release notes for that major must be checked for breaking changes, and it must be confirmed that a local build succeeds with the new version. There is no evidence that this was done. This change should be in a separate PR with appropriate justification.",
+      "index": 3
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/Color.stories.tsx",
+      "line_number": 71,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "None of the three new stories include a `play` function. A `play` function asserting the rendered swatch count (e.g., `expect(canvas.getAllByRole('button', { name: 'Pick this color' })).toHaveLength(5)` for `WithMaxPresetColors`) would provide automated regression coverage and confirm the limit is actually applied. Without it, the stories are purely visual and the behavior is not tested.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `usePresets` hook now has two overlapping branches for the 'no limit' case (`=== 0` and `=== Infinity`). These are documented as equivalent in the JSDoc but are checked separately with a strict-equality guard. Consolidating them with `maxPresetColors == null || maxPresetColors <= 0 || maxPresetColors === Infinity` (or checking `!Number.isFinite(maxPresetColors) || maxPresetColors <= 0`) would unify the intent. As-is, the separate branches are fine but add a small mental-model cost when reading the code. A single path derived from one clear rule ('if not a positive finite integer, skip the slice') would be easier to reason about.",
+      "index": 5
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The meta `parameters.controls.include` is `['value', 'startOpen']`, which means `presetColors` and `maxPresetColors` do not appear in the Storybook controls panel for any story. This is consistent with how the existing `WithPresetColors` story works, but it means the three new stories cannot be interactively explored through the controls. Consider adding `maxPresetColors` (at least as a number control) to `include` so that the feature is discoverable and playable in the Storybook UI.",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.36082269999999994,
+  "duration_seconds": 221.7128632068634
+}

@@ -1,0 +1,163 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33264,
+  "title": "Docs-Blocks: Fix broken tooltip in ArgValue details",
+  "body": "Closes #33248\r\n\r\n## What I did\r\n\r\n* Fixed a bug in PopoverProvider's built-in close button, that didn't work with controlled-state PopoverProviders\r\n* Fixed the HTML markup for the \"show more\" button in long type enums, to use HTML `details` for better keyboard and AT support\r\n* Replaced the type `detail` tooltip with a popover\r\n  * Fixed up the width calculation logic which was outdated and caused unnecessary horizontal scrollbars\r\n  * Fixed the transparency bug\r\n  * Switched to a popover, because this tooltip sometimes requires scrolling, hinting we need to be able to navigate inside it including with a keyboard (hence it needs to grab keyboard focus)\r\n  * Added a close button, so KB users can easily close the popover\r\n\r\nThis is a pretty opinionated change. The alternative would be to use `aria-describedby` (which is the default behaviour of RAC tooltips) but I'm worried the content can be a bit long for ARIA descriptions.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [x] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n1. Run SB instance\r\n2. Navigate to the [Func story](http://localhost:6006/?path=/story/addons-docs-blocks-components-argstable-argrow--func) and the new [LongFunc story](http://localhost:6006/?path=/story/addons-docs-blocks-components-argstable-argrow--long-func)\r\n3. Navigate to the [LongEnum story](http://localhost:6006/?path=/story/addons-docs-blocks-components-argstable-argrow--long-enum)\r\n\r\n### Documentation\r\n\r\n\u00f8\r\n\r\n## Checklist for Maintainers\r\n\r\n- [x] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [x] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Tests**\n  * Added interactive story examples (LongFunc and LongEnum) demonstrating expanded-detail behavior and automated play routines that validate expand/collapse and content visibility.\n\n* **Refactor**\n  * Argument-value display now uses a popover/details pattern instead of tooltips, simplifying expansion and rendering of long details.\n  * Popover hide/show now flows through the standard open/close handler for consistent visibility.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "Sidnioulz",
+  "merged_at": "2025-12-10T20:21:35Z",
+  "base_ref": "next",
+  "merge_commit_sha": "08d73d927704ccf7920fb09f9ec04996733b06c0",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "8b278b06037e517fa59167dc86f43a08b6106f7b",
+    "b21d8fed2c75d21edb4977b463b91a1607ddd532"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6aDJTg",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Potential state desync between React and native `<details>` element.**\n\nThe `<details>` element manages its own open/closed state natively, but the button text relies on React's `isExpanded` state. If the native state changes (e.g., via assistive technology or browser behavior) without triggering `onClick`, the button text may become out of sync with the actual visibility.\n\nConsider using the `onToggle` event to keep states synchronized:\n\n\n\n```diff\n-      <Summary isExpanded={isExpanded}>\n-        {renderSummaryItems(summaryItems)}\n-        <DetailsContainer>\n+      <Summary isExpanded={isExpanded}>\n+        {renderSummaryItems(summaryItems)}\n+        <DetailsContainer\n+          open={isExpanded}\n+          onToggle={(e) => setIsExpanded(e.currentTarget.open)}\n+        >\n           <AlignedDetails>{renderExpandedItems(summaryItems)}</AlignedDetails>\n-          <ExpandButton onClick={() => setIsExpanded(!isExpanded)}>\n+          <ExpandButton>\n             {isExpanded ? 'Show less...' : `Show ${itemsCount - ITEMS_BEFORE_EXPANSION} more...`}\n           </ExpandButton>\n         </DetailsContainer>\n       </Summary>\n```\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    return hasManyItems ? (\n      <Summary isExpanded={isExpanded}>\n        {renderSummaryItems(summaryItems)}\n        <DetailsContainer\n          open={isExpanded}\n          onToggle={(e) => setIsExpanded(e.currentTarget.open)}\n        >\n          <AlignedDetails>{renderExpandedItems(summaryItems)}</AlignedDetails>\n          <ExpandButton>\n            {isExpanded ? 'Show less...' : `Show ${itemsCount - ITEMS_BEFORE_EXPANSION} more...`}\n          </ExpandButton>\n        </DetailsContainer>\n      </Summary>\n    ) : (\n      <Summary>{renderSummaryItems(summaryItems)}</Summary>\n    );\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/addons/docs/src/blocks/components/ArgsTable/ArgValue.tsx around lines\n177-189, the button text can desynchronize from the native <details> open state;\nadd synchronization by making the <details> element controlled and listening for\nnative changes: attach a ref to the DetailsContainer (ensure it renders a\n<details>), add onToggle={(e) => setIsExpanded(e.currentTarget.open)} to update\nReact state when the native control toggles, and set the details element's open\nattribute to {isExpanded} so the native UI follows React state; keep the button\ntoggling setIsExpanded(!isExpanded) as before (or toggle the details via the ref\nif you prefer) so both paths remain in sync.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit bb9681a",
+          "file_path": "code/addons/docs/src/blocks/components/ArgsTable/ArgValue.tsx",
+          "line_number": 201,
+          "start_line": 189,
+          "commit_sha": "b21d8fed2c75d21edb4977b463b91a1607ddd532",
+          "created_at": "2025-12-03T10:25:28Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The React state and native <details> element state can desync, meaning the code behavior doesn't match intent \u2014 the button text should always reflect the actual open/closed state of the details element."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6ae64S",
+          "author": "ghengeveld",
+          "body": "You should look into this.",
+          "file_path": "code/addons/docs/src/blocks/components/ArgsTable/ArgValue.tsx",
+          "line_number": 201,
+          "start_line": 189,
+          "commit_sha": "b21d8fed2c75d21edb4977b463b91a1607ddd532",
+          "created_at": "2025-12-05T08:17:15Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential state desync bug and suggests a concrete fix using onToggle event to synchronize React state with native <details> element state."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6ajxb0",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Remove redundant `role=\"button\"` from native `<summary>` element.**\n\nThe `<summary>` element has an implicit ARIA role of `button`, making the explicit `role=\"button\"` attribute redundant and potentially confusing for assistive technologies. Native semantic HTML should be preferred over explicit ARIA roles when possible.\n\n\n\nApply this diff:\n\n```diff\n-          <ExpandButton role=\"button\">\n+          <ExpandButton>\n             {isExpanded ? 'Show less...' : `Show ${itemsCount - ITEMS_BEFORE_EXPANSION} more...`}\n           </ExpandButton>\n```\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n          <ExpandButton>\n            {isExpanded ? 'Show less...' : `Show ${itemsCount - ITEMS_BEFORE_EXPANSION} more...`}\n          </ExpandButton>\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/addons/docs/src/blocks/components/ArgsTable/ArgValue.tsx around line\n194, the ExpandButton instance sets an explicit role=\"button\" on a native\n<summary> element which is redundant; remove the role=\"button\" attribute from\nthe ExpandButton at that line so the element relies on the summary's implicit\nbutton role (delete the role prop) and ensure no other code relies on that prop\nbeing present.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/docs/src/blocks/components/ArgsTable/ArgValue.tsx",
+          "line_number": 194,
+          "start_line": null,
+          "commit_sha": "b21d8fed2c75d21edb4977b463b91a1607ddd532",
+          "created_at": "2025-12-05T15:24:50Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "high",
+          "label_reasoning": "Adding an explicit role=\"button\" to a native <summary> element is incorrect use of ARIA/HTML semantics, as <summary> already has an implicit button role, making this a misuse of the API."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6a7yb_",
+          "author": "Sidnioulz",
+          "body": "It is not quite redundant because some browsers do not set summary's role to button. This is explained on MDN: https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/summary",
+          "file_path": "code/addons/docs/src/blocks/components/ArgsTable/ArgValue.tsx",
+          "line_number": 194,
+          "start_line": null,
+          "commit_sha": "b21d8fed2c75d21edb4977b463b91a1607ddd532",
+          "created_at": "2025-12-08T16:51:23Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removal of redundant role='button' attribute from a native <summary> element, with a specific diff showing the change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6bI5Ua",
+          "author": "ghengeveld",
+          "body": "This should probably have a play function which opens the tooltip, so that we can visually test this. The `Func` story should do the same.",
+          "file_path": "code/addons/docs/src/blocks/components/ArgsTable/ArgRow.stories.tsx",
+          "line_number": 349,
+          "start_line": null,
+          "commit_sha": "2dc5fa926e3eb35ed888986c9a497403c9ce6712",
+          "created_at": "2025-12-09T13:59:56Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment requests adding a play function to stories for visual testing coverage, which relates to missing test/story intent documentation and completeness of the story implementation."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6bXeQQ",
+          "author": "Sidnioulz",
+          "body": "Good call, I've pushed some!",
+          "file_path": "code/addons/docs/src/blocks/components/ArgsTable/ArgRow.stories.tsx",
+          "line_number": 349,
+          "start_line": null,
+          "commit_sha": "2dc5fa926e3eb35ed888986c9a497403c9ce6712",
+          "created_at": "2025-12-10T13:14:45Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding a play function to stories to visually test tooltip opening behavior, and mentions the Func story should do the same."
+    }
+  ],
+  "review_thread_count": 4,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6ahKzM",
+            "author": "Sidnioulz",
+            "body": "* [ ] I'll need to change this into a `button` for WCAG compliance",
+            "file_path": "code/addons/docs/src/blocks/components/ArgsTable/ArgValue.tsx",
+            "line_number": 110,
+            "start_line": null,
+            "commit_sha": "b21d8fed2c75d21edb4977b463b91a1607ddd532",
+            "created_at": "2025-12-05T11:35:26Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 4,
+    "stage1_kept": 3,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 1,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

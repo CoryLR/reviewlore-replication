@@ -1,0 +1,160 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "instructions.md",
+      "line_number": 1,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This file is a developer AI-prompting scratchpad that should not be committed to the repository. It describes implementation instructions for the tidy-tree algorithm and is unrelated to any shipped feature. Per project rules, scratch/WIP files must not be accidentally committed. Delete this file before merging.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/intersect/intersect-line.js",
+      "line_number": 33,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This condition is logically incorrect and is a regression from the original algorithm. The original check was `r1 !== 0 && r2 !== 0 && sameSign(r1, r2)`, which correctly detects when both points of segment P lie on the *same side* of segment Q (no intersection). The new condition `Math.abs(r1) < epsilon && Math.abs(r2) < epsilon && sameSign(r1, r2)` only fires when r1 and r2 are *both near zero* (near-collinear case) \u2014 an almost orthogonal concern. The key same-side non-intersection check was eliminated, so segment pairs that genuinely don't intersect will now incorrectly return a false intersection point. Restore the original condition: `if (r1 !== 0 && r2 !== 0 && sameSign(r1, r2)) { return; }`",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/preprocess.ts",
+      "line_number": 28,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This silently changes the default layout for *all* mindmaps to `'tidy-tree'` for any diagram that doesn't explicitly set `config.layout`. This is a breaking rendering change for existing users, but it contradicts `config.schema.yaml` which declares the default for `mindmap.layoutAlgorithm` as `'cose-bilkent'`. The two defaults are now inconsistent: the schema says cose-bilkent, but the preprocessor actually delivers tidy-tree. Additionally, this approach bypasses the mindmap-specific `layoutAlgorithm` config field entirely \u2014 the global `layout` key is overridden instead. This should either (a) use the diagram-specific config path consistently, or (b) if truly changing the default, update the schema to match and document the behavior change clearly in the changeset.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 59,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`preferredLayout` is computed from `conf?.layoutAlgorithm ?? layout ?? 'cose-bilkent'` but is only used in three `log.debug` calls and then never applied. The actual layout algorithm selected on line 56 is `getRegisteredLayoutAlgorithm(layout, { fallback: 'cose-bilkent' })`, which consults only the global `layout` config \u2014 it completely ignores `conf?.layoutAlgorithm` (the mindmap-specific config field added in this PR). As a result, the new `MindmapDiagramConfig.layoutAlgorithm` property has no functional effect. Either wire `preferredLayout` into the layout selection call, or remove the dead config field.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/createGraph.ts",
+      "line_number": 29,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "This entire file (`createGraphWithElements`) is unreferenced dead code \u2014 no other file in the repository imports from it. It appears to be an experimental utility that was never wired up. Per project rules, unreferenced new functions must be flagged as dead code. Remove this file before merging, or add the call sites that justify its existence.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid-layout-elk/src/render.ts",
+      "line_number": 4,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`NodeChildren` is imported from `'mermaid/dist/rendering-util/types.js'` \u2014 a path inside the compiled output directory. Importing from `dist/` is fragile: it breaks in development before a build step runs, can silently diverge from source during development, and tightly couples the layout package to a build artifact rather than the source contract. `NodeChildren` is defined as `Node[]` in `rendering-util/types.ts` and is not re-exported from the `mermaid` package root. The simplest fix is to declare it inline (`children?: Node[]`) or to export `NodeChildren` from the mermaid package's public surface and import it from `'mermaid'`.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.ts",
+      "line_number": 381,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`diagramId: 'mindmap-' + Date.now()` generates a new non-deterministic ID on every call to `getData()`. If `getData()` is called more than once during a render pass (or across render passes for snapshot/diffing), the IDs will differ, breaking any logic that depends on a stable diagram identity. The renderer already sets `data4Layout.diagramId = id` on the returned object (line 67 of `mindmapRenderer.ts`), which overwrites this value \u2014 making the `Date.now()` initialization doubly wasteful. Initialize it to an empty string or `undefined` here, since it will always be set by the renderer.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 13,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`_drawNodes` and `_updateNodeDimensions` (lines 13\u201344) are dead code: neither function is called anywhere in this file or elsewhere. The `drawNode` import on line 9 and the `FilledMindMapNode` type import on line 8 are also only used by these dead functions. All four should be removed before merging.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 73,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`const mm = db.getMindmap()` is called here purely as a null-guard, but `getData()` (called on line 51) already calls `getMindmap()` internally and returns early if the mindmap is absent. If `getData()` returned successfully, the mindmap exists. This is a redundant call that adds confusion. If a null check before `render()` is genuinely desired, add a comment explaining why the extra guard is needed; otherwise remove it.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layouts.ts",
+      "line_number": 3,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`const loader = async () => await import(\\`./render.js\\`)` uses a template literal for a static path, which prevents bundlers from statically analyzing the import and can suppress tree-shaking and chunk-splitting optimizations. Use a plain string literal: `const loader = async () => import('./render.js');`. Also, the outer `async/await` wrapper is redundant for a single `import()` \u2014 `import()` already returns a Promise, so `await` inside an `async` arrow provides no benefit.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/cose-bilkent/layout.ts",
+      "line_number": 37,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`validateLayoutData` throws if `data.rootNode` is absent, but `rootNode` is not a declared field on the `LayoutData` interface \u2014 it is accessed via the index signature `[key: string]: unknown`. This means any diagram type that passes its `LayoutData` to the cose-bilkent renderer will throw, even though non-mindmap diagrams have no concept of a root node. The cose-bilkent renderer should either (a) remove the `rootNode` requirement since it's unused in the cose-bilkent layout logic, or (b) add `rootNode` as an optional typed field on `LayoutData`.",
+      "index": 10
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/cose-bilkent/render.ts",
+      "line_number": 155,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`const _edgeLabel = await insertEdgeLabel(edgeLabels, edge)` \u2014 `_edgeLabel` is declared but never read. If the call is needed for its side effects only, remove the variable assignment and just `await insertEdgeLabel(...)`. The leading underscore convention implies intentional non-use, but even by that convention unused declared variables should not exist.",
+      "index": 11
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/intersect/intersect-line.js",
+      "line_number": 2,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The entire function body is now wrapped in an extra `{ }` block that serves no purpose. The only reason to wrap a function body in an inner block would be to create a new scoping context for `let`/`const`, but all declarations here use `const` which have block scope regardless. Remove the inner block \u2014 it adds a level of visual indentation with no semantic benefit.",
+      "index": 12
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/question.ts",
+      "line_number": 83,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Using `// @ts-ignore TODO fix this (KNSV)` to suppress a type error is against project rules: fix the underlying types instead of suppressing the error. The issue is that `node` is typed as `Node` but is being cast to `Bounds`. Since `calcIntersect` is now defined on the node, `this` inside the `intersect` function should already have access to it without casting. Rework the implementation to avoid the cast: `return intersect.polygon(node, points, point)` directly, or type the `calcIntersect` call correctly.",
+      "index": 13
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/bang.ts",
+      "line_number": 72,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`log.info('Bang intersect', ...)` uses `log.info` for a debugging trace inside a rendering path. Per project convention, use `log.debug()` or `log.trace()` for development diagnostics in renderer code \u2014 `log.info` is for meaningful operational messages. The same applies to the `log.info` in `cloud.ts` (Cloud intersect) and the existing `log.info` in `circle.ts`.",
+      "index": 14
+    },
+    {
+      "file_path": "cypress/platform/mindmap-layouts.html",
+      "line_number": 1,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "This is a developer playground/test HTML file. Per project rules, developer scratch HTML files must not be accidentally committed to the repository. If this file is needed as a visual regression fixture, it should be placed under `cypress/integration/` with corresponding `imgSnapshotTest` calls; otherwise remove it.",
+      "index": 15
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "**`MindmapDiagramConfig.layoutAlgorithm` is effectively dead config.** The field was added to `config.type.ts`, `config.schema.yaml`, and the `MindmapDiagramConfig` interface, but it is never read during rendering. `preprocess.ts` short-circuits layout selection by overwriting the global `config.layout` to `'tidy-tree'` when no global layout is set \u2014 this bypasses the mindmap-specific config entirely. The `mindmapRenderer.ts` computes `preferredLayout = conf?.layoutAlgorithm ?? layout` but never uses it. Users who attempt to set `config.mindmap.layoutAlgorithm` will see no effect. Either remove the config field, or thread it through `getRegisteredLayoutAlgorithm` in the renderer.",
+      "index": 16
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "**The ELK renderer's intersection logic was replaced without a complete migration.** The large `cutPathAtIntersect`/`intersectLine`/`diamondIntersection` block was removed and replaced with a `calcIntersect` callback on each node. However, only `drawRect`, `circle`, `bang`, and `cloud` shapes received a `calcIntersect` implementation in this PR. Any other shape type passed through ELK rendering (e.g. `question`/diamond \u2014 which got a `calcIntersect` but via a `@ts-ignore`) will silently fall through the `if (startNode.calcIntersect)` guard with no intersection trimming, causing edges to connect at the node center rather than its boundary. Audit all shapes used in flowchart + ELK-rendered diagrams and ensure each has a `calcIntersect` implementation before removing the old fallback.",
+      "index": 17
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "**Several debug `log.debug` and `log.info` calls with `APA01` prefixes were left in production code.** Both `packages/mermaid-layout-elk/src/render.ts` and `packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts` contain multiple `log.debug('APA01 ...')` and `log.info('APA01 ...')` calls that dump entire graph structures (`JSON.stringify(elkGraph, null, 2)`) and edge arrays to the console. These are clearly development debugging artifacts. Per project rules, remove all debug `console.*` / `log.*` noise before merging, and use `log.debug` or `log.trace` (not `log.info`) for any diagnostics that genuinely need to survive.",
+      "index": 18
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**The `LayoutData` interface accumulates mindmap-specific fields without typing them.** The `getData()` return object adds `rootNode`, `nodeSpacing`, `rankSpacing`, and `shapes` to `LayoutData`, all of which are accessed via the catch-all index signature `[key: string]: unknown`. This means callers must cast or use unsafe access patterns, and there is no compile-time guarantee these fields are present. Prefer one of: (a) extend the `LayoutData` interface with explicit optional typed fields for diagram-specific data, or (b) create a `MindmapLayoutData extends LayoutData` type that makes the mindmap-specific contract explicit, following the pattern described in project architecture rules.",
+      "index": 19
+    }
+  ],
+  "cost_usd": 2.5839043999999998,
+  "duration_seconds": 407.4256479740143
+}

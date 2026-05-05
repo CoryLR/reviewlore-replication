@@ -1,0 +1,48 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33940,
+  "title": "React: Handle render identifier in manifest snippet generation",
+  "body": "## What I did\n\nFixed a bug where stories using `render: Template` (an identifier referencing a function) instead of an inline arrow/function expression would throw an error in the manifest snippet generation:\n\n```\nExpected render to be an arrow function or function expression\n  > 46 |     render: Template,\n       |             ^^^^^^^^\n```\n\nThis pattern is legitimate CSF3 \u2014 the `csf-2-to-3` codemod even creates it when converting `Template.bind({})`.\n\n## How it works\n\nWhen `render` is an identifier:\n1. Try to resolve it to its local declaration via `resolveIdentifierInit()`\n2. If resolved to a function \u2192 use it (snippet includes the inlined JSX with args)\n3. If unresolvable (e.g. imported) \u2192 gracefully fall back to no-function JSX synthesis\n\nAlso renamed `resolveBindIdentifierInit` \u2192 `resolveIdentifierInit` since it's now reused for both `Template.bind({})` and `render: Template` patterns.\n\n## Checklist for Contributors\n\n### Testing\n\n#### The changes in this PR are covered in the following automated tests:\n\n- [ ] stories\n- [x] unit tests\n- [ ] integration tests\n- [ ] end-to-end tests\n\n#### Manual testing\n\n4 new unit tests covering all combinations:\n- Story-level `render: Template` with local function \u2192 resolves and inlines JSX \u2705\n- Story-level `render: Template` with unresolvable identifier \u2192 graceful fallback \u2705\n- Meta-level `render: Template` with local function \u2192 resolves and inlines JSX \u2705\n- Meta-level `render: Template` with unresolvable identifier \u2192 graceful fallback \u2705\n\nAll 40/40 tests passing.\n\n### Documentation\n\n- [ ] Add or update documentation reflecting your changes\n- [ ] If you are deprecating/removing a feature, make sure to update\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Refactor**\n  * More reliable story and meta render resolution so components display consistently; clearer, safer fallbacks when a custom render cannot be resolved.\n\n* **Tests**\n  * Added comprehensive tests for template-driven and meta-level render scenarios, covering resolvable vs. unresolvable render references and precedence behavior.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "kasperpeulen",
+  "merged_at": "2026-02-28T06:37:37Z",
+  "base_ref": "next",
+  "merge_commit_sha": "2b8e827d8074a82a01b601ef09a7836f224ceec7",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "f73e0fe5f7726e3a79349867116f78542a997184",
+    "032c046bd311a7d3b0113dd54d5129312f21ea2b"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6qW-aH",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Preserve story-level `render` precedence when identifier resolution fails.**\n\nWhen a story has `render` but it cannot be resolved (Lines 139-140), `getRenderPath` returns `undefined`, which is indistinguishable from \u201cno render property.\u201d Then Line 155 can incorrectly fall back to `meta.render`, producing a snippet for the wrong renderer.\n\n\n<details>\n<summary>\ud83d\udca1 Proposed fix (introduce tri-state render resolution)</summary>\n\n```diff\n+  type RenderResolution =\n+    | { kind: 'missing' }\n+    | {\n+        kind: 'resolved';\n+        path: NodePath<t.ArrowFunctionExpression | t.FunctionExpression | t.FunctionDeclaration>;\n+      }\n+    | { kind: 'unresolved' };\n+\n-  const getRenderPath = (object: NodePath<t.ObjectProperty>[]) => {\n+  const getRenderPath = (object: NodePath<t.ObjectProperty>[]): RenderResolution => {\n     const renderPath = object.find((p) => keyOf(p.node) === 'render')?.get('value');\n \n-    if (!renderPath) {\n-      return undefined;\n-    }\n+    if (!renderPath) return { kind: 'missing' };\n \n     // If render is an identifier (e.g. `render: Template`), try to resolve it\n     if (renderPath.isIdentifier()) {\n       const resolved = resolveIdentifierInit(storyDeclaration, renderPath);\n       if (\n         resolved &&\n         (resolved.isArrowFunctionExpression() ||\n           resolved.isFunctionExpression() ||\n           resolved.isFunctionDeclaration())\n       ) {\n-        return resolved;\n+        return { kind: 'resolved', path: resolved };\n       }\n       // Could not resolve to a function \u2014 skip render extraction, fall through to no-function path\n-      return undefined;\n+      return { kind: 'unresolved' };\n     }\n \n     if (!(renderPath.isArrowFunctionExpression() || renderPath.isFunctionExpression())) {\n       throw renderPath.buildCodeFrameError(\n         'Expected render to be an arrow function or function expression'\n       );\n     }\n \n-    return renderPath;\n+    return { kind: 'resolved', path: renderPath };\n   };\n \n-  const metaRenderPath = getRenderPath(metaProps);\n-  const renderPath = getRenderPath(storyProps);\n-\n-  storyFn ??= renderPath ?? metaRenderPath;\n+  const metaRender = getRenderPath(metaProps);\n+  const storyRender = getRenderPath(storyProps);\n+\n+  if (!storyFn) {\n+    storyFn =\n+      storyRender.kind === 'resolved'\n+        ? storyRender.path\n+        : storyRender.kind === 'missing' && metaRender.kind === 'resolved'\n+          ? metaRender.path\n+          : undefined;\n+  }\n```\n</details>\n\n\nAlso applies to: 152-156\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/renderers/react/src/componentManifest/generateCodeSnippet.ts` around\nlines 124 - 141, The current logic in getRenderPath treats an unresolved render\nidentifier the same as a missing render, allowing fallback to meta.render;\nchange getRenderPath to be tri-state: return undefined when the story has no\nrender property, return a distinct sentinel (e.g., a Symbol or specific string\nlike \"UNRESOLVED_RENDER\") when a render property exists but\nresolveIdentifierInit(storyDeclaration, renderPath) fails to produce a function,\nand return the resolved function node when resolution succeeds. Then update the\ncaller that inspects getRenderPath to treat the sentinel as \"story-level render\nexists but is unresolved\" (so do NOT fallback to meta.render and proceed with\nthe no-function/story-level-precedence path) while still falling back to\nmeta.render only when getRenderPath returned undefined; use the symbols\nrenderPath, resolveIdentifierInit, storyDeclaration, getRenderPath, and\nmeta.render to locate and apply the changes.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 40bab5e",
+          "file_path": "code/renderers/react/src/componentManifest/generateCodeSnippet.ts",
+          "line_number": 152,
+          "start_line": 135,
+          "commit_sha": "032c046bd311a7d3b0113dd54d5129312f21ea2b",
+          "created_at": "2026-02-26T10:13:32Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6qYMc8",
+          "author": "kasperpeulen",
+          "body": "Good catch\\! Implemented the tri-state approach in 40bab5e \u2014 getRenderPath now returns { kind: 'missing' | 'resolved' | 'unresolved' } so an unresolvable story-level render doesn't fall back to meta's render. Added a dedicated test for this scenario too.",
+          "file_path": "code/renderers/react/src/componentManifest/generateCodeSnippet.ts",
+          "line_number": 152,
+          "start_line": 135,
+          "commit_sha": "032c046bd311a7d3b0113dd54d5129312f21ea2b",
+          "created_at": "2026-02-26T11:22:47Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 1
+}

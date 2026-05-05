@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/common/svgDrawCommon.ts",
+      "line_number": 152,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The inline `background` and `border` styles (lines 152\u2013153) hardcode `#ffffde` and `1px solid #333`, but the existing `.mermaidTooltip` CSS rules in `flowchart/styles.ts`, `block/styles.ts`, and `user-journey/styles.js` use theme variables \u2014 `${options.tertiaryColor}` and `${options.border2}` \u2014 so the tooltip adapts to the active theme. Inline styles have higher CSS specificity than class rules, so these hardcoded values will silently override the theme-aware CSS on every diagram that loads those stylesheets. This breaks tooltip theming across all non-default themes. The inline `position`, `pointer-events`, and `z-index` styles may also be necessary (since those aren't guaranteed to be loaded), but `background`, `border`, `font-size`, `font-family`, `padding`, `text-align`, `max-width`, and `border-radius` should be removed and left to the CSS class so theme overrides work. If you need a fallback for diagrams that don't load the stylesheet, consider using a dedicated CSS class injected once via a `<style>` tag rather than per-element inline styles.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+      "line_number": 478,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`escapeHtml` is a hand-rolled HTML sanitizer, but `classDb.ts` already has a module-level wrapper at line 33: `const sanitizeText = (txt: string) => common.sanitizeText(txt, getConfig())`. That wrapper delegates to DOMPurify (via `common.sanitizeText`) and respects the user's `securityLevel` configuration. Using the custom `escapeHtml` instead bypasses DOMPurify and ignores `securityLevel`. Replace `this.escapeHtml(title)` with `sanitizeText(title)`. Note that DOMPurify allows `<br>` through by default, so the subsequent `.replace(/&lt;br\\/&gt;/g, '<br/>')` step would then be unnecessary \u2014 DOMPurify will have preserved any `<br/>` tags already in the input.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+      "line_number": 478,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`escapeHtml` is a private instance method but never references `this`. Per project conventions, private class methods with no `this` dependency should be extracted as module-level functions rather than kept as instance methods. Since this code should actually be replaced by the existing `sanitizeText` module-level const (see the related defect comment), the whole method can simply be deleted.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+      "line_number": 492,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The selector is broadened from the specific `svg.selectAll('g.node')` (which `flowDb.ts` still uses) to _all_ `<g>` elements that have a `title` attribute. In a class diagram's SVG, many non-node groups can carry `title` attributes \u2014 edge path groups, label wrappers, container groups, etc. This attaches `mouseover`/`mouseout` handlers to every such group and will cause tooltips to fire on elements that were never intended to be tooltip targets, potentially producing visual glitches or confusing UX. If the class diagram renderer doesn't apply a `node` CSS class to node groups (which would explain why the old `g.node` selector might have missed them), prefer using a more specific selector such as `g.classGroup`, `g[data-node]`, or equivalent that matches only diagram node containers.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+      "line_number": 500,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The check was tightened from `if (title === null)` to `if (!title)`. D3's `.attr()` returns `null` when the attribute is absent, so the `=== null` check was correct. The truthy check `!title` also treats an empty-string title (`''`) as absent, which may be intentional but is a silent behavioral change. Per project rules, checking for an absent D3 attribute should use a strict `=== null` (or `!= null` guard), not a falsy test.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+      "line_number": 577,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`flowDb.ts` is updated to use `createTooltip()` but retains the old two-step HTML-construction pattern (`.text()` followed by `tooltipElem.html(tooltipElem.html().replace(...))`) and the verbose `rect.right - rect.left` width calculation that `classDb.ts` cleaned up to `rect.width`. The two DB modules now diverge in how they set tooltip HTML with no documented reason. Consider unifying the content-setting logic \u2014 either promote the `sanitizeText`-based `.html()` approach into `svgDrawCommon.ts` or apply the same pattern in both DB classes.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `createTooltip()` helper is introduced as a shared utility but only adopted by `classDb.ts` and `flowDb.ts`. The `user-journey` diagram also has `.mermaidTooltip` CSS styling and presumably its own tooltip-creation logic. If other diagram modules still create the tooltip element independently (without the `position: absolute` / `pointer-events: none` inline styles now added here), there will be inconsistent tooltip behaviour across diagrams depending on which module happened to create the singleton first. The PR should either audit and migrate all tooltip-creating modules to `createTooltip()`, or document the scope limitation clearly so follow-up work is tracked.",
+      "index": 6
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR does not include any unit or Cypress tests for the fixed tooltip positioning \u2014 the task checklist confirms this was skipped. At minimum, a Cypress test that hovers a class diagram node and asserts the tooltip appears within the viewport bounds (not at `top: 0` or at the page bottom) would prevent a regression of the original bug. The `classDb.spec.ts` file would also be a good place to add a unit test asserting that `setupToolTips` attaches handlers only to intended node groups.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.5592032,
+  "duration_seconds": 369.61384296417236
+}

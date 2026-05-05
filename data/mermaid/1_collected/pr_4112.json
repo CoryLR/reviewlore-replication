@@ -1,0 +1,251 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4112,
+  "title": "Use JSON Schema to define and document `MermaidConfig`",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nCurrently, the `MermaidConfig` definition is a bit broken.\r\n\r\n- The default values for the configuration are stored in [`packages/mermaid/src/defaultConfig.ts`](https://github.com/mermaid-js/mermaid/blob/e51817b735208440b2fcb7c2a09acfdfa9f919d9/packages/mermaid/src/defaultConfig.ts).\r\n- The documentation for the configuration is stored in [`packages/mermaid/src/defaultConfig.ts`](https://github.com/mermaid-js/mermaid/blob/e51817b735208440b2fcb7c2a09acfdfa9f919d9/packages/mermaid/src/defaultConfig.ts).\r\n    However, it uses [documentationjs](https://github.com/documentationjs/documentation), **which is broken with our current workflow**, and has been removed from the Mermaid website since we migrated to Vitepress (see https://github.com/mermaid-js/mermaid/commit/9468bffcbb2bb44b2b0989ef2a92d045d8432017).\r\n- The TypeScript definition is located in [`packages/mermaid/src/config.type.ts`](https://github.com/mermaid-js/mermaid/blob/e51817b735208440b2fcb7c2a09acfdfa9f919d9/packages/mermaid/src/config.type.ts), but the types often conflict with the types described by the documentation.\r\n\r\n**This PR proposes instead moving as much as possible into a [JSON Schema](https://json-schema.org/) definition.**\r\n\r\nFrom a JSON Schema file, we can:\r\n- **Automatically generate documentation in markdown**, using [@adobe/jsonschema2md](https://github.com/adobe/jsonschema2md).\r\n    This has been added in https://github.com/mermaid-js/mermaid/commit/f9d3d5363cc52d07bc80ee06e69b6d6923008fe6.\r\n    - See a preview of this documentation at <https://aloisklink.com/mermaid/config/schema-docs/config.html>\r\n- **Automatically generate TypeScript definitions** using [json-schema-to-typescript](https://github.com/bcherny/json-schema-to-typescript).\r\n    - The script to do this has been added in https://github.com/mermaid-js/mermaid/commit/a15644695ebbec5f9f6e81cea826640f76f68383, and **is backwards compatible with the old TypeScript definition**.\r\n        - For a future version of Mermaid, we probably want to make the `MermaidConfig` stricter, but that will be a breaking change, so it might need to wait for Mermaid v11.\r\n    - The changed TypeScript file can be found in https://github.com/mermaid-js/mermaid/commit/1e8d266d248e0b17c10462993e01666423b3dfc4.\r\n- **Automatically generate default JSON values** using [ajv](https://github.com/ajv-validator/ajv).\r\n    - This is done by a custom Vite plugin I wrote in https://github.com/mermaid-js/mermaid/commit/81b7d74ad6ec100cc8815cd40eebfde7804172c8.\r\n    - Non-JSON values like `undefined` and `function` are still located in\r\n        `defaultConfig.ts`.\r\n    - As a temporary measure, I've added a test in https://github.com/mermaid-js/mermaid/commit/2c7b50f7fa639ec04caa2f63225f3d3b61b80d95 that checks that the old `defaultConfig` is the same as the new `defaultConfig`. This test can be `git revert`-ed once this PR is merged, and there is no risk of merge conflicts.\r\n- Validate user submitted configuration and print human-readable warnings/errors\r\n    (i.e. like what eslint uses for plugins)\r\n    (**not in this PR, since it will be a breaking change**).\r\n\r\n#### Before (broken)\r\n\r\nTwo files to edit (`defaultConfig.ts` and `config.types.ts`) with broken documentation.\r\n\r\n```mermaid\r\nflowchart TD\r\n    default(defaultConfig.ts) -->|documentation.js **BROKEN**| docs[Documentation]\r\n    configTypes(config.types.ts)\r\n```\r\n\r\n#### After\r\n\r\nOne file to edit (`schemas/config.schema.yaml` JSON Schema) that auto-generates `defaultConfig.ts`, `config.types.ts`, and documentation.\r\n\r\n```mermaid\r\nflowchart TD\r\n    schema(schemas/config.schema.yaml JSON Schema)\r\n    schema -->|.vite/jsonSchemaPlugin.ts| default[defaultConfig.ts]\r\n    schema -->|docs.mts using jsonschema2md| docs[Documentation]\r\n    schema --> |create-types-from-json-schema.mjs\\nusing json-schema-to-typescript| configTypes(config.types.ts)\r\n```\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\n- The documentation is generated in the same `packages/mermaid/src/docs.mts` script as the rest of the markdown documentation. However, I've decided to only put it in Vitepress, and not in the `docs/` folder, mainly because it creates 100s of files, which slows down `git`, and would make this PR massive.\r\n    - I've uploaded a preview of the documentation at <https://aloisklink.com/mermaid/config/schema-docs/config.html>\r\n- I've made sure that the **new `packages/mermaid/src/config.type.ts` definition is backwards compatible with the old one**. This however, has some issues:\r\n    - A bunch of types for variables like `securityLevel` are changed from a `string`/`number` to an enum. (e.g. `securityLevel` type is `\"strict\" | \"loose\" | \"antiscript\" | \"sandbox\"`). To ensure backwards compatibility, I've added a `| string` to them, but in the future, they should probably just be an `enum`.\r\n    - All the TypeScript properties are optional. Ideally, anything that is documented as `required`, should be a required type. In the future, we should mark these as required in `MermaidConfig`, and change functions like `setConfig()` to only accept a `Partial<MermaidConfig>`.\r\n    - In order to make the `git diff` simpler, the script that generates `packages/mermaid/src/defaultConfig.ts` has some custom code to make sure everything is output in the same order as it was before. We can delete this bit later, once we no longer need to worry about `git merge` conflicts.\r\n    - The `packages/mermaid/scripts/create-types-from-json-schema.mjs` script I wrote is a bit hacky.\r\n        - Ideally, we should extract some of the common functions from `packages/mermaid/src/docs.mts`, so that both of these scripts can re-use the same code and functions.\r\n        - It's also not written in TypeScript, mainly because this script creates the `MermaidConfig` TypeScript file, but also uses the `MermaidConfig` TypeScript file. We may want to fix this in the future.\r\n- `packages/mermaid/src/defaultConfig.ts`:\r\n    - The JSON default values are automatically generated when running `pnpm run build` or `pnpm run test` from the `default:` keys in the JSON Schema, by the custom `.vite/jsonSchemaPlugin.ts` file I made, that uses [ajv](https://github.com/ajv-validator/ajv) to get the default values.\r\n        - There is a tiny difference in size (~400 bytes), mainly because my custom Vite plugin quotes everything (e.g. it does `{\"key\": \"bar\"}` instead of `{key: \"bar\"}`). It's probably not worth changing.\r\n    - Currently, `gitGraph.useMaxWidth` is `undefined`. I've changed this to `false` in my implementation.\r\n        However, every other diagram uses `true`, so should we also set `gitGraph.useMaxWidth` to `true`?\r\n    - A bunch of options have explicit default values of `undefined`, which isn't a valid JSON type,\r\n        so we can't put their default values into the JSON Schema.\r\n        Can we instead make their default values `null`?\r\n\r\n### Generated Documentation Preview\r\n\r\n![Preview of generated @adobe/jsonschema2md output](https://user-images.githubusercontent.com/19716675/220018381-357b11dd-3360-49bc-8e94-2193e38602a7.png)\r\n\r\n![Preview of generated @adobe/jsonschema2md output](https://user-images.githubusercontent.com/19716675/220019003-1dd32efd-b2d0-4fbb-9b6f-e3876b65f4bf.png)\r\n\r\nSee <https://aloisklink.com/mermaid/config/schema-docs/config.html> if you want to explore the docs yourself.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added unit/e2e tests (if appropriate)\r\n  - E2E tests show that no snapshots have changed.\r\n- [x] :notebook: have added documentation (if appropriate)\r\n- [x] :bookmark: targeted `develop` branch\r\n  - I've targeted commit https://github.com/mermaid-js/mermaid/commit/fec193ebaf85403e3bc8031d79b4f593a5db1c31, which is on both `develop` and `release/10.0.0`, so that this PR should also merge cleanly into the `release/10.0.0` branch.\r\n    However, since this PR is pretty big, it can wait until after v10.0.0, especially since this PR doesn't yet have any breaking changes.\r\n\r\n**It's probably worth asking most of the core contributors if they'd be comfortable writing in JSON Schema, instead of modifying `defaultConfig.ts`/`config.types.ts`.**\r\n",
+  "author": "aloisklink",
+  "merged_at": "2023-07-06T10:09:26Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "2b5da79cdf0045fd6bb6b3aa8ff26503ce2046a8",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "aaec16ed6c743ab8a787f2cbc942c9a84044f823",
+    "29291c8901fe9d8b316f17fe4e84d1ce8ca05002"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85CQFg2",
+          "author": "sidharthv96",
+          "body": "Should this be build-config?",
+          "file_path": "packages/mermaid/.lintstagedrc.mjs",
+          "line_number": 7,
+          "start_line": null,
+          "commit_sha": "29291c8901fe9d8b316f17fe4e84d1ce8ca05002",
+          "created_at": "2023-02-20T06:40:02Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Co5EX",
+          "author": "aloisklink",
+          "body": "Yes it should :) Fixed in https://github.com/mermaid-js/mermaid/commit/c152b0af558798db165c127b4cce16417cbc68d2\r\n\r\nI also had to add a `--git` flag too, to also do the `git add ./src/config.type.ts` bit.\r\n\r\nIn a future PR, I should extract out the common bits of `./src/docs.mts` and move it into something like `./scripts/script-helpers.mts`, since I feel like I'm re-implementing a lot of the code from `./src/docs.mts`.",
+          "file_path": "packages/mermaid/.lintstagedrc.mjs",
+          "line_number": 7,
+          "start_line": null,
+          "commit_sha": "29291c8901fe9d8b316f17fe4e84d1ce8ca05002",
+          "created_at": "2023-02-26T04:09:10Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Kh3cC",
+          "author": "sidharthv96",
+          "body": "```\r\nif(!validate...){\r\n  error\r\n}\r\n```",
+          "file_path": ".vite/jsonSchemaPlugin.ts",
+          "line_number": 102,
+          "start_line": null,
+          "commit_sha": "29291c8901fe9d8b316f17fe4e84d1ce8ca05002",
+          "created_at": "2023-07-03T07:29:38Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KvMSy",
+          "author": "aloisklink",
+          "body": "Fixed in latest commits, see\r\nhttps://github.com/mermaid-js/mermaid/blob/52a1243da58244adafc6b7053776239865b3d5ac/.vite/jsonSchemaPlugin.ts#L94-L96",
+          "file_path": ".vite/jsonSchemaPlugin.ts",
+          "line_number": 102,
+          "start_line": null,
+          "commit_sha": "29291c8901fe9d8b316f17fe4e84d1ce8ca05002",
+          "created_at": "2023-07-06T03:34:52Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Kh38o",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n      if (!idAsUrl.pathname.endsWith('schema.yaml')) {\r\n          return;\r\n      }\r\n      // Dedent rest of code and remove last brace.\r\n```",
+          "file_path": ".vite/jsonSchemaPlugin.ts",
+          "line_number": 124,
+          "start_line": null,
+          "commit_sha": "29291c8901fe9d8b316f17fe4e84d1ce8ca05002",
+          "created_at": "2023-07-03T07:31:14Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KvMXD",
+          "author": "aloisklink",
+          "body": "Good catch! Fixed in latest commits, see https://github.com/mermaid-js/mermaid/blob/52a1243da58244adafc6b7053776239865b3d5ac/.vite/jsonSchemaPlugin.ts#L118-L120",
+          "file_path": ".vite/jsonSchemaPlugin.ts",
+          "line_number": 124,
+          "start_line": null,
+          "commit_sha": "29291c8901fe9d8b316f17fe4e84d1ce8ca05002",
+          "created_at": "2023-07-06T03:35:25Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Kh4JT",
+          "author": "sidharthv96",
+          "body": "Remove?",
+          "file_path": "package.json",
+          "line_number": 84,
+          "start_line": null,
+          "commit_sha": "29291c8901fe9d8b316f17fe4e84d1ce8ca05002",
+          "created_at": "2023-07-03T07:31:54Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KvBFe",
+          "author": "aloisklink",
+          "body": "I think we should keep it here. I'm using `ajv` in two places:\r\n\r\n- `.vite/jsonSchemaPlugin.ts` (so `ajv` needs to be in `devDependencies` in `package.json`)\r\n- `packages/mermaid/scripts/create-types-from-json-schema.mts` (so `ajv` should probably also be in `devDependencies` in `packages/mermaid/package.json`)",
+          "file_path": "package.json",
+          "line_number": 84,
+          "start_line": null,
+          "commit_sha": "29291c8901fe9d8b316f17fe4e84d1ce8ca05002",
+          "created_at": "2023-07-06T02:15:00Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Kh4yO",
+          "author": "sidharthv96",
+          "body": "I think this is a mistake in the `QuadrantChartConfig`. \r\nAll the configs should be optional, with the default being specified in the defaultConfig file. ",
+          "file_path": "packages/mermaid/scripts/create-types-from-json-schema.mjs",
+          "line_number": 197,
+          "start_line": null,
+          "commit_sha": "29291c8901fe9d8b316f17fe4e84d1ce8ca05002",
+          "created_at": "2023-07-03T07:34:05Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KvMGf",
+          "author": "aloisklink",
+          "body": "I've made this fix in a separate PR: https://github.com/mermaid-js/mermaid/pull/4602, so that this PR will change nothing from a user perspective, all default config values and all TypeScript types will be exactly the same.\r\n\r\nI've rebased my changes in this PR to add https://github.com/mermaid-js/mermaid/pull/4602/commits/38013de7114966e8b1a83396703ef8158bb34466 and removed these lines!",
+          "file_path": "packages/mermaid/scripts/create-types-from-json-schema.mjs",
+          "line_number": 197,
+          "start_line": null,
+          "commit_sha": "29291c8901fe9d8b316f17fe4e84d1ce8ca05002",
+          "created_at": "2023-07-06T03:32:54Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Kh4-n",
+          "author": "sidharthv96",
+          "body": "Isn't it possible to use `.mts` instead?\r\n\r\nAnd use a flag to skip run-time type check if that was the issue. ",
+          "file_path": "packages/mermaid/scripts/create-types-from-json-schema.mjs",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "85423656fe46edc1461893c62d9c01677be4688e",
+          "created_at": "2023-07-03T07:34:41Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KvM1X",
+          "author": "aloisklink",
+          "body": "Changed to `.mts` in https://github.com/mermaid-js/mermaid/pull/4112/commits/7c3a73d4a860c7ded69e465985e9ac9e4a55d6df\r\n\r\nThere were a few typescript errors I had to fix too!\r\n\r\nI've set it up so that:\r\n- `pnpm run --filter mermaid types:build-config`: Does **NOT** run type-checking, since the `../src/config.type.ts` file might not exist/be incorrect, before this script is run.\r\n  - The `../src/config.type.ts` file is currently commited into the Mermaid repo, mainly to make this PR easier to review, but in the future, we could delete it and just automatically create it on `pnpm install`.\r\n- `pnpm run --filter mermaid types:verify-config`: Does type check, since we expect that this file already exists.\r\n",
+          "file_path": "packages/mermaid/scripts/create-types-from-json-schema.mjs",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "85423656fe46edc1461893c62d9c01677be4688e",
+          "created_at": "2023-07-06T03:39:41Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Kh53O",
+          "author": "sidharthv96",
+          "body": "Should this be removed before merging?",
+          "file_path": "packages/mermaid/src/oldDefaultConfig.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "85423656fe46edc1461893c62d9c01677be4688e",
+          "created_at": "2023-07-03T07:36:47Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KvONj",
+          "author": "aloisklink",
+          "body": "IMO, there are two cases:\r\n  - If reviewers give me the go ahead to merge, I can delete this file right before merging, then merge myself.\r\n  - We could delete this file directly after this PR is merged.\r\n\r\nPersonally, either way is fine to me.\r\n\r\nIdeally we should delete it using a `git revert` commit, so that this test exists in the git history, in case anybody has any changes in `defaultConfig.ts` that haven't made it into `develop` yet (I can't see any open PRs with changes in `defaultConfig.ts` (even https://github.com/mermaid-js/mermaid/pull/4413 doesn't modify it, despite creating a new diagram), but there might be some people that have local changes that they haven't made into a PR yet.)\r\n",
+          "file_path": "packages/mermaid/src/oldDefaultConfig.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "85423656fe46edc1461893c62d9c01677be4688e",
+          "created_at": "2023-07-06T03:50:21Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KweaI",
+          "author": "sidharthv96",
+          "body": "I'll merge this now, you can delete it in the appropriate way afterwards. ",
+          "file_path": "packages/mermaid/src/oldDefaultConfig.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "85423656fe46edc1461893c62d9c01677be4688e",
+          "created_at": "2023-07-06T10:03:51Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85KvYW0",
+          "author": "sidharthv96",
+          "body": "Move imports to the top?",
+          "file_path": "packages/mermaid/src/docs.mts",
+          "line_number": 334,
+          "start_line": 326,
+          "commit_sha": "29291c8901fe9d8b316f17fe4e84d1ce8ca05002",
+          "created_at": "2023-07-06T05:05:33Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 8
+}

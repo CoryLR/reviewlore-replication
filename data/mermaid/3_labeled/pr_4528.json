@@ -1,0 +1,285 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4528,
+  "title": "fix not rendered style when style is optional",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nfix not rendered style when style is optional, see #4527 for more info.\r\n\r\nResolves #4527 \r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nIt appears that functions are considered empty object when using `isEmpty` from `lodash-es/isEmpty`, so I set the second parameter function as optional and validate it's not `undefined`.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [ ] :computer: have added unit/e2e tests (if appropriate)\r\n- [ ] :notebook: have added documentation (if appropriate)\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "Yokozuna59",
+  "merged_at": "2023-06-27T06:00:15Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "2bec82707f399a294a64f8a39bd39b2b1540b94f",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "5baeda0b5e5bc5cf917f5697ec419e55b1879b7f",
+    "64a28be5e3930d59bc35a1efb857194ecdd91813"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85KC2Pq",
+          "author": "sidharthv96",
+          "body": "Can you change `unknown` to the proper type?\r\nAnd also add it to `themes` at the top of the file?",
+          "file_path": "packages/mermaid/src/styles.ts",
+          "line_number": 76,
+          "start_line": null,
+          "commit_sha": "64a28be5e3930d59bc35a1efb857194ecdd91813",
+          "created_at": "2023-06-26T14:05:25Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "medium",
+          "label_reasoning": "Reviewer is asking to replace `unknown` with a proper type and register it in `themes`, indicating the type usage doesn't match the intended design."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KDJVv",
+          "author": "Yokozuna59",
+          "body": "> Can you change `unknown` to the proper type?\r\n\r\nI guess `(options?: any) => string` should be fine.\r\n\r\n> And also add it to `themes` at the top of the file?\r\n\r\nIt would be hard with the current approach. I think we should add something like `BaseStyleOptions` that contains common options, and make other diagram extends it. I guess `fontFamily` is common as far as I know.\r\n\r\n```diff\r\n- const themes: Record<string, any> = {};\r\n+ const themes: Record<string, (options?: BaseStyleOptions) => string> = {};\r\n```\r\n\r\nWhat do you think? And create `diagramTheme.ts` file would be great.\r\n",
+          "file_path": "packages/mermaid/src/styles.ts",
+          "line_number": 76,
+          "start_line": null,
+          "commit_sha": "64a28be5e3930d59bc35a1efb857194ecdd91813",
+          "created_at": "2023-06-26T14:59:24Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KDgWS",
+          "author": "sidharthv96",
+          "body": "`BaseStyleOptions` is good, but for this PR, let's stick to `unknown` or if it's too many changes, `any`.",
+          "file_path": "packages/mermaid/src/styles.ts",
+          "line_number": 76,
+          "start_line": null,
+          "commit_sha": "64a28be5e3930d59bc35a1efb857194ecdd91813",
+          "created_at": "2023-06-26T16:07:57Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KDjwv",
+          "author": "Yokozuna59",
+          "body": "> `BaseStyleOptions` is good, but for this PR, let's stick to `unknown` or if it's too many changes, `any`.\r\n\r\nI guess there will be too many changes since only [flowchart](https://github.com/mermaid-js/mermaid/blob/2fe5750be1a4f482229e875fd30b380da92f72a1/packages/mermaid/src/diagrams/flowchart/styles.ts#L5-L19) have type for styles right now. I'll add it add when converting diagrams.\r\n",
+          "file_path": "packages/mermaid/src/styles.ts",
+          "line_number": 76,
+          "start_line": null,
+          "commit_sha": "64a28be5e3930d59bc35a1efb857194ecdd91813",
+          "created_at": "2023-06-26T16:20:20Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KDnSA",
+          "author": "Yokozuna59",
+          "body": "`unknown` type isn't possible because the parameter type of other function is `any`.",
+          "file_path": "packages/mermaid/src/styles.ts",
+          "line_number": 76,
+          "start_line": null,
+          "commit_sha": "64a28be5e3930d59bc35a1efb857194ecdd91813",
+          "created_at": "2023-06-26T16:33:37Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests changing the type from 'unknown' to a proper type and adding it to 'themes' at the top of the file \u2014 two concrete code changes."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85KDfgw",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n    themes[type] = diagramTheme;\r\n```\r\n\r\nCan you try if this works?",
+          "file_path": "packages/mermaid/src/styles.ts",
+          "line_number": 81,
+          "start_line": null,
+          "commit_sha": "64a28be5e3930d59bc35a1efb857194ecdd91813",
+          "created_at": "2023-06-26T16:04:45Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Variable Handling",
+          "label_confidence": "medium",
+          "label_reasoning": "The suggestion changes how the diagram theme is assigned to the `themes` object, indicating an issue with how variables/properties are being set."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KDhph",
+          "author": "Yokozuna59",
+          "body": "Yes, it works.\r\n\r\nFixed.",
+          "file_path": "packages/mermaid/src/styles.ts",
+          "line_number": 81,
+          "start_line": null,
+          "commit_sha": "64a28be5e3930d59bc35a1efb857194ecdd91813",
+          "created_at": "2023-06-26T16:12:38Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Provides a code suggestion to change the assignment syntax and asks to verify it works \u2014 a concrete code change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85KDfs_",
+          "author": "sidharthv96",
+          "body": "`(options?: any) => string` Can be moved to a common `type`, which we can use here and in the styles of diagrams.",
+          "file_path": "packages/mermaid/src/styles.ts",
+          "line_number": 4,
+          "start_line": null,
+          "commit_sha": "64a28be5e3930d59bc35a1efb857194ecdd91813",
+          "created_at": "2023-06-26T16:05:29Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Duplication",
+          "label_confidence": "high",
+          "label_reasoning": "Reviewer suggests extracting the repeated function type `(options?: any) => string` into a shared common type to avoid duplication across files."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KDls4",
+          "author": "Yokozuna59",
+          "body": "Done.",
+          "file_path": "packages/mermaid/src/styles.ts",
+          "line_number": 4,
+          "start_line": null,
+          "commit_sha": "64a28be5e3930d59bc35a1efb857194ecdd91813",
+          "created_at": "2023-06-26T16:27:24Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests extracting the inline type to a shared common type for reuse \u2014 a concrete refactoring request."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85KDjeq",
+          "author": "sidharthv96",
+          "body": "Well, this is a function, so let's rename it to `getDiagramStyles` or `getDiagramTheme`",
+          "file_path": "packages/mermaid/src/styles.ts",
+          "line_number": 78,
+          "start_line": null,
+          "commit_sha": "64a28be5e3930d59bc35a1efb857194ecdd91813",
+          "created_at": "2023-06-26T16:19:21Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "high",
+          "label_reasoning": "Reviewer explicitly requests renaming the function to better reflect that it is a function (e.g., `getDiagramStyles` or `getDiagramTheme`)."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KDlqK",
+          "author": "Yokozuna59",
+          "body": "Done.",
+          "file_path": "packages/mermaid/src/styles.ts",
+          "line_number": 78,
+          "start_line": null,
+          "commit_sha": "64a28be5e3930d59bc35a1efb857194ecdd91813",
+          "created_at": "2023-06-26T16:27:14Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests renaming a function to 'getDiagramStyles' or 'getDiagramTheme' \u2014 a concrete rename change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85KDrRO",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\nexport type DiagramStylesProvider = (options?: any) => string;\r\n```\r\n\r\nWe use `UpperCamelCase` for type names. ",
+          "file_path": "packages/mermaid/src/diagram-api/types.ts",
+          "line_number": 86,
+          "start_line": null,
+          "commit_sha": "64a28be5e3930d59bc35a1efb857194ecdd91813",
+          "created_at": "2023-06-26T16:49:03Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Naming Standards",
+          "label_confidence": "high",
+          "label_reasoning": "Reviewer explicitly calls out that type names should use `UpperCamelCase` per project convention, suggesting a rename to `DiagramStylesProvider`."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KD4BP",
+          "author": "Yokozuna59",
+          "body": "Done.",
+          "file_path": "packages/mermaid/src/diagram-api/types.ts",
+          "line_number": 86,
+          "start_line": null,
+          "commit_sha": "64a28be5e3930d59bc35a1efb857194ecdd91813",
+          "created_at": "2023-06-26T17:34:39Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Provides a code suggestion to rename the type to UpperCamelCase ('DiagramStylesProvider') to follow naming conventions \u2014 a concrete style fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85KDrdd",
+          "author": "sidharthv96",
+          "body": "Only change the type name, value name is good as is. ",
+          "file_path": "packages/mermaid/src/styles.ts",
+          "line_number": 77,
+          "start_line": null,
+          "commit_sha": "64a28be5e3930d59bc35a1efb857194ecdd91813",
+          "created_at": "2023-06-26T16:49:50Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "medium",
+          "label_reasoning": "Reviewer clarifies that only the type name should be changed (to UpperCamelCase), while the value name should remain as-is \u2014 a naming scope clarification."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KD4Gu",
+          "author": "Yokozuna59",
+          "body": "Done.",
+          "file_path": "packages/mermaid/src/styles.ts",
+          "line_number": 77,
+          "start_line": null,
+          "commit_sha": "64a28be5e3930d59bc35a1efb857194ecdd91813",
+          "created_at": "2023-06-26T17:34:53Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Clarifies to only change the type name and keep the value name as-is \u2014 a concrete scoping instruction for a code change."
+    }
+  ],
+  "review_thread_count": 6,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 6,
+    "stage1_kept": 6,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

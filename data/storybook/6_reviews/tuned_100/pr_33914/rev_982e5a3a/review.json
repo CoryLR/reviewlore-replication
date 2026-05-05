@@ -1,0 +1,138 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 55,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `.catch()` callback swallows ALL errors from `import('typescript')`, not just module-not-found. Real runtime failures (syntax errors in TypeScript's own code, memory errors, unexpected import side-effects) will be silently routed to the `null` fallback path, making them invisible. Per project rules for try/catch around dynamic import probes, narrow the catch: check `err instanceof Error && (err.code === 'MODULE_NOT_FOUND' || err.code === 'ERR_MODULE_NOT_FOUND')` and re-throw anything else.",
+      "index": 0
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 37,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`managerPromise` is a module-level singleton that is never cleaned up when `experimentalReactComponentMeta` is toggled off. Once created, the `ComponentMetaManager` (with its file watchers and TS LanguageServices) stays alive for the lifetime of the process even if the user disables the flag in their config. The singleton should be tied to the feature flag \u2014 either dispose and reset `managerPromise` when the flag is `false`, or accept the manager as a dependency rather than creating a lazy global.",
+      "index": 1
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 225,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`options as typeof options & { watch?: boolean }` is a runtime-invisible type cast. The `watch` field is injected by the dev server in `manifests.ts` but is not declared in the preset function's `TOptions` type parameter, so there is no compile-time check that the field name or type stays in sync. If the calling site in `manifests.ts` ever renames or removes `watch`, this cast silently produces `undefined` with no error. Add `watch?: boolean` to the `TOptions` generic of the `PresetPropertyFn` declaration or accept it as a properly-typed second parameter.",
+      "index": 2
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 380,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`project.extractPropsFromStories(...)` inside the `byProject` loop has no error handling. The TypeScript LanguageService can throw during type resolution (e.g., corrupted AST nodes, out-of-memory on the first cold type-check of a large project, unexpected TS internal errors). An uncaught exception here would abort all remaining component processing in the manifest pass and surface as a 500 to the manifest endpoint. Wrap in try/catch with a `logger.warn` and continue.",
+      "index": 3
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 430,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`debug: componentMetaDebug` is included in the `meta` object returned by the preset, but the `ComponentsManifest` type in `core-common.ts` does not declare a `debug` field on `meta`. This is an undocumented field being written to the manifest JSON and returned to consumers. Either add `debug?: Record<string, unknown>` to the `ComponentsManifest.meta` type (marking it clearly as internal/unstable), or omit it from the return value and expose it only via `logger.debug`.",
+      "index": 4
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+      "line_number": 494,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`fs.watch(dir, { recursive: true }, ...)` \u2014 the `recursive` option is only supported on macOS and Windows. On Linux (all typical CI environments and production servers), Node.js silently ignores `recursive: true` and creates a non-recursive watcher. Changes in subdirectories are never reported, effectively disabling HMR for the react-component-meta engine on Linux. Use a cross-platform recursive watcher (e.g., `chokidar`) or manually walk subdirectories and create individual watchers.",
+      "index": 5
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 302,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`this.entries = entries` stores a reference to the caller's array. If the caller modifies the array after calling `extractPropsFromStories`, the warmup timer (which fires 100 ms later) will re-extract using the mutated entries rather than the originally-requested set. Since `generator.ts` constructs a new array per call this is safe today, but the contract is fragile. Use `this.entries = [...entries]` to take an explicit snapshot.",
+      "index": 6
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 283,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`this.warmupTimer?.unref?.()` \u2014 `setTimeout` always returns a non-null `NodeJS.Timeout` object, and `NodeJS.Timeout.unref` is not optional. Both `?.` operators are unnecessary and add noise. Use `this.warmupTimer.unref()` directly.",
+      "index": 7
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 371,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `catch {}` block silently discards extraction errors for individual components. In production this makes it impossible to diagnose why a specific component has no props in the manifest. Add a `logger.debug(\\`[reactComponentMeta] Failed to extract props for ${entry.exportName} in ${entry.componentPath}: ${err}\\`)` call so failures surface without aborting the batch.",
+      "index": 8
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 195,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`this.commandLine.fileNames.includes(fileName)` is O(n) for every file in `fileNames`. `ensureFiles` is called on every extraction with the full list of story and component paths, making the total cost O(n\u00b2) for large projects (e.g., Mantine's 133 components each referencing shared story files). Replace the linear scan with a `Set<string>` that is kept in sync alongside `commandLine.fileNames`.",
+      "index": 9
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/getComponentImports.ts",
+      "line_number": 56,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`docgenTimings` is a module-level mutable object that accumulates across invocations. `resetDocgenTimings()` is called at the start of each `manifests()` pass, but if two manifest requests arrive concurrently (which can happen in watch mode), the timings from one pass will bleed into the other and both will report incorrect values. Move the accumulators into local variables inside `manifests()` and pass them by reference (or return them from `getComponents`) instead of using shared module state.",
+      "index": 10
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/reactDocgenTypescript.test.ts",
+      "line_number": 1207,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "Five snapshot tests (`DtsComponent`, `ForwardRef`, `RenamedExport`, `DisplayNameOverride`, `Barrel`) are removed with only the comment \"RDT returns [] for all of these.\" If react-docgen-typescript genuinely now returns an empty array for these patterns (possibly because the fixture files were modified in this PR), the tests should be updated to assert the new behavior (`expect(results).toHaveLength(0)`), not deleted. Deleting them removes the regression guardrail that would catch RDT accidentally re-processing these patterns in future.",
+      "index": 11
+    },
+    {
+      "file_path": "code/core/src/types/modules/core-common.ts",
+      "line_number": 381,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`reactComponentMetaComponents: number` is a count of successfully extracted components, not a duration in milliseconds. Its placement alongside four `*Ms` timing fields is misleading \u2014 a reader will assume it is also a millisecond value. Either rename it to `componentCount` or move it outside the `timings` object into a sibling field (e.g., `meta.components?: number`).",
+      "index": 12
+    },
+    {
+      "file_path": "code/.eslintrc.js",
+      "line_number": 134,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Disabling `@typescript-eslint/no-unused-vars` for the whole override block defeats the protection for variables that are NOT prefixed with `_`. The fixture files were already updated to use the `_props` convention; the correct fix is to configure `argsIgnorePattern: '^_'` (and `varsIgnorePattern: '^_'`) on the rule rather than disabling it outright.",
+      "index": 13
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `extractComponentDescription` refactor replaced `extractDescription(csf._metaStatement) || docgen?.description` with `metaJsDoc || docgenDescription`. This preserves `||` semantics where an empty-string `metaJsDoc` (a valid return value from `extractDescription`) causes a fall-through to `docgenDescription`. Per the project's coding guidelines, `||` should be replaced by `??` for configuration/fallback defaults: `metaJsDoc ?? docgenDescription`. Since `extractDescription` may return `''` for a component with an empty JSDoc block, this distinction matters \u2014 `||` silently discards the empty-but-present comment.",
+      "index": 14
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "After `ComponentMetaManager.stopWatching()` clears the pending-event debounce timers and closes watchers, callbacks that were already queued in the Node.js event loop before `watcher.close()` was called can still fire. Those callbacks set new entries in `this.pendingEvents` (which was just cleared) and schedule new `setTimeout` calls, which will then invoke `handleFileEvent` after `watching` is `false`. Add an early-return guard at the top of the `watchDirectory` callback: `if (!this.watching) return;`.",
+      "index": 15
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `volar`-style `findMatchTSConfig` algorithm was faithfully ported from Volar LS's `typescriptProject.ts`, which is valuable. However, the `prepareClosestRootCommandLine` inner function is called purely for its side-effect (pre-populating `configProjects` so that `findIndirectReferenceTsconfig` can inspect project references), but its name and void return type do not communicate this. A comment like `// Side-effect only: ensures the closest root project is initialised so getReferencesChains() can traverse its references` directly above the call site would save future maintainers from having to re-derive this invariant.",
+      "index": 16
+    }
+  ],
+  "cost_usd": 1.1454109,
+  "duration_seconds": 516.9940621852875
+}

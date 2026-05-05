@@ -1,0 +1,98 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 99,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Debug `console.log` statements were left in production code. These log the full module graph and file count on every debounced file-change event, which is both noisy and a performance concern in large projects. Per project conventions, all diagnostic output must use `logger` from `storybook/internal/node-logger`, not `console.*`. Remove these entirely or replace with a `logger.debug(...)` call gated behind a verbose/debug flag.",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 121,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The watcher listener is registered with `server.watcher.on('all', watcherChangeHandler)` (line ~161) but `bail()` unregisters it with `server?.watcher.off('change', watcherChangeHandler)`. In chokidar, `off('change', fn)` only removes `fn` from the `'change'` event listener set \u2014 it has no effect on the `'all'` event listener. The result is that the `watcherChangeHandler` is never actually removed from the watcher after `bail()`, leaking the listener and continuing to schedule debounced rebuilds after the server has been closed. The fix is to change this line to `server?.watcher.off('all', watcherChangeHandler)`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 163,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`waitForModuleGraph` is declared as a `const` local to `start()`, so `bail()` has no reference to it and cannot call `clearInterval(waitForModuleGraph)`. If `bail()` is called while the module graph is still empty (e.g., during an early failure), the interval continues ticking indefinitely, accessing `server.moduleGraph.fileToModulesMap` on a closed server and potentially calling `server.waitForRequestsIdle()` on it. Promote `waitForModuleGraph` to module scope alongside `debounce` and `watcherChangeHandler`, and add `clearInterval(waitForModuleGraph)` to `bail()`.",
+      "index": 2
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 163,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `setInterval` callback is declared `async`, which means it returns a Promise on every tick that is discarded by `setInterval`. If `server.waitForRequestsIdle()` rejects (e.g., because the server was closed between the size check and the await), the rejection is silently swallowed. Wrap the body in a `try/catch` or convert to a non-async callback with an explicit `.catch()` chain.",
+      "index": 3
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 38,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`buildModuleGraph` is exported from the public module entry point. It appears to be an internal implementation detail used only within `start()`. Exporting it enlarges the package's public API surface, invites external callers to depend on a Vite-specific conversion routine, and couples the internal representation to consumer code. Move it to an unexported helper or a separate internal utility file. The test file imports it directly from `'./index'`, which is the driver for the export \u2014 tests can instead use the observable side-effects (e.g., asserting the callback receives the expected `Map`) rather than white-boxing the conversion logic.",
+      "index": 4
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 83,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "When recursively calling `getOrCreateModuleNode(importer)` and `getOrCreateModuleNode(importedModule)`, `importer` and `importedModule` are typed as `object` because the inner struct declares `importers: Set<object>` and `importedModules: Set<object>`. The function parameter expects `{ file: string | null; type: ModuleNode['type']; importers: Set<object>; importedModules: Set<object>; }`, and `object` is not assignable to that shape \u2014 TypeScript should emit an error here. Consider either typing the inner struct more precisely (e.g., using a recursive type alias or the actual Vite `ModuleNode` type), or using a type assertion with a comment explaining the invariant.",
+      "index": 5
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 333,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "This assertion checks that `watcher.off` was called with `'change'`, but the production code registers the handler with `server.watcher.on('all', watcherChangeHandler)`. Calling `off('change', fn)` on a handler registered under `'all'` is a no-op in chokidar \u2014 the handler is not removed. The test passes only because `listeners.clear()` is called first, so `notifyListeners` becomes a no-op regardless of whether the watcher listener is actually removed. The assertion should verify `watcher.off` was called with `'all'`, and ideally also verify that a subsequent watcher emit does **not** trigger `watcherChangeHandler` at all (not merely that `cb` isn't called due to the cleared listener set).",
+      "index": 6
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 9,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The mock uses the full factory-replacement form `vi.mock('./vite-server', () => ({ createViteServer: vi.fn() }))`. Per project spy-mocking conventions (`.cursor/rules/spy-mocking.mdc`), prefer `vi.mock('./vite-server', { spy: true })` at the top level, then configure behavior via `vi.mocked(createViteServer).mockResolvedValue(...)` in `beforeEach`. Reserve the factory form for modules that cannot be imported at all or must be entirely replaced.",
+      "index": 7
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 184,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`vi.clearAllMocks()` is called inside `afterEach` alongside `bail()`. The project convention is to place a top-level `vi.clearAllMocks()` or `vi.resetAllMocks()` in `beforeEach` so every test starts with a clean slate, rather than relying on teardown ordering in `afterEach`. Doing cleanup in `afterEach` risks state pollution when a test throws before `afterEach` runs.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `bail()`/`start()` lifecycle has a coherent model for `debounce` and `watcherChangeHandler`, but is missing half the plumbing for `waitForModuleGraph`. All three pieces of cancellable state (`debounce`, `watcherChangeHandler`, `waitForModuleGraph`) must be declared at module scope so `bail()` can unconditionally clear all of them. The current code only promotes two of the three. A single missed `clearInterval` keeps a background polling loop alive after server shutdown, which can trigger callbacks against a closed server and prevent garbage-collection of the server reference.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `ModuleNode` interface added in `core-common.ts` has no JSDoc comment, while the adjacent `ModuleGraph` type does. Because `ModuleNode` is now part of the public `Builder` interface contract, add a brief JSDoc explaining the `type` union (`'js' | 'css' | 'asset'`) and the semantics of `importers` vs. `importedModules` \u2014 especially the fact that these sets reference other `ModuleNode` instances (forming a graph, not a tree).",
+      "index": 10
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `onModuleGraphChange` tests do not cover the `setInterval`-based initial-emission path. There is no test that verifies the callback is fired once after `start()` resolves and the module graph is initially populated (i.e., the polling loop fires and calls `watcherChangeHandler()`). This path involves `server.waitForRequestsIdle()` and is the only way listeners registered before `start()` receive the initial graph state; without a test it could silently regress.",
+      "index": 11
+    }
+  ],
+  "cost_usd": 0.54752925,
+  "duration_seconds": 330.3895239830017
+}

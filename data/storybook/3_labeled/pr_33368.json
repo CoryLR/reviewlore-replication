@@ -1,0 +1,67 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33368,
+  "title": "Interactions: Add disable parameter for interactions panel",
+  "body": "Adds support for disabling the interactions panel on a per-story basis using the `interactions.disable` parameter.\r\n\r\nFixes #33339\r\n\r\nProblem\r\nThe interactions panel could not be disabled for specific stories, unlike other addons (a11y, viewport, backgrounds, etc.). This caused performance issues when the panel tried to pretty-print large objects in visual regression tests.\r\n\r\n Solution\r\n\r\nImplemented the `interactions.disable` parameter following the same pattern as other Storybook addons:\r\n\r\n- Created `InteractionsParameters` interface with `disable` option\r\n- Updated panel registration to check the disable parameter\r\n- Added `PARAM_KEY` constant for consistency\r\n- Includes comprehensive unit tests\r\n\r\nUsage\r\n\r\n```typescript\r\nexport const MyStory = {\r\n  parameters: {\r\n    interactions: {\r\n      disable: true,\r\n    },\r\n  },\r\n};\r\n\r\nTesting\r\nUnit tests added and passing (4/4 tests)\r\nManual testing: verified panel hides when [disable: true]\r\nManual testing: verified panel shows normally without parameter\r\nTypeScript compilation successful\r\n\r\n\r\n\r\n\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Story parameter to disable the Interactions panel (parameters.interactions.disable) with typed parameter support.\n  * The Interactions panel respects that parameter and is disabled when set for a story.\n  * Added an example story demonstrating disabling interactions.\n\n* **Tests**\n  * Added unit tests covering various disable-flag scenarios to ensure consistent behavior.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "jeevikar14",
+  "merged_at": "2025-12-29T09:24:58Z",
+  "base_ref": "next",
+  "merge_commit_sha": "3d036b56b4df6d575c67fad507e60ace982b1f40",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "39067a68720f38359925eb5bad88b84335c1a1d4",
+    "652efe3a63574c76a1697a8c0a1a758feb5c919a"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6cWfUe",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Tests should import and verify the actual implementation.**\n\nThese tests replicate the disable logic inline (lines 14, 25, 32, 41) rather than testing the actual `disabled` callback from `manager.tsx`. If the implementation in `manager.tsx` changes, these tests would still pass, providing false confidence.\n\n\n\n**Recommended approach:**\n\n1. Extract the disabled logic from `manager.tsx` into an exported function:\n\n```typescript\n// In manager.tsx\nexport const isInteractionsDisabled = (parameters: API_StoryEntry['parameters']): boolean => {\n  return !!parameters?.[PARAM_KEY]?.disable;\n};\n```\n\n2. Update the test file to import and test the actual function:\n\n```typescript\nimport { describe, expect, it } from 'vitest';\nimport { isInteractionsDisabled } from './manager';\nimport type { InteractionsParameters } from './types';\nimport { PARAM_KEY } from './constants';\n\ndescribe('Interactions Panel Disable Parameter', () => {\n  it('should return true when interactions.disable is true', () => {\n    const parameters: InteractionsParameters = {\n      [PARAM_KEY]: { disable: true },\n    };\n    expect(isInteractionsDisabled(parameters)).toBe(true);\n  });\n  // ... other tests using isInteractionsDisabled(parameters)\n});\n```\n\n3. Use the exported function in the panel registration:\n\n```typescript\ndisabled: isInteractionsDisabled,\n```\n\nThis ensures tests verify the actual implementation and catch regressions.\n\nAs per coding guidelines: \"Export functions that need to be tested from their modules\" and \"Write meaningful unit tests that actually import and call the functions being tested.\"\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/component-testing/manager.test.tsx lines 1-44: the tests inline\nthe disable logic instead of calling the real implementation; export a function\nfrom manager.tsx (e.g., isInteractionsDisabled(parameters): boolean { return\n!!parameters?.[PARAM_KEY]?.disable; }), update manager.tsx to use that exported\nfunction for the panel's disabled callback, then change this test file to import\nisInteractionsDisabled and assert its return value for each case instead of\nrepeating the inline logic; ensure types/import paths match existing module\nstructure.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/component-testing/manager.test.tsx",
+          "line_number": 44,
+          "start_line": null,
+          "commit_sha": "c1cf8b3e4feae00a536a5554300d81e94783b916",
+          "created_at": "2025-12-16T12:44:15Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Duplication",
+          "label_confidence": "high",
+          "label_reasoning": "The comment highlights that the test file replicates the disable logic inline rather than importing and testing the actual implementation from manager.tsx, which is a code duplication concern that also risks false confidence when the real implementation changes."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6cWpjX",
+          "author": "jeevikar14",
+          "body": " Fixed - Extracted disable logic to `utils.ts` as `isInteractionsDisabled()` and updated tests to verify the actual implementation instead of replicating logic inline. All tests passing.",
+          "file_path": "code/core/src/component-testing/manager.test.tsx",
+          "line_number": 44,
+          "start_line": null,
+          "commit_sha": "c1cf8b3e4feae00a536a5554300d81e94783b916",
+          "created_at": "2025-12-16T12:57:21Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a concrete issue (tests replicating logic inline instead of testing the actual implementation) and provides specific code changes: extract a named exported function from manager.tsx, update tests to import and call that function, and use the exported function in the panel registration."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

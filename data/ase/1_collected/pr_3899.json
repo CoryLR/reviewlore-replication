@@ -1,0 +1,285 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3899,
+  "title": "Open and close trajectory and logfile on the fly",
+  "body": "Optimizers/MD: Do not keep logfile and trajectory open all the time since we have difficulty closing it correctly.  Instead, we open, write, and close immediately in each step.  This was pretty difficult to achieve due to a number of complexities in special-casing of trajectories (notably hasattr() magic).\n\nCloses: #1839 \n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [ ] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [ ] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [ ] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [ ] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [ ] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "askhl",
+  "merged_at": "2025-12-10T14:35:06.109Z",
+  "base_ref": "master",
+  "merge_commit_sha": "abc2c1a12e26948bd1693deaba5c5c1871ef23a8",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2912989777",
+          "author": "askhl",
+          "body": "Related: #1839 .\n\nHowever I still get warnings here and there.  We have more mechanisms that need to follow this pattern in order for the issue to be closed.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-11-25T15:37:09.276Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2912991423",
+          "author": "askhl",
+          "body": "@jensj Would you like to review this?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-11-25T15:37:20.125Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2913291642",
+          "author": "askhl",
+          "body": "@ajjackson I think we should get rid of the ResourceWarnings in the test suite, the real significance is that we have a questionable mechanism for doing IO.  This MR is one way to achieve this.  If we apply this pattern in other places, too (so any other places that have logfiles, of which there are a few) then we should be safe.\n\nWhat do you think?  On most filesystems this mechanism should be fine because they do decent caching.  Only *very fast* simulations will be slower, and someone who cares a lot about that should explicitly open and pass the logfile, hence becoming responsible for closing it, too.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-11-25T17:18:46.307Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2913300030",
+          "author": "askhl",
+          "body": "I am not a big fan of having `.trajectory` and `.logfile` attributes that can be different things.  It would be nicer to normalize to a single kind of thing, like the (always-open) file as before.  But we also need to get on with life.\n\nNote that callers can take control of e.g. flushing by opening their own file with a particular buffering mode, which wasn't possible before due to the prevalence of hardcoded flushing.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-11-25T17:22:01.702Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2913853469",
+          "author": "ajjackson",
+          "body": "This doesn't seem _too_ bad in terms of surprise to new users: if all you provided for the file was a string path then it is hard to have specific expectations about how it will be opened and closed. Established users might need a little re-education but it's tractable.\n\nI think the \"smell\" here is indeed creating an open `logfile` and `trajectory` as state on the Optimizer. Would our problems go away if instead the pattern was more like:\n\n```python\nclass Optimizer(Dynamics):\n    ...\n    def irun(self, fmax=0.05, steps=DEFAULT_MAX_STEPS):\n        with (self.get_an_open_logfile() as logfile,\n              self.get_an_open_traj() as trajectory):\n            ...\n            self.log(gradient, logfile=logfile)\n            self.call_observers(logfile, trajectory)\n            ...\n        ...\n```\n\nThen the `.trajectory` and `.logfile` attributes are just some information used to find/create the actual streams.\n(I appreciate there are some compatibility issues with the current attach/callback mechanism.)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-11-25T22:50:12.779Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2915046545",
+          "author": "jensj",
+          "body": "(after discussing this with @askhl offline yesterday, I think this MR is a good solution to the open file problem).  No further comments.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-11-26T10:40:19.856Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2915351454",
+          "author": "askhl",
+          "body": "> I think the \"smell\" here is indeed creating an open `logfile` and `trajectory` as state on the Optimizer. \n\nThere isn't any new (observably mutable) state on the Optimizer.  Previously the files were always open.  Now (unless the user passed already-open files) they are always closed, except during specific *short* method calls which then always close them at the end.  So the files being closed is an *invariant* (left intact before/after method calls) in that case.\n\nIndeed we could open/close the files in irun() or run(), if we have a good reason to.  But the irun() generator could be left dangling with the open files inside.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-11-26T11:58:37.978Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2915795981",
+          "author": "ajjackson",
+          "body": "It's easier to \"mistakenly\" leave an Optimizer in scope than to leave a generator dangling so I do see a significant difference between those patterns.\n\nAnyway, the main concern here now is the performance impact on people who run fast things, especially if they don't directly control how the file is opened. Looking at a few possible impacted codes:\n\n- *janus-core* already uses the \"attach\" mechanism to customize its trajectory-writing so is unaffected.\n- *asap3* docs also recommend using .attach()\n- *fhi-vibes* runs its own logging function in between MD steps, which includes trajectory writing. (And anyway mostly runs AIMD so less concerned about speed.)\n\nAre there some other likely-affected projects we should check/notify?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-11-26T14:35:31.424Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2918000419",
+          "author": "askhl",
+          "body": "I wouldn't know.  Maybe we can include it very visibly in release notes?  And announce on mailing list.\n\nI think one of the lessons in vibes was actually to handle files *this way* rather than leaving them open.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-11-27T11:48:00.319Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2918001654",
+          "author": "askhl",
+          "body": "There are still many places in the code that do logfiles in different ways, so this MR is not the end.  I can do a follow-up MR *before* we merge it to see if we learn anything new.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-11-27T11:48:42.725Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2945162710",
+          "author": "askhl",
+          "body": "I added a release note (under IO, which is a little bit funny since that's usually about the different formats).\n\nI think we have adequately communicated this (it shouldn't affect people *normally*).  Any other comments before we merge?  I might make a few more changes if I find any (files still kept open here and there)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-12-10T13:52:40.752Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2945189498",
+          "author": "askhl",
+          "body": "One second....",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-12-10T14:01:06.472Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2945193397",
+          "author": "askhl",
+          "body": "Merged from master now.  I also changed a few open/close calls to use `with` in minimahopping.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-12-10T14:02:23.315Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2945196255",
+          "author": "askhl",
+          "body": "We still have an issue with some database connections (?) leaking.  I'll look into that when I get time but it'll not be for this MR.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-12-10T14:03:25.886Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2945312470",
+          "author": "askhl",
+          "body": "I take it that the small change is okay, so I'll merge.\n\nThanks @ajjackson and @jensj!",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-12-10T14:34:58.507Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 15
+}

@@ -1,0 +1,23 @@
+{
+  "pr_number": 3839,
+  "source_mr_date": "2025-10-24T08:56:03.453Z",
+  "candidates": [
+    "Use `warnings.warn` (not Python's `logging` module) for all user-facing messages in ASE dynamics classes; `warnings.warn` is the project-wide convention and is easier to capture, filter, and assert on from tests and downstream packages.",
+    "Class docstrings must be placed immediately after the `class` line (or on `__init__`), not at the top of the module file; a module-level string is not treated as the class docstring by Sphinx `autoclass` and will be silently ignored in the generated docs.",
+    "When adding an `rng` parameter to an ASE dynamics class, accept either a `np.random.Generator` instance or any seed value understood by `np.random.default_rng`; when `rng=None`, generate a seed via `secrets.randbits(128)`, construct the generator with `np.random.default_rng(seed)`, and report the seed via `warnings.warn` so users can reproduce the trajectory later.",
+    "Call `super().__init__(...)` rather than the parent class by name (e.g. `MolecularDynamics.__init__(self, ...)`) in ASE dynamics subclasses.",
+    "Factor multi-phase initialization logic in `__init__` into focused private helper methods (e.g. `_set_externalstress(...)`, `_set_barostat_mass(...)`) so that each helper has no side-effects beyond what its name implies and `__init__` remains a concise orchestrator of those helpers.",
+    "Avoid using special floating-point sentinel values (e.g. storing `0.0` to mean 'disabled') to enable or disable features; use `None` or explicit boolean flags so the intent is unambiguous and fragile float-equality comparisons are avoided.",
+    "When a `disable_X=True` constructor flag works by setting a secondary attribute to a sentinel value that is checked later in other methods, add an inline comment at every such check (e.g. `if self.barostat_gamma == 0:  # i.e. disable_cell_langevin=True`) so the control flow is traceable without reading `__init__`.",
+    "When a dynamics class has not been tested with ASE `Atoms` constraints, emit a `warnings.warn` at the earliest point where non-empty `atoms.constraints` is detected, making it explicit to users that this combination is untested.",
+    "New MD integrator classes must be registered in `doc/ase/md.rst`: add an `.. autoclass::` directive in the primary ensemble section (NVT, NPT, etc.) and include brief `:class:`/`:ref:` cross-reference notes in the summary or recommendation text of any other ensemble section the class can operate in.",
+    "In `pytest.warns` calls, always supply a `match=` regex argument to assert that the specific expected warning message was emitted, not merely that some warning of the correct type was raised.",
+    "Docstring parameter descriptions for arguments that only take effect conditionally (e.g. a scaling factor that is applied only when the primary value is `None`) must state that condition explicitly rather than implying unconditional behaviour.",
+    "Keep class-level and parameter docstrings accurate as the implementation evolves; whenever a class's capabilities or parameter semantics change (e.g. a class gains variable-cell support, or a parameter's role is narrowed), update the docstring immediately to match the current behaviour.",
+    "When dispatching on array shapes or other tuple-valued discriminants, use Python 3.10 `match`/`case` blocks instead of chained `if`/`elif`; ASE requires Python \u2265 3.10, so this syntax is always available and produces cleaner, more readable dispatch logic.",
+    "New cross-cutting functionality that applies broadly across multiple dynamics classes (e.g. auto-generating and warning about an RNG seed) should be implemented in the `Dynamics` or `MolecularDynamics` base class rather than in an individual integrator, and contributed as a separate, focused MR rather than bundled into a feature MR."
+  ],
+  "analysis": [],
+  "cost_usd": 0.21275,
+  "duration_seconds": 122.02830505371094
+}

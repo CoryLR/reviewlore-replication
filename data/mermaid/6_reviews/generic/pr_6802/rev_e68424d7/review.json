@@ -1,0 +1,160 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/intersect/intersect-line.js",
+      "line_number": 39,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The second same-side guard condition has been inverted. The original check `r1 !== 0 && r2 !== 0 && sameSign(r1, r2)` correctly returns 'no intersection' when p1 and p2 are on the **same non-zero side** of line q1-q2. The replacement `Math.abs(r1) < epsilon && Math.abs(r2) < epsilon && sameSign(r1, r2)` fires only when both values are **near zero** (near-collinear), which is an entirely different \u2014 and contradictory \u2014 case already handled downstream by `if (denom === 0)`. As a result, the function now skips the same-side early-exit for most inputs and falls through to compute a spurious intersection point. The fix is to keep the original semantics: `r1 !== 0 && r2 !== 0 && sameSign(r1, r2)`, or with epsilon tolerance use `Math.abs(r1) > epsilon && Math.abs(r2) > epsilon && sameSign(r1, r2)` (note `>`, not `<`). This bug affects edge routing in every diagram type that relies on this module.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/intersect/intersect-line.js",
+      "line_number": 5,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The entire function body is now wrapped in an extra unnamed `{ }` block. JavaScript does not require this; `const` declarations inside a function are already function-scoped by the enclosing `function` block. The extra level of indentation adds noise without any benefit \u2014 every subsequent line in the file is indented one extra level compared to normal style. Remove the wrapper block.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/preprocess.ts",
+      "line_number": 31,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This silently changes the effective default layout for every existing mindmap diagram from the historical `cose-bilkent` rendering to the newly introduced `tidy-tree` algorithm. Any diagram without an explicit `layout:` in its frontmatter will look different after this change. The PR description lists `cose-bilkent` as the default, which directly contradicts this code. A change of this scope should be a documented, opt-in configuration with a release note, not a silent default change buried in the preprocessor.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 14,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`_drawNodes` (defined here) and `_updateNodeDimensions` (defined a few lines below) are never invoked anywhere in this file. Both are dead code left over from the refactoring. The import `import { drawNode } from './svgDraw.js'` on line 9 is also effectively dead because `drawNode` is only referenced inside the unused `_drawNodes`. All three should be removed.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 63,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`preferredLayout` is computed as `conf?.layoutAlgorithm ?? layout ?? 'cose-bilkent'` but then only used in a `log.debug` call \u2014 it is never assigned to `data4Layout.layoutAlgorithm`. The actual layout is set two lines earlier using only `layout` (the top-level config), which means the mindmap-specific `mindmap.layoutAlgorithm` configuration key (added to `config.type.ts` and `config.schema.yaml` in this PR) is a complete no-op. To honour it, replace the current `getRegisteredLayoutAlgorithm(layout, ...)` call with `getRegisteredLayoutAlgorithm(preferredLayout, ...)`, or remove the dead `preferredLayout` variable and the now-meaningless config key.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/createGraph.ts",
+      "line_number": 114,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `.filter()` call on line 114 already removes the original edge (identified by `edgeIdToRemove`) from `data4Layout.edges`. The `.findIndex()` on line 116 will therefore always return `-1` because the edge is already gone, making lines 116\u2013119 unreachable dead code. The `splice` never executes. Remove lines 116\u2013119.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.ts",
+      "line_number": 375,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`diagramId: 'mindmap-' + Date.now()` generates a different ID on every call to `getData()`. This makes the function non-deterministic, can break caching or memoisation downstream, and makes snapshot tests flaky. Use a stable identifier derived from the diagram content or from the `id` parameter passed to `draw()`, as other diagram types do.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layout.ts",
+      "line_number": 230,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The virtual root node ID is `\\`virtual-root-${Math.random()}\\``. Using `Math.random()` makes layout results non-reproducible across runs, which complicates debugging, snapshot tests, and diffing. Since there is exactly one virtual root per tree, a fixed string like `'virtual-root'` works fine, or use a monotonically increasing module-level counter.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layout.ts",
+      "line_number": 325,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`_leftBoundingBox` and `_rightBoundingBox` are accepted as parameters but are never read (the underscore prefix acknowledges this). Dead parameters obscure the function's contract and suggest unfinished work. Remove them from the signature, or add an explanatory `// TODO` comment referencing a tracking issue if they are needed for future work.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/cose-bilkent/render.ts",
+      "line_number": 96,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`const _edgeLabel = await insertEdgeLabel(edgeLabels, edge)` \u2014 the return value is captured but never used. The call itself is necessary for its side-effect, but the assignment to `_edgeLabel` is dead. Either drop the assignment entirely (`await insertEdgeLabel(...)`) or explain why the result needs to be held.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid-layout-elk/src/render.ts",
+      "line_number": 598,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Multiple `log.debug` calls with an `'APA01 \u2026'` personal prefix have been left in production code, for example `log.debug('APA01 before')`, `log.debug('APA01 elkGraph structure:', JSON.stringify(elkGraph, null, 2))`, `log.debug('APA01 source:', source, 'target:', target)`, and the surrounding validation loop that logs but never throws. At the DEBUG log level these will appear in user environments. The `'APA01'` prefix is clearly an internal debugging breadcrumb. Remove these statements or, where genuinely useful, replace them with descriptive messages that follow the project's logging conventions.",
+      "index": 10
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/edges.js",
+      "line_number": 436,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`// lineData = fixCorners(lineData);` \u2014 this commented-out call to the now-deleted `fixCorners` function should be deleted rather than left in. If there is an intention to restore this behaviour, a `// TODO:` comment with a tracking issue is more appropriate.",
+      "index": 11
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/question.ts",
+      "line_number": 66,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`// @ts-ignore TODO fix this (KNSV)` \u2014 a TypeScript suppression with a personal annotation is not appropriate for a merged PR. It gives no indication of what error is being suppressed, making it impossible for a future reader to evaluate whether the underlying issue has been fixed. Either fix the type mismatch (the `node as Bounds` cast) or replace this with a `// @ts-expect-error` accompanied by a comment explaining the specific error and referencing an issue number.",
+      "index": 12
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layouts.ts",
+      "line_number": 3,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The loader uses a template literal for a fully static path: `` async () => await import(`./render.js`) ``. Since nothing is interpolated, this is identical to `async () => await import('./render.js')` but prevents static analysis tools, bundlers, and tree-shakers from statically resolving the import. Use a plain string literal.",
+      "index": 13
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes.ts",
+      "line_number": 149,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `cloud` entry uses `description: 'cloud'` (lowercase) while the `bang` entry directly above uses `description: 'Bang'` (sentence-case), and all other shape descriptions in this file are sentence-case. Capitalise `'cloud'` to `'Cloud'` for consistency.",
+      "index": 14
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/bang.ts",
+      "line_number": 63,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`node.calcIntersect` delegates to `intersect.rect`, meaning edges are terminated at the rectangular bounding box of the bang shape rather than at its actual irregular outline. The same approximation appears in `cloud.ts`. For shapes that differ significantly from a rectangle this causes edges to visually float inside or outside the shape boundary. If an accurate outline intersection is not feasible for these shapes right now, add a comment explicitly noting the approximation so the next contributor knows it is intentional.",
+      "index": 15
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`instructions.md` at the repository root is a personal developer scratchpad \u2014 it reproduces the `non-layered-tidy-tree-layout` package README and records implementation notes. It is tracked by git and will be visible to all contributors and in the public repository. It should be removed from the PR; the same content is available from the upstream package's own documentation.",
+      "index": 16
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`cypress/platform/knsv2.html` now contains at least 15 `<pre>` elements all sharing `id=\"diagram4\"`. Duplicate `id` attributes are invalid per the HTML specification \u2014 only the first element with that ID is reachable via `getElementById`. Automated tooling and Cypress selectors that target `#diagram4` will behave unpredictably. Each element should have a unique ID, or the IDs should be removed if they are not referenced anywhere.",
+      "index": 17
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Two `.d.ts` declaration files have been added alongside TypeScript source files: `packages/mermaid-layout-elk/src/find-common-ancestor.d.ts` and `packages/mermaid-layout-elk/src/render.d.ts`. Hand-authoring declaration files next to `.ts` sources is fragile \u2014 they will silently drift out of sync as the source evolves. Declaration files for TypeScript sources should be emitted by the compiler (`tsc --declaration`), not maintained manually.",
+      "index": 18
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`cose-bilkent` is registered as a global layout loader in `packages/mermaid/src/rendering-util/render.ts`, which makes it available to every diagram type. If the intent is to use it only for mindmaps, it should be registered at the mindmap level instead of globally. Exposing it globally allows users of unrelated diagram types (flowchart, sequence, etc.) to select it via `layout: cose-bilkent` in their frontmatter and receive untested results.",
+      "index": 19
+    }
+  ],
+  "cost_usd": 3.7944613499999997,
+  "duration_seconds": 514.245509147644
+}

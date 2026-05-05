@@ -1,0 +1,74 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+      "line_number": 497,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Changing the selector from `svg.selectAll('g.node')` to `svg.selectAll('g').filter(...)` is too broad. In a class diagram SVG, `<g>` elements are also used for edge groups, relationship arrows, subgraph containers, and other structural elements that may carry a `title` attribute. This attaches `mouseover`/`mouseout` handlers to unintended elements, producing spurious tooltip flicker and incorrect hover-class application. The original `g.node` selector was precise by design. Note that `flowDb.ts` (a sibling diagram) intentionally keeps `g.node` in its current implementation.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+      "line_number": 512,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`.html(title.replace(...))` injects the raw `title` string directly as HTML. The previous code used `.text()` first (which HTML-escapes all content), then read back `.html()` and only selectively unescaped `&lt;br/&gt;`. That approach was a narrow allowlist \u2014 only `<br/>` tags could render. The new approach allows arbitrary HTML from the title attribute to execute (e.g. `<img src=x onerror=alert(1)>`), creating an XSS vulnerability. Mermaid input sanitization may not strip all such patterns from label/tooltip text. You should wrap the value in `DOMPurify.sanitize(title)` before passing it to `.html()`, which is exactly the pattern used in the current `flowDb.ts` implementation.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+      "line_number": 488,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The hardcoded `'#ffffde'` background and `'1px solid #333'` border bypass the project's theming system. `packages/mermaid/src/diagrams/flowchart/styles.ts` already defines `.mermaidTooltip` using `options.tertiaryColor` and `options.border2`, which respond to the user's selected theme (dark, forest, neutral, etc.). Injecting these fixed colors via `element.style` takes precedence over the CSS class rule, so theme changes will be silently ignored for class diagram tooltips.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+      "line_number": 614,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`// @ts-ignore TODO: fix this` should be replaced with `// @ts-expect-error: <descriptive reason>` per the project's coding conventions. `@ts-ignore` suppresses all TypeScript errors on the line unconditionally, while `@ts-expect-error` will itself error if the suppression is no longer needed \u2014 making it safer. The comment should also describe *why* the error occurs (e.g. the type of `tooltipElem` being too narrow for reassignment here), not just defer it as a TODO.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+      "line_number": 615,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "A new `div.mermaidTooltip` is unconditionally appended to `<body>` every time `setupToolTips` is called \u2014 there is no guard equivalent to the `.empty()` check added in `classDb.ts`. On a page with multiple flowchart diagrams, or whenever the diagram re-renders, an additional orphaned `<div>` accumulates in the DOM (a resource leak). Additionally, because the event handlers registered earlier in the function close over the `tooltipElem` *variable* (not its value at time of binding), reassigning `tooltipElem` here means handlers will reference this newly created element \u2014 but the element created at the top of the function is left in the DOM with no reference. The fix should mirror `classDb.ts`: create the tooltip conditionally using `.empty()`, and do so *before* attaching the event handlers.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+      "line_number": 624,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Same theming issue as in `classDb.ts`: the hardcoded `'#ffffde'` and `'1px solid #333'` override the theme-aware CSS already defined in `packages/mermaid/src/diagrams/flowchart/styles.ts`, which uses `options.tertiaryColor` and `options.border2`. Inline `element.style` values have higher specificity than the CSS class rule, so the tooltip will ignore the active theme.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The tooltip style definitions are now duplicated in three places \u2014 `classDb.ts`, `flowDb.ts`, and the existing CSS in `flowchart/styles.ts` (with parallel definitions in `block/styles.ts` and `user-journey/styles.js`) \u2014 but with different values (hardcoded colors in JS vs. theme variables in CSS). This creates two sources of truth. The correct fix is to keep the CSS class as the sole style definition and ensure the `<div>` is just created with the class applied (opacity only). Any positioning fixes should be made without pulling tooltip appearance out of the stylesheet.",
+      "index": 6
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "No unit or end-to-end tests are added. The PR checklist acknowledges this with an unchecked box. Per project rules, rendering changes that affect SVG/DOM output must be accompanied by integration tests (e.g. Cypress `imgSnapshotTest`) asserting expected behavior. At minimum, a test should verify: (1) only one `.mermaidTooltip` element exists in the DOM after rendering multiple diagrams, (2) the tooltip becomes visible on node hover and hidden on mouseout, and (3) tooltip positioning places it near the hovered element rather than at the page bottom.",
+      "index": 7
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "In `flowDb.ts`, the new tooltip-creation block is placed *after* the event listeners are set up. This makes the code hard to reason about: a reader has to notice the late reassignment to understand which element the handlers will actually operate on. The tooltip element should always be created or retrieved before any event handlers are attached, matching the structure used in `classDb.ts`.",
+      "index": 8
+    }
+  ],
+  "cost_usd": 0.50937055,
+  "duration_seconds": 385.79347014427185
+}

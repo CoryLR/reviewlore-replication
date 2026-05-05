@@ -1,0 +1,74 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 131,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`void this.configureBranchWatcher(gitDir, generation)` silently discards the returned Promise. `configureBranchWatcher` calls `readHeadRef`, which re-throws any error that is not ENOENT (e.g., EACCES on `.git/HEAD`). Similarly, the `watchFile` call inside `configureBranchWatcher` re-throws non-ENOENT errors. When either path throws from within a watcher callback, the result is an unhandled promise rejection \u2014 which Node.js can turn into an uncaught exception or warning. The outer `try/catch` in `setupWatchers` only covers the initial setup invocation (line 136), not these callback-triggered re-invocations. The same issue exists on line 212 inside the branch watcher callback.\n\nFix: attach a `.catch(() => { /* opportunistic */ })` to each fire-and-forget call:\n```ts\nvoid this.configureBranchWatcher(gitDir, generation).catch(() => {\n  // Watching git state is opportunistic.\n});\n```",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 239,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`invalidateAndClearWatchers` increments the generation and closes all watchers, but does not clear `watcherSetupInFlight`. This creates a narrow but real race: if a watcher error fires while the *initial* `setupWatchers` call is still awaiting its git command (i.e., `watcherSetupInFlight` is non-null), `scheduleWatcherRebuild` eventually fires and calls `ensureWatchers`. At that point `ensureWatchers` finds `watcherSetupInFlight` still set (for the old, now-invalid generation), awaits it, and returns \u2014 without ever starting a fresh setup for the new generation. Watchers are never rebuilt.\n\nFix: clear the in-flight reference during invalidation so that the subsequent `ensureWatchers` call starts a fresh setup:\n```ts\nprivate invalidateAndClearWatchers(): void {\n  this.watcherSetupGeneration += 1;\n  this.watcherSetupInFlight = undefined; // prevent ensureWatchers from reusing a stale promise\n  this.clearAllWatchers();\n}\n```\nThe old promise's `finally` block will be a harmless no-op after this.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 129,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Both `'head'` and `'packedRefs'` watch the same path \u2014 `gitDir` (the entire `.git/` directory) \u2014 yet their key names imply they watch specific files. Watching a directory rather than specific files is the correct approach (Node.js `fs.watch` is more reliable on directories across platforms), but it means any write anywhere inside `.git/` \u2014 including `FETCH_HEAD` from `git fetch`, `ORIG_HEAD` from a merge, or index updates \u2014 will fire both callbacks and trigger two `emitGitStateChange` calls. The debounce in `ChangeDetectionService` absorbs the churn, but a comment here would prevent future maintainers from 'fixing' the paths to specific files or from being puzzled by apparent over-triggering:\n```ts\n// Both watchers watch the gitDir directory rather than individual files.\n// This is intentional: fs.watch on a directory is more reliable cross-platform,\n// and the debounce in ChangeDetectionService absorbs spurious change events.\n```",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 151,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The function is named `watchFile` and its third parameter is named `filePath`, but every call site passes a *directory* path (`gitDir`, `dirname(branchRefPath)`, `join(gitDir, 'refs', 'heads')`). Watching a directory via `fs.watch` is intentional here, so the name and parameter should reflect that \u2014 e.g., rename the function to `watchDirectory` and the parameter to `dirPath`. The mismatch is currently papered over but will confuse anyone reading the call sites.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 138,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The catch block silently drops all errors from `getGitDir()` and the subsequent watcher setup without emitting even a `logger.debug(...)`. When commit detection silently stops working (e.g., because `.git` has an unexpected format, a subprocess hangs, or the worktree pointer is malformed), there is no observable signal. A debug-level log here would make these failures diagnosable without adding noise in normal operation:\n```ts\n} catch (error) {\n  // Watching git state is opportunistic; scanning still runs from module graph updates.\n  logger.debug(`Change detection: failed to install git watchers: ${error instanceof Error ? error.message : String(error)}`);\n}\n```",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.test.ts",
+      "line_number": 103,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`void callback` inside the `onGitStateChangeMock` default implementation is an unusual idiom for suppressing an unused-variable lint warning. The conventional TypeScript/JavaScript approach is to prefix unused parameters with an underscore:\n```ts\nreadonly onGitStateChangeMock = vi.fn<(callback: () => void) => () => void>((_callback) => {\n  return vi.fn();\n});\n```\nThis is clearer and consistent with the rest of the codebase.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `getChangedFiles` diff-filter change from `--diff-filter=d` to `--diff-filter=ad` (adding lowercase `a` to exclude Added files) correctly ensures that newly added staged files no longer pollute the `changed` set and instead appear exclusively in `new` via the dedicated `--diff-filter=A` commands. The new `intentToAdd` command (`diff --name-only --diff-filter=A` without `--cached`) correctly captures `git add -N` intent-to-add files. The two result sets are now naturally disjoint by filter, which the renamed test ('returns changed and new files without overlap') accurately describes. No issue \u2014 this is a meaningful correctness improvement.",
+      "index": 6
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `MockGitDiffProvider` class in `ChangeDetectionService.test.ts` is a well-structured approach that correctly handles the widening of `gitDiffProvider`'s type from `Pick<GitDiffProvider, 'getChangedFiles' | 'getRepoRoot'>` to `GitDiffProvider`. By extending the real class, it satisfies the stronger type requirement without the duck-typing workarounds that the old plain-object mocks would have needed. One observation: `getRepoRootMock` is declared as a public readonly field and is called by `ChangeDetectionService.buildStatuses`, but no test asserts how many times it was called or with what arguments. That's fine for the existing tests, but worth noting if future tests need to verify `getRepoRoot` call counts.",
+      "index": 7
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The 'rebuilds watchers after a watcher error while callbacks are still registered' test calls `vi.useFakeTimers()` inside the `it()` body rather than in a `beforeEach`, and restores real timers in a `finally` block. The surrounding `describe('GitDiffProvider')` tests rely on real timers and `vi.waitFor`. This pattern is correct and the `finally` guarantees cleanup, but it differs from the project convention of using `beforeEach`/`afterEach` for timer management. Extracting the fake-timer cases into a nested `describe` block with its own `beforeEach(() => vi.useFakeTimers())` and `afterEach(() => vi.useRealTimers())` would make the timer boundary explicit and consistent.",
+      "index": 8
+    }
+  ],
+  "cost_usd": 0.8855172999999998,
+  "duration_seconds": 596.7821249961853
+}

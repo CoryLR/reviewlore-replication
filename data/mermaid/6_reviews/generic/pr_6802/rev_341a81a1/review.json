@@ -1,0 +1,162 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/intersect/intersect-line.js",
+      "line_number": 36,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The r1/r2 DON'T_INTERSECT condition has been incorrectly inverted. The original guard was `if (r1 !== 0 && r2 !== 0 && sameSign(r1, r2))` \u2014 meaning: if both values are non-zero and have the same sign, the points lie on the same side of the line and the segments don't intersect. This is the correct test from the referenced Graphics Gems algorithm.\n\nThe new condition `if (Math.abs(r1) < epsilon && Math.abs(r2) < epsilon && sameSign(r1, r2))` means: if BOTH values are near-zero AND same sign, return DON'T_INTERSECT. Near-zero with same sign is the nearly-collinear case \u2014 it almost never fires, causing this guard to be nearly always skipped. As a result, the algorithm will attempt to compute intersections for segments that should have been rejected early, returning incorrect intersection points and breaking edge routing.\n\nNote also that the symmetric r3/r4 check above (line 20) was correctly left unchanged with `!== 0`, making the two halves of the same algorithm inconsistent. The fix is to restore `r1 !== 0 && r2 !== 0 && sameSign(r1, r2)` for line 36.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/cose-bilkent/layout.test.ts",
+      "line_number": 78,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This file imports `{ layout, validateLayoutData }` from `./index.js`, but `cose-bilkent/index.ts` only exports `render` (re-exported from `render.ts`). Neither `layout` nor `validateLayoutData` is re-exported from `index.ts`. At runtime both will be `undefined`, so every test that calls `layout(...)` will throw `TypeError: layout is not a function`.\n\nSimilarly, `MindmapLayoutData` is imported from `./types.js`, but `cose-bilkent/types.ts` only defines `PositionedNode`, `PositionedEdge`, `LayoutResult`, and `CytoscapeLayoutConfig` \u2014 not `MindmapLayoutData`. TypeScript compilation will also fail.\n\nFix: either export `executeCoseBilkentLayout` and `validateLayoutData` from `index.ts` and update the import names, or import directly from `./layout.js`.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.getData.test.ts",
+      "line_number": 52,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Multiple tests look up nodes by bare numeric string IDs such as `n.id === '0'` or check edge relations like `'0->1'`, but `getData()` in `mindmapDb.ts` prefixes every ID with `'node_'` (e.g., `id: 'node_' + node.id.toString()`). All `find((n) => n.id === '0')` calls will return `undefined`, and assertions like `expect(edgeRelations).toContain('0->1')` will fail because the actual value is `'node_0->node_1'`.\n\nThis same mismatch affects the edge assertions in `should return structured data for hierarchical mindmap`, `should assign correct section classes based on sibling position`, and `should assign correct section classes to edges`. All of these will fail as-written. The test IDs need to be updated to match the `node_` prefix used by the implementation.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/preprocess.ts",
+      "line_number": 31,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This silently changes the default layout for all mindmap diagrams from `cose-bilkent` (the previous behavior) to `tidy-tree` for any diagram that does not explicitly set `config.layout`. This is a breaking behavior change: existing diagrams that relied on the cose-bilkent default will now render differently without any opt-in. The PR description lists `cose-bilkent` as the default algorithm, but this code contradicts that.\n\nIf the intent is to make tidy-tree the new default, this should be clearly documented as a breaking change, added to the changelog, and the PR description should be updated. Alternatively, if cose-bilkent should remain the default, this block should be removed and the fallback in `mindmapRenderer.ts` is sufficient.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/render.ts",
+      "line_number": 54,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The ELK layout is registered via a relative source-file path `'../../../mermaid-layout-elk/src/render.js'`. Resolved from `packages/mermaid/src/rendering-util/render.ts`, this path points into the source directory of the sibling monorepo package. This works during local development but will be broken in the published `mermaid` npm package, where the relative path to `mermaid-layout-elk`'s source will not exist.\n\nELK was previously an opt-in external package for good reason (it's large and not universally needed). Bundling the ELK import by source path also bypasses the separate `@mermaid-js/layout-elk` package's public API. The loader should either import from the package name `@mermaid-js/layout-elk` (if it becomes a hard dependency) or be removed from the default loaders and left to consumers to register explicitly, as before.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/tidy-tree/layout.ts",
+      "line_number": 8,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`intersectionShift` is declared as a module-level mutable variable (`let intersectionShift = 50`) and then mutated inside `executeTidyTreeLayout` (`intersectionShift = 30` around line 45). Because Mermaid uses async rendering, two mindmap diagrams rendering concurrently will share this variable and race against each other, causing one diagram to use the other's value. The variable should be declared as a `const` local to `executeTidyTreeLayout` so each invocation has its own copy.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 57,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`preferredLayout` is computed (`conf?.layoutAlgorithm ?? layout ?? 'cose-bilkent'`) but is never used. The layout algorithm actually applied comes from `getRegisteredLayoutAlgorithm(layout, { fallback: 'cose-bilkent' })` on the line above, which reads only the global `layout` config and ignores `conf?.layoutAlgorithm`.\n\nThis means the `layoutAlgorithm` field added to `MindmapDiagramConfig` (and its corresponding schema entry) is entirely non-functional \u2014 setting `config.mindmap.layoutAlgorithm` has no effect on the rendered layout. To make it functional, either `preferredLayout` needs to be passed to `getRegisteredLayoutAlgorithm`, or the layout resolution logic needs to prioritize the mindmap-specific config.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 24,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`_updateNodeDimensions` is defined (lines ~24\u201337) but never called anywhere in the file. It was presumably meant to sync node sizes from the drawn SVG back to the layout data, but it was left out of the rendering flow. Either it needs to be called at the appropriate point in `draw`, or it should be removed.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/tidy-tree/layout.ts",
+      "line_number": 39,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`const _maxChildren = Math.max(...)` is computed but never used \u2014 the commented-out block below it (`// if (maxChildren > 5) { ... }`) was the intended consumer. This is dead code that should be removed along with the commented-out block.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/createGraph.ts",
+      "line_number": 113,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Double edge deletion: `data4Layout.edges = data4Layout.edges.filter((edge) => edge.id !== edgeIdToRemove)` already removes the original edge from the array. The subsequent `findIndex` + `splice` block will always find `index === -1` (since the edge was already removed by the filter) and is therefore dead code. Remove the `findIndex`/`splice` block.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.ts",
+      "line_number": 377,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`diagramId: 'mindmap-' + Date.now()` is set in `getData()` but is immediately overwritten by `data4Layout.diagramId = id` in `mindmapRenderer.ts`. The `Date.now()` call is wasted work and introduces non-determinism into a data-retrieval function. The `diagramId` should not be set here at all; it belongs solely to the renderer which receives the actual diagram `id`.",
+      "index": 10
+    },
+    {
+      "file_path": "packages/mermaid-layout-elk/src/render.ts",
+      "line_number": 596,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Eight or more `log.debug('APA01 ...')` statements (verbose ELK graph structure dumps, edge-by-edge validation loops, full `JSON.stringify(elkGraph, null, 2)` output) were left in production code. These generate significant noise in production logs and serialize the entire graph on every render. They should be removed or moved to `log.trace` before merging.",
+      "index": 11
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/intersect/intersect-line.js",
+      "line_number": 55,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "A 25-line commented-out `console.log` block (`// console.log('APA30 intersectLine intersection', ...)`) was left in the file. This is development debugging output that should be deleted before merging.",
+      "index": 12
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/question.ts",
+      "line_number": 80,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`return { x: res.x - 0.5, y: res.y - 0.5 }` applies a 0.5-pixel offset with no explanation. The accompanying `// @ts-ignore TODO fix this (KNSV)` comment indicates the containing `intersect` function is also a workaround. These suggest unfinished work. The magic offset should either be explained with a comment describing why it corrects the geometry, or the underlying issue should be properly fixed.",
+      "index": 13
+    },
+    {
+      "file_path": "cypress/platform/knsv2.html",
+      "line_number": 108,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "After this change, the file contains more than a dozen elements sharing `id=\"diagram4\"`. Duplicate `id` attributes are invalid HTML \u2014 browsers only recognize the first element with a given ID, which will break any ID-based DOM lookups and may cause some diagrams to fail to render. Each diagram element should have a unique ID.",
+      "index": 14
+    },
+    {
+      "file_path": "cypress/integration/rendering/mindmap.spec.ts",
+      "line_number": 108,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "All four new test cases are titled \"Bang and cloud shape with X layout\", but the diagram content in each test is a generic mindmap with only default-shaped (`Origins`, `Research`, `Tools`) nodes \u2014 there are no bang (`))text((`) or cloud (`)text(`) nodes in any of them. The test names are misleading and make it harder to understand test coverage. Either rename them to reflect what they actually test (e.g., \"Standard mindmap with dagre layout\") or update the diagrams to include bang/cloud shapes as the names imply.",
+      "index": 15
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/bang.ts",
+      "line_number": 61,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`calcIntersect` and `intersect` for the `bang` shape delegate to `intersect.rect`, which computes intersections against the rectangular bounding box of the shape. Because the bang shape has a non-rectangular boundary (it is a lumpy starburst-like form), edges will visually connect to a point outside the visible shape border. The same issue exists in `cloud.ts`. A dedicated polygon or ellipse approximation would produce more accurate results, or at least a comment should explain that this is a known approximation.",
+      "index": 16
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "Three development artifact files were committed and should not be in the repository:\n1. `instructions.md` \u2014 an AI prompt describing how to implement the tidy-tree algorithm, committed to the repo root. Notably, `.gitignore` adds `.instructions/` (a directory) but does not ignore `instructions.md` (a file), so the file bypassed the intended exclusion.\n2. `test-unified-rendering.html` \u2014 a throwaway test page at the repo root that loads scripts from `http://localhost:9000` (a local dev server address that will never work in CI or for other contributors).\n3. `packages/mermaid/src/diagrams/mindmap/test.mmd` \u2014 a scratch test diagram.\n\nAll three should be deleted before this PR is merged.",
+      "index": 17
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `cose-bilkent/layout.test.ts` file tests a `layout` function and a `MindmapLayoutData` type that don't exist in the cose-bilkent module's public API, and the `mindmapDb.getData.test.ts` tests use node ID strings that don't match the implementation. As a result, a meaningful portion of the newly added test suite will fail or not compile. Before this PR is merged, all tests should pass with `pnpm test`.",
+      "index": 18
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `cypress/platform/mindmap-layouts.html` file has inconsistent YAML frontmatter indentation \u2014 some `---` blocks are preceded by a leading space (e.g., ` ---\\n      config:`) while others are not (`    ---\\n      config:`). Leading spaces before `---` can cause frontmatter parsers to treat the block as regular text rather than metadata, which would silently ignore the `layout` configuration. All frontmatter blocks should start with `---` at the beginning of a line with no leading whitespace.",
+      "index": 19
+    }
+  ],
+  "cost_usd": 1.07565215,
+  "duration_seconds": 478.2790949344635
+}

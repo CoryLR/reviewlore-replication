@@ -1,0 +1,76 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/create-storybook/src/generators/REACT_NATIVE/metroConfig.ts",
+      "line_number": 9,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`METRO_SETUP_DOCS_LINK` is set to the literal string `'TODO_REPLACE_WITH_REACT_NATIVE_METRO_DOCS_LINK'`. This value is written verbatim into users' Metro config files as a comment (via `prependMetroFallbackComment`) and printed to the terminal in `postConfigure`. Shipping a TODO placeholder as user-facing text is a release blocker \u2014 replace this with the actual documentation URL before merging.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/generators/REACT_NATIVE/index.ts",
+      "line_number": 22,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`lastMetroCodemodResult` and `lastScriptDerivationResult` are module-level mutable `let` variables used to thread state from `configure` into `postConfigure`. Because they live at module scope they persist across calls and are never touched by `vi.clearAllMocks()` or `beforeEach` resets in tests. If two generator runs happen in the same process (e.g., integration tests that import the same module), or if `postConfigure` is invoked in a test that skipped `configure`, the values silently bleed over from a prior run. A better design is to capture these values in a closure at module-definition time or to return them from `configure` and thread them explicitly through the `GeneratorModule` API.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/generators/REACT_NATIVE/index.test.ts",
+      "line_number": 14,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`vi.mock('./generateEntrypoint', { spy: true })` (and `'./metroConfig'` on the next line) omit the `.ts` extension, but `index.ts` imports these modules with explicit `.ts` extensions: `'./generateEntrypoint.ts'` and `'./metroConfig.ts'`. The project rule requires the mock path to exactly match the import path used in the file under test; a mismatch can silently leave the real implementation in place. Use `vi.mock('./generateEntrypoint.ts', { spy: true })` and `vi.mock('./metroConfig.ts', { spy: true })` to match.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 19,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The project convention requires `{ spy: true }` on all `vi.mock()` calls \u2014 including factory-style mocks. The current pattern `vi.mock('../helpers/mainConfigFile', () => ({...}))` diverges from the `{ spy: true }` + `vi.mocked()` pattern used elsewhere in the automigration test suite (e.g., `rnstorybook-config.test.ts`). Refactor to `vi.mock('../helpers/mainConfigFile', { spy: true })` and move the `mockImplementation(...)` setup into `beforeEach` via `vi.mocked(updateMainConfig).mockImplementation(...)`.",
+      "index": 3
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/generators/REACT_NATIVE/metroConfig.ts",
+      "line_number": 69,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`containsStorybookImport` returns `true` for any import from `@storybook/\u2026`, `storybook/\u2026`, or the bare `'storybook'` package. This means a metro config that happens to import an unrelated Storybook utility (e.g., `storybook/internal/common`) will be treated as already configured and the `withStorybook` codemod will be silently skipped, even if the metro wrapper is not present. Consider narrowing the check to imports from `'@storybook/react-native/metro'` specifically (which is what both `hasWithStorybookBinding` and the actual test cases really target), or at minimum add a JSDoc comment explaining the intentionally broad heuristic and why accepting false positives is a deliberate trade-off here.",
+      "index": 4
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/generators/REACT_NATIVE/generateEntrypoint.ts",
+      "line_number": 2,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`path` (the default namespace import) and `join`/`dirname` (named imports) are both pulled from `'node:path'`. Inside the file, `path.join(...)` is used for some calls and the bare `join` for others \u2014 both resolve to the same function. Drop the default `path` import and use the named `join` everywhere for consistency.",
+      "index": 5
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/generators/REACT_NATIVE/metroConfig.ts",
+      "line_number": 11,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`EXPO_CREATE_METRO_COMMAND` has a `command: 'expo'` field, which implies it is the executable name. However, at the call site `'expo'` is spread into `args` alongside the constant's own `args`, making it the first positional argument rather than the command. The `command` field is never used as an executable name, making the structure misleading. Either rename the field to reflect its actual role (e.g., `packageName`), or flatten the constant into a single `args` array like `['expo', 'customize', 'metro.config.js']`.",
+      "index": 6
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `rn-ondevice-addons-to-device-addons` automigration's `check` method has no version guard \u2014 it will run against any version of `@storybook/react-native`. Other fixes in `allFixes` gate on `storybookVersion` when the change they address is version-specific. If `deviceAddons` support was introduced in a particular version of `@storybook/react-native`, add a `semver.gte(storybookVersion, 'X.Y.Z')` guard so the migration is not mistakenly applied to older versions that do not recognize `deviceAddons`.",
+      "index": 7
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `run` callback passed to `updateMainConfig` in `rn-ondevice-addons-to-device-addons.ts` is synchronous (`(main) => { ... }`), while `updateMainConfig`'s signature accepts `(main: ConfigFile) => Promise<void> | void`. This is valid but diverges from every other automigration `run` implementation in the codebase (e.g., `rnstorybook-config.ts`), which use `async (main) => { ... }`. Using a synchronous callback here is fine, but the inconsistency may cause future contributors to second-guess whether the callback should be async. Adding `async` for consistency would make the intent clear without changing behavior.",
+      "index": 8
+    }
+  ],
+  "cost_usd": 0.85316095,
+  "duration_seconds": 602.957516670227
+}

@@ -1,0 +1,100 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/index.ts",
+      "line_number": 44,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`process.exit(1)` inside a library function is an API misuse. It kills the process before `withTelemetry`'s `.catch(handleCommandFailure(...))` in `run.ts` can run, which means the failure is never recorded and the log file is never written. It also makes unit testing impossible. Throw an `Error` instead and let the caller handle it:\n```ts\nthrow new Error(`Failed to read Storybook configuration: ${err instanceof Error ? err.message : String(err)}`);\n```",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/index.ts",
+      "line_number": 47,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Silent no-op for unsupported frameworks. When a user or agent runs `storybook ai init` on a Vue, Angular, Svelte, or any non-`@storybook/react-vite` project, the command exits without any output whatsoever \u2014 no error, no explanation. An agent running this command will have no way to know why nothing happened. At minimum, emit a message before returning:\n```ts\nif (projectInfo.framework !== '@storybook/react-vite') {\n  logger.warn(`storybook ai init currently only supports @storybook/react-vite (detected: ${projectInfo.framework}). Skipping.`);\n  return;\n}\n```\nIf this restriction is intentional for an MVP, it should also be reflected in the command description string.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/index.ts",
+      "line_number": 53,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`console.log` is used for output here, while the rest of the module uses `logger` from `storybook/internal/node-logger`. `console.log` bypasses any log-level controls and is inconsistent with surrounding code. Since this output is intentional user-facing content (not a side-effect log), this may be a deliberate choice \u2014 but it should be consistent. If the intent is to write directly to stdout (e.g. for piping), a comment explaining why `console.log` is preferred here over `logger.log` would clarify the decision.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/prompt.ts",
+      "line_number": 186,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `renderer` variable holds the full scoped package name (e.g. `@storybook/react`), because `getStorybookInfo` returns `rendererPackage` as the full npm package name from its `rendererPackages` lookup map. Interpolating it directly as `` `@storybook/${renderer}` `` produces `@storybook/@storybook/react` in the generated example \u2014 an invalid package that will confuse both the AI and any human reading the output.\n\nEither extract the short name by stripping the prefix:\n```ts\nconst rendererShortName = (projectInfo.renderer ?? 'react').replace(/^@storybook\\//, '');\n```\nor use the `renderer` value directly as the complete package name (not nested inside `@storybook/`).",
+      "index": 3
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/types.ts",
+      "line_number": 10,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`framework`, `renderer`, and `builder` are declared as `string | null` in `ProjectInfo`, but in `index.ts` they are always assigned a `string` via the `?? 'unknown'` fallback \u2014 `null` is never actually assigned. The declared type is wider than the actual runtime type, which may force unnecessary null-checks in consumers. Tighten the type to `string`.",
+      "index": 4
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/types.ts",
+      "line_number": 20,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The JSDoc comment still reads \"Represents a skill category\" and \"Each skill provides\" \u2014 leftover terminology from the old `skill` command that was removed in this PR and replaced by `ai init`. Update it to describe `AiPrompt` accurately (e.g. \"Represents a named prompt with instructions for an AI agent\").",
+      "index": 5
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/bin/detect-agent.ts",
+      "line_number": 27,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Most of the extra env-var checks (GITHUB_COPILOT, CLINE, CLINE_TASK_ID, WINDSURF, WINDSURF_SESSION_ID, BOLT, BOLT_SESSION_ID, LOVABLE, V0_DEV) do not appear in any published documentation for those tools and may never actually be set by them. A false positive would silently enable `options.yes = true` (via `options.agent = true` in `run.ts`) for a real user whose environment happens to contain one of these variable names for an unrelated reason. Consider adding links to authoritative sources confirming each env var, or restricting the extra checks to only those that are verified (e.g. `CLAUDE_CODE_SSE_PORT` which is documented for Claude Code).",
+      "index": 6
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/bin/run.ts",
+      "line_number": 128,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This log line runs unconditionally for every `create-storybook` invocation. Any user who is not running inside an agent will see `Detecting agent presence: undefined` printed to their console \u2014 a confusing and unwanted debug artifact. Either remove it entirely or guard it:\n```ts\nconst agent = detectAgent();\nif (agent.name) {\n  logger.log(`Running via AI agent: ${agent.name}. Enabling non-interactive defaults.`);\n}\n```",
+      "index": 7
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/bin/run.ts",
+      "line_number": 133,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`detectAgent()` is invoked a second time here (and a third time at module level for `isAgent`). Each call re-reads `process.env` and iterates the checks. Cache the result once:\n```ts\nconst detectedAgent = detectAgent();\nif (detectedAgent.name) {\n  options.agent = true;\n  logger.log(`This command is running via an AI agent: ${detectedAgent.name}. Enabling non-interactive defaults.`);\n}\n```",
+      "index": 8
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/initiate.ts",
+      "line_number": 115,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "This is a cross-package source-level import: `create-storybook` is reaching directly into `cli-storybook`'s `src/` directory via a relative path, bypassing `cli-storybook`'s published entry point entirely. This breaks the package boundary abstraction \u2014 any internal reorganisation of `cli-storybook` (moving, renaming, or splitting the `ai/` directory) will silently break this import at runtime without a compile error in the consuming package. The `aiInit` function should be exported from `cli-storybook`'s package entry point and imported via the package name (e.g. `@storybook/cli`), or the shared logic should be moved to a common package.",
+      "index": 9
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "No automated tests are added for any of the new modules: `ai/index.ts`, `ai/prompt.ts`, or `detect-agent.ts`. The prompt generation functions (`generateMarkdownOutput`, `generateJsonOutput`, `getCsfExample`, `getDocsUrl`) are pure functions that are straightforward to unit test and have clearly defined edge cases (e.g. undefined `majorVersion`, the `hasCsfFactoryPreview` branch, different renderer values). The renderer import path bug (using a full scoped package name like `@storybook/react` inside `@storybook/${renderer}`) is exactly the kind of regression a snapshot or simple string-assertion test would catch immediately.",
+      "index": 10
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `@storybook/react-vite`-only restriction in `aiInit` is an implicit, undocumented limitation. It does not appear in the command's `--help` description, is not communicated to the user at runtime (silent return), and is not called out in the PR description as a known scope limitation. If this is an intentional MVP constraint, it should be tracked with a `// TODO: extend to other frameworks` comment in the code, and the command description in `run.ts` (currently \"Generate setup instructions to write stories for real components\") should reflect the constraint so users know what to expect before running it.",
+      "index": 11
+    }
+  ],
+  "cost_usd": 0.7831874999999999,
+  "duration_seconds": 619.6388852596283
+}

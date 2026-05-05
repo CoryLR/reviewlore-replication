@@ -1,0 +1,54 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/renderers/react/src/componentManifest/utils.ts",
+      "line_number": 178,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "`TSCONFIG_CANDIDATES` is not exported, yet the identical fallback order (`tsconfig.json` \u2192 `tsconfig.base.json` \u2192 `tsconfig.app.json`) is duplicated verbatim in both `react-docgen.ts` and `react-docgen-loader.ts`. There is no single source of truth: if a new candidate (e.g. `tsconfig.build.json`) needs to be added later, it must be updated in three separate places and the omission in any one of them would create a silent, hard-to-diagnose behavioral inconsistency between Vite, Webpack, and the manifest codepath. Export this constant and import it in the other two files.",
+      "index": 0
+    },
+    {
+      "file_path": "code/frameworks/react-vite/src/plugins/react-docgen.ts",
+      "line_number": 51,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "When all three candidates fail and `tsconfigPath` remains `undefined`, the code silently continues with no path-alias resolution. By contrast, `reactDocgenTypescript.ts` (the other consumer of this same fallback logic) now emits an explicit `logger.warn`. Users whose monorepo has no tsconfig variant at all will see path aliases silently fail here without any diagnostic hint. Consider adding a `logger.warn` after the chain \u2014 analogous to the one added in `reactDocgenTypescript.ts` \u2014 so the failure mode is visible in all code paths.",
+      "index": 1
+    },
+    {
+      "file_path": "code/presets/react-webpack/src/loaders/react-docgen-loader.ts",
+      "line_number": 87,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Same gap as `react-docgen.ts`: when `tsconfigPath` is `undefined` (no tsconfig variant found), the Webpack loader silently falls through with no path-alias resolution and no diagnostic message. A `logger.warn` when `tsconfigPath` is falsy would match the warning behaviour introduced in `reactDocgenTypescript.ts` and give users a consistent experience across Vite and Webpack.",
+      "index": 2
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/reactDocgenTypescript.ts",
+      "line_number": 207,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The new `else` branch \u2014 which fires when `findTsconfigPath` returns `undefined` \u2014 has no unit test. The existing tests in `utils.test.ts` cover `findTsconfigPath` returning `undefined` but they verify that no warning is emitted *from the utility*, not that the caller (`getParser`) correctly emits its own warning in that case. A test that mocks `findTsconfigPath` to return `undefined` and asserts `logger.warn` is called with the expected message would close this coverage gap.",
+      "index": 3
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/utils.ts",
+      "line_number": 188,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The warning message tells the user to \"create a tsconfig.json that extends \\\"tsconfig.base.json\\\"\" to silence the warning. In many Nx/Turborepo setups the intent is precisely the opposite \u2014 `tsconfig.json` is absent on purpose and `tsconfig.base.json` is the canonical root config. Advising users to create a wrapper just to suppress a log entry may cause confusion. Consider instead pointing users toward the Storybook option for explicitly setting a tsconfig path (e.g. `typescript.tsConfigPath` in the main config) so they have a concrete, non-invasive action to take.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR introduces two separate mechanisms for tsconfig discovery that are kept in sync only by convention. `reactDocgenTypescript.ts` delegates to the cached `findTsconfigPath()` utility (which encapsulates the fallback chain and the warning), while `react-docgen.ts` and `react-docgen-loader.ts` each re-implement the same three-candidate chain inline. If the set of candidates ever needs to change, a developer has to know to update all three sites. A stronger approach would be to export `TSCONFIG_CANDIDATES` from `utils.ts` (or a purpose-built `findTsconfigPath`-style helper that accepts an explicit `cwd`/`projectRoot` pair rather than deriving them internally) and import it wherever the fallback chain is needed.",
+      "index": 5
+    }
+  ],
+  "cost_usd": 0.43552185,
+  "duration_seconds": 409.5948579311371
+}

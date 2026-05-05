@@ -1,0 +1,37 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33340,
+  "title": "Addon-Vitest: Normalize Windows paths in addon-vitest automigration",
+  "body": "## Summary\n\nFixes #31768\n\nWhen running `storybook add @storybook/addon-vitest` with Windows-style paths (e.g., `--config-dir .\\apps\\frontend\\.storybook`), the backslashes were being inserted directly into the generated JavaScript template files, causing invalid syntax.\n\nThis PR normalizes all Windows paths to forward slashes before inserting them into templates using the existing `slash` dependency.\n\n## Changes\n\n- Import and use `slash` package in `updateVitestFile.ts` `loadTemplate` function\n- Add comment explaining the normalization\n- Add unit tests to verify Windows path normalization\n- Add unit tests to verify Unix paths are preserved\n\n## Test Results\n\nAll tests pass \u2705\n\n```\n\u2713 @storybook/addon-vitest src/updateVitestFile.test.ts (17 tests)\n   \u2713 normalizes Windows paths to forward slashes\n   \u2713 preserves forward slashes in paths\n```\n\n## Before\n\n```javascript\n// Windows path input: .\\apps\\frontend\\.storybook\nstorybookTest({ configDir: path.join(dirname, '.\\apps\\frontend\\.storybook') })\n// \u274c Invalid - backslashes cause issues in JS strings\n```\n\n## After\n\n```javascript\n// Windows path input: .\\apps\\frontend\\.storybook  \nstorybookTest({ configDir: path.join(dirname, './apps/frontend/.storybook') })\n// \u2705 Valid - forward slashes work cross-platform\n```\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Bug Fixes**\n  * Windows-style paths in vitest configuration updates are now normalized to cross-platform format.\n  * Default workspace metadata now includes a consistent extends value for generated vitest content.\n\n* **Tests**\n  * New tests validate path normalization and the updated workspace content in configuration templates.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "tanujbhaud",
+  "merged_at": "2026-01-30T09:42:41Z",
+  "base_ref": "next",
+  "merge_commit_sha": "3802b16031a3678d9e7d6bc7a462a5494500abe2",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "0da33fbb97ba168c0340f09ae3dc361e764ba5d9",
+    "b5e8daa2fbda808e37bfe1ab4be71e0d4e5e406b"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6jnz_W",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n**Fix the `forEach` callback to not return a value.**\n\nThe arrow function implicitly returns the result of the assignment expression, but `forEach` ignores return values. This is flagged by static analysis and can be confusing to readers.\n\n\n\n<details>\n<summary>\ud83d\udd27 Proposed fix</summary>\n\n```diff\n   // Normalize Windows paths (backslashes) to forward slashes for JavaScript string compatibility\n-  Object.entries(replacements).forEach(\n-    ([key, value]) => (template = template.replace(key, normalize(value)))\n-  );\n+  Object.entries(replacements).forEach(([key, value]) => {\n+    template = template.replace(key, normalize(value));\n+  });\n```\n\n</details>\n\nAlternatively, a `for...of` loop would be slightly more idiomatic here:\n\n```typescript\nfor (const [key, value] of Object.entries(replacements)) {\n  template = template.replace(key, normalize(value));\n}\n```\n\n<details>\n<summary>\ud83e\uddf0 Tools</summary>\n\n<details>\n<summary>\ud83e\ude9b Biome (2.3.13)</summary>\n\n[error] 15-15: This callback passed to forEach() iterable method should not return a value.\n\nEither remove this return or remove the returned value.\n\n\n(lint/suspicious/useIterableCallbackReturn)\n\n</details>\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/addons/vitest/src/updateVitestFile.ts` around lines 14 - 17, The forEach\ncallback currently uses an implicit return from the assignment\n(Object.entries(replacements).forEach(([key, value]) => (template =\ntemplate.replace(key, normalize(value))))), which static analysis flags; change\nit so the callback does not return a value by using a block body and explicit\nstatement or replace the forEach with a for...of loop iterating over\nObject.entries(replacements) \u2014 in either case update the code that references\ntemplate, replacements, normalize and Object.entries to assign template =\ntemplate.replace(key, normalize(value)) as a standalone statement (no expression\nreturned).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/vitest/src/updateVitestFile.ts",
+          "line_number": 17,
+          "start_line": 14,
+          "commit_sha": "b5e8daa2fbda808e37bfe1ab4be71e0d4e5e406b",
+          "created_at": "2026-01-30T08:11:12Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 1
+}

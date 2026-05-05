@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/vitest.d.ts",
+      "line_number": 3,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The relative import path is wrong. This file lives at `code/core/vitest.d.ts`, so `./core/src/shared/utils/toHaveLiveRegion` resolves to `code/core/core/src/shared/utils/toHaveLiveRegion`, which doesn't exist. It should be `./src/shared/utils/toHaveLiveRegion`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/addons/vitest/src/custom-matchers.d.ts",
+      "line_number": 7,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The return type `Promise<void>` is incorrect. The `toHaveLiveRegion` implementation is fully synchronous and returns `{ pass: boolean; message: () => string }`. For Vitest/Jest matcher augmentation the conventional return is `void`. Declaring it as `Promise<void>` will make TypeScript reject usages that aren't `await`-ed and gives callers a false impression the matcher is async. Compare the sibling declaration in `code/core/vitest.d.ts` which correctly uses the generic `R`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/vitest-setup.ts",
+      "line_number": 6,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "This side-effect-only import (`import './core/src/shared/utils/toHaveLiveRegion.ts'`) is redundant. Line 7 already imports the same module with a named binding, which is sufficient to load the module. `toHaveLiveRegion.ts` exports a function and an interface \u2014 it has no side effects on import \u2014 so the bare import on line 6 does nothing and can be removed.",
+      "index": 2
+    },
+    {
+      "file_path": "code/.storybook/storybook.setup.ts",
+      "line_number": 7,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "This side-effect-only import of `toHaveLiveRegion.ts` is a no-op. The module has no side effects; it only exports a function. The `expect.extend({ toHaveLiveRegion })` call that actually registers the matcher is done in `preview.tsx`. This line should be removed to avoid confusion about why a module is imported without bindings.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/package.json",
+      "line_number": 319,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`extend-to-be-announced` is added as a devDependency here, but it is never imported anywhere in this diff. The PR description claims it is registered in `code/.storybook/storybook.setup.ts` via `import 'extend-to-be-announced/vitest'`, but that import does not appear in the diff of that file. The actual stories use the custom `toHaveLiveRegion` matcher rather than `toBeAnnounced`. If the approach was changed from `extend-to-be-announced` to the custom matcher, this devDependency and its transitive dependency `aria-live-capture` should be removed to avoid shipping unused packages.",
+      "index": 4
+    },
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.tsx",
+      "line_number": 204,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`componentTestStatusValueToStoryIds` and `a11yStatusValueToStoryIds` are plain objects in the dependency array. If a parent component creates new object references on every render (even with identical values), the effect re-fires, reads `prevState === testProviderState`, and exits early \u2014 no announcement is made, but the effect body still executes on every render. Since these values are only needed inside the `test-provider-state:succeeded` branch, consider reading them from refs to avoid the unnecessary re-runs, or verify that the parent memoises these objects.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/shared/utils/toHaveLiveRegion.ts",
+      "line_number": 84,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "In the failure-message helper, elements without an explicit `aria-live` attribute are shown as `[aria-live=\"(implicit)\"]`. This is misleading: the attribute wasn't set, the politeness is implied by a `role`. Showing the role instead (e.g. `[role=\"alert\", effective aria-live=\"assertive\"]`) would make debugging failures much easier, especially because the level filter uses the effective value.",
+      "index": 6
+    },
+    {
+      "file_path": "code/addons/vitest/src/custom-matchers.d.ts",
+      "line_number": 1,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "There are now two separate type-declaration files that augment `toHaveLiveRegion` for different `expect` objects: this file (for `storybook/test`) and `code/core/vitest.d.ts` (for `vitest`). They already disagree on the return type (`Promise<void>` here vs `R` in `vitest.d.ts`). Any future signature change will need to be reflected in both places. Consider consolidating or at minimum cross-referencing the two.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `succeeded` announcement is only triggered when the previous state was exactly `test-provider-state:running` (line 161 of `TestProviderRender.tsx`). If `testProviderState` transitions directly from any other state (e.g., `pending`) to `succeeded` \u2014 a possible race condition where the store updates arrive out of order \u2014 no announcement is made. This may be intentional, but the implicit contract should be documented with a comment so future maintainers understand why the `prevState` guard exists.",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The three new announcement stories (`AnnouncesTestRunStart`, `AnnouncesTestRunFinished`, `AnnouncesTestRunCrashed`) each duplicate the same `render: function Render(args)` pattern: a `useState` initialized from `args.testProviderState`, a `useEffect` with a `setTimeout` transition, and a cleanup `clearTimeout`. Extracting this into a shared `render` helper (or a small custom render factory) in the stories file would reduce repetition and make the intent clearer.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.45714385,
+  "duration_seconds": 249.0417821407318
+}

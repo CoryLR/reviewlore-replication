@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "docs/_snippets/automock-register-mock-file.md",
+      "line_number": 65,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The Vue TypeScript snippet filename was changed from `.storybook/preview.ts` to `.storybook/preview.tsx`. Vue does not use JSX, so Storybook generates `preview.ts` (not `preview.tsx`) for Vue projects \u2014 the generator's `isJsx` check in `configure.ts` explicitly excludes Vue. Using `.tsx` in this documentation tells Vue users their file should have a JSX extension, which is incorrect. The same incorrect change also affects the Vue JS snippet (line 82 \u2192 `.jsx` instead of `.js`), the Angular TS snippet (line 97 \u2192 `.tsx` instead of `.ts`), and the Web Components TS and JS snippets (lines 112 and 129). All of these should be reverted to `.ts`/`.js`. In contrast, other snippet files such as `storybook-preview-auto-docs-custom-docs-container.md` correctly go in the opposite direction (`.tsx` \u2192 `.ts`) for these same non-JSX renderers.",
+      "index": 0
+    },
+    {
+      "file_path": "docs/_snippets/storybook-preview-auto-docs-custom-docs-container.md",
+      "line_number": 111,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "After the filename change from `.storybook/preview.tsx` to `.storybook/preview.ts` for Vue, the opening code fence still declares `tsx` (i.e. ` ```tsx filename=\".storybook/preview.ts\" `). The fence type controls syntax highlighting and signals to readers which parser applies \u2014 `tsx` implies JSX is expected, but a `.ts` file does not allow JSX syntax. The fence should be updated to `ts`. The same mismatch occurs for the Angular and Web Components snippets later in this file, and also in `storybook-preview-auto-docs-custom-template-function.md` and `storybook-preview-auto-docs-override-mdx-container.md`, which have the same `tsx`/`jsx` fence types paired with the new `.ts`/`.js` filenames.",
+      "index": 1
+    },
+    {
+      "file_path": "docs/configure/story-rendering.mdx",
+      "line_number": 12,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The description was changed from `preview.js|ts` to `preview.ts|tsx`, silently dropping the JavaScript variants. This section is renderer-agnostic and describes behaviour for all Storybook projects \u2014 including non-TypeScript projects that use `preview.js` or `preview.jsx`. The wording `preview.ts|tsx` implies the file must be TypeScript, which misleads JavaScript users. Consider `preview.*` or restore `preview.js|ts` and add a parenthetical note such as `(preview.jsx / preview.tsx for React-based frameworks)`.",
+      "index": 2
+    },
+    {
+      "file_path": "docs/api/portable-stories/portable-stories-jest.mdx",
+      "line_number": 175,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The bullet point now says `preview.tsx` specifically. The file extension depends on both language (TS vs JS) and renderer (React-based projects use `.tsx`/`.jsx`; Angular, Vue, Svelte etc. use `.ts`/`.js`). Hardcoding `.tsx` is too narrow and will confuse non-React users. The parallel locations in `portable-stories-playwright.mdx` and `portable-stories-vitest.mdx` were correctly updated to `preview.*` in this same PR \u2014 this entry should be consistent with them.",
+      "index": 3
+    },
+    {
+      "file_path": "docs/writing-docs/autodocs.mdx",
+      "line_number": 18,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The text now reads `.storybook/preview.jsx|tsx`, which only covers JSX-based (React-family) renderers. Autodocs can be enabled in any Storybook project, including Angular, Vue, Svelte, and Web Components projects that use `.ts`/`.js` preview files. Replacing `.jsx|tsx` with `.*` (or restoring the previous `js|ts` with a note for React projects) would keep the description accurate for all renderers.",
+      "index": 4
+    },
+    {
+      "file_path": "docs/get-started/frameworks/vue3-vite.mdx",
+      "line_number": 50,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The prose was changed from `./storybook/preview.js|ts` to `./storybook/preview.ts`, dropping the JavaScript option entirely. Vue 3 projects can use JavaScript, so Vue users with a `preview.js` file are now excluded. Additionally, the code block a few lines below uses the title `\".storybook/preview.ts\"` but contains JavaScript code (no TypeScript syntax), making the title and content inconsistent. Restore `js|ts` in the prose, and align the code block title with the actual code language (use `.storybook/preview.js` for the JS example or switch the code to TypeScript).",
+      "index": 5
+    },
+    {
+      "file_path": "docs/get-started/frameworks/nextjs.mdx",
+      "line_number": 434,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The code block title was changed from `index.jsx|tsx` to `index.tsx`, dropping the JavaScript variant. The surrounding section is about absolute imports which work in both JS and TS Next.js projects. The previous `jsx|tsx` form communicated that both variants are supported; the new `index.tsx` implies TypeScript only. The same narrowing happens in `nextjs-vite.mdx`. Consider keeping `index.*` or `index.jsx|tsx` here and in `nextjs-vite.mdx` to avoid implying TypeScript is required.",
+      "index": 6
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/generators/configure.test.ts",
+      "line_number": 185,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The \"non-react renderer\" test passes `frameworkPackage: '@storybook/react-vite'` while using `renderer: SupportedRenderer.VUE3`. The test passes because only `renderer` affects the `isJsx` check, but the mismatched framework package is misleading to future readers \u2014 it suggests the framework is React-Vite but the renderer is Vue3. Using a Vue-appropriate framework package (e.g. `@storybook/vue3-vite`) would make the test intent clearer.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "**Systematic wrong-direction rename in `automock-register-mock-file.md`.** This file contains snippets for Vue, Angular, and Web Components CSF Next variants. The PR changed their preview filenames from `.ts`/`.js` to `.tsx`/`.jsx` \u2014 the opposite of the correct direction. Every other multi-renderer snippet file in this PR either keeps non-JSX renderers at `.ts`/`.js` or converts them from `.tsx` back to `.ts` (e.g. `storybook-preview-auto-docs-custom-docs-container.md` correctly goes `.tsx` \u2192 `.ts` for Vue/Angular/WC). Only `automock-register-mock-file.md` went the wrong way, affecting five snippet blocks (Vue TS, Vue JS, Angular TS, Web Components TS, Web Components JS). All five should be reverted to `.ts`/`.js`.",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**Inconsistent filename style across updated documentation.** The PR applies three different conventions for referring to the preview file in documentation prose: `preview.*` (most places), `preview.ts|tsx` (some MDX files), and `preview.jsx|tsx` (a few autodocs references). Additionally, several renderer-specific pages now name a single specific extension (e.g. `preview.tsx` in the Next.js pages, `preview.ts` in the Vue 3 page) rather than covering both language variants. Adopting a single consistent rule \u2014 `preview.*` in renderer-agnostic prose, and the specific extension in renderer-specific code blocks \u2014 would reduce reader confusion and make future updates easier.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 1.0355067,
+  "duration_seconds": 750.8348579406738
+}

@@ -1,0 +1,38 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/cli-storybook/src/codemod/helpers/config-to-csf-factory.ts",
+      "line_number": 45,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The early return fires unconditionally whenever the file looks transformed and has no named exports, even when the framework import is missing or incomplete. The rest of the function (lines ~229\u2013264) is the only code that handles adding/patching the `defineMain`/`definePreview` import specifier. Two existing test cases directly exercise this path \u2014 'should add missing import when already transformed but import is absent' and 'should add missing specifier when already transformed but defineMain is not in existing import' \u2014 and both would regress under this change because `info.source` is returned before the import-fixup logic runs.\n\nFix: gate the early return on a `hasCorrectImport` check, the same way the surrounding code does for the broader `shouldSkipTransform` condition:\n```ts\nconst hasCorrectImport = programNode.body.some(\n  (node) =>\n    t.isImportDeclaration(node) &&\n    node.importKind !== 'type' &&\n    node.source.value === expectedImportSource &&\n    node.specifiers.some(\n      (spec) =>\n        t.isImportSpecifier(spec) &&\n        t.isIdentifier(spec.imported) &&\n        spec.imported.name === methodName\n    )\n);\nif (isAlreadyTransformed && !hasNamedExports && hasCorrectImport) {\n  return info.source;\n}\n```",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/codemod/helpers/config-to-csf-factory.ts",
+      "line_number": 40,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`t.isCallExpression(node.declaration)` checks the raw AST node directly without unwrapping TypeScript type-annotation syntax. In TypeScript files, the default export declaration is often wrapped in a `TSSatisfiesExpression` (`export default defineMain({}) satisfies StorybookConfig`) or `TSAsExpression` (`export default defineMain({}) as StorybookConfig`). In those cases `node.declaration` is *not* a `CallExpression`, so `isAlreadyTransformed` evaluates to `false` and the early return never fires \u2014 the file gets fed through `recast` and still suffers the Windows CRLF mutation.\n\nThe existing code in Scenario 2 already handles this with `config._unwrap(node.declaration)`. Use the same unwrapping here:\n```ts\nconst isAlreadyTransformed = programNode.body.some((node) => {\n  if (!t.isExportDefaultDeclaration(node)) return false;\n  const declaration = config._unwrap(node.declaration as t.Node);\n  return (\n    t.isCallExpression(declaration) &&\n    t.isIdentifier(declaration.callee) &&\n    declaration.callee.name === methodName\n  );\n});\n```",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/codemod/helpers/config-to-csf-factory.ts",
+      "line_number": 45,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The condition `isAlreadyTransformed && !hasNamedExports` is applied identically for both `'main'` and `'preview'` configTypes, but the two types have different semantics elsewhere in the function (e.g., Scenario 4 adds an empty default export only for preview). Per the project coding rule, any modification to a configType-specific branch must explicitly document whether the same logic applies to the other config type. Add a brief comment explaining why the identical condition is correct here for both types \u2014 or split it into a per-type condition as done in the broader `shouldSkipTransform` pattern below.",
+      "index": 2
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "No test is added for the specific regression this PR fixes (Windows CRLF introduced by `recast` on already-transformed files). The existing 'should leave already transformed code as is' test uses `.toEqual(original)`, which passes even if a round-trip through `recast` normalises line endings on Unix. Consider adding an assertion that explicitly verifies `result === original` (strict identity or byte count) so a future refactor that re-enables `recast` for this path is caught immediately. Alternatively, the test description should call out the Windows line-ending concern so reviewers know what behaviour it guards.",
+      "index": 3
+    }
+  ],
+  "cost_usd": 0.42220565000000004,
+  "duration_seconds": 314.1603229045868
+}

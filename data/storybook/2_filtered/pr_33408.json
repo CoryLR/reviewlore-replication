@@ -1,0 +1,122 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33408,
+  "title": "Addon-docs: Add MDX manifest generation",
+  "body": "## What I did\r\n\r\nExtends the manifest generation system to include MDX documentation files alongside component manifests. This enables AI agents and other tools to access structured documentation content through the manifest API.\r\n\r\n### Key Changes\r\n\r\n**addon-docs (`code/addons/docs/src/manifest.ts`)**\r\n- New `experimental_manifests` preset function that processes MDX docs entries\r\n- Attached MDX entries (`attached-mdx` tag) are added to their corresponding component manifests under a `docs` property\r\n- Unattached MDX entries (`unattached-mdx` tag) are added to a separate `/manifests/docs.json` endpoint\r\n- Includes the raw MDX content for each docs entry\r\n\r\n**React renderer (`code/renderers/react/src/componentManifest/generator.ts`)**\r\n- Updated to create component manifests even when only attached-mdx docs entries have the `manifest` tag (previously required story entries)\r\n- Uses `storiesImports[0]` to find the story file for attached docs entries\r\n\r\n**Core server (`code/core/src/core-server/utils/manifests/manifests.ts`)**\r\n- Updated to properly handle the new docs manifest format\r\n\r\n### Manifest Structure\r\n\r\nAttached docs are added to component manifests:\r\n```json\r\n{\r\n  \"components\": {\r\n    \"v\": 0,\r\n    \"components\": {\r\n      \"example-button\": {\r\n        \"id\": \"example-button\",\r\n        \"name\": \"Button\",\r\n        \"docs\": {\r\n          \"example-button--docs\": {\r\n            \"id\": \"example-button--docs\",\r\n            \"name\": \"docs\",\r\n            \"path\": \"./Button.mdx\",\r\n            \"title\": \"Example/Button\",\r\n            \"content\": \"# Button\\n\\nDocumentation content...\"\r\n          }\r\n        }\r\n      }\r\n    }\r\n  }\r\n}\r\n```\r\n\r\nUnattached docs are served at `/manifests/docs.json`:\r\n```json\r\n{\r\n  \"v\": 0,\r\n  \"docs\": {\r\n    \"standalone--docs\": {\r\n      \"id\": \"standalone--docs\",\r\n      \"name\": \"docs\",\r\n      \"path\": \"./Standalone.mdx\",\r\n      \"title\": \"Standalone\",\r\n      \"content\": \"# Standalone\\n\\nStandalone documentation...\"\r\n    }\r\n  }\r\n}\r\n```\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n1. Run a sandbox: `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Add an MDX file and use `<Meta of={ButtonStories} />` to attach it to the Button stories.\r\n4. Start Storybook and access `/manifests/components.json` to see attached docs in component entries\r\n5. Access `/manifests/docs.json` to see unattached docs entries\r\n\r\n### Documentation\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Docs manifest system: supports standalone and component-attached docs, extracts MDX content, and augments component manifests and a global docs manifest.\n  * Centralized Tag enum exported across APIs for consistent tag usage.\n\n* **Tests**\n  * New comprehensive test suite validating docs manifest generation, attachment vs unattached separation, content extraction, and error propagation.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "copilot-swe-agent",
+  "merged_at": "2026-01-06T13:23:33Z",
+  "base_ref": "next",
+  "merge_commit_sha": "0406ca83dfdb3a134b520ff8cee928be52ddf8b6",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "e5d2edd121500556317d9ef0a03c765487a0adbf",
+    "2f7d638a91eaaffd4ffe5f4258cd38592d812bcf"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6d_Z9U",
+          "author": "valentinpalkovic",
+          "body": "We should use a helper function to get the component id. Does `storybook/internal/csf` already provide a proper helper function?",
+          "file_path": "code/addons/docs/src/manifest.ts",
+          "line_number": 102,
+          "start_line": null,
+          "commit_sha": "2f7d638a91eaaffd4ffe5f4258cd38592d812bcf",
+          "created_at": "2025-12-29T10:19:05Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests using a helper function to get the component id and asks whether one already exists in a specific package \u2014 implies a refactoring action."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6d_cTU",
+          "author": "valentinpalkovic",
+          "body": "We should export the tag const from `core` and re-use it in `addon/docs` and `react`",
+          "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "d91d75c76fb7d7c79476c57f48719f8eb89e11e4",
+          "created_at": "2025-12-29T10:24:16Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly requests exporting a tag constant from 'core' and reusing it in 'addon/docs' and 'react' \u2014 a concrete code change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e0NC1",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check if sourcefiles.ts generator exists and how it generates this file\n\n# Search for sourcefiles.ts generator\nfd -t f 'sourcefiles\\.ts'\n\n# Check if there's a script that generates exports.ts\nrg -l \"globals/exports\" --type ts | head -10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Read the exports.ts file, particularly the header\nhead -20 code/core/src/manager/globals/exports.ts\n\n# Search for generator patterns more broadly\nrg \"sourcefiles|generator|auto-generated|auto generated\" --type ts -i | head -20\n\n# Look for scripts that might generate files\nfd -t f '\\.ts$|\\.js$' | xargs grep -l \"globals.*exports\\|generates.*exports\" 2>/dev/null | head -10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2749\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Examine the generator script\ncat code/core/scripts/generate-source-files.ts\n\n# Also check if there's a configuration file for what gets exported\nfd -t f 'package.json|tsconfig|config' code/core/scripts | head -10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 6507\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Read runtime.ts to understand structure\ncat code/core/src/manager/globals/runtime.ts\n\n# Check the context around line 319 in exports.ts\nsed -n '310,330p' code/core/src/manager/globals/exports.ts\n\n# Search for 'Tag' to understand what it is\nrg \"Tag\" --type ts --context 3 | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 5683\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check if Tag is exported from storybook/manager-api\n# First find the manager-api entry point\nfd -t f 'index' code/core/src/manager-api/ | head -20\n\n# Search for Tag export in manager-api\nrg \"export.*Tag\" code/core/src/manager-api --type ts | head -20\n\n# Check the structure of manager-api\nls -la code/core/src/manager-api/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1156\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check the manager-api index.ts to see the full exports\ncat code/core/src/manager-api/index.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1148\n\n---\n\n\n\n</details>\n\n**Remove manual edit\u2014regenerate exports.ts using the generator instead.**\n\nThis file is auto-generated by `generate-source-files.ts`. Manually adding `'Tag'` here will be overwritten when the generator runs next. Since `Tag` is already exported from `storybook/manager-api/index.ts` (which is imported in `runtime.ts`), running the generator should automatically discover and include it. Regenerate the file rather than editing it manually.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/manager/globals/exports.ts at line 319, This file was manually\nedited to add the 'Tag' export but is auto-generated; remove the manual 'Tag'\nentry from exports.ts and run the generator (generate-source-files.ts) so it\npicks up 'Tag' from storybook/manager-api/index.ts (which is imported via\nruntime.ts) and regenerates the exports list correctly.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/globals/exports.ts",
+          "line_number": 319,
+          "start_line": null,
+          "commit_sha": "2f7d638a91eaaffd4ffe5f4258cd38592d812bcf",
+          "created_at": "2026-01-06T10:41:37Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removing a manual edit to an auto-generated file and running the generator instead \u2014 a concrete code change with specific instructions."
+    }
+  ],
+  "review_thread_count": 4,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_collapsed": false,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6d_YUa",
+            "author": "valentinpalkovic",
+            "body": "As discussed, evaluating the absolute path of the import path needs a helper function and refactoring, because it's opaque to know what the \"workingDir\" actually is. I have agreed with Jeppe that refactoring and adjusting other code places as well will be a separate task, likely implemented in the next cooldown cycle.",
+            "file_path": "code/addons/docs/src/manifest.ts",
+            "line_number": 47,
+            "start_line": null,
+            "commit_sha": "2f7d638a91eaaffd4ffe5f4258cd38592d812bcf",
+            "created_at": "2025-12-29T10:15:09Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "This is a meta-discussion comment noting that a refactoring task has been agreed upon and deferred to a future cycle. It doesn't request any specific change to the current code."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 4,
+    "stage1_kept": 4,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1
+  }
+}

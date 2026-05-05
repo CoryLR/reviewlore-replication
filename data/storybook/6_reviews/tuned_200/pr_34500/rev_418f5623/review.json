@@ -1,0 +1,60 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 20,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `storybookVersion` parameter is available in `CheckOptions` but is not destructured or used in `check()`. The MIGRATION.md entry is placed in the 9.x \u2192 10.0.0 chapter and says 'In Storybook 9', yet the tests all pass `storybookVersion: '8.0.0'` and there is no version guard here. If `deviceAddons` was only introduced in `@storybook/react-native` at a specific version, running this migration on an older project would silently move addons to an unrecognised field, breaking the project without any warning. Either add a minimum-version guard (e.g., `if (semver.lt(storybookVersion, '9.0.0')) return null;`) or add an inline comment explaining why the migration is safe to run regardless of Storybook version, and update the tests to reflect the version at which this change actually becomes required.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 28,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `'ondevice'` substring match is a broad heuristic. A third-party addon whose package name happens to contain 'ondevice' but that is a valid Node.js preset (e.g., `my-org/addon-ondevice-analytics`) would be incorrectly migrated to `deviceAddons`. Consider narrowing the check to the known namespace prefix (e.g., `getAddonName(addon).startsWith('@storybook/addon-ondevice-')`), or add a brief JSDoc comment acknowledging the trade-off so future maintainers understand the choice.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 19,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Per project coding guidelines, all `vi.mock()` calls in test files must include the `{ spy: true }` option. This applies to factory-style mocks as well as simple mocks. The mock here does not include it.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 146,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test name 'handles the case where @storybook/react-native is in dependencies (not devDependencies)' is misleading. `JsPackageManager.getAllDependencies()` already merges `dependencies`, `devDependencies`, and `peerDependencies` into a single flat object, so the mock `makePackageManager` always returns the same shape regardless of which sub-object the package originates from. This test exercises exactly the same code path as 'returns the ondevice addons when string addons with \"ondevice\" are present' (just with fewer addons) and does not cover a meaningfully distinct scenario. Either rename it to accurately describe what it does, or replace it with a case that tests genuinely different behavior.",
+      "index": 3
+    },
+    {
+      "file_path": "MIGRATION.md",
+      "line_number": 1325,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "\"In Storybook 9, on-device addons...must be listed under the `deviceAddons` key\" appears in what is labeled the 9.x \u2192 10.0.0 migration chapter. This is ambiguous: it could mean (a) this was a requirement that existed throughout Storybook 9 and users have likely already encountered the breakage, or (b) this is a new requirement being introduced in 10.0.0. The automigration has no version guard and the tests use `storybookVersion: '8.0.0'`, neither of which aligns with 'Storybook 9' as the effective version. Clarify the prose \u2014 e.g., 'To prevent `storybook extract` from failing in React Native projects, on-device addons must be moved to `deviceAddons`' \u2014 so readers understand why the change is needed independently of the version framing.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Four test files under `code/lib/create-storybook/src/generators/REACT_NATIVE/` have import paths updated to add `.ts` extensions (`generateEntrypoint.test.ts`, `generateScripts.test.ts`, `index.test.ts`, `metroConfig.test.ts`). These changes are unrelated to the stated PR objective of migrating on-device addons to `deviceAddons`. Per project guidelines, PRs should be strictly scoped to their stated purpose; incidental changes should be extracted into a separate, focused pull request.",
+      "index": 5
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `run()` test for 'preserves object-form addons when moving to `deviceAddons`' mocks `appendValueToArray` with `vi.fn()`, so it only verifies that the mock is called with the correct argument \u2014 it does not exercise the actual `ConfigFile.appendValueToArray` implementation to confirm that a plain JS object (`{ name, options }`) is correctly serialized to a valid AST node in the output file. The real implementation delegates to Babel's `t.valueToNode()` which does support objects, but this path is never exercised in the test suite. An integration-level test (or even a snapshot test against the real `ConfigFile`) would close this gap and give confidence that the migration produces well-formed output for object-form addons.",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.72371385,
+  "duration_seconds": 599.5891788005829
+}

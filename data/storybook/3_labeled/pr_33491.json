@@ -1,0 +1,89 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33491,
+  "title": "Addon Pseudo States: Fix stylesheet rewrite for `:not()` with parenthesis in inner selector",
+  "body": "## What I did\r\n\r\nFixed the below runtime error, which was caused by a styled component using a CSS selector shaped like `:not(:has(...))`. The way `:not` got rewritten did not take into account nested parenthesis. Now it does, up to 3 levels deep (seems sufficient for CSS).\r\n\r\n<img width=\"833\" height=\"175\" alt=\"Screenshot 2026-01-09 at 08 47 54\" src=\"https://github.com/user-attachments/assets/b06b428b-fc81-4978-8b99-5a2312fff354\" />\r\n\r\nThe problem here is the last `:has()` does not have an argument, which is invalid. The solution is to pass `*` which we already did in other scenarios, just not this one.\r\n\r\n<!-- Briefly describe what your PR does -->\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\nOpen the \"Checklist\" stories. They no longer cause a CSS parsing error.\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Bug Fixes**\n  * Improved CSS selector rewriting to correctly handle deeper nesting in :not(...) arguments and combinations with :has(), ensuring complex pseudo-selector expansions are applied reliably.\n\n* **Tests**\n  * Added a test verifying correct expansion and rewriting of complex nested pseudo-selectors, including :not with :has variants.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ghengeveld",
+  "merged_at": "2026-01-12T10:18:50Z",
+  "base_ref": "next",
+  "merge_commit_sha": "c239ecc37d277581382f99e8870cb124da4fc358",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "39b8e538cd80c6dcd4eafd3ef1d71aab047ec672",
+    "5ad57345feadf94300a5a13fdbdf659811e9a853"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fgSgL",
+          "author": "ndelangen",
+          "body": "Would it make sense to guard this ability/limitation in the test?\r\n\r\nI can see there *is* a test, but is it testing the \"3 levels\" behavior?\r\n\r\nIs there a way to remove the \"3 levels\" restriction?",
+          "file_path": "code/addons/pseudo-states/src/preview/rewriteStyleSheet.ts",
+          "line_number": 82,
+          "start_line": null,
+          "commit_sha": "5ad57345feadf94300a5a13fdbdf659811e9a853",
+          "created_at": "2026-01-09T12:37:30Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment questions whether the limitation (3 levels restriction) is adequately documented/tested, suggesting the intent and constraints of the code are not clearly communicated."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6ftQrN",
+          "author": "ghengeveld",
+          "body": "Sure, I could add a test for it. Doesn't seem important though because if for some reason it does support 4 levels, that's totally fine too. No need to verify a limitation, imho. I'll extend the existing test to have more nesting, so we at least verify that 3 levels of nesting works.\r\n\r\nThe only way to remove the restriction on the number of levels is to use recursive matching, which can't be done through regex alone afaik. I didn't want to overcomplicate things with a CSS parser or writing my own recursive matcher. This code is fairly performance sensitive too, so a regex is highly preferable. I could extend it to support 4 levels (or more), but then the regex becomes even more unwieldy. I can't really imagine anyone in their right mind writing CSS selectors with more than 3 levels of nested parenthesis inside a `:not()`.",
+          "file_path": "code/addons/pseudo-states/src/preview/rewriteStyleSheet.ts",
+          "line_number": 82,
+          "start_line": null,
+          "commit_sha": "5ad57345feadf94300a5a13fdbdf659811e9a853",
+          "created_at": "2026-01-11T11:02:08Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6fuANh",
+          "author": "ghengeveld",
+          "body": "I've made the test more elaborate to cover the scenario for `:has(:not(:has(*)))`. A `:not` inside a `:not` is invalid and `:is` doesn't take `*` so this seemed like the only reasonable scenario for three levels of nesting.",
+          "file_path": "code/addons/pseudo-states/src/preview/rewriteStyleSheet.ts",
+          "line_number": 82,
+          "start_line": null,
+          "commit_sha": "5ad57345feadf94300a5a13fdbdf659811e9a853",
+          "created_at": "2026-01-11T14:38:28Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6f0CD9",
+          "author": "ndelangen",
+          "body": "Sounds good, thanks!",
+          "file_path": "code/addons/pseudo-states/src/preview/rewriteStyleSheet.ts",
+          "line_number": 82,
+          "start_line": null,
+          "commit_sha": "5ad57345feadf94300a5a13fdbdf659811e9a853",
+          "created_at": "2026-01-12T08:09:32Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "The comment asks whether the test should guard the 3-levels limitation (implying a test change) and whether the restriction can be removed (implying a potential code improvement). Both are actionable suggestions phrased as questions."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

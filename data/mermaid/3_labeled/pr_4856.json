@@ -1,0 +1,156 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4856,
+  "title": "Bug/4391 make markdown auto wrapping optional",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nHi! I'm new here and would like to be part of this awesome project! I'm still getting familiar with the code, so if I overlooked something, sorry in advance!\r\nThis PR solves the issue with auto wrapping markdown strings, by making auto wrapping optional for markdown strings.\r\n\r\nResolves #4391\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nI created a boolean option \"markdownAutoWrap\". If this option is set to false, then markdown strings are preprocessed, so that every whitespace is replaced by a \"\\&nbsp;\". This way only explicit line breaks are rendered.\r\n\r\nI added a unit test for the markdownToHTML function. I needed to import the setConfig function for testing.\r\nI did not add a e2e test. BTW: 11 of 35 e2e tests fail. Can you tell me, whether this is a known issue or a problem on my side?\r\n\r\nI updated the documentation for the flowchart.\r\n\r\nI'm happy to get your feedback!\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n- [x] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/docs/community/development.md#3-update-documentation) is used for all new features.\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "dreathed",
+  "merged_at": "2024-03-23T11:39:24Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "223f339682bc07a3acd1e7ca84553a84a84478b0",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "ea86697973f52c5c7d87a9b4303dc634c918dd7f",
+    "16db0c039fc4b08f3e61f1965716cc7619f5df37"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PbMc4",
+          "author": "sidharthv96",
+          "body": "We've deprecated the directives. \r\nYou can use the yaml frontmatter instead. \r\n\r\n```suggestion\r\n---\r\nconfig:\r\n  markdownAutoWrap: false\r\n---\r\n```",
+          "file_path": "packages/mermaid/src/docs/syntax/flowchart.md",
+          "line_number": 525,
+          "start_line": null,
+          "commit_sha": "16db0c039fc4b08f3e61f1965716cc7619f5df37",
+          "created_at": "2023-09-21T06:22:12Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment points out use of a deprecated directive pattern and suggests using the newer yaml frontmatter approach instead \u2014 this is an API/convention misuse in documentation."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests replacing deprecated directive syntax with yaml frontmatter, includes a concrete code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PbM9d",
+          "author": "sidharthv96",
+          "body": "Please pass the config to the function, instead of importing `getConfig`.\r\nThis makes the function independent and will make writing tests easier. ",
+          "file_path": "packages/mermaid/src/rendering-util/handle-markdown-text.ts",
+          "line_number": 12,
+          "start_line": null,
+          "commit_sha": "16db0c039fc4b08f3e61f1965716cc7619f5df37",
+          "created_at": "2023-09-21T06:23:45Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment advises against importing getConfig globally and instead passing config as a parameter, improving testability and reducing hidden dependencies \u2014 this is a structural/design concern about how the function accesses its dependencies."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85PcfKw",
+          "author": "dreathed",
+          "body": "Thank you for the feedback!\r\nI understand what you mean. But I want to be sure, that I get the task correct \ud83d\ude04 .\r\n\r\nThe preprocessMarkdown function is not a funtion I created new, but it is part of the already existing markdown functionality. If I change the parameters of these functions (the same was done in the createTexts function), I will need to change all function calls. If this function (preprocessMarkdown or createText) is called by a function that does not know about config, I will need to change this calling functions definition as well. And so on until I encounter a module that already imports getConfig.\r\n\r\nMaybe I am missing a more simple solution here. \r\nI just wanted to be sure, I understand your requested change before I go and change - protentially - a lot of function definitions.",
+          "file_path": "packages/mermaid/src/rendering-util/handle-markdown-text.ts",
+          "line_number": 12,
+          "start_line": null,
+          "commit_sha": "16db0c039fc4b08f3e61f1965716cc7619f5df37",
+          "created_at": "2023-09-21T10:51:57Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Pc5UW",
+          "author": "sidharthv96",
+          "body": "Nope, your suggested approach is right. \r\nYou will have to modify `markdownToLines` and `createText`. \r\n\r\nYou'll have to add an optional parameter here\r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/8be8736131cb8068eb9c1b64963ab6f53d38025d/packages/mermaid/src/rendering-util/createText.ts#L156-L168\r\n\r\n---\r\n\r\nContext: There is a plan to improve the internal architecture, removing global variables and other dependencies that could get polluted after rendering. This would enable us to remove the render queue and have proper async (parallel) rendering. \r\n\r\nSo we should avoid new imports of getConfig in internal functions. ",
+          "file_path": "packages/mermaid/src/rendering-util/handle-markdown-text.ts",
+          "line_number": 12,
+          "start_line": null,
+          "commit_sha": "16db0c039fc4b08f3e61f1965716cc7619f5df37",
+          "created_at": "2023-09-21T12:29:37Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests a specific refactor: pass config as a parameter instead of importing getConfig."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PbNkb",
+          "author": "sidharthv96",
+          "body": "Please provide a default value (`true`) for the parameter. \r\n",
+          "file_path": "packages/mermaid/src/schemas/config.schema.yaml",
+          "line_number": 247,
+          "start_line": 246,
+          "commit_sha": "16db0c039fc4b08f3e61f1965716cc7619f5df37",
+          "created_at": "2023-09-21T06:24:46Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "medium",
+          "label_reasoning": "Missing a default value for a parameter can lead to incorrect behavior when the parameter is not provided, making this a logic/correctness issue."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding a default value of true to a parameter in the schema."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PbN1F",
+          "author": "sidharthv96",
+          "body": "nit: You don't need this `else`, as the `if` ends in return. \r\n```suggestion\r\n      }\r\n      return node.value.replace(/\\n/g, '<br/>');\r\n```",
+          "file_path": "packages/mermaid/src/rendering-util/handle-markdown-text.ts",
+          "line_number": 74,
+          "start_line": null,
+          "commit_sha": "16db0c039fc4b08f3e61f1965716cc7619f5df37",
+          "created_at": "2023-09-21T06:26:01Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Redundancy Handling",
+          "label_confidence": "high",
+          "label_reasoning": "The comment flags an unnecessary else block after an if that ends with a return statement, which is redundant and can be simplified."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removal of an unnecessary else block, includes a concrete code suggestion."
+    }
+  ],
+  "review_thread_count": 4,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 4,
+    "stage1_kept": 4,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

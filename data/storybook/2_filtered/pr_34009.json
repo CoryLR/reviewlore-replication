@@ -1,0 +1,140 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34009,
+  "title": "Hotfix: Backport host/origin validation to requests and websocket connections",
+  "body": "## What I did\r\n\r\nThis is a backport of #33835 for Storybook v8.6.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n- Run `npx ngrok http 6006`\r\n- Verify that the ngrok URL serves an Invalid host error\r\n- Update `.storybook/main.ts` to set `core.allowedHosts` to include the ngrok hostname (no protocol), then restart Storybook\r\n- Verify that the ngrok URL serves Storybook properly, and it works\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\nThis pull request has been released as version `0.0.0-pr-34009-sha-c90626e7`. Try it out in a new sandbox by running `npx storybook@0.0.0-pr-34009-sha-c90626e7 sandbox` or in an existing project with `npx storybook@0.0.0-pr-34009-sha-c90626e7 upgrade`.\n<details>\n<summary>More information</summary>\n\n| | |\n| --- | --- |\n| **Published version** | [`0.0.0-pr-34009-sha-c90626e7`](https://npmjs.com/package/storybook/v/0.0.0-pr-34009-sha-c90626e7) |\n| **Triggered by** | @ghengeveld |\n| **Repository** | [storybookjs/storybook](https://github.com/storybookjs/storybook) |\n| **Branch** | [`origin-validation-v8`](https://github.com/storybookjs/storybook/tree/origin-validation-v8) |\n| **Commit** | [`c90626e7`](https://github.com/storybookjs/storybook/commit/c90626e7679727d899c6311c83be6193def3360c) |\n| **Datetime** | Wed Mar  4 15:04:14 UTC 2026 (`1772636654`) |\n| **Workflow run** | [22675197081](https://github.com/storybookjs/storybook/actions/runs/22675197081) |\n\nTo request a new release of this pull request, mention the `@storybookjs/core` team.\n\n_core team members can create a new canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=34009`_\n</details>\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Host validation added for the dev server and WebSocket connections.\n  * New allowedHosts option (string[] | true) plus localAddress/networkAddress to control permitted hosts.\n  * Startup now displays allowed hosts and warns when binding to 0.0.0.0 for containerized setups.\n\n* **Refactor**\n  * Server channel and token handling moved to an options-based flow (public API updated).\n\n* **Chores**\n  * Added host-validation-middleware dependency.\n  * .gitignore adjusted to ignore root node_modules.\n\n* **Tests**\n  * New comprehensive tests for host validation, token validation, and server channel behavior.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ghengeveld",
+  "merged_at": "2026-03-06T10:45:02Z",
+  "base_ref": "v8",
+  "merge_commit_sha": "d81a34c0991835f004b6e34fce355e72ce1b4a92",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "c6e550a58e69723187157165d3610e876518d935",
+    "725c81be42745c55a43a8c464f8542591a0782d7"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r2WTx",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Fallback host handling misses IPv6 wildcard bind.**\n\nLine 37 only checks `0.0.0.0`. If the dev server binds all interfaces via IPv6 (`::`), this fallback won\u2019t run even when `allowedHosts` is empty, which can cause unexpected host rejection.\n\n\n<details>\n<summary>Suggested patch</summary>\n\n```diff\n-  if (\n-    options.host === '0.0.0.0' &&\n-    (!allowedHosts || (Array.isArray(allowedHosts) && allowedHosts.length === 0))\n-  ) {\n+  const isWildcardBindHost = options.host === '0.0.0.0' || options.host === '::';\n+  if (\n+    isWildcardBindHost &&\n+    (!allowedHosts || (Array.isArray(allowedHosts) && allowedHosts.length === 0))\n+  ) {\n     config.server.allowedHosts = true;\n   }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  // '0.0.0.0' binds to all interfaces, which is useful for Docker and other containerized environments\n  const isWildcardBindHost = options.host === '0.0.0.0' || options.host === '::';\n  if (\n    isWildcardBindHost &&\n    (!allowedHosts || (Array.isArray(allowedHosts) && allowedHosts.length === 0))\n  ) {\n    config.server.allowedHosts = true;\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/builders/builder-vite/src/vite-server.ts` around lines 35 - 40, The\nfallback that sets config.server.allowedHosts = true only checks for IPv4\nwildcard '0.0.0.0' and misses IPv6 wildcard '::'; update the conditional in\nvite-server.ts to treat both '0.0.0.0' and '::' as wildcard binds (e.g., check\noptions.host === '0.0.0.0' || options.host === '::' or normalize options.host\ninto a set of wildcard values) while keeping the existing allowedHosts\nempty-array check so that when options.host is an IPv6 wildcard and allowedHosts\nis absent/empty you set config.server.allowedHosts = true.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/builders/builder-vite/src/vite-server.ts",
+          "line_number": 40,
+          "start_line": 35,
+          "commit_sha": "725c81be42745c55a43a8c464f8542591a0782d7",
+          "created_at": "2026-03-04T11:01:16Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where IPv6 wildcard '::' is not handled, and provides a specific code patch to fix it."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r2WUJ",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**`allowedHosts` can be stale after the second preset pass.**\n\nLine 139 captures `allowedHosts` from the first pass, but startup output at Line 267 happens after reloading presets with builder/renderer presets. If `core.allowedHosts` changes in pass two, warning/output messaging can be inaccurate.\n\n\n\n\nAlso applies to: 267-267\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/core-server/build-dev.ts` around lines 139 - 140, The code\ndestructures allowedHosts from the first presets.apply('core', {}) result and\nthen later reloads presets with builder/renderer, so allowedHosts can become\nstale; update the logic to read core.allowedHosts (or re-destructure\nallowedHosts) after the second presets pass (the reload that applies\nbuilder/renderer presets) before emitting the startup warning/output;\nspecifically adjust the use of the originally captured allowedHosts variable and\nreference presets.apply('core', {}) / builder / renderer so the startup message\nalways uses the post-reload value.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/build-dev.ts",
+          "line_number": 140,
+          "start_line": 139,
+          "commit_sha": "725c81be42745c55a43a8c464f8542591a0782d7",
+          "created_at": "2026-03-04T11:01:17Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential staleness issue with the allowedHosts variable after a second preset pass, implying the code should be updated to re-read the value post-reload."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r2WUN",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**`logger` is not in scope at Line 147.**\n\n`logger.warn(...)` is called, but `logger` is never imported in this file. This will fail type-check/build.\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n-import { deprecate } from '@storybook/core/node-logger';\n+import { deprecate, logger } from '@storybook/core/node-logger';\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/core-server/build-dev.ts` around lines 147 - 151, The code\ncalls logger.warn(...) but logger is not imported into build-dev.ts; add the\nmissing import for the logger used (e.g., import { logger } from the Storybook\nlogger module) at the top of the file so logger is in scope before the call in\nthe function that contains the host/allowedHosts check (the warning around\nlogger.warn in build-dev.ts).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit c90626e",
+          "file_path": "code/core/src/core-server/build-dev.ts",
+          "line_number": 151,
+          "start_line": 147,
+          "commit_sha": "725c81be42745c55a43a8c464f8542591a0782d7",
+          "created_at": "2026-03-04T11:01:17Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a missing import for 'logger' that would cause a build failure, and provides a specific diff to fix it. (Already addressed in a commit, but still actionable.)"
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r2WUS",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Handle relative upgrade URLs when `options.localAddress` is missing.**\n\n`request.url` on upgrade is usually relative. `new URL(request.url, options.localAddress)` throws when `localAddress` is unset, and that currently falls into the 403 path, rejecting otherwise valid websocket upgrades.\n\n\n\n<details>\n<summary>\ud83d\udca1 Proposed fix</summary>\n\n```diff\n-        const url = request.url && new URL(request.url, options.localAddress);\n+        const url = request.url\n+          ? new URL(request.url, options.localAddress ?? 'http://localhost')\n+          : undefined;\n         if (!url || url.pathname !== '/storybook-server-channel') {\n           return;\n         }\n```\n</details>\n\n\nAlso applies to: 36-38\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/core-server/utils/get-server-channel.ts` around lines 16 - 18,\nThe upgrade handling currently calls new URL(request.url, options.localAddress)\nwhich throws if options.localAddress is undefined because upgrade request.url is\noften relative; update both occurrences (the new URL(...) usages) to build a\nsafe base when options.localAddress is missing by falling back to a host-derived\nbase (e.g., use request.headers.host with \"http://\" or \"ws://\" as appropriate)\nor by wrapping the URL construction in a try/catch and constructing new\nURL(request.url, `http://${request.headers.host}`) when the first call fails,\nensuring relative upgrade URLs are parsed instead of causing a 403 rejection.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/get-server-channel.ts",
+          "line_number": 18,
+          "start_line": 16,
+          "commit_sha": "725c81be42745c55a43a8c464f8542591a0782d7",
+          "created_at": "2026-03-04T11:01:17Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where missing localAddress causes URL construction to throw, rejecting valid WebSocket upgrades, and provides a concrete code fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6sZl0e",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Clarify the changelog entry to reflect the actual behavior change.**\n\nLine 3 is too broad for a security-related backport. Please explicitly mention host/origin validation for both HTTP requests and WebSocket connections, and that users may need to configure `core.allowedHosts` when accessing Storybook via external hostnames (e.g., ngrok).\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@CHANGELOG.md` at line 3, Update the changelog entry to explicitly state the\nsecurity-related backport: replace the vague \"Add request validation\" with a\nsentence that details host/origin validation was added for HTTP requests and\nWebSocket connections, mention that this may block external access and that\nusers can configure core.allowedHosts to allow external hostnames (for example\nngrok), and include a short note about the purpose (preventing host\nheader/origin spoofing).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:triton:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "CHANGELOG.md",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "725c81be42745c55a43a8c464f8542591a0782d7",
+          "created_at": "2026-03-05T21:21:19Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests a specific improvement to the changelog entry to include more detailed information about the behavior change and user impact."
+    }
+  ],
+  "review_thread_count": 5,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 5,
+    "stage1_kept": 5,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

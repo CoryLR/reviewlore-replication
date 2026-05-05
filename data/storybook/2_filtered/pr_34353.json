@@ -1,0 +1,74 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34353,
+  "title": "React-Docgen: Add tsconfig fallback chain and warning for monorepos",
+  "body": "## What this PR does\r\n\r\nFixes #24585\r\n\r\nIn monorepo setups (e.g., Nx, Turborepo), the root directory often has \r\n`tsconfig.base.json` instead of `tsconfig.json`. Storybook's tsconfig \r\nresolution silently failed, causing react-docgen-typescript to produce \r\nno controls with zero warnings.\r\n\r\n## Changes\r\n\r\n- **`utils.ts`** \u2014 `findTsconfigPath()` now tries `tsconfig.json` \u2192 \r\n  `tsconfig.base.json` \u2192 `tsconfig.app.json` in order, with a warning \r\n  log when using a fallback\r\n- **`reactDocgenTypescript.ts`** \u2014 Warns when no tsconfig variant is \r\n  found, telling the user TypeScript controls won't work\r\n- **`react-docgen.ts` / `react-docgen-loader.ts`** \u2014 Consistent \r\n  fallback chain for path alias resolution in Vite and Webpack\r\n- **`utils.test.ts`** \u2014 5 new tests covering all scenarios\r\n\r\n## How to test\r\n\r\n1. Create a monorepo with `tsconfig.base.json` in root (no `tsconfig.json`)\r\n2. Set up a Storybook with `react-docgen-typescript`\r\n3. Verify controls are now generated correctly\r\n4. Verify a warning is logged when falling back to `tsconfig.base.json`\r\n5. Remove all tsconfig variants and verify a clear warning is shown\r\n\r\n## Checklist\r\n\r\n- [x] Bug fix\r\n- [x] Tests added\r\n- [x] No breaking changes\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Bug Fixes & Improvements**\n  * Broadened TypeScript config discovery to try common alternative filenames for better multi-package/monorepo support.\n  * Added a runtime warning when no TypeScript config is found (affects prop documentation behavior).\n\n* **Tests**\n  * Added tests for config discovery priority and warning behavior.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "viditkbhatnagar",
+  "merged_at": "2026-03-31T09:59:42Z",
+  "base_ref": "next",
+  "merge_commit_sha": "e70339a0f2cdee92d8eab8f09e8eb1f9d7b599bc",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "5eeadf7f6994a812aa15e0813139dc1d8cdd50c9",
+    "ee42d68f23dcb3df16509b02aed0d0518f33c269"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zUMzM",
+          "author": "valentinpalkovic",
+          "body": "I don't think we need a warning. We can safely drop it.",
+          "file_path": "code/renderers/react/src/componentManifest/utils.ts",
+          "line_number": 191,
+          "start_line": null,
+          "commit_sha": "07edf14ed290da45c1c9b572c02573a529c709d2",
+          "created_at": "2026-03-30T08:50:45Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment suggests removing the warning, implying a concrete code change (dropping the warning code)."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zbVog",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Verify inline find.up mock implementations are inside test cases rather than beforeEach\nrg -n -C2 \"vi\\\\.mocked\\\\(find\\\\.up\\\\)\\\\.mockImplementation|beforeEach\\\\(\" code/renderers/react/src/componentManifest/utils.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1202\n\n---\n\n\n\n</details>\n\n**Move `find.up` mock behavior setup into `beforeEach` to match repo Vitest rules.**\n\nLines 197, 211, 224, and 246 define inline `mockImplementation` inside test cases. Per repository guidelines, implement mock behaviors in `beforeEach` and use per-test data setup instead.\n\n<details>\n<summary>Proposed refactor</summary>\n\n```diff\n describe('findTsconfigPath', () => {\n+  let findUpResults: Partial<Record<'tsconfig.json' | 'tsconfig.base.json' | 'tsconfig.app.json', string>>;\n+\n   beforeEach(() => {\n     invalidateCache();\n     vi.mocked(getProjectRoot).mockReturnValue('/project-root');\n+    findUpResults = {};\n+    vi.mocked(find.up).mockImplementation((name) => findUpResults[name as keyof typeof findUpResults]);\n   });\n\n   test('returns tsconfig.json when found', () => {\n-    vi.mocked(find.up).mockImplementation((name) => {\n-      if (name === 'tsconfig.json') {\n-        return '/project-root/tsconfig.json';\n-      }\n-      return undefined;\n-    });\n+    findUpResults['tsconfig.json'] = '/project-root/tsconfig.json';\n\n     const result = findTsconfigPath('/project-root');\n     expect(result).toBe('/project-root/tsconfig.json');\n     expect(logger.warn).not.toHaveBeenCalled();\n   });\n\n   test('falls back to tsconfig.base.json when tsconfig.json is not found', () => {\n-    vi.mocked(find.up).mockImplementation((name) => {\n-      if (name === 'tsconfig.base.json') {\n-        return '/project-root/tsconfig.base.json';\n-      }\n-      return undefined;\n-    });\n+    findUpResults['tsconfig.base.json'] = '/project-root/tsconfig.base.json';\n\n     const result = findTsconfigPath('/project-root');\n     expect(result).toBe('/project-root/tsconfig.base.json');\n   });\n\n   test('falls back to tsconfig.app.json when neither tsconfig.json nor tsconfig.base.json is found', () => {\n-    vi.mocked(find.up).mockImplementation((name) => {\n-      if (name === 'tsconfig.app.json') {\n-        return '/project-root/tsconfig.app.json';\n-      }\n-      return undefined;\n-    });\n+    findUpResults['tsconfig.app.json'] = '/project-root/tsconfig.app.json';\n\n     const result = findTsconfigPath('/project-root');\n     expect(result).toBe('/project-root/tsconfig.app.json');\n   });\n\n   test('returns undefined when no tsconfig variant is found', () => {\n-    vi.mocked(find.up).mockReturnValue(undefined);\n     const result = findTsconfigPath('/project-root');\n     expect(result).toBeUndefined();\n     expect(logger.warn).not.toHaveBeenCalled();\n   });\n\n   test('prefers tsconfig.json over fallback variants', () => {\n-    vi.mocked(find.up).mockImplementation((name) => {\n-      if (name === 'tsconfig.json') {\n-        return '/project-root/tsconfig.json';\n-      }\n-      if (name === 'tsconfig.base.json') {\n-        return '/project-root/tsconfig.base.json';\n-      }\n-      return undefined;\n-    });\n+    findUpResults['tsconfig.json'] = '/project-root/tsconfig.json';\n+    findUpResults['tsconfig.base.json'] = '/project-root/tsconfig.base.json';\n\n     const result = findTsconfigPath('/project-root');\n     expect(result).toBe('/project-root/tsconfig.json');\n     expect(logger.warn).not.toHaveBeenCalled();\n   });\n });\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/renderers/react/src/componentManifest/utils.test.ts` around lines 191 -\n254, The tests currently set vi.mocked(find.up).mockImplementation inline inside\nindividual tests; move this mock setup into the existing beforeEach so all mock\nbehavior follows repo Vitest rules: create a local mapping variable (e.g.\nfindUpMap) in the test file, set a default mapping in beforeEach and call\nvi.mocked(find.up).mockImplementation((name) => findUpMap[name]); then in each\ntest set/override entries on findUpMap (or assign a new map) before invoking\nfindTsconfigPath so tests still return the desired filenames (tsconfig.json,\ntsconfig.base.json, tsconfig.app.json or undefined) and preserve assertions such\nas expect(logger.warn).not.toHaveBeenCalled().\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk:dff109df-4463-4cc5-b5e3-0616525b0840 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/utils.test.ts",
+          "line_number": 254,
+          "start_line": 191,
+          "commit_sha": "ee42d68f23dcb3df16509b02aed0d0518f33c269",
+          "created_at": "2026-03-30T14:44:09Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment requests refactoring mock setup into beforeEach blocks, with a specific proposed code change."
+    }
+  ],
+  "review_thread_count": 2,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 2,
+    "stage1_kept": 2,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 122,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`startChangeDetection(options)` is intentionally fire-and-forget but has no `.catch()` attached. If `options.presets.apply<StoryIndexGenerator>('storyIndexGenerator')` returns `null`/`undefined` or `indexGenerator.getIndex()` rejects, the resulting unhandled promise rejection will either crash the process or emit a loud warning with no actionable context. The comment correctly explains the non-`await` intent; pair it with error handling:\n```ts\nstartChangeDetection(options).catch((error) => {\n  logger.error(`Failed to start change detection: ${error instanceof Error ? error.message : String(error)}`);\n});\n```",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 44,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Commented-out debug `logger.info` call should be removed before merging. Per project guidelines, `console.log` and equivalent diagnostic calls must not be committed; inspect intermediate values through assertions or proper logging instead.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 207,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`getChangedFiles()` already calls `getRepoRoot()` internally, and `getRepoRoot()` is also called directly in the same `Promise.all`. Because both start concurrently, the `this.repoRoot` cache is unset when both begin, causing two `git rev-parse --show-toplevel` subprocesses to be spawned. Simplify by awaiting `getRepoRoot()` first and passing it to `getChangedFiles()`, or restructure `getChangedFiles()` to return `{ repoRoot, changes }` so the root is fetched exactly once.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 233,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`newFiles` is an `Array` and `Array.prototype.includes` is O(n). For large projects with many untracked files this becomes a nested linear scan (once per story file, per changed file). Convert `newFiles` to a `Set` after construction so membership checks are O(1):\n```ts\nconst newFilesSet = new Set(Array.from(changes.new).map((f) => resolve(repoRoot, f)));\n// \u2026\nconst value = newFilesSet.has(storyFile) ? 'status-value:new' : \u2026\n```",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 242,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`changedFile.replace(\\`${repoRoot}/\\`, '')` strips the repo root prefix using a hardcoded `/` separator. On Windows, `resolve()` produces paths with `\\` separators, so the template literal `\\`${repoRoot}/\\`` never matches and the full absolute path is stored as the \"changed file\" label instead of the relative one. Use `path.relative` which is path-separator-aware:\n```ts\nchangedStoryFiles.add(path.relative(repoRoot, changedFile));\n```\n`path` is already imported at the top of the file via `import { resolve } from 'node:path'` \u2014 add `relative` to the import.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/trace-changed.ts",
+      "line_number": 27,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`queue.shift()` on an `Array` is O(n) because it shifts every remaining element left. For large module graphs (hundreds of nodes) the BFS becomes O(n\u00b2) in total. A simple two-pointer approach or swapping to a proper deque (e.g. a linked-list-based queue or using index tracking) keeps each dequeue O(1). At minimum, replace the `Array` with a head-index pattern:\n```ts\nlet head = 0;\nwhile (head < queue.length) {\n  const current = queue[head++];\n  // \u2026\n}\n```",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/core-server/index.ts",
+      "line_number": 32,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`ChangeDetectionService` is exported here without any stability prefix, while the companion `getChangeDetectionReadiness` exported two lines above is aliased to `experimental_getChangeDetectionReadiness`. The inconsistency signals different stability guarantees that probably aren't intentional. If this API is still experimental, export it as `experimental_ChangeDetectionService`; if it's intended to be stable, that should be a deliberate decision and documented.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/core-server/index.ts",
+      "line_number": 32,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`ChangeDetectionService` is exported twice from this file: once implicitly through `export { \u2026 } from './change-detection'` (since `change-detection/index.ts` already re-exports it from `./service`), and again explicitly here from `'./change-detection/service'`. The direct path export is redundant \u2014 remove it and rely solely on the barrel export.",
+      "index": 7
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/git-diff-provider.test.ts",
+      "line_number": 19,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`vi.clearAllMocks()` is called in both `beforeEach` and `afterEach`. The `afterEach` call is redundant \u2014 `beforeEach` already ensures a clean state before each test. Remove the `afterEach` block (or consolidate) to avoid confusion about which hook is authoritative.",
+      "index": 8
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.test.ts",
+      "line_number": 67,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`internal_resetChangeDetectionReadiness()` is called in both `beforeEach` (line ~63) and `afterEach` (line ~67). The `afterEach` call is redundant since `beforeEach` unconditionally resets state before each test. Remove the duplicate from `afterEach` to keep reset logic in one canonical place.",
+      "index": 9
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`git-diff-provider.ts` imports `execa` from `'execa'` for use in production code, but `execa` is listed only in `devDependencies` of `code/core/package.json`. When `@storybook/core` is installed as a dependency in a consumer project, `execa` will not be present and the runtime import will fail. Additionally, both `git-diff-provider.ts` and its test carry `// eslint-disable-next-line depend/ban-dependencies` \u2014 the `depend/ban-dependencies` ESLint rule is a deliberate guard against importing banned packages. Suppressing it without explanation signals that either (a) `execa` should be moved to `dependencies` (and added to the allowlist), or (b) the git operations should be rewritten using Node's built-in `child_process.execFile` / `spawnSync` to avoid the banned dependency entirely.",
+      "index": 10
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`CHANGE_DETECTION_STATUS_TYPE_ID` is exported from `change-detection/index.ts` but is not re-exported from `core-server/index.ts`, even though `ChangeDetectionService` (which depends on it) is exported there. Any external consumer of `ChangeDetectionService` who needs to look up statuses by type ID would have to reach into an internal module path. Either export it alongside the service (e.g. `export { CHANGE_DETECTION_STATUS_TYPE_ID } from './change-detection'`) or document why it is intentionally withheld.",
+      "index": 11
+    }
+  ],
+  "cost_usd": 0.7787532000000001,
+  "duration_seconds": 487.9691197872162
+}

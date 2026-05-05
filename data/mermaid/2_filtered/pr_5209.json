@@ -1,0 +1,118 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 5209,
+  "title": "Feature/4051 sequence diagram multi directional arrow",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nAdded Bi-directional arrow support for dotted and solid lines in sequence diagram\r\n\r\nResolves #4051 \r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nAdded new syntax ``<<->>`` for solid bidirectional arrow\r\nAdded new syntax ``<<-->>`` for dotted bidirectional arrow\r\nPlease approve new syntax.\r\n\r\nAdded unit tests for both arrows.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [X] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [X] :computer: have added necessary unit/e2e tests.\r\n- [x] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/docs/community/contributing.md#update-documentation) is used for all new features.\r\n- [X] :bookmark: targeted `develop` branch\r\n",
+  "author": "Ronid1",
+  "merged_at": "2024-06-20T18:14:08Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "cda41a1cdfe7ba969ef16953e6e0ff28a5012950",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "3af4020cdcf9be8a8f500bd8238cb307eed2c193",
+    "1a199d630f69abb8d58a3c327bc203640f13e921"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85W_Jja",
+          "author": "sidharthv96",
+          "body": "Please use backticked strings like above, so it's more readable.",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+          "line_number": 535,
+          "start_line": null,
+          "commit_sha": "1a199d630f69abb8d58a3c327bc203640f13e921",
+          "created_at": "2024-01-19T17:24:31Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests a specific code change: use backtick strings instead of the current string format for readability."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85XdbEl",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n      `\r\n    );\r\n```",
+          "file_path": "cypress/integration/rendering/sequencediagram.spec.js",
+          "line_number": 84,
+          "start_line": null,
+          "commit_sha": "1a199d630f69abb8d58a3c327bc203640f13e921",
+          "created_at": "2024-01-26T08:07:29Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Provides a direct code suggestion/diff to apply a specific change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85gBX6t",
+          "author": "sidharthv96",
+          "body": "The startx and stopx values are calculated in the `buildMessageModel` function. \r\nAdding this adjustment here breaks the Separation of concern, as it makes the `drawMessage` function responsible for the adjustment, where it should only have drawn as per the dimensions calculated in `buildMessageModel`.\r\n\r\nWe should always try to solve the root cause, instead of patching the outcome. ",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceRenderer.ts",
+          "line_number": 435,
+          "start_line": null,
+          "commit_sha": "1a199d630f69abb8d58a3c327bc203640f13e921",
+          "created_at": "2024-05-23T04:54:01Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85gBaYa",
+          "author": "sidharthv96",
+          "body": "```diff\r\ndiff --git a/packages/mermaid/src/diagrams/sequence/sequenceRenderer.ts b/packages/mermaid/src/diagrams/sequence/sequenceRenderer.ts\r\nindex 6bb3c654e..525358d90 100644\r\n--- a/packages/mermaid/src/diagrams/sequence/sequenceRenderer.ts\r\n+++ b/packages/mermaid/src/diagrams/sequence/sequenceRenderer.ts\r\n@@ -425,14 +425,7 @@ const drawMessage = async function (diagram, msgModel, lineStartY: number, diagO\r\n     }\r\n   } else {\r\n     line = diagram.append('line');\r\n-    let adjustedStartx = startx;\r\n-    if (\r\n-      type === diagObj.db.LINETYPE.BIDIRECTIONAL_DOTTED ||\r\n-      type === diagObj.db.LINETYPE.BIDIRECTIONAL_SOLID\r\n-    ) {\r\n-      startx < stopx ? (adjustedStartx += 3) : (adjustedStartx -= 3);\r\n-    }\r\n-    line.attr('x1', adjustedStartx);\r\n+    line.attr('x1', startx);\r\n     line.attr('y1', lineStartY);\r\n     line.attr('x2', stopx);\r\n     line.attr('y2', lineStartY);\r\n@@ -1449,7 +1442,7 @@ const buildMessageModel = function (msg, actors, diagObj) {\r\n   const [fromLeft, fromRight] = activationBounds(msg.from, actors);\r\n   const [toLeft, toRight] = activationBounds(msg.to, actors);\r\n   const isArrowToRight = fromLeft <= toLeft;\r\n-  const startx = isArrowToRight ? fromRight : fromLeft;\r\n+  let startx = isArrowToRight ? fromRight : fromLeft;\r\n   let stopx = isArrowToRight ? toLeft : toRight;\r\n \r\n   // As the line width is considered, the left and right values will be off by 2.\r\n@@ -1488,6 +1481,14 @@ const buildMessageModel = function (msg, actors, diagObj) {\r\n     if (![diagObj.db.LINETYPE.SOLID_OPEN, diagObj.db.LINETYPE.DOTTED_OPEN].includes(msg.type)) {\r\n       stopx += adjustValue(3);\r\n     }\r\n+\r\n+    if (\r\n+      [diagObj.db.LINETYPE.BIDIRECTIONAL_SOLID, diagObj.db.LINETYPE.BIDIRECTIONAL_DOTTED].includes(\r\n+        msg.type\r\n+      )\r\n+    ) {\r\n+      startx -= adjustValue(3);\r\n+    }\r\n   }\r\n \r\n   const allBounds = [fromLeft, fromRight, toLeft, toRight];\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceRenderer.ts",
+          "line_number": 435,
+          "start_line": null,
+          "commit_sha": "1a199d630f69abb8d58a3c327bc203640f13e921",
+          "created_at": "2024-05-23T05:06:46Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85g9LX1",
+          "author": "Ronid1",
+          "body": "Thanks for pointing out this function, I made the updates @sidharthv96 ",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceRenderer.ts",
+          "line_number": 435,
+          "start_line": null,
+          "commit_sha": "1a199d630f69abb8d58a3c327bc203640f13e921",
+          "created_at": "2024-06-04T21:59:53Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a separation of concerns issue and suggests moving the adjustment logic to `buildMessageModel` instead of `drawMessage`, implying a concrete refactor."
+    }
+  ],
+  "review_thread_count": 3,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 3,
+    "stage1_kept": 3,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

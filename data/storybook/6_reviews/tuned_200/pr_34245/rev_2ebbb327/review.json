@@ -1,0 +1,106 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "package.json",
+      "line_number": 45,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The lint-staged entries for `code/**/*.{js,jsx,mjs,ts,tsx}` and `code/**/*.{html,json}` use `\"oxfmt --check\"` instead of `\"oxfmt\"`. The `--check` flag only verifies formatting without writing changes. In a pre-commit hook context, the intent is to auto-format staged files before they are committed (i.e., run `oxfmt` in write mode). Switching to `--check` means the commit will be rejected if files aren't pre-formatted, but the hook won't fix them automatically \u2014 a significant regression in developer experience compared to the previous `code/package.json` lint-staged config, which ran `oxfmt` (write mode). Change `\"oxfmt --check\"` to `\"oxfmt\"` in both patterns.",
+      "index": 0
+    },
+    {
+      "file_path": "scripts/ci/common-jobs.ts",
+      "line_number": 78,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `prettyDocs` CI job now runs `command: 'yarn fmt:check'` at the repository root, but the root `.oxfmtrc.json` lists `\"docs\"` in `ignorePatterns`. This means `oxfmt --check .` silently skips the entire `docs/` directory \u2014 the docs formatting check is effectively gone from CI. The previous job ran `yarn docs:fmt:check` from the `scripts/` working directory, which called `cd ../docs && oxfmt --check ./_snippets` and actually validated docs snippets. To restore the check, either keep the install+command targeting `scripts` (e.g., use `npm.installScripts()` and run `yarn fmt:check` inside `scripts/`), or invoke the equivalent `cd scripts && yarn fmt:check` at root level. This is separate from the intentional TODO to 'check with DX team on formatting docs' \u2014 the _snippets check was already established and should not be silently dropped.",
+      "index": 1
+    },
+    {
+      "file_path": "code/package.json",
+      "line_number": 27,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "`\"lint\": \"yarn lint:js && cd .. && yarn fmt:check\"` uses a bare `cd` shell command to change directory before running the format check. This is fragile in npm scripts (it relies on shell state) and is inconsistent with the established `--cwd` pattern used throughout this same file (e.g., `\"i\": \"yarn --cwd .. i\"`, `\"lint:package\": \"yarn --cwd ../scripts lint:package\"`). Replace with: `\"lint\": \"yarn lint:js && yarn --cwd .. fmt:check\"`.",
+      "index": 2
+    },
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 43,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The override block targeting `[\"*.md\", \"*.mdx\"]` is dead code \u2014 both `\"*.md\"` and `\"*.mdx\"` are listed in `ignorePatterns` (lines 38\u201339), so oxfmt will never process these files and the override options (`importOrderSeparation`, `importOrderSortSpecifiers`) will never be applied. Additionally, import-order options have no effect on Markdown/MDX files regardless. Remove this override block to avoid misleading future maintainers.",
+      "index": 3
+    },
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 56,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The second glob in this override \u2014 `\"**/frameworks/angular/template/**/*.ts\"` \u2014 is dead code. `\"code/frameworks/angular/template/**\"` is already in `ignorePatterns` (line 33), so those files are excluded before overrides are evaluated. Only the `\"**/frameworks/angular/src/**/*.ts\"` glob is actually active here. Remove the dead `template/**` glob from this override to avoid confusion.",
+      "index": 4
+    },
+    {
+      "file_path": "code/builders/builder-vite/input/iframe.html",
+      "line_number": 91,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "This diff contains an incidental HTML bug fix: the old code had `<ul>\u2026<ul></p>` (two opening `<ul>` tags) and the new code correctly has `<ul>\u2026</ul></p>`. This is a genuine correctness fix that was silently bundled into a formatting-only PR. It should be called out explicitly in the PR description so it's traceable in git history as an intentional semantic change rather than a formatting artifact.",
+      "index": 5
+    },
+    {
+      "file_path": "code/builders/builder-vite/input/iframe.html",
+      "line_number": 68,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The reformatted `<script>` block now uses 10-space indentation for the JavaScript content inside the HTML tag (4 levels at 2 spaces each, plus the base 2-space indent of the `<script>` element). This is deeper than necessary and makes the code harder to read in editors without horizontal scrolling. The original 6-space indentation (matching the surrounding HTML nesting) was more readable. If the formatter is generating this, consider adding `code/builders/builder-vite/input/iframe.html` to the ignore list or using a per-file override, since HTML files with embedded scripts are notoriously tricky to format automatically.",
+      "index": 6
+    },
+    {
+      "file_path": ".vscode/settings.json",
+      "line_number": 55,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "File is missing a trailing newline (`\\ No newline at end of file`). This is inconsistent with POSIX text file conventions and may cause noise in diffs. Given that this PR enforces formatting, the VS Code config files themselves should conform.",
+      "index": 7
+    },
+    {
+      "file_path": ".vscode/extensions.json",
+      "line_number": 7,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "File is missing a trailing newline (`\\ No newline at end of file`), same as `settings.json`. Both VS Code config files should end with a newline for consistency.",
+      "index": 8
+    },
+    {
+      "file_path": "scripts/package.json",
+      "line_number": 11,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Renaming `docs:fmt:check` \u2192 `fmt:check` and `docs:fmt:write` \u2192 `fmt:write` makes the scripts appear to be general-purpose formatters, but they only target `docs/_snippets`. Any caller looking for a broad format check in `scripts/` will be surprised. Consider keeping a `docs:` prefix (e.g., `docs:fmt:check`) or adding a comment in `package.json` clarifying the scope, especially since these scripts are now also called from `scripts/project.json`.",
+      "index": 9
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The CI `prettyDocs` job was also changed to call `npm.install('.')` (root) instead of `npm.installScripts()`. While installing root deps makes sense since `oxfmt` is now a root devDependency, the command it runs (`yarn fmt:check` at root) no longer targets docs at all due to the `\"docs\"` entry in root `ignorePatterns`. The NX `pretty-docs` target in `scripts/project.json` correctly uses `cwd: \"{projectRoot}\"` (the `scripts/` directory), so NX-based runs still check docs snippets. But the standalone CircleCI step does not. The two paths are now inconsistent, and the CircleCI path silently does nothing for docs. Consider either fixing the CI job to run `cd scripts && yarn fmt:check` or having CI invoke the NX target.",
+      "index": 10
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The project-specific rules note that when migrating formatters, the old tool's config file (`.prettierrc.json`) should be preserved if prettier is still used programmatically (e.g., in codegen or codemod utilities). `code/package.json` still lists `prettier` as a devDependency (it was not removed in this diff), which suggests it is still in use within `code/`. Verify that there is a corresponding `.prettierrc` or `.prettierrc.json` in `code/` that programmatically-invoked prettier calls can resolve, so codegen output does not change unexpectedly.",
+      "index": 11
+    },
+    {
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `lint-staged` version was bumped from `^16.2.7` to `^16.4.0` as part of this PR. The `yarn.lock` diff shows this also drops `nano-spawn`, `pidtree`, and `micromatch` as transitive dependencies of `lint-staged`, and adds `picomatch` and bumps `tinyexec`. These look like expected changes for the `lint-staged` upgrade, but it is worth confirming the `picomatch` version aligns with what is used elsewhere in the monorepo to avoid duplicate resolution.",
+      "index": 12
+    }
+  ],
+  "cost_usd": 0.47613235,
+  "duration_seconds": 290.33154106140137
+}

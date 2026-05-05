@@ -1,0 +1,378 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3795,
+  "title": "Allow extxyz writer to work with non-subscriptable iterables when move_mask is present",
+  "body": "Here: Your concise description of the content of this merge request.\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [X] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [X] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [X] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [X] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [X] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)\n\ncloses #1730",
+  "author": "noambern",
+  "merged_at": "2025-08-21T21:24:28.097Z",
+  "base_ref": "master",
+  "merge_commit_sha": "fb53affd8264ff1ba7ae9afb8a1c018fabee99b3",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2698463196",
+          "author": "yuzie007",
+          "body": "Thank you so much @noambern for the MR! Since I merged the related part in !3713, I would like to have a first review.\n\nBefore going to the actual revision, I would like to raise a question \"whether ASE writers should also handle an iterator/generator of `Atoms` objects\".\n\nIf we say yes, this might be the issue not only for `extxyz` but for other writers, as found as\n```\n% git grep -n \"images\\[0\\]\" ase/io/\nase/io/bytes.py:30:    return images[0]\nase/io/dmol.py:217:    if np.all(images[0].pbc):\nase/io/dmol.py:220:    elif not np.any(images[0].pbc):\nase/io/eon.py:188:        return images if len(images) > 1 else images[0]\nase/io/extxyz.py:902:            cnstr = images[0].constraints\nase/io/findsym.py:2:    symbols = images[0].get_chemical_symbols()\nase/io/formats.py:700:        images = images[0]\nase/io/gen.py:84:        atoms = images[0]\nase/io/octopus/input.py:336:        return images[0]\nase/io/proteindatabank.py:202:    symbols = images[0].get_chemical_symbols()\nase/io/xsd.py:305:    natoms = len(images[0])\nase/io/xsd.py:306:    atom_element = images[0].get_chemical_symbols()\nase/io/xsd.py:307:    atom_cell = images[0].get_cell()\nase/io/xsd.py:308:    atom_positions = images[0].get_positions()\nase/io/xsd.py:319:    if not images[0].pbc.all():\nase/io/xsd.py:325:        # writing images[0]\nase/io/xsf.py:19:    numbers = images[0].get_atomic_numbers()\nase/io/xsf.py:21:    pbc = images[0].get_pbc()\nase/io/xsf.py:38:        if np.abs(images[0].cell - image.cell).max() > 1e-14:\nase/io/xtd.py:41:    natoms = len(images[0])\nase/io/xtd.py:52:    if not images[0].pbc.all():\n```\nSo, the writers in these should probably also be fixed.\n\nThe other way is to say that \"ASE writers support only `Atoms` and `Sequence[Atoms]` but not `Iterable[Atoms]`\".\n\nI personally think it may make sense to officially support `Iterable[Atoms]` for ASE writers in general. (This means that, e.g., we replace `Sequence[Atoms]` with `Iterable[Atoms]` [here](https://gitlab.com/ase/ase/-/blob/9c9eabdb4eda350d6e606f5462dbe479085694b5/ase/io/formats.py#L626) and make corresponding changes.) @askhl @ajjackson how do you think?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-20T15:52:25.015Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2698693079",
+          "author": "ajjackson",
+          "body": "The type annotation of `write` currently has `images: Union[Atoms, Sequence[Atoms]]` so there is currently no promise that an iterator can be written.\n\nHowever, given that we have `iread` but no `iwrite` it _does_ seem reasonable/desireable that `write(filename, iread(input_file))` would work. Maybe there should be an `iwrite` for this, in order to keep the function signatures reasonably under control.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-20T16:42:08.940Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2698753353",
+          "author": "noambern",
+          "body": "It's definitely desirable, in my opinion, as I've been using it for years before this change that caused the `move_mask` to be added by default and this code block to fail.\n\nI also don't see the need for multiple write functions, since it's so easy to add (unlike `read` vs. `iread`, which may be hard to retrofit to existing functions): there's no evidence any format requires anything other than access to the first image, which is easy.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-20T16:59:33.597Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2698755995",
+          "author": "noambern",
+          "body": "The alternative would be for me to convert my iterables into lists manually before calling `ase.io.write`, which could lead to huge waste of memory.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-20T17:00:39.802Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2698769039",
+          "author": "ajjackson",
+          "body": "Why do we take the constraints from the first image, rather than the current image, anyway? Can't `constr = atoms.constraints`?",
+          "file_path": "ase/io/extxyz.py",
+          "line_number": 902,
+          "commit_sha": "e66630c410a96d1b2f6679b8be71d17f0736ff05",
+          "base_sha": "f801685b923ebffd615daa70275313b5da0a4465",
+          "created_at": "2025-08-20T17:04:21.563Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2698785439",
+          "author": "noambern",
+          "body": "I was wondering that myself",
+          "file_path": "ase/io/extxyz.py",
+          "line_number": 902,
+          "commit_sha": "e66630c410a96d1b2f6679b8be71d17f0736ff05",
+          "base_sha": "f801685b923ebffd615daa70275313b5da0a4465",
+          "created_at": "2025-08-20T17:09:38.079Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2698808862",
+          "author": "ajjackson",
+          "body": "@jameskermode looks like you reviewed this the first time :wink: Any ideas?",
+          "file_path": "ase/io/extxyz.py",
+          "line_number": 902,
+          "commit_sha": "e66630c410a96d1b2f6679b8be71d17f0736ff05",
+          "base_sha": "f801685b923ebffd615daa70275313b5da0a4465",
+          "created_at": "2025-08-20T17:20:13.461Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2698824140",
+          "author": "noambern",
+          "body": "frankly, that whole chunk of code is confusing",
+          "file_path": "ase/io/extxyz.py",
+          "line_number": 902,
+          "commit_sha": "e66630c410a96d1b2f6679b8be71d17f0736ff05",
+          "base_sha": "f801685b923ebffd615daa70275313b5da0a4465",
+          "created_at": "2025-08-20T17:31:01.043Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2699157088",
+          "author": "ajjackson",
+          "body": "If there _is_ a good reason to always draw constraints from the first `atoms` then another way to implement it is\n\n```python\niter_images = iter(images)\nimage_0 = next(iter_images)\nfor atoms in itertools.chain([image_0], iter_images):\n    ...\n    if 'move_mask' in fr_cols:\n        cnstr = image_0.constraints\n        ...\n    ...\n...\n```\n\nThis avoids assigning `image_0` inside the loop on the first pass, so streamlines the logic a bit and makes the loop iterations more similar.\n\nBut `cnstr = atoms.constraints` would be simpler still!",
+          "file_path": "ase/io/extxyz.py",
+          "line_number": 902,
+          "commit_sha": "e66630c410a96d1b2f6679b8be71d17f0736ff05",
+          "base_sha": "f801685b923ebffd615daa70275313b5da0a4465",
+          "created_at": "2025-08-20T21:01:55.917Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2700983015",
+          "author": "noambern",
+          "body": "I don't actually care, but let's just say that a combination of `iter`, `next`, and `itertools.chain` is not what I would consider an improvement over a assignment and an `if`. Just a variety of counter-productive software engineering purity.",
+          "file_path": "ase/io/extxyz.py",
+          "line_number": 902,
+          "commit_sha": "e66630c410a96d1b2f6679b8be71d17f0736ff05",
+          "base_sha": "f801685b923ebffd615daa70275313b5da0a4465",
+          "created_at": "2025-08-21T13:37:45.100Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2701042877",
+          "author": "ajjackson",
+          "body": "I don't really mind in this case either, your version is fine.",
+          "file_path": "ase/io/extxyz.py",
+          "line_number": 902,
+          "commit_sha": "e66630c410a96d1b2f6679b8be71d17f0736ff05",
+          "base_sha": "f801685b923ebffd615daa70275313b5da0a4465",
+          "created_at": "2025-08-21T13:55:36.921Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2701047692",
+          "author": "jameskermode",
+          "body": "I also don't really recall or know why it's only `images[0]` that is checked for constraints, but safest to retain this functionality to avoid unexpected side effects. Noam's proposed change looks good to me.",
+          "file_path": "ase/io/extxyz.py",
+          "line_number": 902,
+          "commit_sha": "e66630c410a96d1b2f6679b8be71d17f0736ff05",
+          "base_sha": "f801685b923ebffd615daa70275313b5da0a4465",
+          "created_at": "2025-08-21T13:57:42.461Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2701063246",
+          "author": "ajjackson",
+          "body": "Ah, there is actually already an Issue about this https://gitlab.com/ase/ase/-/issues/765\n\nWell, I suppose we can merge this fix to iterables and then follow up with a fix to the masking behaviour.",
+          "file_path": "ase/io/extxyz.py",
+          "line_number": 902,
+          "commit_sha": "e66630c410a96d1b2f6679b8be71d17f0736ff05",
+          "base_sha": "f801685b923ebffd615daa70275313b5da0a4465",
+          "created_at": "2025-08-21T14:03:30.698Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2701067369",
+          "author": "noambern",
+          "body": "Does @acastanedam know? This syntax was added in https://gitlab.com/ase/ase/-/commit/afd755f477b9605a560c9fe5b921f15e2ee8be70",
+          "file_path": "ase/io/extxyz.py",
+          "line_number": 902,
+          "commit_sha": "e66630c410a96d1b2f6679b8be71d17f0736ff05",
+          "base_sha": "f801685b923ebffd615daa70275313b5da0a4465",
+          "created_at": "2025-08-21T14:04:58.911Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2698845217",
+          "author": "yuzie007",
+          "body": "> I also don't see the need for multiple write functions, since it's so easy to add (unlike `read` vs. `iread`, which may be hard to retrofit to existing functions): there's no evidence any format requires anything other than access to the first image, which is easy.\n\nI agree on this point. Unlike the `read` case, where the \"output\" is multi-typed, the present `write` case is for an \"input\", which may be more common to accept multiple types. Also, I believe, in most cases, it may be not extremely challenging to re-write the relevant codes also for a iterator.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-20T17:41:37.181Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2699143620",
+          "author": "ajjackson",
+          "body": "On reflection, if we can avoid all the cases where other features of `Sequence` are required then the type annotation can become `Atoms | Iterable[Atoms]`; sequences and iterators are both Iterable. So it's not that bad...\n\n(But could cause surprises for an external plugin that uses Sequence features while writing?)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-20T20:51:11.001Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2699151068",
+          "author": "noambern",
+          "body": "It's true that a decision has to be made so that plugins (and future internal formats) will know what to expect, and yes, it could break compatibility. FWIW, I'd be fine with saying that in principle it has to be a Sequence but I'd still like to urge patching at least extxyz so that it works with Iterables, like it used to, even though it doesn't strictly need to.\n\nBut I also highly doubt that any reasonable writer will need anything other than `images[0]` like the existing writers, so don't think in practice this hypothetical compatibility breaking will be a practical problem, so I'd advocate officially going to Iterable.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-20T20:57:09.469Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2699157872",
+          "author": "yuzie007",
+          "body": "I agree that, we can anyway also do a quick fix for `write_extxyz`, with maybe saying that \"while `ase.io.write` in general should get `Sequence[Atoms]`, `write_extxyz` is actually more flexible to accept `Iterable[Atoms]`\".",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-20T21:02:35.700Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2699162085",
+          "author": "ajjackson",
+          "body": "From an annotation/documentation perspective I think it is fine for `write` to be stricter and the underlying function more flexible. Strictly we would then recommend that people do\n```python\nwrite_extxyz(fileobj, images)\n```\nrather than use the write wrapper, if `images` is an iterator. We don't really have to explain that in the docs, but let's not advertise use of `write` that is inconsistent with its annotations.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-20T21:06:31.003Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2701095487",
+          "author": "ajjackson",
+          "body": "Ok I have captured some of this proposal in #1731 for further consideration. I think with the docstring comment and existing annotations we can resolve this for now.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-21T14:14:01.107Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2701118061",
+          "author": "noambern",
+          "body": "looks good to me",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-21T14:22:27.023Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2700204103",
+          "author": "ajjackson",
+          "body": "```suggestion:-0+0\n\n``images`` may be Atoms or any Iterable[Atoms].\n\n```\n\nI'd prefer to annotate the whole thing properly, but as a quick fix let's at least capture the information here.",
+          "file_path": "ase/io/extxyz.py",
+          "line_number": 811,
+          "commit_sha": "e66630c410a96d1b2f6679b8be71d17f0736ff05",
+          "base_sha": "f801685b923ebffd615daa70275313b5da0a4465",
+          "created_at": "2025-08-21T08:49:51.506Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2700986289",
+          "author": "noambern",
+          "body": "I'm fine with any of these suggestions. Does someone else want to clone my repo and do it to their satisfaction, or should I have a go at it?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-21T13:38:49.931Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2701050715",
+          "author": "ajjackson",
+          "body": "I've applied the docstring note about Iterable being supported.\n\nThe only thing blocking my approval now is a concern that this use of `cnstr = images[0].constraints` is basically incorrect and should be `cnstr = atoms.constraints`. I'd like to hear from somebody familiar with the extxyz specification about why it might have been done this way.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-21T13:58:47.898Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2701097576",
+          "author": "ajjackson",
+          "body": "```suggestion:-0+0\n    ``images`` may be Atoms or any Iterable[Atoms].\n```",
+          "file_path": "ase/io/extxyz.py",
+          "line_number": 812,
+          "commit_sha": "385c6baed8286269f848a0c2b455695c1b397db4",
+          "base_sha": "9c9eabdb4eda350d6e606f5462dbe479085694b5",
+          "created_at": "2025-08-21T14:14:49.282Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2701101470",
+          "author": "ajjackson",
+          "body": "```suggestion:-0+0\n  `atoms.arrays` (:mr:`3795`)\n```",
+          "file_path": "changelog.d/20250820_094043_noam.bernstein_extxyz_move_mask_iterable.rst",
+          "line_number": 51,
+          "commit_sha": "7c7b13d31df5c9dd4c2e3384c3628a7a23a15cd9",
+          "base_sha": "9c9eabdb4eda350d6e606f5462dbe479085694b5",
+          "created_at": "2025-08-21T14:16:16.710Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 11
+}

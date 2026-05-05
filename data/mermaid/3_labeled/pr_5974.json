@@ -1,0 +1,411 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 5974,
+  "title": "refactor: TypeScript improvements to `packages/mermaid/src/rendering-util/rendering-elements`",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nA bunch of TypeScript improvements to `packages/mermaid/src/rendering-util/rendering-elements`.\r\n\r\nI'd recommend reviewing this PR commit-by-commit!\r\n\r\n- `packages/mermaid/src/rendering-util/rendering-elements/shapes.ts`: Change the type of `shapes` from a generic `Record<string, ShapeHandler>` to a more specific type that knows every key in the variable, and every function and return value.\r\n- `packages/mermaid/src/rendering-util/rendering-elements/shapes/`: Correct the types of all the shapes in this directory. Most of these functions were incorrectly using a raw DOM `SVGAElement` as a parameter. However, they actually accept a `d3.Selection<SVGAElement, unknown, Element | null, unknown> | d3.Selection<SVGGElement, unknown, Element | null, unknown>`. I've turned most of these functions into template functions, since otherwise TypeScript has issues with these types.\r\n- `packages/mermaid/src/rendering-util/rendering-elements/nodes.ts`: Convert the `nodes.js` file to TypeScript.\r\n- `packages/mermaid/src/rendering-util/rendering-elements/shapes/util.ts`: Convert the `shapes/util.js` file to TypeScript.\r\n- `packages/mermaid-layout-elk/src/rendering-util/rendering-elements/render.ts`: Remove some `any` types from `render()`. This was mainly so I could see what types were being passed to `src/rendering-util/rendering-elements/shapes/util.ts` so I could accurately type it.\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nCalling `d3.selection.attr('attr', undefined)` is not supported and throws a TypeScript error https://d3js.org/d3-selection/modifying#selection_attr\r\n\r\nHowever, I've noticed that it seems to do the same thing as `d3.selection.attr('attr', null)` (e.g. deleting the attribute if it exists), so I've made a new helper function called `handleUndefinedAttr` that basically just does `?? null`:\r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/16a5fc05d65165f02966eb7f33154f136394a534/packages/mermaid/src/utils.ts#L944-L954\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://mermaid.js.org/community/contributing.html)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n- [x] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://mermaid.js.org/community/contributing.html#update-documentation) is used for all new features.\r\n- [x] :butterfly: If your PR makes a change that should be noted in one or more packages' changelogs, generate a changeset by running `pnpm changeset` and following the prompts. Changesets that add features should be `minor` and those that fix bugs should be `patch`. Please prefix changeset messages with `feat:`, `fix:`, or `chore:`.\r\n  - Internal only change, the only potential change in behavior is me adding a `?? 0` in https://github.com/mermaid-js/mermaid/blob/16a5fc05d65165f02966eb7f33154f136394a534/packages/mermaid/src/rendering-util/rendering-elements/shapes/util.ts#L52, but I'm unsure it if will actually ever change anything for users.\r\n",
+  "author": "aloisklink",
+  "merged_at": "2024-10-28T12:52:23Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "e765007b21a6fd37cc9fe9c0030753bcf1e5584b",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "d16e46a3860bce8c4ae1d12308c5d9cf8055bcf7",
+    "b5cd101d8647fce051bce9a1280f538cbe84721c"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85rrJoV",
+          "author": "saurabhg772244",
+          "body": "```suggestion\r\ntype Node = LayoutData['nodes'][number];\r\n```",
+          "file_path": "packages/mermaid-layout-elk/src/render.ts",
+          "line_number": 6,
+          "start_line": null,
+          "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+          "created_at": "2024-10-18T13:14:12Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "medium",
+          "label_reasoning": "Suggestion to use a more idiomatic TypeScript type derivation pattern (indexed access type from LayoutData) rather than a manually defined type."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85r0InL",
+          "author": "aloisklink",
+          "body": "Fixed by https://github.com/mermaid-js/mermaid/pull/5974/commits/4bc70b732560102d481110f4344b5a4c6776c335",
+          "file_path": "packages/mermaid-layout-elk/src/render.ts",
+          "line_number": 6,
+          "start_line": null,
+          "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+          "created_at": "2024-10-21T13:29:22Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "A direct code suggestion is provided to change the type definition."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85ry6WH",
+          "author": "saurabhg772244",
+          "body": "```suggestion\r\n  labelData?: unknown;\r\n```",
+          "file_path": "packages/mermaid-layout-elk/src/render.ts",
+          "line_number": 10,
+          "start_line": null,
+          "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+          "created_at": "2024-10-21T10:29:47Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "medium",
+          "label_reasoning": "Suggestion to use `unknown` instead of another type for `labelData`, following TypeScript best practices for safer typing of unknown data."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85r0JYF",
+          "author": "aloisklink",
+          "body": "Unfortunately, `unknown` caused type issues.\r\n\r\nInstead, I've fully typed `labelData?:` by creating a new `interface LabelData` type: https://github.com/mermaid-js/mermaid/pull/5974/commits/6cc0132e0a192c4101c86083f34ca3af7d6ebe23\r\n\r\nTo be honest, I don't know what it does (to me, it seems like some fields aren't use anywhere?), but I've typed it with the values it seems to have.",
+          "file_path": "packages/mermaid-layout-elk/src/render.ts",
+          "line_number": 10,
+          "start_line": null,
+          "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+          "created_at": "2024-10-21T13:31:03Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "A direct code suggestion is provided to change the type of labelData."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85ry7L6",
+          "author": "saurabhg772244",
+          "body": "```suggestion\r\n  renderOptions: ShapeRenderOptions\r\n```",
+          "file_path": "packages/mermaid/src/rendering-util/rendering-elements/nodes.ts",
+          "line_number": 16,
+          "start_line": null,
+          "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+          "created_at": "2024-10-21T10:32:26Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "medium",
+          "label_reasoning": "Suggestion to remove the optional marker (`?`) from a parameter, aligning the signature with TypeScript conventions for required parameters."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85r0IwJ",
+          "author": "aloisklink",
+          "body": "Good catch! I've fixed this in https://github.com/mermaid-js/mermaid/pull/5974/commits/4bc70b732560102d481110f4344b5a4c6776c335",
+          "file_path": "packages/mermaid/src/rendering-util/rendering-elements/nodes.ts",
+          "line_number": 16,
+          "start_line": null,
+          "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+          "created_at": "2024-10-21T13:29:39Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "A direct code suggestion is provided to modify the renderOptions parameter."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85r4nhl",
+          "author": "saurabhg772244",
+          "body": "I am bit uncomfortable using `!` what if we got childNodeEl.node() undefined in runtime... ",
+          "file_path": "packages/mermaid-layout-elk/src/render.ts",
+          "line_number": 61,
+          "start_line": null,
+          "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+          "created_at": "2024-10-22T06:06:35Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Null Pointer",
+          "label_confidence": "high",
+          "label_reasoning": "The reviewer explicitly flags that using the non-null assertion operator `!` is risky because `childNodeEl.node()` could return `undefined` at runtime, leading to a potential null/undefined dereference."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85r6xJB",
+          "author": "aloisklink",
+          "body": "I agree.\r\n\r\nI think in 95% of cases, `d3Selection.node()` will never return `null`, though, since we've created a node, so we know it exists. E.g. `elem.insert<SVGAElement>('svg:a').node()` will never return `null`, since we're creating a new `SVGALement`.\r\n\r\nUnfortunately, I don't know of anyway to fix this without putting `!` everywhere.\r\n\r\nMaybe we can adjust the official types of `d3-selection` https://github.com/DefinitelyTyped/DefinitelyTyped/blob/6725a0f4009013cb59f7f57971568cdc287745a4/types/d3-selection/index.d.ts to have a new generic field like `NotEmpty = true`, that's automatically set when you create a D3.Selection, but I'd imagine that might be quite a bit of work too!",
+          "file_path": "packages/mermaid-layout-elk/src/render.ts",
+          "line_number": 61,
+          "start_line": null,
+          "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+          "created_at": "2024-10-22T11:44:27Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential runtime issue with the non-null assertion operator, implying the code should handle the undefined case."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85r4-VT",
+          "author": "saurabhg772244",
+          "body": "I think we can move this to `packages/mermaid/src/rendering-util/rendering-elements/shapes/util.ts` since its only used in rendering-elements/",
+          "file_path": "packages/mermaid/src/utils.ts",
+          "line_number": 954,
+          "start_line": 944,
+          "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+          "created_at": "2024-10-22T07:18:08Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "high",
+          "label_reasoning": "The reviewer suggests moving a utility function from `utils.ts` to a more appropriate location (`shapes/util.ts`) closer to where it is actually used, improving module boundaries and code organization."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85r6tUA",
+          "author": "aloisklink",
+          "body": "Hmmmmm, it might be better to leave it here, since it would be used by a lot of the `diagrams/*/*rendering.js` files once we move them to `.ts`.\r\n\r\nE.g. like https://github.com/mermaid-js/mermaid/blob/07de0907238db20abb50d905a71331d8394480cd/packages/mermaid/src/diagrams/gantt/ganttRenderer.js#L374\r\n\r\nAnd I'm a bit reluctant to modify the import paths in ~60 files!",
+          "file_path": "packages/mermaid/src/utils.ts",
+          "line_number": 954,
+          "start_line": 944,
+          "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+          "created_at": "2024-10-22T11:32:35Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests moving a function to a different file/location, implying a concrete refactoring change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85r6uzH",
+          "author": "sidharthv96",
+          "body": "Unrelated to this PR, but, should we rename from `Node` to something else? As `Node` conflicts with https://developer.mozilla.org/en-US/docs/Web/API/Node. \r\n\r\nNot just this instance, but the main use in Mermaid as well. ",
+          "file_path": "packages/mermaid-layout-elk/src/render.ts",
+          "line_number": 6,
+          "start_line": null,
+          "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+          "created_at": "2024-10-22T11:37:19Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "high",
+          "label_reasoning": "The reviewer points out that the name `Node` conflicts with the browser's built-in Web API `Node` interface, suggesting a rename to avoid ambiguity and potential confusion."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85r7JOL",
+          "author": "aloisklink",
+          "body": "I'm for it (if somebody actually knows a good other name for `Node`)!\r\n\r\nTo be honest, there are so many `node` parameters that don't seem to match this `Node` type that we'd probably need multiple different `NodeXXXX` types, like this `NodeWithVertex` type I made:\r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/6cc0132e0a192c4101c86083f34ca3af7d6ebe23/packages/mermaid-layout-elk/src/render.ts#L15-L19",
+          "file_path": "packages/mermaid-layout-elk/src/render.ts",
+          "line_number": 6,
+          "start_line": null,
+          "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+          "created_at": "2024-10-22T12:50:52Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests renaming Node to avoid conflict with the Web API Node type, implying a concrete rename action."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85r6vxY",
+          "author": "sidharthv96",
+          "body": "nit: Might be useful to move to a more generic types file, as it might be useful in other places. ",
+          "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes.ts",
+          "line_number": 61,
+          "start_line": null,
+          "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+          "created_at": "2024-10-22T11:40:13Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "medium",
+          "label_reasoning": "The reviewer suggests moving a type definition to a more generic/shared types file so it can be reused across different parts of the codebase, improving organization."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85r7K3O",
+          "author": "aloisklink",
+          "body": "I've seen this type used in a lot of places in other code-bases (e.g. https://github.com/sveltejs/kit/blob/ed6b5cd4fc0d1d299c838628b73027dd07179281/packages/kit/types/index.d.ts#L2151), so you're right! (although it's not part of [type-fest](https://github.com/sindresorhus/type-fest), maybe because it's too simple).\r\n\r\nI've moved it to `packages/mermaid/src/types` in https://github.com/mermaid-js/mermaid/pull/5974/commits/f8746bee0454b01378726d04f9c65bbc3974eb3a:\r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/f8746bee0454b01378726d04f9c65bbc3974eb3a/packages/mermaid/src/types.ts#L98-L103\r\n\r\n\r\n\r\n",
+          "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes.ts",
+          "line_number": 61,
+          "start_line": null,
+          "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+          "created_at": "2024-10-22T12:54:45Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests moving the type to a more generic file, implying a concrete refactoring change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85r6x7X",
+          "author": "sidharthv96",
+          "body": "We can use this.\r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/2933eb5c288784650d0499a878f98fff8c9790e4/packages/mermaid/src/utils.ts#L832-L856",
+          "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/util.ts",
+          "line_number": 83,
+          "start_line": null,
+          "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+          "created_at": "2024-10-22T11:47:03Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Duplication",
+          "label_confidence": "high",
+          "label_reasoning": "The reviewer points to an already existing utility in `utils.ts` that can be reused instead of reimplementing similar logic, avoiding code duplication."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85r7Jl4",
+          "author": "aloisklink",
+          "body": "Ah, I didn't know that function existed!\r\n\r\nFixed by https://github.com/mermaid-js/mermaid/pull/5974/commits/bb97fdbd1e539f9585a613844b06b6593d09e44d\r\n\r\nI also added a fallback to `defaultConfig.fontSize` if the value is a `NaN`.",
+          "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/util.ts",
+          "line_number": 83,
+          "start_line": null,
+          "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+          "created_at": "2024-10-22T12:51:46Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Points to an existing utility that should be used instead of the current implementation, implying a concrete code change."
+    }
+  ],
+  "review_thread_count": 12,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85rmKqI",
+            "author": "aloisklink",
+            "body": "These reason why we have to make this change is because TypeScript isn't smart enough to understand:\r\n\r\n```\r\nlet circle: D3Selection<SVGCircleElement> | D3Selection<SVGGElement>;\r\ncircle.attr('class', 'state-start');\r\n```\r\n\r\nHowever, if we move this code into the `if()` blocks, then TypeScript knows that in one block it's `D3Selection<SVGCircleElement>`, and the other block it's `D3Selection<SVGGElement>`, and so it's happy to call `.attr` on it.",
+            "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/stateStart.ts",
+            "line_number": 33,
+            "start_line": 26,
+            "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+            "created_at": "2024-10-17T17:40:51Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85rmLPX",
+            "author": "aloisklink",
+            "body": "Same issue here.\r\n\r\nTypeScript isn't smart enough to understand `cylinder.selectAll` when `cylinder` is `D3Selection<SVGGElement> | D3Selection<SVGPathElement>`.\r\n\r\nHowever, if we move it into the `if (node.look !== 'handDrawn')` block, it knows that `cylinder` is only `D3Selection<SVGPathElement>` and nothing else.\r\n\r\nThe `if (node.look === 'handDrawn' )` block also already has a `cylinder.attr('class', 'basic label-container');` call, so we don't need to copy it there.",
+            "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/tiltedCylinder.ts",
+            "line_number": 99,
+            "start_line": 89,
+            "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+            "created_at": "2024-10-17T17:43:00Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85rmMln",
+            "author": "aloisklink",
+            "body": "This value is ignored, maybe it should be the following instead?\r\n\r\n```ts\r\n    // @ts-expect-error -- This is currently not used. Should this be `classes` instead?\r\n    classes: 'markdown-node-label',\r\n```\r\n\r\nI didn't want to change it in this PR, since this one would probably cause visual regression changes, so having a separate PR where we decide to fix it/delete it would probably be best.",
+            "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/util.ts",
+            "line_number": 47,
+            "start_line": 46,
+            "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+            "created_at": "2024-10-17T17:47:47Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85r5Aip",
+            "author": "saurabhg772244",
+            "body": "Nice.\ud83d\ude4c",
+            "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/util.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "b5cd101d8647fce051bce9a1280f538cbe84721c",
+            "created_at": "2024-10-22T07:24:12Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_too_short"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 12,
+    "stage1_kept": 8,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 3,
+    "stage1_filtered_too_short": 1,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

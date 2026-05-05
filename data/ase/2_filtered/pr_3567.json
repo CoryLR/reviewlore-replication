@@ -1,0 +1,624 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3567,
+  "title": "Fix that the temperature in Langevin dynamics is slightly wrong.",
+  "body": "The Langevin dynamics uses a friction and a fluctuating force to couple the atoms to the environment / heat bath.\n\nTo prevent that this causes a random walk of the center-of-mass momentum (and thus the center of mass itself), the fluctuating force is modified to sum to 0.  That changes its average magnitude slightly, resulting in the temperature becoming too low by a factor `(N-1)/N`, where `N` is the number of atoms.  This is solved by rescaling the fluctuating force.\n\nThis issue has long since been addressed in Asap, but has not been fixed in ASE.\n\nThe test that detects the problem is a bit slow (10-15 sec), as it needs to accumulate statistics.\n\nCloses #1285 \n\n# Checklist\n\n- [X] I am familiar with [ASE's contribution guidelines](https://wiki.fysik.dtu.dk/ase/development/contribute.html).\n- [X] [**Doc strings**](https://wiki.fysik.dtu.dk/ase/development/python_codingstandard.html#writing-documentation-in-the-code) in code changed in this MR are up to date.\n- [X] [**Unit tests** have been added for new or changed code.](https://wiki.fysik.dtu.dk/ase/development/tests.html)\n- [X] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "schiotz",
+  "merged_at": "2025-01-30T19:50:39.852Z",
+  "base_ref": "master",
+  "merge_commit_sha": "14fdd93da3d5ab6307b3e56f74a8b702abdcb6ba",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2280268721",
+          "author": "yuzie007",
+          "body": "Thank you so much @schiotz for the MR!\n\nWith a quick look, the fix sounds reasonable to me. I will do a review also for the tests.\n\nI would also like to share a few my own opinions:\n\n- While I am not 100% sure, I guess we may be able to get proper positions and velocities using the `FixCom` ASE constraint via the RATTLE algorithm instead of the `fixcm` option of `Langevin`.\n\n- I myself also think that the `fixcm` option in `MolecularDynamics`-based subclasses has another disadvantage; this constraint is not recognized by `atoms` itself, and then `atoms.get_temperature()` does not return the true expected temperature (cf. #1285). Therefore, my honest hope in a mid term is rather removing the `fixcm` option in favor of the `FixCom` constraint.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-01-03T09:00:45.889Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2280284274",
+          "author": "schiotz",
+          "body": "Thank you for your valuable comments.  This MR will actually fixes #1285, the atoms will have the correct temperature with Langevin dynamics, as they will with any other NVT MD algorithm which naturally preserves the center of mass, such as the new NoseHooverChainNVT.\n\nThe difference is that the kinetic energy now will be 3/2 N k T in both algorithms, instead of 3/2 (N-1) k T in Langevin and 3/2 N k T in NoseHooverChainNVT.\n\nI think the difference between the ``fixcm`` option and the ``FixCom`` constraint is somewhat a matter of philosophy.  But also I personally think they do something slightly different.\n\n``FixCom`` is an explicit constraint, placed on your dynamics, and as such is treated as a constraint limiting the dynamics and removing 3 degrees of freedom.  It also makes sense to apply ``FixCom`` to situations with e.g. external forces that would otherwise move the COM.\n\n``fixcm`` is fixing a \"flaw\" of the specific dynamics: you would not normally expect MD to move the center of mass, and most NVT algorithms do not.  But Langevin does, if this is not explicitly fixed.  Originally, I chose to make this a user-settable parameter (but turned on by default) because you might want the diffusion of the center of mass, if you chose the Langevin dynamics because you actually model the interaction between the electrons as a heat bath and the atoms (or something like that, I was interested in those effects at the time).",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-01-03T09:14:31.735Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2280286560",
+          "author": "schiotz",
+          "body": "Follow-up: I took the liberty of marking this MR as closing #1285 (I had previously overlooked that issue, I should have addressed this a year ago when you opened it.  Sorry)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-01-03T09:16:43.421Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2281651517",
+          "author": "yuzie007",
+          "body": "Thank you very much @schiotz for your kind response and various information!\n\nI agree with you that the `fixcm` and the `FixCom` constraint have slightly different philosophies as well as different approaches.\n\nNow I think that `fixcm` is reasonable for periodic systems where the COM motion should be negligible compared with the bulk system with an Avogadro number of atoms. Maybe `FixCom` is rather for isolated systems with a few atoms where the COM motion is substantial and its degrees of freedom should be explicitly considered.\n\nI also now agree that, unlike other MD classes (where we can beforehand set the center-of-mass motion as zero, which should be kept during the MD run), `Langevin` needs an explicit treatment. So indeed the change suggested in this MR looks reasonable.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-01-04T10:53:29.198Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2281796872",
+          "author": "schiotz",
+          "body": "Thanks for your reply.  I'll mark this as resolved, so it can get merged.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-01-04T16:26:45.899Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests using FixCom constraint instead of fixcm option, and implies removing the fixcm option in favor of FixCom in the mid term \u2014 both are concrete improvement suggestions."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2281817373",
+          "author": "yuzie007",
+          "body": "Following Python convention & philosophy, let's (1) avoid capital letters for variables and (2) make variables names descriptive. So, I would suggest\n```python\n    def __call__(self):\n        atoms = self.atoms\n        energy = atoms.get_potential_energy() + atoms.get_kinetic_energy()\n        temperature = atoms.get_temperature()\n        self.energies.append(energy)\n        self.temperatures.append(temperature)\n```",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 30,
+          "commit_sha": "e2efc424d0b022348b2c5f43190341d8ce3bf616",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T18:57:09.934Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2281845009",
+          "author": "schiotz",
+          "body": "Agreed.",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 30,
+          "commit_sha": "e2efc424d0b022348b2c5f43190341d8ce3bf616",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T22:38:32.665Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly suggests renaming variables to follow Python conventions and provides a concrete code snippet replacement."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2281817374",
+          "author": "yuzie007",
+          "body": "This is unused in the test and can be removed.",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 35,
+          "commit_sha": "e2efc424d0b022348b2c5f43190341d8ce3bf616",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T18:57:10.308Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removal of an unused element in the test file."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2281817376",
+          "author": "yuzie007",
+          "body": "1. I would suggest some verb-based name, e.g., `make_langevin`\n\n2. `T0` -> `temperature` or `temperature_expected`\n\n3. `logint` -> `loginterval` (to be consistent with the argument name for `Langevin`)",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 98,
+          "commit_sha": "e2efc424d0b022348b2c5f43190341d8ce3bf616",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T18:57:10.511Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2281845384",
+          "author": "schiotz",
+          "body": "OK to 1 and 3.  2: temperature is already used, and temperature_expected is a bit long.  Let's say expected_T (as T is easily recognized as the symbol for T, and the measured average is avgT).",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 98,
+          "commit_sha": "e2efc424d0b022348b2c5f43190341d8ce3bf616",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T22:43:19.410Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests multiple concrete renames: function name, parameter names, for clarity and consistency."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2281817378",
+          "author": "yuzie007",
+          "body": "Maybe better to use a common handing style either like\n```python\n    return Langevin(atoms, dt, temperature_K=temperature,\n                    friction=1 / (2 * tau), logfile='-',\n                    loginterval=loginterval, rng=rng)\n```\nor (I personally prefer the latter)\n```python\n    return Langevin(\n        atoms,\n        dt,\n        temperature_K=temperature,\n        friction=1 / (2 * tau),\n        logfile='-',\n        loginterval=loginterval,\n        rng=rng,\n    )\n```",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 102,
+          "commit_sha": "e2efc424d0b022348b2c5f43190341d8ce3bf616",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T18:57:10.696Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2281845536",
+          "author": "schiotz",
+          "body": "Sure.  The latter is clearest, when there are this many arguments.",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 102,
+          "commit_sha": "e2efc424d0b022348b2c5f43190341d8ce3bf616",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T22:46:00.717Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests reformatting the function call to use a consistent argument style, with two concrete code alternatives provided."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2281817379",
+          "author": "yuzie007",
+          "body": "If I understand correctly from the comment, here `2 / 3` does not have a substantial meaning except that it should be enough smaller than `1.0`.\nIf so, then we can rather use some float number like `0.65` or `0.5` together with the comment like \"Here we even assume a smaller error by 0.65\".\n\nIf we do not plan to extend the test for cases with ASE constraints, maybe we can replace `3 / atoms.get_number_of_degrees_of_freedom()` simply with `/ len(atoms)`.",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 86,
+          "commit_sha": "e2efc424d0b022348b2c5f43190341d8ce3bf616",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T18:57:10.961Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2281845788",
+          "author": "schiotz",
+          "body": "Agree on both points.  The latter is because the code was copied from Asap, where atoms.get_number_of_degrees_of_freedom() gives 3 times the global number of atoms, whereas len(atoms) just give how many reside on this MPI task.",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 86,
+          "commit_sha": "e2efc424d0b022348b2c5f43190341d8ce3bf616",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T22:50:05.845Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests replacing the magic fraction with a more descriptive float literal and a clarifying comment, and suggests simplifying the degrees-of-freedom expression."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2281817380",
+          "author": "yuzie007",
+          "body": "`stdE` -> `std_energy` and `avgT` -> `avg_temperature`",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 69,
+          "commit_sha": "c63b265d405d41d38d0190f2c38104c42427ed9d",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T18:57:11.168Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2281845869",
+          "author": "schiotz",
+          "body": "I think E and T are standard symbols, and the current names are perfectly readable.",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 69,
+          "commit_sha": "c63b265d405d41d38d0190f2c38104c42427ed9d",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T22:51:16.865Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2282028020",
+          "author": "yuzie007",
+          "body": "Thank you so much for your reply. Let me still comment that it is a common Python coding style ([PEP8](https://peps.python.org/pep-0008/#function-and-variable-names) and thus [ASE conventions](https://wiki.fysik.dtu.dk/ase/development/python_codingstandard.html#coding-conventions)) to use lower cases for variable names. It is also recommended to use descriptive names (e.g. in [Google coding style](https://google.github.io/styleguide/pyguide.html#316-naming)), and, as far as I know, @askhl also agrees on this philosophy (pls. see e.g. his comment in https://gitlab.com/ase/ase/-/merge_requests/2073#note_419894296). The violation of the common style could also cause complaints by the linter (Ruff) if we turn on the check, which could cause a lint pipeline error using Ruff in (near or far) future.\n\n(I am saying mostly about conventions, so, in case other maintainers / developers accept your implementation, I do not insist above.)",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 69,
+          "commit_sha": "c63b265d405d41d38d0190f2c38104c42427ed9d",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-05T20:25:06.136Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2282029269",
+          "author": "yuzie007",
+          "body": "Sorry, let me update my thoughts. I myself have the philosophy above, and, as far as I know, in principle this is the ideal ASE convention. However, since we anyway use symbols like `E` and `T` in some other places as well, I would not insist my request above now, unless other people do. We can definitely live with the present implementation, and in case necessary, this can be easily fixed later.",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 69,
+          "commit_sha": "c63b265d405d41d38d0190f2c38104c42427ed9d",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-05T20:32:54.191Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2282034661",
+          "author": "schiotz",
+          "body": "OK, I'll not fight for those variable names :-)",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 69,
+          "commit_sha": "c63b265d405d41d38d0190f2c38104c42427ed9d",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-05T21:10:14.726Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests renaming variables to follow Python snake_case convention."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2281817381",
+          "author": "yuzie007",
+          "body": "1. `T0` -> e.g. `temperature_expected` or `temperature_target`\n\n2. Maybe we do not need to pass `dynmaker` as an argument; we can simply call `lgvdynmaker` (note: I suggest renaming below) inside `run_nvt`.\n(Or, possibly if this test is intended to test also other NVT thermostats, we can rather rename the test script name to be more general.)\n\n3. It may be nicer to follow the NumPy docstring style like\n```python\n    \"\"\"Run NVT dynamics, testing the behaviour.\n\n    Parameters\n    ----------\n    atoms : Atoms\n        ASE Atoms object.\n    nsteps : int\n        Number of MD steps.\n    dt : float\n        MD time step.\n    temperature_expected : float\n        Expected temperature.\n    rng : np.random.Generator \n        Random number generator.\n    interval : int\n        Interval for taking data.\n\n    \"\"\"\n```",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 43,
+          "commit_sha": "a0ff7acd6f44ca6e90abba9b59a5420a2847105f",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T18:57:11.369Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2281846094",
+          "author": "schiotz",
+          "body": "1.  Done\n2.  I may want to reuse the code later to test other dynamics in the same way, hence the way this is stuctured.  That is already being done in Asap.\n3.  Yes, but that does not matter in a test script, where no documentation is generated from the docstring.  But for \"real\" code I agree.",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 43,
+          "commit_sha": "a0ff7acd6f44ca6e90abba9b59a5420a2847105f",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T22:53:44.792Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2282028019",
+          "author": "yuzie007",
+          "body": "OK, I agree!",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 43,
+          "commit_sha": "a0ff7acd6f44ca6e90abba9b59a5420a2847105f",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-05T20:25:05.948Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests multiple changes: renaming a parameter, potentially removing a function argument, and adopting NumPy docstring style with a full example."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2281817383",
+          "author": "yuzie007",
+          "body": "In Python convention, class names are better to be a noun. So I would suggest `EnergyMeasurer` etc.",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 20,
+          "commit_sha": "e2efc424d0b022348b2c5f43190341d8ce3bf616",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T18:57:11.630Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2281846206",
+          "author": "schiotz",
+          "body": "I really don't think that matter, but whatever.",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 20,
+          "commit_sha": "e2efc424d0b022348b2c5f43190341d8ce3bf616",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T22:55:19.172Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests renaming the class to follow Python naming conventions (noun-based class name)."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2281817384",
+          "author": "yuzie007",
+          "body": "I would suggest using a simpler ASE-implemented calculator instead of `asap3.EMT`. Then the test will run even the environment without ASAP3. I would maybe suggest `from ase.calculators.idealgas import IdealGas` then `atoms.calc = IdealGas()`. This may be indicative that the thing tested here is independent of specific calculators.\n\n`T` -> `temperature`",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 15,
+          "commit_sha": "a0ff7acd6f44ca6e90abba9b59a5420a2847105f",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T18:57:11.819Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2281846354",
+          "author": "schiotz",
+          "body": "Most of the MD test suite uses the asap3 calculator for performance, and it is available in the GitLab CI, so there is no need to change that.  We also want to check that stuff works when there are actual forces between the atoms.",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 15,
+          "commit_sha": "a0ff7acd6f44ca6e90abba9b59a5420a2847105f",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T22:56:57.507Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2282028018",
+          "author": "yuzie007",
+          "body": "OK, I agree, and let's keep using asap3!",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 15,
+          "commit_sha": "a0ff7acd6f44ca6e90abba9b59a5420a2847105f",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-05T20:25:05.568Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests replacing the asap3.EMT calculator with an ASE built-in calculator so the test runs without ASAP3, and requests renaming a variable."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2281817385",
+          "author": "yuzie007",
+          "body": "Maybe we can remove this comment.",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 5,
+          "commit_sha": "e2efc424d0b022348b2c5f43190341d8ce3bf616",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T18:57:12.015Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2281846402",
+          "author": "schiotz",
+          "body": "Oops, matplotlib is no longer imported.  Fixed.",
+          "file_path": "ase/test/md/test_langevin_offbyone.py",
+          "line_number": 5,
+          "commit_sha": "e2efc424d0b022348b2c5f43190341d8ce3bf616",
+          "base_sha": "26fdf992b012706a08dcf6a85e15b226cec5020b",
+          "created_at": "2025-01-04T22:57:36.766Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests removal of a comment from the file."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2283222809",
+          "author": "askhl",
+          "body": "The test passes for me whether I run with 5000 steps as here, or a much smaller number such as 500 or 2.  Probably it should start from a failing condition and converge to a passing one.  After which we can reduce nsteps and dt until it fails again, and then use that to choose reliable but not too expensive parameters.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-01-06T14:36:56.923Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that the test passes regardless of step count (implying it may not actually test the fix), and suggests starting from a failing condition and tuning parameters \u2014 a concrete improvement to the test design."
+    }
+  ],
+  "review_thread_count": 18,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2281846669",
+            "author": "schiotz",
+            "body": "I have followed most of your suggestions above, and explained why I disagree with a minority of them.  Thank you very much for your input.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-01-04T23:01:29.872Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2283305765",
+            "author": "schiotz",
+            "body": "Yes, but we need to be sure we are actually testing for the bug being there.  If the run is too short, it will sometimes pass and sometimes fail depending on the RNG seed.  In the worst case the results is mostly random, and we just have a seed that gives failure without the change and success with it.  We want it to depend more strongly on the bug being present than on the specific seed.\n\nBut we also want the test to be fast.  I'll play with it tomorrow, and see if I can find a length where the result almost does not depend on the seed.\n\nI could also add similar tests of the other NVT dynamics.  And then delete md/test_nvt_npt.py, which is a \"weaker\" test.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-01-06T15:31:35.004Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2291142679",
+            "author": "schiotz",
+            "body": "I have removed ``test_langevin_offbyone.py`` as it did the same as the test ``test_nvt_npt.py``, just for Langevin dynamics instead of three other dynamics types.  And the test in ``test_langevin_offbyone.py`` was more sensitive.  I have updated ``test_nvt_npt.py`` to do it for Langevin.  \n\nThe run time for each dynamics is smaller than ``test_langevin_offbyone.py``, but the overall runtime is a bit larger, as we test 6 dynamics instead of just one.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-01-10T14:29:41.792Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2306214820",
+            "author": "schiotz",
+            "body": "@askhl @yuzie007 I think this one could be merged now.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-01-20T14:55:25.260Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2281817386",
+            "author": "yuzie007",
+            "body": "Thank you so much @schiotz once again for the MR. I have now provided a few suggestions (90% just stylistic). Could you address them?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-01-04T18:57:12.364Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "This is a meta/social comment thanking the author and asking them to address the already-listed suggestions \u2014 it contains no new code change requests of its own."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2323762305",
+            "author": "askhl",
+            "body": "I suppose this should be good to go.  Thank you very much @schiotz and @yuzie007!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-01-30T19:50:34.232Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment and approval with no code change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 18,
+    "stage1_kept": 14,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 4,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 2,
+    "stage3_cost_usd": 0.031057
+  }
+}

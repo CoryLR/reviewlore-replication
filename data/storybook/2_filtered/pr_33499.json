@@ -1,0 +1,52 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33499,
+  "title": "Revert \"ReactDocgen: Try using the latest version of the original\"",
+  "body": "Reverts storybookjs/storybook#33454\r\n\r\nI have found a major regression when react components are exported directly like so:\r\n```ts\r\nexport default function Header(){};\r\n```\r\n\r\nWhen users change their code to be like so:\r\n```ts\r\nfunction header(){};\r\nexport default Header\r\n```\r\n\r\nEverything functions correctly.\r\n\r\nFor now, I'll revert the change, and I'll seek a way to improve the upstream package so that it supports this use-case.\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n\n## Summary by CodeRabbit\n\n* **Chores**\n  * Updated React Docgen TypeScript plugin integration across Create React App and React Webpack presets to use Storybook's maintained variant, improving long-term dependency management and consistency.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ndelangen",
+  "merged_at": "2026-01-09T16:30:39Z",
+  "base_ref": "next",
+  "merge_commit_sha": "639947993afae6952af8db542dce1816e6ab8316",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "535ca866116a0c4ff1ea7cd7ac77cb36123a9684",
+    "fc87a01607672cb7953b6555d98b5002eeae507e"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fjMDZ",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, let's look at the test file content around lines 3-5 and 91-103\ncat -n code/presets/react-webpack/src/framework-preset-react-docs.test.ts | head -110 | tail -+1\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 186\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Now let's check the runtime implementation file to see how it imports\ncat -n code/presets/react-webpack/src/framework-preset-react-docs.ts | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1773\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find and check the @storybook/react-docgen-typescript-plugin module to understand its exports\nfind . -type f -path \"*/react-docgen-typescript-plugin/*\" -name \"package.json\" -o -name \"index.ts\" -o -name \"index.js\" | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 909\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for where ReactDocgenTypeScriptPlugin (or similar) is exported\nrg \"export.*ReactDocgen\" --type ts --type tsx --type js | head -30\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Read the test file specifically\ncat -n code/presets/react-webpack/src/framework-preset-react-docs.test.ts | sed -n '1,15p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 710\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Read more of the test file, especially around line 102\ncat -n code/presets/react-webpack/src/framework-preset-react-docs.test.ts | sed -n '90,105p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 668\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find the actual react-docgen-typescript-plugin package\nfind . -type d -name \"react-docgen-typescript-plugin\" | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for the package in code/lib or similar locations\nfd \"react-docgen-typescript-plugin\" --type d\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for react-docgen-typescript-plugin in packages or check if it's external\nrg \"react-docgen-typescript-plugin\" --type json | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 303\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the package's actual index file to see what it exports\nfind . -path \"*/node_modules/*\" -prune -o -type f -name \"index.ts\" -print | xargs rg -l \"ReactDocgen\" | head -10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for where ReactDocgenTypeScriptPlugin is defined (with the correct casing)\nrg \"ReactDocgenTypeScriptPlugin\" --type ts --type js | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 329\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Also search for any variations of the export\nrg \"export.*class.*ReactDocgen\" --type ts --type js | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 412\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's a .d.ts file that defines the exports\nfind . -name \"*.d.ts\" -type f | xargs rg \"ReactDocgen\" | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's check if there are type definitions or documentation about this package\n# First, verify if the test could even work by checking what it expects\ncat -n code/presets/react-webpack/src/framework-preset-react-docs.test.ts | sed -n '1,110p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4052\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look at the imports and usages more carefully, including the exact line 102\ncat -n code/presets/react-webpack/src/framework-preset-react-docs.test.ts | sed -n '95,105p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 550\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's any other reference to ReactDocgenTypeScriptPlugin vs ReactDocgenTypescriptPlugin in the codebase\nrg \"ReactDocgenTypescript\" --type ts --type js\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 861\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's verify what the external package actually exports by checking its type definitions\n# The package version is specified in package.json, let's see if we can find more info\nrg \"@storybook/react-docgen-typescript-plugin\" code/presets/react-webpack/ -A 5 -B 5 | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3494\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's a mismatch in naming - let's look at both usages carefully\necho \"=== Test import (line 4) ===\" && cat -n code/presets/react-webpack/src/framework-preset-react-docs.test.ts | sed -n '4p'\necho \"=== Runtime import (line 43) ===\" && cat -n code/presets/react-webpack/src/framework-preset-react-docs.ts | sed -n '43p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 326\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's check what the actual test expects at line 102 with the name\ncat -n code/presets/react-webpack/src/framework-preset-react-docs.test.ts | sed -n '102p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 131\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's also check the actual config output to see what gets passed to plugins\ncat -n code/presets/react-webpack/src/framework-preset-react-docs.ts | sed -n '43,75p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1162\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Verify if there are any other test files or imports that use this module differently\nrg \"react-docgen-typescript-plugin\" code/presets/react-webpack/ --type ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 620\n\n---\n\n\n\n</details>\n\n**Fix import style mismatch: test uses default import while runtime uses named import.**\n\nThe test imports `ReactDocgenTypescriptPlugin` as a default import, but the runtime code at line 43 uses the named import `{ ReactDocgenTypeScriptPlugin }`. This inconsistency can hide real-world ESM/CJS export issues and the test should match the actual production import pattern.\n\n<details>\n<summary>Proposed change</summary>\n\n```diff\n import type { TypescriptOptions } from '@storybook/core-webpack';\n-import ReactDocgenTypescriptPlugin from '@storybook/react-docgen-typescript-plugin';\n+import { ReactDocgenTypeScriptPlugin } from '@storybook/react-docgen-typescript-plugin';\n@@\n-        plugins: [expect.any(ReactDocgenTypescriptPlugin)],\n+        plugins: [expect.any(ReactDocgenTypeScriptPlugin)],\n```\n</details>\n\n\n\n> Committable suggestion skipped: line range outside the PR's diff.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/presets/react-webpack/src/framework-preset-react-docs.test.ts around\nlines 3 - 5, The test imports the plugin as a default\n(ReactDocgenTypescriptPlugin) but runtime uses the named export\nReactDocgenTypeScriptPlugin; update the test import to use the named import form\n(import { ReactDocgenTypeScriptPlugin } ...) so the test mirrors production\nimport/export semantics and catches ESM/CJS mismatches for the\nReactDocgenTypeScriptPlugin symbol.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/presets/react-webpack/src/framework-preset-react-docs.test.ts",
+          "line_number": 5,
+          "start_line": 3,
+          "commit_sha": "fc87a01607672cb7953b6555d98b5002eeae507e",
+          "created_at": "2026-01-09T16:19:36Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a concrete import style mismatch between the test file (default import) and runtime code (named import), and provides a specific diff showing exactly what changes to make."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

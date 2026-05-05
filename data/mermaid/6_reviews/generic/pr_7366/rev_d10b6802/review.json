@@ -1,0 +1,116 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/stateEnd.ts",
+      "line_number": 38,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Copy-paste bug: `node.width = 14` should be `node.height = 14`. When both `node.width` and `node.height` are falsy, this block runs and silently sets `node.width` twice while leaving `node.height` unset (zero/undefined). Downstream, `updateNodeBounds` and the height-dependent layout calculations will receive an incorrect value. The exact same bug exists in `stateStart.ts` at line 34.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/stateStart.ts",
+      "line_number": 34,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Same copy-paste bug as in `stateEnd.ts`: `node.width = 14` should be `node.height = 14`. When `node.height` is falsy, this leaves it uninitialized while `node.width` gets set to 14 a second time (it was already set in the `!node.width` block above).",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/markers.js",
+      "line_number": 371,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `refX` of the shared `barb` marker is changed from `19` to `14`, but the PR description explicitly states: *\"The shared `barb` marker is unchanged (still `refX: 19`) so other diagram types are not affected.\"* The arrowhead path `M 19,7 L9,13 L14,7 L9,1 Z` places its tip at x=19. Changing `refX` to 14 shifts the line's attachment point to the mid-body of the arrowhead rather than its tip, producing a visual overshoot on all diagrams (e.g. flowcharts) that use `barb`. If this change is intentional for barb, it needs to be documented and its effect on other diagram types verified.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/markers.js",
+      "line_number": 383,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`barbNeo` reads `archEdgeArrowColor` from `themeVariables` to colorize the margin-variant arrowhead. `archEdgeArrowColor` is a semantic variable belonging to architecture diagrams. The PR description says: *\"`barbNeo` uses `transitionColor` from theme variables (not `archEdgeArrowColor`) so state diagrams use the correct semantic color.\"* The implementation contradicts the stated design decision. Using the wrong color variable means the arrowhead color will diverge from the transition line color on themes that set these values differently.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/markers.js",
+      "line_number": 403,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Duplicate `.attr('markerUnits', ...)` calls: line 403 sets `'strokeWidth'` and line 404 immediately overwrites it with `'userSpaceOnUse'`. The `strokeWidth` assignment is dead code and `strokeWidth` semantics are completely lost. This is likely a copy-paste artifact from the first `barbNeo` marker block. Decide which unit system is correct and remove the dead line.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/stateEnd.ts",
+      "line_number": 84,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The drop-shadow guard uses `theme?.includes('redux')`, which hardcodes theme names. The PR description explicitly states this was replaced with a `nodeShadow` theme variable: *\"Drop-shadow is driven by a `nodeShadow` theme variable instead of `theme?.includes('redux')`, so shared shapes stay theme-agnostic.\"* The implementation contradicts the design decision. If a future theme wants to opt in to the drop-shadow, it cannot do so without touching this source file. The same issue exists in `stateStart.ts` at line 65.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/stateStart.ts",
+      "line_number": 65,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Same hardcoded `theme?.includes('redux')` check for the drop-shadow as in `stateEnd.ts` line 84. See that comment \u2014 both files should use the `nodeShadow` theme variable as described in the PR design decisions.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/markers.js",
+      "line_number": 262,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`// What!!!??` is a debug/confusion comment that should not be merged into production. It should be replaced with a clear explanation of why `refY` is 5 here (e.g. \"half of the 10-unit viewBox height, centering the circle vertically\").",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/stateStart.ts",
+      "line_number": 47,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "A new `// @ts-ignore TODO: Fix typings` suppresses a type error on `shapeSvg.insert(() => roughNode)`. The comment gives no indication of *what* the type error is or *why* it is safe to ignore it. A future reader cannot tell whether this is the same issue as the pre-existing `// @ts-ignore` on line 44 or a new one introduced by changing `14` to `node.width`. Please add a brief explanation (e.g. `// roughjs return type is not SVGElement but is compatible at runtime`).",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/stateStart.ts",
+      "line_number": 15,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The comment says *\"subtract the padding from them as labelHelper does not take padding into account\"* but the code does nothing of the sort \u2014 it only clamps values to a minimum of 14. No padding is subtracted anywhere in the block. The same misleading comment appears in `stateEnd.ts` at line 18. The comments should be corrected to describe what the code actually does (e.g. \"Ensure minimum size of 14px for the state circle\").",
+      "index": 9
+    },
+    {
+      "file_path": "cypress/integration/rendering/stateDiagram-neo.spec.js",
+      "line_number": 113,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`imgSnapshotTest('info', ...)` tests the `info` diagram type inside a state-diagram-specific neo spec file. This test has nothing to do with state diagrams or the neo look and should live in an existing `info` diagram spec (or be removed). Its presence here is confusing and makes it harder to understand what is actually being validated.",
+      "index": 10
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/markers.js",
+      "line_number": 185,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "New `-pointEnd-margin`, `-pointStart-margin`, `-circleEnd-margin`, `-circleStart-margin`, `-crossEnd-margin`, and `-crossStart-margin` variants are added to the `point`, `circle`, and `cross` marker functions. None of these variants appear to be used anywhere in this PR's state diagram rendering pipeline \u2014 only `barbNeo` (and its `-barbEnd-margin` variant) is used. If these are not consumed by any renderer, they are dead code. If they are intended for a future feature, they should land in that PR with tests, not here.",
+      "index": 11
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The PR description and the actual implementation disagree on three independently important design decisions: (1) `barb.refX` is stated as unchanged at 19 but is changed to 14; (2) drop-shadow is stated to be driven by a `nodeShadow` theme variable but still uses `theme?.includes('redux')`; (3) `barbNeo` is stated to use `transitionColor` but uses `archEdgeArrowColor`. A PR where the description does not match the diff is a significant review risk \u2014 approvers may accept the description rather than the code. Each discrepancy should be resolved by either correcting the code to match the description or updating the description to reflect the actual change.",
+      "index": 12
+    },
+    {
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "The nested `looks.forEach` \u00d7 `themes.forEach` \u00d7 `stateFeatureSets.forEach` in the Cypress spec, combined with the 14+ additional `it` blocks per theme/look combination, generates roughly 2 \u00d7 4 \u00d7 (5 + 14) = **152 snapshot tests** in a single file. Each snapshot test renders and diffs an image. This will substantially increase CI time. Consider whether full cross-product coverage is necessary, or whether a smaller representative matrix (e.g. one neo-specific theme, one classic theme) would still give meaningful regression coverage.",
+      "index": 13
+    }
+  ],
+  "cost_usd": 0.80888815,
+  "duration_seconds": 512.3527481555939
+}

@@ -1,0 +1,410 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3986,
+  "title": "Deprecate `fixcm=True` in `Langevin` in favor of `FixCom` to get correct distributions both for positions and momenta",
+  "body": "(EDIT: 2026-02-22)\n\n# Summary\n\nThis MR solves #1871 by ~using `FixCom` internally~ deprecating `fixcm=True` in `Langevin` in favor of asking users to set `FixCom` by themselves explicitly.\n\ncloses #1871\n\n# Details\n\n~Instead of shifting and scaling `rnd_pos` and `rnd_vel`, the present MR attaches internally `FixCom` before the updates of positions/momenta and then removes it.~\n\n~This is done at every MD step. This might look ugly. It is, however, necessary not to just attach `FixCom` to `atoms` in e.g. `__init__` and leave it, because:~\n\n~1. Except inside `Langevin`, we do not want it to affect e.g. several `Atoms` methods (`set_positions()`, `get_forces()`, `get_temperature()`, etc.), unless users explicitly attach `FixCom` beforehand by themselves.~\n\n~2. After the instantization of `Langevin`, it is possible that users do something they want using the above `Atoms` methods before `run`.~\n\n~The approach in the present MR should be safe even when users set `FixCom` beforehand while with `fixcm=True` (although it is not particularly encouraged). This will just do redundant operations to fix the COM position and velocity.~\n\n~There is a potential conflict with the internal `FixCom` and the other user-attached constraints. This is however the issue not specifically for `Langevin` but a present general restriction of ASE (cf. #1836). I therefore think this should be addressed in a separate MR.~\n\n~The present MR seemingly reproduces #1285 when `fixcm=True`. I now think this is \"as expected\", because, without `FixCom` attached, `atoms.get_temeprature()` cannot know if `Langevin` has run with or without fixing the COM and therefore cannot know how much the DOF to be reduced.\nFor this, it is still recommended to use `fixcm=False` together with `FixCom` explicitly attached by the users.\nTo make this clear for users, the docstring is updated as follows.~\n\n(EDIT: 2026-02-22) Figure removed to avoid confusion.\n\n(EDIT: 2026-02-22) Instead of the above, the MR now suggests simply deprecating `fixcm=True` (as the first step, raising `UserWarning`). The final goal is to remove `fixcm` entirely from `Langevin`. For this, several deprecation steps will be taken. (1) Asking users to set `fixcm=False`. (2) `fixcm=False` will be the default and raise an error for `fixcm=True`. (3) Raise warning when `fixcm` is used. (4) Complete removal of `fixcm`.\n\nTwo tests are substantially added or modified, in order not to reproduce the issues reported in #1871 in future anymore (hopefully).\n\n- `test_nvt_npt.py`: Most of the changes are just refactoring. In addition, it also tests if the standard deviation of instant temperatures agrees with the one expected from the corresponding gamma distribution.\n\n- `test_position_distribution.py` checks if the distance distribution of a Morse potential in NVT is reproduced, by comparing the the probability distribution functions based on the KL divergence. While it is so far only for `Langevin`, in principle we can test also other NVT thermostats.\n\n@askhl May I ask your review? Also, feedbacks from users/developers are very much appreciated, particularly those in #1871, @timduignan, @AndrewRosen, @thomasloux, @tgmaxson, @schiotz, @drFaustroll\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [x] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [x] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [x] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [x] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "yuzie007",
+  "merged_at": "2026-02-26T02:12:28.013Z",
+  "base_ref": "master",
+  "merge_commit_sha": "57938197cb2e2d7045833193df8416f6317dfe9b",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3097428614",
+          "author": "schiotz",
+          "body": "Before we merge this, I would like to see how it interacts with Asap.  I suspect it may require some changes in Asap, and perhaps that requires minor changes here as well.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-19T11:53:55.481Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "low",
+          "label_reasoning": "General integration/compatibility concern about how the change interacts with external dependency (Asap). No specific code category fits well; closest is structural/architectural impact."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests that Asap interaction be tested before merging, implying potential code changes may be needed."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3097534058",
+          "author": "askhl",
+          "body": "I'm not enormously happy that we modify the constraints as we go along, but I suppose it'll work so okay :sweat_smile: .\n\nWe should however do try/finally here so the popping is guaranteed also if there's an error (which someone might catch).",
+          "file_path": "ase/md/langevin.py",
+          "line_number": 208,
+          "commit_sha": "f0fa82251c680a8d3fcd424256f0010e80773f42",
+          "base_sha": "7985947b7a4b953cfdd2708e3a5037c686032211",
+          "created_at": "2026-02-19T12:27:54.908Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The reviewer identifies a missing try/finally block, which means the constraint popping is not guaranteed to occur if an exception is raised \u2014 a correctness/reliability issue in the control flow."
+        },
+        {
+          "id": "3098290177",
+          "author": "askhl",
+          "body": "I think this is how we should do it:\n\n * If `self.fix_com` and atoms.constraints is *not* empty in the beginning, raise an error\n * If at the end, `atoms.constraints` is anything except a one-element list containing our own constraint, raise an error\n\nThen it should be safe.",
+          "file_path": "ase/md/langevin.py",
+          "line_number": 208,
+          "commit_sha": "f0fa82251c680a8d3fcd424256f0010e80773f42",
+          "base_sha": "7985947b7a4b953cfdd2708e3a5037c686032211",
+          "created_at": "2026-02-19T15:52:47.960Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3099038212",
+          "author": "tgmaxson",
+          "body": "@askhl Can't there be other constraints involved?  I can imagine a Hookean constraint for example wanting to be applied during MD or something to steer MD.  That corner case should be handled.\n\n- If `self.fix_com` is True and `atoms.constraints` already contains the `FixCOM` constraint, raise an error.\n- If `self.fix_com` is True and `atoms.constraints` does not contain the `FixCOM` constraint, we apply it temporarily during the MD steps.  The constraint can be held internally on the Langevin class.\n- If `self.fix_com` is None (default) and `atoms.constraints` already contains the `FixCOM` constraint, the user created the `FixCOM` manually.\n- If `self.fix_com` is False and `atoms.constraints` already contains the `FixCOM` constraint, the user created the `FixCOM` manually and we should raise a warning to make sure they get the intended behavior.",
+          "file_path": "ase/md/langevin.py",
+          "line_number": 208,
+          "commit_sha": "f0fa82251c680a8d3fcd424256f0010e80773f42",
+          "base_sha": "7985947b7a4b953cfdd2708e3a5037c686032211",
+          "created_at": "2026-02-19T20:07:43.737Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3099060416",
+          "author": "askhl",
+          "body": "We don't know whether the fixcom constraint in combination with other constraints produces the right thermodynamics, or even whether different kinds of constraints work together at all, thermodynamics or not.\n\nWe should not try to do something automatically which we suspect to produce wrong results.\n\nThe user can set up the constraints manually (and bear the burden of testing them) if it's going to be advanced.",
+          "file_path": "ase/md/langevin.py",
+          "line_number": 208,
+          "commit_sha": "f0fa82251c680a8d3fcd424256f0010e80773f42",
+          "base_sha": "7985947b7a4b953cfdd2708e3a5037c686032211",
+          "created_at": "2026-02-19T20:19:39.140Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3099098760",
+          "author": "tgmaxson",
+          "body": "I think I can agree with that.  It would be nice if we somehow had a master list of constraints which do / dont work with other constraints to throw this warning for non-expert users which might accidently manually construct this though.\n\nI then suggest that a secondary flag be added to let constraints work with the fix_com in langevin for expert users that disables the error.",
+          "file_path": "ase/md/langevin.py",
+          "line_number": 208,
+          "commit_sha": "f0fa82251c680a8d3fcd424256f0010e80773f42",
+          "base_sha": "7985947b7a4b953cfdd2708e3a5037c686032211",
+          "created_at": "2026-02-19T20:40:34.064Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3099160870",
+          "author": "askhl",
+          "body": "The way to constrain things in ASE (for better or worse) is to set up the constraints and attach them to the Atoms.\n\nThen Langevin (for some reason) added a shortcut to make that slightly easier in one case.  But then it turned out to produce wrong results.  So we could either remove the shortcut, or fix it.  But I don't think we should be adding *more keywords* inside Langevin to for additional control over constraints, because that does not allow doing anything that cannot already be done with the Atoms in the standard way.  We don't have a reason to add these same or similar keywords to NEB, optimizer, Dimer method, minima hopping, etc., where one might also want to constrain things.  We'd accumulate a lot of keywords with code and special cases that we need to test, document, and maintain, all to solve a problem that the user can solve before creating those objects.",
+          "file_path": "ase/md/langevin.py",
+          "line_number": 208,
+          "commit_sha": "f0fa82251c680a8d3fcd424256f0010e80773f42",
+          "base_sha": "7985947b7a4b953cfdd2708e3a5037c686032211",
+          "created_at": "2026-02-19T21:13:16.326Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3099352144",
+          "author": "tgmaxson",
+          "body": "Then honestly, I am somewhat in the belief that this option of Langevin should just raise an error and do nothing and report to the user what the right approach actually would be, as it should be immediately deprecated.",
+          "file_path": "ase/md/langevin.py",
+          "line_number": 208,
+          "commit_sha": "f0fa82251c680a8d3fcd424256f0010e80773f42",
+          "base_sha": "7985947b7a4b953cfdd2708e3a5037c686032211",
+          "created_at": "2026-02-19T22:52:43.252Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly requests adding try/finally to guarantee the popping occurs even if an error is raised."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3100169055",
+          "author": "schiotz",
+          "body": "I think I am tempted to agree with @tgmaxson here: Let's follow the fundamental principle of engineering: KISS (\"Keep it simple, stupid\").  Lets remove the fixcm option.\n\nUnfortunately, this breaks backwards compatibility in a nasty way, since it silently will stop fixing the center-of-mass per default, and that is bad.\n\nSo let's remove this option in a disruptive way: In this version of ASE (3.28.0b1 **and** the final 3.28.0) we keep the default ``fixcm=True``, but if Langevin is called with the default it aborts with an error like this\n\n```\nThe fixcm option of Langevin is broken, do not use it (it is on per default)!\n* If you want to keep the center of mass fixed, use the FixCom constraint\n  on the atoms, and specify fixcm=None when you call Langevin.\n* If you want the center of mass to drift thermally, just specify fixcm=False.\n```\n\nIn a later version we turn fixcm off per default.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-20T08:38:17.670Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment is about API design and deprecation strategy for the fixcm option \u2014 a structural/architectural concern about how to handle backwards compatibility and guide users to the correct approach."
+        },
+        {
+          "id": "3100622628",
+          "author": "askhl",
+          "body": "I would be okay with a noisy error forcing everyone to update the code, since we are not really breaking things when those things were (very unfortunately) already broken.\n\nOne issue brought up by @schiotz is that if we attach a temporary constraint, then someone afterwards call `atoms.get_temperature()` and it will be subtly wrong because the constraint is no longer there.  (It would *always* have been subtly wrong since fixcm wasn't based on an actual constraint).\n\nSo the \"most correct\" solution seems to be:\n\n * Add a warning to force everyone to set fixcm=False explicitly (with deprecation period)\n * Then force everyone to *not* set fixcm and remove the parameter (another deprecation period)\n\nThe \"least painful\" solution is probably:\n\n * Deprecate the parameter immediately and change the default behaviour willy-nilly so it does not attempt to constrain anything.  After all, people doing MD normally have a thousand atoms, so the error is not huge (which is why these errors can hide).  We'd still list this clearly as a breaking change.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-20T11:16:32.845Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3100853690",
+          "author": "yuzie007",
+          "body": "Thank you @askhl, @schiotz, @tgmaxson for the discussion!\n\n> One issue brought up by @schiotz is that if we attach a temporary constraint, then someone afterwards call atoms.get_temperature() and it will be subtly wrong because the constraint is no longer there. (It would always have been subtly wrong since fixcm wasn't based on an actual constraint).\n\nYes, it will seemingly reproduce the issue #1285. So, to have a correct temperature from `get_temperature()` we need anyway `fixcm=False` either with or without `FixCom`.\n\nReading the discussion above, it looks we are more or less going to remove `fixcm` entirely (either with or without deprecation periods). I also agree on this, and I also think this is the simplest way, both for ASE and ASAP.\n\nRegarding \"most correct\" or \"least painful\", I am in principle fine with both, but I think the \"most correct\" solution will be much less surprising for users (I mean, users have chance to know how to fix and get the correct behavior). I can take care of the deprecation period for every ASE release until complete `fixcm` removal. I will update the MR in this afternoon.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-20T12:34:37.247Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Proposes a specific alternative approach: remove fixcm option with a disruptive deprecation strategy, including exact error message wording."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3105101169",
+          "author": "schiotz",
+          "body": "Just a nitpick: The variable ``_`` is normally used to signify \"this return value will not be used\".  But here you actually use it.  What about calling it ``attrib`` or just ``a`` instead.\n\nI suppose the change was because the line was too long.",
+          "file_path": "ase/test/md/test_langevin_asapcompat.py",
+          "line_number": 32,
+          "commit_sha": "808fd546c0ff3d4ac77d731eb65095155d3cbed8",
+          "base_sha": "7985947b7a4b953cfdd2708e3a5037c686032211",
+          "created_at": "2026-02-23T11:25:55.346Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "high",
+          "label_reasoning": "The reviewer explicitly calls out that the variable name `_` is conventionally used for unused values, but here the value is actually used \u2014 a naming convention issue."
+        },
+        {
+          "id": "3106983968",
+          "author": "yuzie007",
+          "body": "Thank you @schiotz for the review! The change is indeed to make them in one line, and I agree on not using `_` but something else.",
+          "file_path": "ase/test/md/test_langevin_asapcompat.py",
+          "line_number": 32,
+          "commit_sha": "808fd546c0ff3d4ac77d731eb65095155d3cbed8",
+          "base_sha": "7985947b7a4b953cfdd2708e3a5037c686032211",
+          "created_at": "2026-02-23T22:47:57.590Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests renaming the variable `_` to `attrib` or `a` since its value is actually used."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3106225139",
+          "author": "askhl",
+          "body": "Maybe we should clarify this since the error is small when there are many atoms, as opposed to \"all results are garbage\"",
+          "file_path": "ase/md/langevin.py",
+          "line_number": 58,
+          "commit_sha": "808fd546c0ff3d4ac77d731eb65095155d3cbed8",
+          "base_sha": "7985947b7a4b953cfdd2708e3a5037c686032211",
+          "created_at": "2026-02-23T17:26:25.274Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "high",
+          "label_reasoning": "The reviewer suggests clarifying a comment or message to better describe the nature and magnitude of the error, indicating the existing description is misleading or insufficiently precise."
+        },
+        {
+          "id": "3106983981",
+          "author": "yuzie007",
+          "body": "Thank you @askhl, I fully agree with you! I have now revised the description to be more precise.",
+          "file_path": "ase/md/langevin.py",
+          "line_number": 58,
+          "commit_sha": "808fd546c0ff3d4ac77d731eb65095155d3cbed8",
+          "base_sha": "7985947b7a4b953cfdd2708e3a5037c686032211",
+          "created_at": "2026-02-23T22:47:58.157Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests clarifying the error/warning message to better describe the actual impact (small error with many atoms vs. garbage results)."
+    }
+  ],
+  "review_thread_count": 11,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3103305432",
+            "author": "yuzie007",
+            "body": "I have updated the MR to simply deprecate `fixcm=True`. The MR title and the description have revised.\n\n@askhl @schiotz @tgmaxson Could you have a look again? Is this the way to go, or at least closer to it?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-22T00:27:35.301Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3106983988",
+            "author": "yuzie007",
+            "body": "Thank you @schiotz and @askhl for the suggestions! Following them, I have updated the MR.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-23T22:47:58.637Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3105104550",
+            "author": "schiotz",
+            "body": "> Is this the way to go, or at least closer to it?\n\n@yuzie007: I think this is exactly the way to go.  Well done, I'll begin adapting Asap to reflect this.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-23T11:27:11.534Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment and approval of the approach with no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3111087059",
+            "author": "timduignan",
+            "body": "Thanks for fixing! I agree with this approach.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-25T06:29:39.576Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment and agreement, no code change suggested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3114326424",
+            "author": "askhl",
+            "body": "Fantastic, thanks a lot @yuzie007!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-26T02:12:16.703Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure praise/thanks, no code change suggested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3115040079",
+            "author": "schiotz",
+            "body": "Yes, thanks a lot to all the contributors to this one!  Great to finally get it done right.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-26T08:27:25.593Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment and thanks, no code change suggested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 11,
+    "stage1_kept": 9,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 2,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 4,
+    "stage3_cost_usd": 0.021233250000000002
+  }
+}

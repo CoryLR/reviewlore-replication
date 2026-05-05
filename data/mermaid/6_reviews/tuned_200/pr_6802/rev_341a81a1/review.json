@@ -1,0 +1,266 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/config.type.ts",
+      "line_number": 1068,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`config.type.ts` is auto-generated from `config.schema.yaml` and carries a 'DO NOT MODIFY IT BY HAND' header comment. The `layoutAlgorithm` field was added to the YAML schema correctly, but the TypeScript file must be regenerated via the project's build script rather than edited manually. Manual edits here will be silently overwritten on the next schema compilation.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/cose-bilkent/index.ts",
+      "line_number": 25,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`index.ts` only re-exports `render`. However `layout.test.ts` imports `layout` and `validateLayoutData` directly from `./index.js`. Neither of these names exists in this file \u2014 the actual exports from `layout.ts` are `executeCoseBilkentLayout` and `validateLayoutData`. The test will fail at import time unless `index.ts` re-exports both, or the test is changed to import from `./layout.js` directly.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/cose-bilkent/layout.test.ts",
+      "line_number": 170,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The test asserts `expect(() => validateLayoutData(invalidData)).toThrow('Root node is required')` when `rootNode` is set to `null`. However, the `validateLayoutData` implementation in `layout.ts` only checks for `data`, `data.config`, `data.nodes`, and `data.edges` \u2014 it has no `rootNode` guard. This test will always fail as written.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/preprocess.ts",
+      "line_number": 31,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This silently changes the default layout for **every existing mindmap** that has no explicit `config.layout` to `tidy-tree`. All previously rendered mindmaps relied on the old cytoscape/cose-bilkent layout, so their visual output will change without any user action. This constitutes a breaking change. At minimum this should be documented prominently and guarded by a feature flag or versioned default.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/intersect/intersect-line.js",
+      "line_number": 44,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The second non-intersection check was changed from `if (r1 !== 0 && r2 !== 0 && sameSign(r1, r2))` to `if (Math.abs(r1) < epsilon && Math.abs(r2) < epsilon && sameSign(r1, r2))`. The original means 'both points clearly on the same side \u2192 don't intersect.' The new version means 'both near-zero \u2192 don't intersect,' which is the *opposite* semantic (near-collinear case). For the common case where both r1 and r2 are clearly positive (e.g., 10 and 20), this check now passes, so line segments that shouldn't intersect will be reported as intersecting. This will corrupt edge routing for many shapes.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.getData.test.ts",
+      "line_number": 53,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The test looks for nodes by `n.id === '0'` and edges by `start: '0', end: '1'`. But `getData()` in `mindmapDb.ts` prefixes every ID with `'node_'` (e.g., `id: 'node_' + node.id.toString()`). All node-lookup and edge-relationship assertions in this file will fail because the actual IDs are `'node_0'`, `'node_1'`, etc.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/cose-bilkent/render.ts",
+      "line_number": 52,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`Promise.all` is used to insert nodes in parallel. The project explicitly prohibits this pattern in rendering loops: diagram DB modules rely on module-level mutable state, so concurrent renders corrupt each other's output (tracked in issue #3577). All node insertions must be sequential `await` calls.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/tidy-tree/render.ts",
+      "line_number": 83,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Same `Promise.all` issue as in `cose-bilkent/render.ts`. Node insertions must be sequential `await` calls to avoid mutable state corruption across concurrent renders.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 49,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`preferredLayout` is computed from `conf?.layoutAlgorithm ?? layout ?? 'cose-bilkent'` but is never used to set `data4Layout.layoutAlgorithm`. That property is set two lines earlier from `getRegisteredLayoutAlgorithm(layout, ...)`, which uses only the global `layout` setting and ignores the mindmap-specific `conf.layoutAlgorithm`. The mindmap-specific layout config property is effectively dead.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/tidy-tree/layout.ts",
+      "line_number": 23,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`intersectionShift` is a module-level `let` variable that is reassigned inside `executeTidyTreeLayout`. Per project conventions, mutable module-level state in functional-export modules must use the `ImperativeState` utility. As written this also makes the module non-reentrant: concurrent calls would overwrite each other's value.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/tidy-tree/layout.ts",
+      "line_number": 56,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`const _maxChildren = Math.max(...)` is computed but never used; the block that referenced it is commented out. Remove this dead computation.",
+      "index": 10
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/tidy-tree/layout.ts",
+      "line_number": 63,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Commented-out code block (`// if (maxChildren > 5) { ... }`) should be removed. Git history preserves prior versions.",
+      "index": 11
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 14,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`drawNode` is imported from `./svgDraw.js` but is only used inside `_drawNodes`, which is itself never called. Both `_drawNodes` and `_updateNodeDimensions` are defined but unreachable. Remove this dead code and the associated import.",
+      "index": 12
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.ts",
+      "line_number": 349,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`diagramId: 'mindmap-' + Date.now()` is immediately overwritten by `data4Layout.diagramId = id` in the renderer. `Date.now()` is also non-monotonic and unsuitable for IDs per project guidelines. Remove this line from `getData()`.",
+      "index": 13
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/edges.js",
+      "line_number": 435,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The commented-out `// lineData = fixCorners(lineData);` line should be deleted. If `fixCorners` is intentionally replaced, remove the stale comment.",
+      "index": 14
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/intersect/intersect-line.js",
+      "line_number": 4,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The entire function body is wrapped in an unnecessary extra `{}` block, adding a spurious indentation level. Remove the wrapper braces.",
+      "index": 15
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/intersect/intersect-line.js",
+      "line_number": 71,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "A large commented-out `console.log` block is left in the committed code. Remove it before merging.",
+      "index": 16
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/tidy-tree/render.ts",
+      "line_number": 168,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Commented-out `points` alternative and `// debugger;` line should be removed.",
+      "index": 17
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/cose-bilkent/render.ts",
+      "line_number": 142,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`log.debug('APA01 positionedEdge', ...)` is a development tracing statement. All `APA01`-prefixed log calls throughout this PR should be removed before merge.",
+      "index": 18
+    },
+    {
+      "file_path": "packages/mermaid-layout-elk/src/render.ts",
+      "line_number": 64,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Multiple `log.debug('APA01 ...')` statements were added throughout this file for development tracing. These should be removed. Per project convention, only meaningful diagnostic logs should remain, and development debug prints should not be committed.",
+      "index": 19
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/question.ts",
+      "line_number": 87,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`// @ts-ignore TODO fix this (KNSV)` should use `// @ts-expect-error: <descriptive reason>` instead, targeting only the specific line that needs suppression. Blanket `@ts-ignore` silently suppresses all type errors on that line and hides future regressions.",
+      "index": 20
+    },
+    {
+      "file_path": ".changeset/hungry-guests-drive.md",
+      "line_number": 5,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The changeset describes 'fix: Updated offset calculations for diamond shape when handling intersections' with a `patch` bump, but the actual PR adds multiple new layout algorithms, new shape renderers, and significant renderer refactoring. This constitutes a feature (`minor` bump) and the description should summarize the actual changes. Inaccurate changesets produce misleading CHANGELOGs.",
+      "index": 21
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/render.ts",
+      "line_number": 52,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The ELK loader uses a direct relative path: `import('../../../mermaid-layout-elk/src/render.js')`. This path bypasses the package's published exports and couples the core package to the internal directory layout of a sibling workspace package. If the ELK package structure changes, this silently breaks. Use the package name `@mermaid-js/layout-elk` (or its workspace alias) instead, consistent with how external packages are normally consumed.",
+      "index": 22
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/cose-bilkent/render.ts",
+      "line_number": 1,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Types are imported from `'mermaid'` (the package itself) rather than from relative paths like `../../types.js`. Importing from the package root inside the package creates a circular dependency risk and differs from the pattern used by all other layout modules (dagre, ELK) which use relative imports.",
+      "index": 23
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/tidy-tree/render.ts",
+      "line_number": 1,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Same circular import issue: types are imported from `'mermaid'` instead of relative paths.",
+      "index": 24
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.ts",
+      "line_number": 204,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `id` field is set to `'node_' + node.id.toString()` but the `nodeId` field is also set to `node.nodeId` (which is the string id). Using two different id formats on the same object (`id` with `node_` prefix, `nodeId` without) creates confusion and causes the test assertions that look up nodes by `id === '0'` to fail.",
+      "index": 25
+    },
+    {
+      "file_path": "cypress/platform/knsv2.html",
+      "line_number": 108,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "All newly added `<pre>` elements use `id=\"diagram4\"`, which duplicates an ID already present in the file. HTML IDs must be unique per document. Multiple elements with the same ID cause unpredictable behavior in JavaScript queries and accessibility tools.",
+      "index": 26
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "Three development scratch files were committed directly to the repository: `instructions.md` (AI prompt for implementing the algorithm), `test-unified-rendering.html` (ad-hoc test page in the repo root), and `packages/mermaid/src/diagrams/mindmap/test.mmd` (development fixture). None of these belong in the repository. Per project conventions, ephemeral dev demos go in `demos/dev/` and must not be committed to the main tree. The `.instructions/` pattern is already in `.gitignore` \u2014 `instructions.md` at the root is not covered.",
+      "index": 27
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "`packages/mermaid/src/rendering-util/createGraph.ts` is a new file that appears to be unused \u2014 it is not imported anywhere visible in the diff or in the existing codebase. If it is scaffolding for future work, add a `// TODO:` comment explaining its intended use; otherwise delete it.",
+      "index": 28
+    },
+    {
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `knsv2.html` platform file grew by over 200 lines of ad-hoc test diagrams, many duplicating the same mindmap across all four layouts. These additions inflate the file significantly and mix development experiments with the platform test suite. Only diagrams needed to cover specific rendering cases should live here; consider moving exhaustive layout comparisons to the dedicated `cypress/platform/mindmap-layouts.html` file added in this PR.",
+      "index": 29
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `chokidar` dependency was downgraded from `^4.0.3` to `^3.6.0` in both `package.json` files with no explanation. Chokidar 4 dropped the `readdirp` dependency intentionally. This downgrade reintroduces it and may conflict with other packages that already resolved to v4. The rationale should be documented in the PR or a comment, and the lockfile should be fully regenerated (not manually patched).",
+      "index": 30
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The four new Cypress test cases in `mindmap.spec.ts` are all titled with 'Bang and cloud shape with X layout' but their diagram content doesn't actually include bang or cloud nodes \u2014 it's the standard origins/research/tools mindmap. Test titles should accurately describe what is being tested so failures are immediately informative.",
+      "index": 31
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `pnpm-lock.yaml` snapshot adds a `packages/mermaid/src/vitepress` workspace entry with a full dependency tree. There is no corresponding `package.json` in the diff for this path, suggesting the lockfile entry is stale or belongs to an unrelated branch. This should be investigated and cleaned up.",
+      "index": 32
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `mindmapDb.ts` `getData()` function returns an object with non-standard `LayoutData` properties (`rootNode`, `markers`, `direction`, `nodeSpacing`, `rankSpacing`, `shapes`, `type`, `diagramId`) via the index signature. These should be declared as explicit optional fields on the `LayoutData` interface (or a `MindmapLayoutData` subtype) rather than relying on the catch-all `[key: string]: any` to avoid loss of type safety and accidental property collisions.",
+      "index": 33
+    }
+  ],
+  "cost_usd": 1.5353243999999997,
+  "duration_seconds": 933.3044559955597
+}

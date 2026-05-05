@@ -1,0 +1,30 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/trace-changed.ts",
+      "line_number": 14,
+      "dimension": "Performance Issue",
+      "importance": "major",
+      "comment": "The fallback linear scan (`for...of moduleGraph.entries()`) will be the *common* case on Windows, not an edge case. `buildModuleGraph` (in `builder-vite/src/utils/build-module-graph.ts`) uses raw Vite paths as map keys without normalizing them, so on Windows those keys contain backslashes. The caller always passes a forward-slash normalized path, so `moduleGraph.get(normalizedPath)` (line 9) will always miss on Windows, and every call falls through to this O(n) scan over the full module graph.\n\nFor large projects with thousands of modules, this runs once per changed file per module-graph update \u2014 a meaningful regression on Windows relative to the previous O(1) lookup.\n\nThe more correct fix is to normalize keys when the graph is built in `buildModuleGraph.ts`, so that all downstream `Map.get()` calls remain O(1) and `ModuleNode.file` values are already normalized (removing the need for `normalizePath(importer.file)` inside the BFS as well).",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.ts",
+      "line_number": 49,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The commented-out debug line `// logger.info(`Story ${entry.id} absolute path: ${absolutePath}`);` that existed in the original file was silently removed as part of this change. Project convention is to preserve existing comments when modifying a source file rather than dropping them without explanation.",
+      "index": 1
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "No test cases using Windows-style backslash paths (e.g., `C:\\\\repo\\\\src\\\\Button.tsx`) were added to `trace-changed.test.ts` or `ChangeDetectionService.test.ts`. Since the stated purpose of this PR is Windows support, the new code paths in `getModuleNodesByNormalizedPath` and the `normalizePath(importer.file)` call inside the BFS are not exercised by the test suite. At minimum, a test case for `findAffectedStoryFiles` with a `moduleGraph` whose keys and `ModuleNode.file` values use backslashes, and a changed-file argument that also uses backslashes, would validate the fix and serve as a regression guard.",
+      "index": 2
+    }
+  ],
+  "cost_usd": 0.42474205,
+  "duration_seconds": 196.79148292541504
+}

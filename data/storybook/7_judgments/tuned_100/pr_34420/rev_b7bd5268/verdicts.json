@@ -1,0 +1,24 @@
+{
+  "verdicts": [
+    {
+      "human_comment_index": 0,
+      "human_file": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "human_line": 114,
+      "human_summary": "Race condition: onGitStateChange() fire-and-forgets ensureWatchers(), so if a consumer unsubscribes before setupWatchers() finishes, cleanup runs before watchers exist and in-flight setup can still create watchers afterward, leaking open FSWatchers with zero callbacks.",
+      "verdict": "no_match",
+      "matched_ai_comment_index": null,
+      "reasoning": "No AI comment addresses this specific concurrency race condition between unsubscribe and in-flight watcher setup. AI Comment 6 is about the caller (ChangeDetectionService) not capturing the unsubscribe return value\u2014a different concern about a different file, and also appears factually incorrect since line 154 does capture it. No other AI comment discusses the race between cleanup and the fire-and-forget ensureWatchers call."
+    },
+    {
+      "human_comment_index": 1,
+      "human_file": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "human_line": 135,
+      "human_summary": "The while loop in ensureWatchers() becomes an unbounded busy loop if setupWatchers() finishes without installing any watchers (e.g., git unavailable, .git missing), causing infinite background git/fs work instead of a graceful no-op.",
+      "verdict": "no_match",
+      "matched_ai_comment_index": null,
+      "reasoning": "AI Comment 2 is the closest match, addressing unbounded retries in scheduleWatcherRebuild (line 252), but it targets a different code path with a different mechanism (timer-based exponential backoff retries triggered by watcher errors). The human comment is specifically about the ensureWatchers() while loop creating a tight unbounded retry cycle when setup consistently installs zero watchers. Different code location, different trigger condition, and different severity (tight async loop vs. capped timer retries)."
+    }
+  ],
+  "cost_usd": 0.25604534999999995,
+  "duration_seconds": 117.75831508636475
+}

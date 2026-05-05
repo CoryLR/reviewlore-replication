@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "scripts/eval/eval.ts",
+      "line_number": 134,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Both branches of this ternary are textually identical, which makes the intent completely opaque. The branching is actually needed so TypeScript can narrow `args.model` to `ClaudeModel` vs `CodexModel` (and similarly for `effort`) to satisfy the `AgentVariant` discriminated union \u2014 but there is zero indication of this in the code. A developer will almost certainly flag this as dead code or 'clean it up' by collapsing to a single branch, reintroducing a type error. Add an explanatory comment: `// Both branches are structurally identical; the ternary exists solely to let TypeScript narrow the discriminated-union types.`",
+      "index": 0
+    },
+    {
+      "file_path": "scripts/package.json",
+      "line_number": 45,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`@anthropic-ai/claude-agent-sdk@0.2.85` declares `zod: ^4.0.0` as a peer dependency, but `scripts/package.json` currently pins `\"zod\": \"^3.25.76\"`. Zod v4 contains breaking changes (notably the import path changed to `zod/v4`). Yarn Berry will warn about the peer mismatch, and any internal use of zod by the SDK could fail at runtime if it resolves to v3. Either bump the scripts package to `zod: ^4.0.0`, or verify the SDK is zod-version-agnostic and suppress the peer warning explicitly.",
+      "index": 1
+    },
+    {
+      "file_path": "scripts/package.json",
+      "line_number": 79,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`citty` is added as a dependency but is not imported or used anywhere in the `scripts/eval/` tree (or anywhere else in the diff). Remove it, or add the file that uses it.",
+      "index": 2
+    },
+    {
+      "file_path": "scripts/eval/lib/run-trial.test.ts",
+      "line_number": 11,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Project spy-mocking convention (`.cursor/rules/spy-mocking.mdc`) requires `vi.mock('module', { spy: true })` at the top level and `vi.fn()` / `mockImplementation` calls placed inside `beforeEach` \u2014 never inside factory bodies. Lines 11, 14, 20, 28, and 31 all place `vi.fn()` (or `vi.fn().mockResolvedValue(...)`) directly in the factory. The agent modules can be imported without side effects (no API calls happen at module scope), so `{ spy: true }` is viable. Replace, for example:\n```ts\nvi.mock('./agents/claude-code', { spy: true });\n// in beforeEach:\nvi.mocked(claudeAgent.execute).mockResolvedValue({ cost: 0.42, ... });\n```",
+      "index": 3
+    },
+    {
+      "file_path": "scripts/eval/lib/agents/claude-code.ts",
+      "line_number": 16,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`variant.effort as 'low' | 'medium' | 'high' | 'max'` is a redundant cast. `ClaudeEffort` is already `'low' | 'medium' | 'high' | 'max'` (defined in `config.ts`), so TypeScript should accept the value directly. The cast introduces a maintenance risk: if `ClaudeEffort` is ever extended, this cast will silently accept values it shouldn't. Remove it and type `effort` as `ClaudeEffort`.",
+      "index": 4
+    },
+    {
+      "file_path": "scripts/eval/lib/grade.ts",
+      "line_number": 274,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`truncateEnd` reads as though it truncates the *tail* of the string, but the implementation does the opposite \u2014 `slice(-maxChars)` keeps the tail and discards the beginning. Per the project rule, for a chronological log or output buffer the tail (most-recent) is the right half to keep, so the *behaviour* is correct. But the name and doc-comment mislead every reader. Rename to `truncateStart` or `keepTail`, and update the doc to say \"Keeps the last `maxChars` characters\".",
+      "index": 5
+    },
+    {
+      "file_path": "scripts/eval/lib/grading-helpers.test.ts",
+      "line_number": 169,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`c.replace(cwd + '/', '')` hard-codes the `/` path separator. On Windows, `getComponentCandidates` returns backslash-separated absolute paths, so the replacement would silently fail and the test would pass relative paths that still contain the full absolute prefix. Use `path.relative(cwd, c)` (or `node:path`'s `relative`) instead.",
+      "index": 6
+    },
+    {
+      "file_path": "scripts/eval/lib/utils.ts",
+      "line_number": 18,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`EVAL_ROOT` is hardcoded to `resolve(REPO_ROOT, '..', 'storybook-eval')`, requiring that every developer place their results directory at exactly that path relative to the repo root. Consider reading from an environment variable \u2014 e.g. `process.env.STORYBOOK_EVAL_ROOT ?? resolve(REPO_ROOT, '..', 'storybook-eval')` \u2014 and documenting the variable in the eval README. This is especially useful in CI where the workspace layout differs.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`eval-parallel.ts` is described prominently in the PR \u2014 it is listed as half the architecture (`eval.ts` for a single run, `eval-parallel.ts` for all 8 combos), the PR description shows its exact CLI signature and live-streamed log output, yet the file is entirely absent from the diff and does not exist in the repo. Either the file should be included here, or the PR description needs to be updated to scope it as a follow-up. As-is, one half of the advertised architecture is missing.",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `prepare-trial.ts` first-run path (clone \u2192 `installDeps` \u2192 copy to cache) has no error handling between steps. If `installDeps` throws (e.g., a transient network failure), the cache is never populated and the partial trial directory is left on disk without any indication. Subsequent runs will re-clone correctly (unique trial IDs prevent collisions), but there is no diagnostic message. Consider wrapping the clone+install+cache block in try/catch to emit a clear `logger.logError` on failure explaining that the cache was not populated, so the user knows to re-run rather than wonder about stale state.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.89538365,
+  "duration_seconds": 486.9586548805237
+}

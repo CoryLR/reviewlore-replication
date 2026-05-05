@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/babel/vitest-config-helpers.ts",
+      "line_number": 185,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`getEffectiveMergeConfigCall` returns non-null for *any* `mergeConfig(...)` call regardless of whether its arguments are usable config objects. So `canUpdateVitestConfigFile('export default mergeConfig(viteConfig, \"string\")')` now returns `true`, but when `updateConfigFile` is subsequently called, `getConfigObjectFromMergeArg` resolves the string argument to `null`, `targetConfigObject` is `undefined`, and `updateConfigFile` returns `false` silently. The old `isValidVitestConfig` rejected this pattern (via `isSafeToExtendWorkspace` returning false for non-object args). The test that verified that rejection was removed without a replacement, so this regression is not caught. Consider adding a guard that at least one mergeConfig argument resolves to an ObjectExpression before returning `true`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/babel/vitest-config-helpers.ts",
+      "line_number": 159,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The old `isValidVitestConfig` called `isSafeToExtendWorkspace`, which rejected configs where `test.workspace` was set to a non-array value (e.g., a glob string like `'./vitest/projects/**'`). That guard is completely absent here. If a user has `export default defineConfig({ test: { workspace: './my-glob/**' } })`, `canUpdateVitestConfigFile` returns `true`, but the auto-update will then clobber or mismerge `test.workspace`. The PR description calls this a 'pure refactor', but this is a silent behavior change that can corrupt valid user configs.",
+      "index": 1
+    },
+    {
+      "file_path": "code/addons/vitest/src/updateVitestFile.ts",
+      "line_number": 78,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "This comment (`// isDefineConfigLike, getConfigObjectFromMergeArg, ... are imported from 'storybook/internal/babel'`) is redundant: the import declarations at the top of the file already communicate exactly this. It adds noise without providing any information a reader couldn't immediately get from the imports. Remove it.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/babel/index.ts",
+      "line_number": 19,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`isImportedDefineConfigLikeIdentifier` is a narrow internal helper that only makes sense in the context of `isDefineConfigLike`. Exporting it as part of the `storybook/internal/babel` public API leaks an implementation detail that external callers are unlikely to need directly. Consider keeping it unexported (or at least un-exported from `index.ts`) to avoid growing the public surface unnecessarily.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/babel/vitest-config-helpers.ts",
+      "line_number": 222,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The old `isWorkspaceConfigArray` validated that every element was a `StringLiteral` or `ObjectExpression`. The new check accepts any `ArrayExpression` regardless of element types, so arrays containing spread elements, computed values, or function calls will pass validation, but the actual `updateWorkspaceFile` logic may not handle those shapes. Consider re-adding `decl.elements.every(el => el !== null && (el.type === 'StringLiteral' || el.type === 'ObjectExpression'))` (and the corresponding check inside the `defineWorkspace` branch) to keep validation aligned with what the updater actually supports.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/babel/vitest-config-helpers.ts",
+      "line_number": 219,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`canUpdateVitestConfigFile` uses `resolveExpression` to follow variable references (e.g., `const config = mergeConfig(...); export default config` is accepted), but `canUpdateVitestWorkspaceFile` inspects `exportDefault.declaration` directly without resolving identifiers. So `const projects = [...]; export default projects` would return `false` from the workspace variant even though the same pattern is supported in the config variant. This asymmetry should be documented, or the workspace function should apply the same resolution if the workspace updater supports variable-aliased arrays.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The PR description says 'This is a pure refactor that moves code without changing behavior', but at least two observable behaviors changed: (1) configs whose `mergeConfig` second argument is not a resolvable object are now accepted by validation but fail silently during the actual update, and (2) the `test.workspace` non-array guard from `isSafeToExtendWorkspace` was dropped entirely. Both changes should be explicitly acknowledged, justified, and covered by tests \u2014 especially since the one test that previously exercised the non-object-arg rejection was removed without replacement.",
+      "index": 6
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The new `AddonVitestService.test.ts` additions are thorough and well-commented (including real-world project attributions like 'xmtp-js' and 'lynx-stack'). The new `vitest-config-helpers.test.ts` is similarly comprehensive. The coverage additions are a net positive for this module.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.6051329499999998,
+  "duration_seconds": 341.6947090625763
+}

@@ -1,0 +1,337 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33818,
+  "title": "React: Add react-docgen-typescript to component manifest",
+  "body": "<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\n\n<!--\n\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\n\n-->\n\n## What I did\n\nAdds `react-docgen-typescript` as an alternative docgen engine for the component manifest system, selectable via the existing `reactDocgen` config in `main.ts`. The manifest uses a **single engine** based on this config \u2014 either `react-docgen` (default) or `react-docgen-typescript`.\n\n```ts\n// main.ts \u2014 opt in to react-docgen-typescript for the manifest\ntypescript: {\n  reactDocgen: 'react-docgen-typescript',\n}\n```\n\n- Manages a singleton TS program with incremental rebuild via `previousProgram` (preserved across manifest passes so TypeScript reuses unchanged source files)\n- Updates the manifest debugger HTML page to show which engine produced results, performance tips, and a recommendation to switch to `react-docgen-typescript` when using the default `react-docgen`\n- Extracts `findTsconfigPath` to shared utils\n- Adds `react-docgen-typescript` as explicit dependency\n\n### Prop filtering\n\nRDT resolves the full type tree, which includes hundreds of inherited props from React, DOM, and CSS-in-JS libraries. A single heuristic (`getLargeNonUserPropSources`) filters bulk props while preserving meaningful ones:\n\n- When a single source file (in `node_modules` or ending in `.d.ts`) contributes **>30 props**, all props from that source are filtered out\n- This catches React built-ins (`HTMLAttributes` from `@types/react` \u2192 200+ props), DOM interfaces (`lib.dom.d.ts` \u2192 hundreds of props), and CSS-in-JS system props (Panda CSS `style-props.d.ts` \u2192 704 props)\n- User-authored `.ts` files are never filtered \u2014 only `node_modules` and generated `.d.ts` files are candidates\n- Small interfaces (e.g. `RefAttributes` with just `ref`) pass through since they're below the threshold\n- Example: Park UI Button goes from 850 \u2192 12 props after filtering\n\n## QA Reports\n\nTested on 5 real-world React component libraries to compare react-docgen (RD) vs react-docgen-typescript (RDT):\n\n| Project | RD components | RDT components | RD props | RDT props | Winner |\n|---------|--------------|----------------|----------|-----------|--------|\n| **Mantine** (183) | 19 (10%) | **151 (83%)** | 535 | **12,287** | RDT |\n| **Flowbite-React** (44) | 42 (95%) | **42 (95%)** | 282 | **308** | Tie (slight RDT edge) |\n| **Primer React** (225) | **189 (84%)** | 161 (72%) | 1,016 | **1,061** | Tie (complementary) |\n| **Park UI** (54) | 8 (15%) | **25 (46%)** | 11 | **393** | RDT |\n| **Reshaped** (78) | 0 (0%) | **63 (81%)** | 0 | **827** | RDT |\n| **Total** (584) | 258 (44%) | **441 (76%)** | 1,844 | **14,876** | **RDT** |\n\n### Why react-docgen-typescript\n\n**RDT is the clear choice** for projects that need it:\n\n- **RDT handles everything RD handles** \u2014 where both work (Flowbite, Primer), results are nearly identical\n- **RDT handles patterns RD cannot** \u2014 factory wrappers (Mantine), namespace type imports (Reshaped), and complex generic types are completely invisible to RD's AST pattern matching\n- **RDT is the only option for 2 out of 5 projects** \u2014 Mantine and Reshaped get essentially zero useful results from RD\n- **The trade-off is performance** \u2014 RDT adds ~2s per request due to TypeScript compilation\n\nThe one area where RD has an edge is Primer React, where it covers 28 more components. This is likely due to specific patterns RDT doesn't match (e.g. components without explicit type annotations). Users can choose the engine that works best for their codebase.\n\n### Performance per project\n\n| Project | Components | Total | react-docgen | react-docgen-typescript | RDT init | RDT parse+filter |\n|---------|-----------|-------|-------------|------------------------|----------|-----------------|\n| **Mantine** | 183 | 15.8s | 6.2s | 8.1s | 2.5s | 5.7s |\n| **Flowbite-React** | 44 | 5.2s | 2.2s | 2.7s | 1.4s | 1.3s |\n| **Primer React** | 225 | 9.0s | 2.7s | 4.1s | 1.6s | 2.5s |\n| **Park UI** | 54 | 37.9s | 0.9s | 36.8s | 1.9s | 34.9s |\n| **Reshaped** | 78 | 4.4s | 0.8s | 2.1s | 0.9s | 1.2s |\n\n- **RDT init** = `ts.createProgram` (one-time cost, reused across components)\n- **RDT parse+filter** = `parseWithProgramProvider` + prop filtering per component\n\n#### Park UI performance (37.9s) \u2014 root cause\n\nPark UI uses Panda CSS, which generates massive in-project type definitions in `styled-system/types/`:\n\n- `style-props.d.ts` \u2014 **704 CSS properties** in `SystemProperties` (7,503 lines)\n- `conditions.d.ts` \u2014 **136 conditions** (_hover, _focus, sm, md, lg, _dark, etc.)\n- `ConditionalValue<V>` \u2014 recursive type: `V | Array<V | null> | { [K in keyof Conditions]?: ConditionalValue<V> }`\n- `Nested<P>` \u2014 recursively self-referential: `P & { [K in Selectors]?: Nested<P> } & { [K in Conditions]?: Nested<P> }`\n\nEvery styled component's props type is `HTMLStyledProps<T>` = `JsxHTMLProps<ComponentProps<T> & UnstyledProps & AsProps, JsxStyleProps>`, where `JsxStyleProps = SystemStyleObject & WithCss` expands to the full 704\u00d7136 recursive type. TypeScript must resolve this for each of the 54 components, taking 500ms\u20132.7s per component.\n\nThe bottleneck is `checker.getApparentProperties()` inside react-docgen-typescript's `getPropsInfo()` \u2014 this fully resolves the type tree before any filtering can happen. RDT's `propFilter` option runs **after** type resolution, so it cannot short-circuit the expensive work. RDT's internal `propertiesOfPropsCache` only caches props from `node_modules`, so Panda CSS's in-project `.d.ts` types bypass the cache between components.\n\nOur system props filter correctly removes these props from the output (e.g. Button: 850 \u2192 12 props), but the performance cost is unavoidable with the current RDT architecture.\n\n---\n\n### Mantine \u2014 react-docgen (RD) vs react-docgen-typescript (RDT)\n\n<details>\n<summary><strong>RDT: 151/183 components (82.5%) \u2014 RD: 19/183 (10.4%)</strong></summary>\n\n#### Summary\n\n| Metric | react-docgen (RD) | react-docgen-typescript (RDT) |\n|--------|-------------------|-------------------------------|\n| Components with props | **19** / 183 (10.4%) | **151** / 183 (82.5%) |\n| Total props extracted | **535** | **12,287** |\n| Components with 0 props | 164 | 32 |\n\nRDT extracts **23x more props** and covers **8x more components** than RD on this codebase.\n\n#### Why RDT wins on Mantine\n\nMantine wraps nearly all components in `factory()` or `polymorphicFactory()`:\n\n```ts\n// Button \u2014 RD gets 0 props, RDT gets 81\nexport const Button = polymorphicFactory<ButtonFactory>((_props, ref) => { ... });\n\n// Select \u2014 RD gets 0 props, RDT gets 126\nexport const Select = factory<SelectFactory>((_props, ref) => { ... });\n```\n\n**react-docgen** (AST/Babel) pattern-matches known React patterns like `function Foo(props: FooProps)` or `React.forwardRef(...)`. It cannot follow types through `factory()` wrappers \u2014 it just sees a function call.\n\n**react-docgen-typescript** uses the TypeScript compiler, so it resolves `ButtonFactory` \u2192 `ButtonProps` \u2192 all individual props, including inherited style/theme/polymorphic props.\n\nThe only components RD successfully parses are the ones that use plain `export function`:\n```ts\n// Accordion \u2014 RD gets 78 props (no factory wrapper)\nexport function Accordion<Multiple extends boolean = false>(_props: AccordionProps<Multiple>) { ... }\n```\n\n#### Breakdown by category\n\n**Both have props (19 components):**\n\n| Component | RD | RDT | Diff |\n|-----------|-----|------|------|\n| ModalBase | 80 | 80 | equal |\n| Accordion | 78 | 78 | equal |\n| InlineInput | 76 | 76 | equal |\n| UnstyledButton | 8 | 69 | +61 |\n| Box | 63 | 63 | equal |\n| Menu | 52 | 52 | equal |\n| HoverCard | 6 | 48 | +42 |\n| Popover | 47 | 47 | equal |\n| Combobox | 44 | 44 | equal |\n| MantineProvider | 16 | 16 | equal |\n| Transition | 13 | 13 | equal |\n| NumberFormatter | 9 | 9 | equal |\n| FocusTrap | 4 | 4 | equal |\n| CopyButton | 3 | 3 | equal |\n| DirectionProvider | 3 | 3 | equal |\n\n15 of 19 have equal prop counts. RDT finds significantly more for UnstyledButton (+61) and HoverCard (+42).\n\n**RDT-only (132 components) \u2014 top examples:**\n\n| Component | RDT props |\n|-----------|-----------|\n| DatePickerInput | 178 |\n| DateTimePicker | 174 |\n| DateInput | 171 |\n| MultiSelect | 129 |\n| Select | 126 |\n| NumberInput | 124 |\n| Spotlight | 117 |\n| Autocomplete | 115 |\n| Button | 81 |\n| Table | 71 |\n| Chip | 68 |\n| Avatar | 63 |\n\nAll of these use `factory()` / `polymorphicFactory()` \u2014 completely invisible to RD.\n\n**Neither (32 components):** Hooks (`use-click-outside`, `use-move`, etc.), guides, changelogs, and utilities without component props.\n\n#### Conclusion\n\nFor libraries using higher-order component patterns like Mantine's `factory()`, **RDT is essential** \u2014 RD misses 132 out of 151 components entirely. Where both work, they produce identical results. RDT is the strictly better choice for Mantine.\n\n</details>\n\n---\n\n### Flowbite-React \u2014 react-docgen (RD) vs react-docgen-typescript (RDT)\n\n<details>\n<summary><strong>RDT: 42/44 components (95.5%) \u2014 RD: 42/44 (95.5%)</strong></summary>\n\n#### Summary\n\n| Metric | react-docgen (RD) | react-docgen-typescript (RDT) |\n|--------|-------------------|-------------------------------|\n| Components with props | **42** / 44 (95.5%) | **42** / 44 (95.5%) |\n| Total props extracted | **282** | **308** |\n| Components with 0 props | 2 | 2 |\n\nBoth tools perform well on this codebase. RDT extracts **9% more props** overall.\n\n#### Setup: tsconfig paths trick\n\nFlowbite-react's storybook lives in `apps/storybook/` and imports components from the `flowbite-react` package:\n\n```ts\nimport { Accordion } from \"flowbite-react\";\n```\n\nBy default, neither RD nor RDT could resolve the source files \u2014 both returned **0 props for all 44 components**. Adding a tsconfig path alias fixed this:\n\n```json\n// apps/storybook/tsconfig.json\n{\n  \"compilerOptions\": {\n    \"paths\": {\n      \"flowbite-react\": [\"../../packages/ui/src/index.ts\"]\n    }\n  }\n}\n```\n\nThis lets RDT resolve `flowbite-react` imports to the actual TypeScript source files, enabling prop extraction.\n\n#### Why results are similar\n\nFlowbite-react uses simple `forwardRef` patterns that both tools handle well:\n\n```ts\nexport const Button = forwardRef<HTMLButtonElement, ButtonProps>((props, ref) => { ... });\n```\n\nNo factory wrappers or complex HOC patterns \u2014 both AST and TypeScript compiler approaches work.\n\n#### Breakdown by category\n\n**Both have props (41 components):**\n\n| Component | RD | RDT | Diff |\n|-----------|-----|------|------|\n| Datepicker | 19 | 25 | +6 |\n| Dropdown | 11 | 21 | +10 |\n| Card | 5 | 8 | +3 |\n| Accordion | 8 | 7 | -1 |\n| ToggleSwitch | 8 | 7 | -1 |\n| Avatar | 13 | 13 | equal |\n| Carousel | 11 | 11 | equal |\n| Modal | 11 | 11 | equal |\n| Progress | 11 | 11 | equal |\n| Popover | 10 | 10 | equal |\n| Alert | 9 | 9 | equal |\n| TextInput | 9 | 9 | equal |\n| Tooltip | 9 | 9 | equal |\n| ... (28 more) | | | equal |\n\n35 of 41 shared components have equal prop counts. RDT finds more for Dropdown (+10), Datepicker (+6), and Card (+3).\n\n**RDT-only (1):** Pagination (13 props) \u2014 RD fails to extract props here.\n\n**RD-only (1):** Button (4 props) \u2014 RDT misses this one.\n\n**Neither (1):** Banner \u2014 no extractable props.\n\n#### Conclusion\n\nFor libraries using standard React patterns (`forwardRef`, simple function components), both tools produce near-identical results. RDT has a slight edge with **308 vs 282 total props** and uniquely resolves Pagination. The tsconfig `paths` trick is essential for monorepos where stories import from a package name rather than relative paths.\n\n</details>\n\n---\n\n### Primer React \u2014 react-docgen (RD) vs react-docgen-typescript (RDT)\n\n<details>\n<summary><strong>RDT: 161/225 components (71.6%) \u2014 RD: 189/225 (84%)</strong></summary>\n\n#### Summary\n\n| Metric | react-docgen (RD) | react-docgen-typescript (RDT) |\n|--------|-------------------|-------------------------------|\n| Components with props | **189** / 225 (84%) | **161** / 225 (71.6%) |\n| Total props extracted | **1,016** | **1,061** |\n| Components with 0 props | 36 | 64 |\n\nBoth tools perform well. RD covers more components (189 vs 161), while RDT extracts slightly more total props (1,061 vs 1,016).\n\n#### Where both have props (150 components)\n\n| Comparison | Count |\n|-----------|-------|\n| Equal prop count | 83 |\n| RDT has more | 26 |\n| RD has more | 41 |\n\n**RDT wins big on:** SelectPanel (RD=18, RDT=47), AnchoredOverlay (RD=15, RDT=22), Octicon (RD=2, RDT=7)\n\n**RD-only (39 entries, 21 unique components):** Textarea, TextInputWithTokens, FormControl, Radio, Checkbox, Overlay, Label, Flash, SideNav, etc.\n\n**RDT-only (11 entries, 5 unique components):** RelativeTime (26 props), Box, Portal, SegmentedControlIconButton, UnderlinePanels\n\n#### Conclusion\n\nPrimer uses standard React patterns that both tools handle well. This is the most balanced result \u2014 **RD has broader coverage** (189 vs 161 components) while **RDT extracts deeper props** where it works (1,061 vs 1,016 total). The tools are complementary here.\n\n</details>\n\n---\n\n### Park UI \u2014 react-docgen (RD) vs react-docgen-typescript (RDT)\n\n<details>\n<summary><strong>RDT: 25/54 components (46.3%) \u2014 RD: 8/54 (14.8%)</strong></summary>\n\n#### Summary\n\n| Metric | react-docgen (RD) | react-docgen-typescript (RDT) |\n|--------|-------------------|-------------------------------|\n| Components with props | **8** / 54 (14.8%) | **25** / 54 (46.3%) |\n| Total props extracted | **11** | **393** |\n| Components with 0 props | 46 | 29 |\n\nRDT covers **3x more components** and extracts **36x more props** than RD.\n\nPark UI is built on Panda CSS, which generates system props in in-project `.d.ts` files (`styled-system/types/style-props.d.ts` with 703 `SystemProperties`, `types/conditions.d.ts` with 135 `Conditions`). The `.d.ts` system props filter correctly removes these bulk props while preserving meaningful component-specific props.\n\n#### Both have props (8 components)\n\n| Component | RD | RDT | Diff |\n|-----------|-----|------|------|\n| PinInput | 1 | 33 | +32 |\n| Slider | 2 | 33 | +31 |\n| ProgressCircular | 1 | 21 | +20 |\n| ProgressLinear | 1 | 21 | +20 |\n| Avatar | 2 | 14 | +12 |\n| Button | 2 | 12 | +10 |\n| Spinner | 1 | 10 | +9 |\n| Skeleton | 1 | 3 | +2 |\n\nRDT consistently finds 10-30x more props per component.\n\n#### RDT-only (17 components) \u2014 top examples\n\n| Component | RDT props |\n|-----------|-----------|\n| NumberInput | 35 |\n| RatingGroup | 24 |\n| TreeView | 24 |\n| Switch | 22 |\n| Checkbox | 21 |\n| Pagination | 20 |\n| Badge | 10 |\n| IconButton | 10 |\n\n#### Conclusion\n\nRDT is the clear winner for Park UI. RD barely extracts any props (1-2 per component), while RDT provides meaningful prop coverage. The `.d.ts` system props filter is essential here \u2014 without it, each component would show 800+ Panda CSS system props.\n\n</details>\n\n---\n\n### Reshaped \u2014 react-docgen (RD) vs react-docgen-typescript (RDT)\n\n<details>\n<summary><strong>RDT: 63/78 components (80.8%) \u2014 RD: 0/78 (0%)</strong></summary>\n\n#### Summary\n\n| Metric | react-docgen (RD) | react-docgen-typescript (RDT) |\n|--------|-------------------|-------------------------------|\n| Components with props | **0** / 78 (0%) | **63** / 78 (80.8%) |\n| Total props extracted | **0** | **827** |\n| Components with 0 props | 78 | 15 |\n\nRDT is the **only tool that works** on this codebase. RD extracts zero props.\n\n#### Why RD fails completely\n\nReshaped uses `export default` with types imported from a separate file:\n\n```ts\nimport type * as T from \"./Button.types\";\n\nconst Button = forwardRef<ActionableRef, T.Props>((props, ref) => { ... });\n\nexport default Button;\n```\n\nreact-docgen cannot follow the `type * as T` namespace import to resolve `T.Props`. react-docgen-typescript resolves this through the TypeScript compiler.\n\n#### RDT-only (63 components) \u2014 top examples\n\n| Component | RDT props |\n|-----------|-----------|\n| View | 48 |\n| Autocomplete | 39 |\n| Popover | 29 |\n| Flyout | 29 |\n| NumberField | 28 |\n| TextField | 26 |\n| ToggleButton | 25 |\n| DropdownMenu | 24 |\n| Button | 21 |\n| Select | 21 |\n| Modal | 20 |\n\n**Neither (15 components):** Hooks (`useHotkeys`, `useToggle`, etc.) and utility components without props.\n\n#### Conclusion\n\nReshaped demonstrates a pattern where **RDT is the only viable option**. The namespace type import pattern (`type * as T`) is completely opaque to RD's AST-based analysis.\n\n</details>\n\n## Checklist for Contributors\n\n### Testing\n\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\n\n#### The changes in this PR are covered in the following automated tests:\n\n- [ ] stories\n- [x] unit tests\n- [ ] integration tests\n- [ ] end-to-end tests\n\n#### Manual testing\n\n> [!CAUTION]\n> This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!\n\nTested on 5 real-world React projects (Mantine, Flowbite-React, Primer React, Park UI, Reshaped) by publishing canary releases and building Storybook with `experimentalComponentsManifest` enabled. Verified prop extraction, system prop filtering, and compared RD vs RDT results. See QA Reports above for detailed results.\n\n### Documentation\n\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\n\n- [ ] Add or update documentation reflecting your changes\n- [ ] If you are deprecating/removing a feature, make sure to update\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\n\n## Checklist for Maintainers\n\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\n- [ ] Make sure this PR contains **one** of the labels below:\n   <details>\n     <summary>Available labels</summary>\n\n  - `bug`: Internal changes that fixes incorrect behavior.\n  - `maintenance`: User-facing maintenance tasks.\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\n  - `feature request`: Introducing a new feature.\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\n  - `other`: Changes that don't fit in the above categories.\n\n   </details>\n\n### \ud83e\udd8b Canary release\n\n<!-- CANARY_RELEASE_SECTION -->\nThis pull request has been released as version `0.0.0-pr-33818-sha-b6e1582e`. Try it out in a new sandbox by running `npx storybook@0.0.0-pr-33818-sha-b6e1582e sandbox` or in an existing project with `npx storybook@0.0.0-pr-33818-sha-b6e1582e upgrade`.\n<details>\n<summary>More information</summary>\n\n| | |\n| --- | --- |\n| **Published version** | [`0.0.0-pr-33818-sha-b6e1582e`](https://npmjs.com/package/storybook/v/0.0.0-pr-33818-sha-b6e1582e) |\n| **Triggered by** | @kasperpeulen |\n| **Repository** | [storybookjs/storybook](https://github.com/storybookjs/storybook) |\n| **Branch** | [`kasper/react-docgen-typescript`](https://github.com/storybookjs/storybook/tree/kasper/react-docgen-typescript) |\n| **Commit** | [`b6e1582e`](https://github.com/storybookjs/storybook/commit/b6e1582e863c03c9ad4e2a484b4761d06def950a) |\n| **Datetime** | Fri Feb 13 08:07:15 UTC 2026 (`1770970035`) |\n| **Workflow run** | [21979396877](https://github.com/storybookjs/storybook/actions/runs/21979396877) |\n\nTo request a new release of this pull request, mention the `@storybookjs/core` team.\n\n_core team members can create a new canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=33818`_\n</details>\n<!-- CANARY_RELEASE_SECTION -->\n\n<!-- BENCHMARK_SECTION -->\n<!-- BENCHMARK_SECTION -->\n",
+  "author": "kasperpeulen",
+  "merged_at": "2026-02-20T13:43:40Z",
+  "base_ref": "next",
+  "merge_commit_sha": "228bce02cfb3444ac278c79e9739df0f5a25a77c",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "e9cfa91a679e6cf4ca780cccf702317699c88611",
+    "6d555c8eea3307dd9f144db492539b9d7143c59e"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6mMSSD",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Prefix unused parameter with underscore to satisfy ESLint.**\n\nThe `props` parameter is declared but never used in the function body. While this is acceptable for a minimal test fixture focused on type extraction, it will trigger ESLint's `no-unused-vars` rule. As per coding guidelines, ESLint checks must pass.\n\n\n\n<details>\n<summary>\ud83d\udd27 Suggested fix</summary>\n\n```diff\n-function Icon(props: IconProps) {\n+function Icon(_props: IconProps) {\n   return null;\n }\n```\n\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nfunction Icon(_props: IconProps) {\n  return null;\n}\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/renderers/react/src/componentManifest/__testfixtures__/DefaultExport.ts`\naround lines 5 - 7, The function Icon declares an unused parameter props which\ntriggers ESLint no-unused-vars; fix by renaming the parameter to a prefixed\nunused name (e.g., _props) in the Icon function signature so lint ignores it,\nupdating the Icon(props: IconProps) declaration accordingly; ensure only the\nparameter name changes (keep IconProps type) so the test fixture behavior and\ntype extraction remain the same.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:triton:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/__testfixtures__/DefaultExport.ts",
+          "line_number": 7,
+          "start_line": 5,
+          "commit_sha": "6d555c8eea3307dd9f144db492539b9d7143c59e",
+          "created_at": "2026-02-10T14:18:38Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Dead Code",
+          "label_confidence": "high",
+          "label_reasoning": "Unused parameter `props` triggers ESLint no-unused-vars rule; the fix is to prefix it with underscore to indicate it's intentionally unused."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6nCbtw",
+          "author": "kasperpeulen",
+          "body": "Not applicable \u2014 test fixtures are not linted, and `props` is needed for react-docgen-typescript to detect the component signature (it checks for a single parameter or a parameter named `props`).",
+          "file_path": "code/renderers/react/src/componentManifest/__testfixtures__/DefaultExport.ts",
+          "line_number": 7,
+          "start_line": 5,
+          "commit_sha": "6d555c8eea3307dd9f144db492539b9d7143c59e",
+          "created_at": "2026-02-13T05:56:18Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests renaming unused parameter to _props to satisfy ESLint no-unused-vars rule."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6mMSSe",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Cache invalidation doesn\u2019t clear per-file memoization.**  \n`invalidateParser()` resets the parser, but `parseWithReactDocgenTypescript` remains memoized by filePath, so unchanged keys will return stale docs even after invalidation. This breaks the \u201cpick up changes on the next parse\u201d intent.\n\n<details>\n<summary>\ud83d\udee0\ufe0f Proposed fix: add a cache-buster to the memoization key</summary>\n\n```diff\n let compilerOptions: ts.CompilerOptions | undefined;\n let fileNames: string[] | undefined;\n let previousProgram: ts.Program | undefined;\n let parser: { program: ts.Program; fileParser: FileParser } | undefined;\n+let parseCacheBuster = 0;\n\n /** Rebuild the TS program incrementally so that file changes are picked up on the next parse. */\n export function invalidateParser() {\n   parser = undefined;\n+  parseCacheBuster += 1;\n }\n\n export const parseWithReactDocgenTypescript = cached(\n   (filePath: string): ComponentDocWithExportName[] => {\n     const { program, fileParser } = getParser();\n     const checker = program.getTypeChecker();\n     const sourceFile = program.getSourceFile(filePath);\n@@\n       .filter((doc) => /^[A-Z]/.test(doc.displayName));\n   },\n-  { name: 'parseWithReactDocgenTypescript' }\n+  {\n+    name: 'parseWithReactDocgenTypescript',\n+    key: (filePath: string) => `${parseCacheBuster}:${filePath}`,\n+  }\n );\n```\n</details>\n\n\n\nAlso applies to: 150-170\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/renderers/react/src/componentManifest/reactDocgenTypescript.ts` around\nlines 83 - 117, invalidateParser() only resets the shared parser object but not\nthe per-file memoization used by parseWithReactDocgenTypescript, causing stale\nresults; add a cache-buster counter (e.g., parserInvalidateCounter) that\ninvalidateParser() increments and include that counter in the memoization key\nfor parseWithReactDocgenTypescript (change the memo key from just filePath to\nsomething like `${filePath}:${parserInvalidateCounter}`) so cached entries are\nignored after invalidation; ensure the counter is initialized near\nparser/previousProgram and referenced where the memoized lookup occurs.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/reactDocgenTypescript.ts",
+          "line_number": 208,
+          "start_line": 160,
+          "commit_sha": "3353c7b2e25b4cd922e70fd2ac1b96586e31f42f",
+          "created_at": "2026-02-10T14:18:39Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Cache invalidation logic is incomplete \u2014 invalidateParser() resets the parser but not the per-file memoization, causing stale results to be returned after invalidation."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6nCb0d",
+          "author": "kasperpeulen",
+          "body": "False positive. `invalidateCache()` in `utils.ts` replaces the entire module-level `memoStore` WeakMap (`memoStore = new WeakMap()`). The `cached()` closures read `memoStore` dynamically (it's a `let` variable, not captured by value), so all per-file caches are properly cleared. In `generator.ts:109-110`, `invalidateCache()` is called right before `invalidateParser()` \u2014 together they clear both the per-file memoization and the parser singleton.",
+          "file_path": "code/renderers/react/src/componentManifest/reactDocgenTypescript.ts",
+          "line_number": 208,
+          "start_line": 160,
+          "commit_sha": "3353c7b2e25b4cd922e70fd2ac1b96586e31f42f",
+          "created_at": "2026-02-13T05:56:28Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where cache invalidation doesn't clear per-file memoization, and proposes a specific fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6mMuPW",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Normalize should handle Windows path separators.**\n\nThe regex only matches `/` separators, so absolute paths on Windows won\u2019t be stripped and snapshots can drift.\n\n\n<details>\n<summary>\ud83d\udee0\ufe0f Proposed fix</summary>\n\n```diff\n-        return value.replace(/.*__testfixtures__\\//, '');\n+        return value.replace(/.*__testfixtures__[\\\\/]/, '');\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/renderers/react/src/componentManifest/reactDocgenTypescript.test.ts`\naround lines 9 - 18, The normalize function's replacer only strips Unix-style\nseparators so Windows paths remain; update the regex used in the JSON.stringify\nreplacer (the check for (key === 'filePath' || key === 'fileName') && typeof\nvalue === 'string') to match both forward and backslashes (e.g. use a character\nclass for / and \\) so __testfixtures__\\... and __testfixtures__/... are both\nstripped; keep the rest of the JSON.stringify-based normalization and only\nchange the regex used in normalize.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/reactDocgenTypescript.test.ts",
+          "line_number": 18,
+          "start_line": null,
+          "commit_sha": "94d53dcf7c6d81a7127e9a0acf7f727c7d96db04",
+          "created_at": "2026-02-10T14:38:22Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The regex only handles Unix-style path separators, missing Windows backslash separators, which causes incorrect behavior on Windows platforms."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6nCb6x",
+          "author": "kasperpeulen",
+          "body": "Not needed. These tests only run in CI on Linux and locally on macOS. TypeScript also normalizes `sourceFile.fileName` to forward slashes on all platforms, so the fixture paths will always use `/`.",
+          "file_path": "code/renderers/react/src/componentManifest/reactDocgenTypescript.test.ts",
+          "line_number": 18,
+          "start_line": null,
+          "commit_sha": "94d53dcf7c6d81a7127e9a0acf7f727c7d96db04",
+          "created_at": "2026-02-13T05:56:36Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a bug with Windows path separators in the normalize regex and proposes a specific fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6mMuPd",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Handle Windows path separators when deriving the default-export name.**\n\n`sourceFile.fileName.replace(/.*\\//, '')` won\u2019t strip directories on Windows, so default-export displayName mapping can break there. Prefer `path.basename`/`extname` to keep this cross\u2011platform.\n\n\n<details>\n<summary>\ud83d\udee0\ufe0f Proposed fix</summary>\n\n```diff\n-import { dirname } from 'node:path';\n+import { basename, dirname, extname } from 'node:path';\n@@\n-  const fileName = sourceFile.fileName.replace(/.*\\//, '').replace(/\\.[^.]+$/, '');\n+  const fileName = basename(sourceFile.fileName, extname(sourceFile.fileName));\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/renderers/react/src/componentManifest/reactDocgenTypescript.ts` around\nlines 66 - 68, The code deriving fileName from sourceFile.fileName using\nreplace(/.*\\//, '').replace(/\\.[^.]+$/, '') is not cross-platform and fails on\nWindows; update the logic in reactDocgenTypescript where fileName is computed\n(referencing result, fileName, and sourceFile.fileName) to use Node's path\nutilities (e.g., path.basename and path.extname) so you strip directories and\nremove the extension in a platform-independent way, ensuring the default-export\ndisplayName mapping works on Windows too.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/reactDocgenTypescript.ts",
+          "line_number": 99,
+          "start_line": 97,
+          "commit_sha": "6d555c8eea3307dd9f144db492539b9d7143c59e",
+          "created_at": "2026-02-10T14:38:22Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Using a Unix-only regex to derive file names from paths will fail on Windows; path.basename/extname should be used for cross-platform correctness."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6nCb8q",
+          "author": "kasperpeulen",
+          "body": "Not an issue. TypeScript internally normalizes `sourceFile.fileName` to forward slashes on all platforms (including Windows). This is a property of the TS compiler API, so the regex is correct as-is.",
+          "file_path": "code/renderers/react/src/componentManifest/reactDocgenTypescript.ts",
+          "line_number": 99,
+          "start_line": 97,
+          "commit_sha": "6d555c8eea3307dd9f144db492539b9d7143c59e",
+          "created_at": "2026-02-13T05:56:38Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a cross-platform bug with Windows path separators and suggests using path.basename/extname instead."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6mN0BI",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/renderers/react/src/componentManifest/reactDocgenTypescript.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 10285\n\n---\n\n\n\n</details>\n\n**Reset `fileNames` when invalidating the parser.**\n\nThe `invalidateParser()` function only clears `parser`, but `fileNames` remains cached. This prevents the tsconfig from being re-read on the next `getParser()` call (line 153's condition `if (configPath && !fileNames)` becomes false), so newly added TS/TSX files won't be included in the program.\n\n<details>\n<summary>Fix</summary>\n\n```diff\n export function invalidateParser() {\n   parser = undefined;\n+  fileNames = undefined;\n }\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/renderers/react/src/componentManifest/reactDocgenTypescript.ts` around\nlines 143 - 158, invalidateParser currently only clears the parser variable so\nfileNames remains cached and the tsconfig is not re-read; update\ninvalidateParser to also reset fileNames (and any related cached compilerOptions\nif desired) so that on the next getParser() call the condition in getParser()\n(configPath && !fileNames) will be true and the tsconfig and file list (used\nwhen building the TS program) are reloaded; modify the invalidateParser function\nto set fileNames = undefined (and optionally compilerOptions = undefined)\nalongside parser = undefined.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/reactDocgenTypescript.ts",
+          "line_number": 183,
+          "start_line": 160,
+          "commit_sha": "3353c7b2e25b4cd922e70fd2ac1b96586e31f42f",
+          "created_at": "2026-02-10T15:26:58Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "invalidateParser() fails to reset fileNames, so the tsconfig condition is never re-evaluated and newly added files are excluded from the program after invalidation."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6nCb-X",
+          "author": "kasperpeulen",
+          "body": "Intentional design. `fileNames` and `compilerOptions` are read once from tsconfig and reused \u2014 tsconfig doesn't change during a Storybook session. `previousProgram` is intentionally preserved across `invalidateParser()` calls to enable TypeScript's incremental compilation: `ts.createProgram(..., previousProgram)` reuses source files that haven't changed on disk, avoiding a full program rebuild on each cycle.",
+          "file_path": "code/renderers/react/src/componentManifest/reactDocgenTypescript.ts",
+          "line_number": 183,
+          "start_line": 160,
+          "commit_sha": "3353c7b2e25b4cd922e70fd2ac1b96586e31f42f",
+          "created_at": "2026-02-13T05:56:41Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where invalidateParser() doesn't reset fileNames, preventing tsconfig re-reads, and proposes a specific fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6mN0BP",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Fix stale doc comment.**  \nThe comment mentions `invalidateCache()`, but the function is `invalidateParser()`.  \n\n\n<details>\n<summary>\u270f\ufe0f Proposed fix</summary>\n\n```diff\n- * `invalidateCache()`. The underlying TS program is a long-lived singleton.\n+ * `invalidateParser()`. The underlying TS program is a long-lived singleton.\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n/**\n * Parse a component file with react-docgen-typescript. Per-file results are cached via\n * `invalidateParser()`. The underlying TS program is a long-lived singleton.\n */\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/renderers/react/src/componentManifest/reactDocgenTypescript.ts` around\nlines 204 - 207, Update the stale JSDoc in reactDocgenTypescript.ts: replace the\nincorrect reference to invalidateCache() with the correct function name\ninvalidateParser() in the top comment above the parse function so the doc\nmatches the actual API (search for the comment block that starts \"Parse a\ncomponent file with react-docgen-typescript...\" and update the function name).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/reactDocgenTypescript.ts",
+          "line_number": 238,
+          "start_line": 235,
+          "commit_sha": "6d555c8eea3307dd9f144db492539b9d7143c59e",
+          "created_at": "2026-02-10T15:26:58Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "high",
+          "label_reasoning": "The doc comment references a non-existent function name `invalidateCache()` instead of the correct `invalidateParser()`, making the documentation misleading."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6nCb_y",
+          "author": "kasperpeulen",
+          "body": "The comment is actually correct. The per-file parse results are cached by the `cached()` wrapper, and `invalidateCache()` (not `invalidateParser()`) is what clears them by replacing the module-level `memoStore` WeakMap. `invalidateParser()` only resets the TS program singleton.",
+          "file_path": "code/renderers/react/src/componentManifest/reactDocgenTypescript.ts",
+          "line_number": 238,
+          "start_line": 235,
+          "commit_sha": "6d555c8eea3307dd9f144db492539b9d7143c59e",
+          "created_at": "2026-02-13T05:56:43Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests fixing a stale doc comment that references the wrong function name."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6oqrdV",
+          "author": "JReinhold",
+          "body": "would it make sense for this property to just be called `docgen`, so it allows for eg. `docgen: 'react-docgen' | 'react-docgen-typescript' | 'vue-component-meta' | 'svelte2tsx' | '@custom-elements-manifest/analyzer' ...` in the future?",
+          "file_path": "code/core/src/types/modules/core-common.ts",
+          "line_number": 375,
+          "start_line": null,
+          "commit_sha": "3353c7b2e25b4cd922e70fd2ac1b96586e31f42f",
+          "created_at": "2026-02-19T19:29:42Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Class Design Guidelines",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment suggests a more extensible API design by renaming the property to `docgen` to accommodate future docgen tool options across frameworks."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6o2nO7",
+          "author": "kasperpeulen",
+          "body": "will do",
+          "file_path": "code/core/src/types/modules/core-common.ts",
+          "line_number": 375,
+          "start_line": null,
+          "commit_sha": "3353c7b2e25b4cd922e70fd2ac1b96586e31f42f",
+          "created_at": "2026-02-20T12:04:40Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests renaming the property to 'docgen' for better extensibility across frameworks."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6oq19d",
+          "author": "JReinhold",
+          "body": "this could be a devDependency, right?",
+          "file_path": "code/renderers/react/package.json",
+          "line_number": 58,
+          "start_line": null,
+          "commit_sha": "6d555c8eea3307dd9f144db492539b9d7143c59e",
+          "created_at": "2026-02-19T19:40:39Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "high",
+          "label_reasoning": "The dependency is placed in the wrong section of package.json \u2014 it should be a devDependency rather than a regular dependency."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6o2nEg",
+          "author": "kasperpeulen",
+          "body": "We use both rd and rdt as regular dep in other places. I think it is better as it also used in the joshwooding vite plugin and the webpack plugin. So this way it is deduplicated. ",
+          "file_path": "code/renderers/react/package.json",
+          "line_number": 58,
+          "start_line": null,
+          "commit_sha": "6d555c8eea3307dd9f144db492539b9d7143c59e",
+          "created_at": "2026-02-20T12:04:29Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6o2yGp",
+          "author": "JReinhold",
+          "body": "ah, makes sense. \ud83d\udc4d",
+          "file_path": "code/renderers/react/package.json",
+          "line_number": 58,
+          "start_line": null,
+          "commit_sha": "6d555c8eea3307dd9f144db492539b9d7143c59e",
+          "created_at": "2026-02-20T12:17:04Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests moving a dependency to devDependencies."
+    }
+  ],
+  "review_thread_count": 8,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 8,
+    "stage1_kept": 8,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

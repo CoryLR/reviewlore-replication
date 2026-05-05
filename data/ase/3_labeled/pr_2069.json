@@ -1,0 +1,1161 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 2069,
+  "title": "Add Andersen thermostat for Molecular Dynamics to ase.md",
+  "body": "DEV: add ase.md.andersen (Andersen thermostat)\n\nTST:\n- delete test_verlet.py, test_verlet_asap.py, test_langevin.py and test_langevin_asap.py; this cleans up\n  - repetition of tests for varying pbc\n  - repetition of tests for varying atomic systems\n  - repetition of tests for varying calculators\n  - several `QuasiNewton` optimizations after MD runs\n  - rough temperature checks\n- merge the essence of the deleted tests in test_verlet_thermostats.py; this includes tests for\n  - conservation of total energy using `Verlet` (long traj)\n  - reproduction of `Verlet` by `Langevin` and `Andersen` for switched off thermostats (short traj)\n  - ability of thermostats (`Langevin`, `Andersen`) to achieve and conserve the target temperature on average (long traj)\n  - thermalization by `MaxwellBoltzmannDistribution` to target temperature\n\nDOC: update md.rst and releasenotes.rst\n\nWith the Andersen thermostat, temperature is imposed by random collisions with a heat bath.",
+  "author": "jamsler",
+  "merged_at": "2020-11-09T13:30:03.099Z",
+  "base_ref": "master",
+  "merge_commit_sha": "54f6fcee4ce8a98b140f6c02b3280e92d34206ce",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "421106555",
+          "author": "schiotz",
+          "body": "Hi @jamsler \n\nThank you very much for this!\n\nShould the temperature argument be called ``temperature_K`` for consistency with the other dynamics?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-09-30T08:10:53.134Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "high",
+          "label_reasoning": "Suggests renaming the 'temperature' argument to 'temperature_K' for consistency with other dynamics classes."
+        },
+        {
+          "id": "421144596",
+          "author": "jamsler",
+          "body": "If I have understood you correctly, you are planning to change the unit for temperature to Kelvin on the long run and temperature_K is only a temporary compatibility measure? On the other hand, it is indeed more consistent to use temperature_K which also does not lead to misunderstandings. I changed it to temperature_K.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-09-30T08:57:05.700Z",
+          "is_outdated": false
+        },
+        {
+          "id": "421186998",
+          "author": "schiotz",
+          "body": "I expect that we will keep the name ``temperature_K`` at least for quite a while.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-09-30T09:42:40.955Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests renaming the temperature argument to `temperature_K` for consistency with other dynamics."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "421106716",
+          "author": "schiotz",
+          "body": "I think you should just remove the default argument for ``andersen_prob``.   The other dynamics use this ``xxx is None`` trick because a previous argument (the old temperature argument) had to be optional, but there is no need not to make ``andersen_prob`` a normal compulsory argument.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 62,
+          "commit_sha": "e589ea2ba2c3f8194a4a685a359ddd7aaf0c48e2",
+          "base_sha": "9b84d2a858e089c9344c274cdb359f1d03adc7f2",
+          "created_at": "2020-09-30T08:11:00.712Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Function Consistency",
+          "label_confidence": "high",
+          "label_reasoning": "Suggests removing the default argument for 'andersen_prob' to make it a compulsory argument, consistent with how other dynamics handle parameters."
+        },
+        {
+          "id": "421141326",
+          "author": "jamsler",
+          "body": "agreed!",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 62,
+          "commit_sha": "e589ea2ba2c3f8194a4a685a359ddd7aaf0c48e2",
+          "base_sha": "9b84d2a858e089c9344c274cdb359f1d03adc7f2",
+          "created_at": "2020-09-30T08:52:28.527Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removing the default argument for `andersen_prob` and making it a compulsory argument."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "421106721",
+          "author": "schiotz",
+          "body": "@askhl What is the use for the ``todict`` method?  Should the keys not be identical to the arguments of the ``__init__`` method, i.e. ``fix-cm`` should be changed to ``fixcm`` here and in langevin.py ?",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 75,
+          "commit_sha": "e3838b2d3d52732ab260a776dc63ef9abea1ff2e",
+          "base_sha": "059df1c5059f1b945038488bf8ff521062990b78",
+          "created_at": "2020-09-30T08:11:01.023Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "high",
+          "label_reasoning": "Points out that the key 'fix-cm' in todict() should match the __init__ argument name 'fixcm' for consistency."
+        },
+        {
+          "id": "421150142",
+          "author": "jamsler",
+          "body": "In contrast to langevin.py, there is no temperature_eV argument in `__init__` of the Andersen class. So, the dictionary contains temperature_K instead.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 75,
+          "commit_sha": "e3838b2d3d52732ab260a776dc63ef9abea1ff2e",
+          "base_sha": "059df1c5059f1b945038488bf8ff521062990b78",
+          "created_at": "2020-09-30T09:04:33.060Z",
+          "is_outdated": false
+        },
+        {
+          "id": "421153610",
+          "author": "schiotz",
+          "body": "I am not sure I follow you.\n\nI was speaking about the ``fix-cm`` member of the dictionary, and whether the temperature should be called ``temperature_K`` in ``__init__`` (which I think it should, to be consistent among all the Dynamics).  Even the Berendsen dynamics got the ``temperature_K`` added although they already took a temperature in Kelvin, so all temperatures in all modules can be specified as ``temperature_K=300``, for example.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 75,
+          "commit_sha": "e3838b2d3d52732ab260a776dc63ef9abea1ff2e",
+          "base_sha": "059df1c5059f1b945038488bf8ff521062990b78",
+          "created_at": "2020-09-30T09:08:50.760Z",
+          "is_outdated": false
+        },
+        {
+          "id": "421160841",
+          "author": "jamsler",
+          "body": "I know ;) I did not quite answer to the question of fix-cm. I just wanted to highlight, that there is an additional inconsistency between MD codes in the to_dict method regarding temperature.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 75,
+          "commit_sha": "e3838b2d3d52732ab260a776dc63ef9abea1ff2e",
+          "base_sha": "059df1c5059f1b945038488bf8ff521062990b78",
+          "created_at": "2020-09-30T09:17:53.604Z",
+          "is_outdated": false
+        },
+        {
+          "id": "421187467",
+          "author": "schiotz",
+          "body": "Ah!  That is a bug.  I'll look into that.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 75,
+          "commit_sha": "e3838b2d3d52732ab260a776dc63ef9abea1ff2e",
+          "base_sha": "059df1c5059f1b945038488bf8ff521062990b78",
+          "created_at": "2020-09-30T09:43:22.696Z",
+          "is_outdated": false
+        },
+        {
+          "id": "421298284",
+          "author": "askhl",
+          "body": "> @askhl What is the use for the `todict` method? Should the keys not be identical to the arguments of the `__init__` method, i.e. `fix-cm` should be changed to `fixcm` here and in langevin.py ?\n\nIt's unfortunately not clear to me what the purpose of todict() on optimizers or MD is.\n\nThe purpose of todict() on `@jsonable` classes or objects which put `'ase_objtype'` into their dict is to support serialization via `ase.io.jsonio`.\n\nMD and optimizers don't do this, nor do they attempt to dump all their attributes, which means they cannot be restored.\n\nI can think of two things about optimizers which it would be beneficial to store: 1) the input parameters, 2) the full state (inputs, Atoms, calculator parameters, Hessian, ...), so as to resume an existing optimization.\n\nAs it is, my guess is that it's more of a logging thing (\"who am I\"), a better fit for `__str__()` or `__repr__()`.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 75,
+          "commit_sha": "e3838b2d3d52732ab260a776dc63ef9abea1ff2e",
+          "base_sha": "059df1c5059f1b945038488bf8ff521062990b78",
+          "created_at": "2020-09-30T12:12:16.479Z",
+          "is_outdated": false
+        },
+        {
+          "id": "422570109",
+          "author": "jamsler",
+          "body": "It seems that the `Langevin` class is the only MD code that implements the `todict()` method. Since there is no essential reason to have it, I do not include the method in the `Andersen` class.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 75,
+          "commit_sha": "e3838b2d3d52732ab260a776dc63ef9abea1ff2e",
+          "base_sha": "059df1c5059f1b945038488bf8ff521062990b78",
+          "created_at": "2020-10-02T08:46:54.595Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests changing the key `fix-cm` to `fixcm` in the `todict` method in both andersen.py and langevin.py."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "421156212",
+          "author": "schiotz",
+          "body": "I think this looks like it is ready to merge.\n\nWe have to address ``fix-cm`` when we hear from @askhl, but that is really not urgent and can just be fixed in another MR later.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-09-30T09:12:14.399Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "medium",
+          "label_reasoning": "General PR review comment referencing the 'fix-cm' naming inconsistency to be resolved."
+        },
+        {
+          "id": "421303249",
+          "author": "askhl",
+          "body": "IMHO the conclusion is: Not worth worrying about todict() since there aren't established rules.  Since less is more, I would refrain from overriding or otherwise touching todict().",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-09-30T12:19:43.413Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Notes the `fix-cm` issue still needs to be addressed, implying a future code change is needed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "421300562",
+          "author": "askhl",
+          "body": "\"infinitely\" improbable, but: `log(1 - y)` always works whereas log(y) could be log(0).",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 88,
+          "commit_sha": "68130e30e27140a2069d268f01b97ac2af88677d",
+          "base_sha": "059df1c5059f1b945038488bf8ff521062990b78",
+          "created_at": "2020-09-30T12:15:32.756Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Points out a potential log(0) issue when using log(y) instead of log(1 - y), which is a correctness/edge case bug."
+        },
+        {
+          "id": "421459899",
+          "author": "jamsler",
+          "body": "Very good point!",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 88,
+          "commit_sha": "68130e30e27140a2069d268f01b97ac2af88677d",
+          "base_sha": "059df1c5059f1b945038488bf8ff521062990b78",
+          "created_at": "2020-09-30T15:30:19.798Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential bug where `log(y)` could be `log(0)`, implying the code should use `log(1 - y)` instead."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "421313706",
+          "author": "askhl",
+          "body": "Now the difficult question.\n\nWe have different MDs that work together with RATTLE constraints somehow, but I don't understand how that part works.\n\nSo: *If* this code were wrong in such a way that the RATTLE constraints were not handled correctly, then which test would fail?\n\nIn other words what behaviour is required  to work together with RATTLE constraints, and can we meaningfully distinguish between something that works and doesn't?",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 135,
+          "commit_sha": "ee7457571c5421ebfaeaa55341e46fad0fe36e70",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-09-30T12:34:58.601Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "medium",
+          "label_reasoning": "Questions whether RATTLE constraints are handled correctly, implying potential behavioral deviation from the intended specification."
+        },
+        {
+          "id": "421465396",
+          "author": "jamsler",
+          "body": "I can think of running an NVE ensemble with a constraint such as one of FixInternals. The energy average and the constraint should be conserved to pass the test. @schiotz, what do you think?",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 135,
+          "commit_sha": "ee7457571c5421ebfaeaa55341e46fad0fe36e70",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-09-30T15:37:34.919Z",
+          "is_outdated": false
+        },
+        {
+          "id": "422516661",
+          "author": "schiotz",
+          "body": "I think it would be important to test that thermalization does not break RATTLE.  I have no experience with rattle, I hardly even know how it works :-)\n\nI guess a test would be to remove a significant fraction of the degrees of freedom (DOF) with RATTLE, then test that the kinetic energy ends up being as expected for the reduced number of DOFs.  And that the contraints are obeyed.\n\nDoes that make sense?",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 135,
+          "commit_sha": "ee7457571c5421ebfaeaa55341e46fad0fe36e70",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-02T07:01:31.339Z",
+          "is_outdated": false
+        },
+        {
+          "id": "422569809",
+          "author": "jamsler",
+          "body": "Okay, as far as I understand RATTLE in ASE the constraints are handled by `set_positions(..., apply_constraint=True)` and the `adjust_positions()` method of the corresponding constraint together with the recalculation of the real velocity. Currently, I do not see a problem with thermalization, as this only sets the initial momenta which are then modified by RATTLE in the MD class. However, I do not feel confident enough to design a fail-proof test at the moment, hence I suggest to open an issue 'add RATTLE test for MD'. I might come back to that issue later, when my projects (and experience) have grown the point of constrained MD.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 135,
+          "commit_sha": "ee7457571c5421ebfaeaa55341e46fad0fe36e70",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-02T08:46:25.709Z",
+          "is_outdated": false
+        },
+        {
+          "id": "422573667",
+          "author": "schiotz",
+          "body": "OK, I think this makes sense.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 135,
+          "commit_sha": "ee7457571c5421ebfaeaa55341e46fad0fe36e70",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-02T08:53:02.370Z",
+          "is_outdated": false
+        },
+        {
+          "id": "422587636",
+          "author": "jamsler",
+          "body": "#759 was opened to address the missing test for RATTLE constraints in MD simulations.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 135,
+          "commit_sha": "ee7457571c5421ebfaeaa55341e46fad0fe36e70",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-02T09:15:50.145Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Raises a concern about whether RATTLE constraints are handled correctly and asks what test would catch a failure, implying a test coverage gap that should be addressed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "422746178",
+          "author": "askhl",
+          "body": "Already explained in the docstring, no comment necessary.\n\nSuggest renaming to `fix_com` due to prior art in atoms.py.\n\nIs fixing the center of mass particularly useful with Andersen or is it equally applicable to all MDs?  Should it be an option of all MD runs?",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 63,
+          "commit_sha": "ee7457571c5421ebfaeaa55341e46fad0fe36e70",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-02T13:48:25.424Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "high",
+          "label_reasoning": "Suggests renaming 'fix_com' following prior art in atoms.py, and questions placement of the feature (all MDs vs. just Andersen)."
+        },
+        {
+          "id": "422872679",
+          "author": "jamsler",
+          "body": "Fixing the center of mass is particularly useful for thermostats that perturb the center of mass velocity.\nI can rename fixcm to fix_com in all MD codes.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 63,
+          "commit_sha": "ee7457571c5421ebfaeaa55341e46fad0fe36e70",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-02T17:44:39.720Z",
+          "is_outdated": false
+        },
+        {
+          "id": "422876655",
+          "author": "jamsler",
+          "body": "Changed variable name fixcm to fix_com.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 63,
+          "commit_sha": "ee7457571c5421ebfaeaa55341e46fad0fe36e70",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-02T17:56:41.903Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests renaming `fix_cm` to `fix_com` and raises a design question about whether this option should be generalized to all MD runs."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "422746181",
+          "author": "askhl",
+          "body": "would you mind renaming `f` to `forces` since that's more greppable?  I know it's often called `f` but we can do better.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 96,
+          "commit_sha": "ee7457571c5421ebfaeaa55341e46fad0fe36e70",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-02T13:48:25.637Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "high",
+          "label_reasoning": "Suggests renaming variable 'f' to 'forces' for better readability and greppability."
+        },
+        {
+          "id": "422878934",
+          "author": "jamsler",
+          "body": "Done for all MD codes.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 96,
+          "commit_sha": "ee7457571c5421ebfaeaa55341e46fad0fe36e70",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-02T18:00:34.993Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests renaming variable `f` to `forces` for better readability and greppability."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "422746185",
+          "author": "askhl",
+          "body": "There are multiple loops over arrays filling with boltzmann_random, i.e., a mild case of duplication. To avoid repetition (and reduce risk of accidentally changing the order of random number generation) I suggest\n\n```python\ndef boltzmann_random(self, width, shape):\n    x = self.rng.random_sample(shape=shape)\n    y = ...\n    z = ...\n    return z\n```\n\nThis will also be much faster (array math vs python loops) in case that matters.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 82,
+          "commit_sha": "1e4a794aa3d3cad3bbad19e5ed7152b926ae9f8f",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-02T13:48:25.768Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Duplication",
+          "label_confidence": "high",
+          "label_reasoning": "Identifies multiple loops that duplicate the boltzmann_random logic and suggests extracting into a shared method, also noting performance benefit."
+        },
+        {
+          "id": "422940963",
+          "author": "jamsler",
+          "body": "Good point, done.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 82,
+          "commit_sha": "1e4a794aa3d3cad3bbad19e5ed7152b926ae9f8f",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-02T20:04:12.537Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests refactoring the duplicated loop logic into a shared `boltzmann_random` method with array math for performance."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "422746187",
+          "author": "askhl",
+          "body": "This can also be replaced with array expression `v[self.rng.random_sample(v.shape) <= v] = get_maxwell_....`",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 120,
+          "commit_sha": "1e4a794aa3d3cad3bbad19e5ed7152b926ae9f8f",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-02T13:48:25.989Z",
+          "is_outdated": false,
+          "dimension": "Performance Issue",
+          "category": "Computation Efficiency",
+          "label_confidence": "medium",
+          "label_reasoning": "Suggests replacing a Python loop with a vectorized array expression for efficiency."
+        },
+        {
+          "id": "422941303",
+          "author": "jamsler",
+          "body": "Done.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 120,
+          "commit_sha": "1e4a794aa3d3cad3bbad19e5ed7152b926ae9f8f",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-02T20:05:16.534Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests replacing a loop with a vectorized array expression."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "422746192",
+          "author": "askhl",
+          "body": "I have seen this snippet before in another test.  Please never duplicate any code.  Is there any other duplicate code I did not spot?\n\nCan we port the test so it uses asap3 instead, and runs in less than one second?",
+          "file_path": "ase/test/md/test_andersen.py",
+          "line_number": 27,
+          "commit_sha": "b4ed9ebe05eef166599783c68894a98400889555",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-02T13:48:26.355Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Duplication",
+          "label_confidence": "high",
+          "label_reasoning": "Explicitly calls out duplicated test code snippet copied from another test and asks to eliminate duplication."
+        },
+        {
+          "id": "423078709",
+          "author": "jamsler",
+          "body": "The tests for Langevin, Andersen, Verlet and Verlet(asap3) are very similar. It should be possible to reduce code duplication by combining these tests into one test.\n\nI am unfamiliar with asap3, are you @schiotz? It seems Langevin needs to broadcast its random numbers to work with asap3. What is required for Andersen to work with asap3?",
+          "file_path": "ase/test/md/test_andersen.py",
+          "line_number": 27,
+          "commit_sha": "b4ed9ebe05eef166599783c68894a98400889555",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-03T11:20:30.360Z",
+          "is_outdated": false
+        },
+        {
+          "id": "423130263",
+          "author": "jamsler",
+          "body": "Tests for Verlet and Langevin without asap3 were merged into one test_mds.py file which reduced code duplications. A test for Andersen was added to this file. Equivalence of Langevin and Andersen with Verlet for zero friction/andersen_prob is now tested using a very short trajectory.\n\nFor Verlet and Langevin there exist additional test files using asap3: test_verlet_asap.py and test_langevin_asap.py. These can be merged and extended by Andersen to a test file 'test_mds_asap.py' similarly to the tests without asap3.\n\nIf there is no reason to test the MD codes without asap3, then test_mds.py can be deleted and only test_mds_asap.py is kept.",
+          "file_path": "ase/test/md/test_andersen.py",
+          "line_number": 27,
+          "commit_sha": "b4ed9ebe05eef166599783c68894a98400889555",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-03T21:08:20.768Z",
+          "is_outdated": false
+        },
+        {
+          "id": "423177291",
+          "author": "jamsler",
+          "body": "I see, asap3 is an external calculator and MD package. I think we cannot port the test to use asap3 as this would leave untested ASE code.",
+          "file_path": "ase/test/md/test_andersen.py",
+          "line_number": 27,
+          "commit_sha": "b4ed9ebe05eef166599783c68894a98400889555",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-04T10:23:50.290Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removing duplicate code from the test and porting it to use asap3 for faster execution."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "422746194",
+          "author": "askhl",
+          "body": "Excellent, that can verified in a single MD step.  No need for a full propagation to verify that condition.\n\nBut does this mean that our Verlet implementation is redundant because it is a special case of Andersen?",
+          "file_path": "ase/test/md/test_andersen.py",
+          "line_number": 29,
+          "commit_sha": "b4ed9ebe05eef166599783c68894a98400889555",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-02T13:48:26.570Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Redundancy Handling",
+          "label_confidence": "medium",
+          "label_reasoning": "Questions whether Verlet implementation is redundant given Andersen is a generalization, implying potential unnecessary code."
+        },
+        {
+          "id": "422886803",
+          "author": "schiotz",
+          "body": "Technically it may be, but is it equally fast? Langevin is also a slow version of Verlet for friction=0.",
+          "file_path": "ase/test/md/test_andersen.py",
+          "line_number": 29,
+          "commit_sha": "b4ed9ebe05eef166599783c68894a98400889555",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-02T18:23:42.353Z",
+          "is_outdated": false
+        },
+        {
+          "id": "423175477",
+          "author": "jamsler",
+          "body": "I have compared the speed of Verlet, Langevin and Andersen using 100k steps for the setup used in test_mds.py. The relative speeds on my Macbook are Verlet : Langevin : Andersen = 1 : 1.17 : 1.23.\nAfter around 20k steps the trajectories of Verlet, Langevin and Andersen differ slightly for numerical reasons. All three codes conserve total energy and thus generate an NVE ensemble. In my opinion the Verlet implementation is not redundant due to its significantly better performance.\n\nSo, apart from numerical differences after several thousand steps Andersen and Langevin do reproduce Verlet for andersen_prob/friction equal zero. This is now tested in test_mds.py using a very short trajectory.",
+          "file_path": "ase/test/md/test_andersen.py",
+          "line_number": 29,
+          "commit_sha": "b4ed9ebe05eef166599783c68894a98400889555",
+          "base_sha": "4d126209059c1c71458bfc0168f54ec1466cda8b",
+          "created_at": "2020-10-04T10:03:18.235Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests simplifying the test to use a single MD step rather than full propagation, and raises a design question about Verlet redundancy."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "423476203",
+          "author": "schiotz",
+          "body": "> I am unfamiliar with asap3, are you @schiotz? It seems Langevin needs to broadcast its random numbers to work with asap3. What is required for Andersen to work with asap3?\n\nI am the main asap maintainer.  The broadcasting in Langevin is not for asap, it is for gpaw: in parallel gpaw calculations it is essential that the atoms maintain the same positions on all MPI tasks, that is what the broadcast is used for and something similar should be done for Andersen thermalization.\n\nAsap has the atoms distributed between MPI tasks, so there the random numbers should be independent.  On the other hand, the atoms migrate when forces are calculated, so all per-atom data should be on the atoms when forces are calculated.  Here that is only the velocities, which are kept on the atoms in Verlet for this reason.  I'll try to use Andersen with asap and see if it works.  For langevin, a special langevin class is used in asap, it is derived from ase.md.langevin and just defines a helper method that binds the temporary arrays to the atoms object so they get migrated along other data, but I do not foresee that to be necessary for Andersen.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-10-05T09:40:09.727Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Concurrency Issues",
+          "label_confidence": "medium",
+          "label_reasoning": "Discusses MPI parallel execution and the need to broadcast random numbers across tasks to keep atom data consistent, a distributed/concurrent correctness concern."
+        },
+        {
+          "id": "425993908",
+          "author": "jamsler",
+          "body": "Hi @schiotz, based on your comment I have adapted the Andersen code so that it should be compatible with asap and gpaw. In detail, random per-atom variables are now stored as attributes and broadcasted via the communicator:\n- self.random_com_velocity  # added to all atoms if self.fix_com\n- self.random_velocity      # added to some atoms if the per-atom\n- self.andersen_chance      # andersen_chance <= andersen_prob",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-10-08T09:11:42.032Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explains that broadcasting is needed for parallel GPAW calculations and implies similar broadcasting logic should be added to the Andersen thermostat."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "439978334",
+          "author": "askhl",
+          "body": "Instead of communicator being None, you can use ase.parallel.SerialCommunicator().  That one has dummy implementations of broadcast etc., so the if-statements will be unnecessary (in multiple places)",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 127,
+          "commit_sha": "9ef4df85692bdde59ff3088c58e9d0da32748ec5",
+          "base_sha": "86ac1499d4c7e9097fbf6ca55354f86aea495342",
+          "created_at": "2020-11-02T12:46:33.511Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Redundancy Handling",
+          "label_confidence": "high",
+          "label_reasoning": "Suggests using SerialCommunicator() instead of None checks, which would eliminate multiple if-statements and reduce redundancy."
+        },
+        {
+          "id": "440132113",
+          "author": "jamsler",
+          "body": "If I understand ase.parallel correctly, then I think that `communicator=ase.parallel.world` will assign the correct communicator (dummy or whatever). So, I can remove the if statement. By the way: this if statement is also found in langevin.py. I removed it now.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 127,
+          "commit_sha": "9ef4df85692bdde59ff3088c58e9d0da32748ec5",
+          "base_sha": "86ac1499d4c7e9097fbf6ca55354f86aea495342",
+          "created_at": "2020-11-02T15:18:31.068Z",
+          "is_outdated": false
+        },
+        {
+          "id": "440245562",
+          "author": "jamsler",
+          "body": "I noticed that the DOC strings in langevin.py (and andersen.py) tell the user to set the communicator to None to disable communication. So, I add `if communicator is None: communicator = DummyMPI()`.\n\nBtw, I could not find `ase.parallel.SerialCommunicator()`, I assume you meant `DummyMPI()`.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 127,
+          "commit_sha": "9ef4df85692bdde59ff3088c58e9d0da32748ec5",
+          "base_sha": "86ac1499d4c7e9097fbf6ca55354f86aea495342",
+          "created_at": "2020-11-02T18:20:30.791Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests replacing `None` communicator checks with `ase.parallel.SerialCommunicator()` to eliminate multiple if-statements."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "439978337",
+          "author": "askhl",
+          "body": "This is a copy from langevin.\n\nWe should make use of programming constructs like functions, methods, shared superclasses, or object composition so the computer takes care of the repetition instead of humans needing to know about the duplication and remember to update the same thing in multiple places.\n\nCan the duplication be eliminated?\n\nIf there was any other duplication that I didn't spot (yet), then the same comment applies.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 139,
+          "commit_sha": "134b0cf2dfb901b75fbacfb441cee48d9c49842a",
+          "base_sha": "86ac1499d4c7e9097fbf6ca55354f86aea495342",
+          "created_at": "2020-11-02T12:46:33.830Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Duplication",
+          "label_confidence": "high",
+          "label_reasoning": "Explicitly identifies code copied from langevin.py and asks to eliminate duplication via shared methods, superclasses, or composition."
+        },
+        {
+          "id": "440172311",
+          "author": "jamsler",
+          "body": "I fully agree. The duplication marked in this thread was reduced by addition of `atoms.set_center_of_mass()` to atoms.py.\n\nI furthermore spotted a duplicated `_get_com_velocity()` (used by Langevin and Andersen) and moved it to the super class.",
+          "file_path": "ase/md/andersen.py",
+          "line_number": 139,
+          "commit_sha": "134b0cf2dfb901b75fbacfb441cee48d9c49842a",
+          "base_sha": "86ac1499d4c7e9097fbf6ca55354f86aea495342",
+          "created_at": "2020-11-02T16:15:02.803Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags code duplication copied from langevin and requests it be eliminated via shared abstractions (functions, methods, superclass, or composition)."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "439978340",
+          "author": "askhl",
+          "body": "Many of the parameters are repeated (4-fold duplication).\n\nPlease eliminate duplication by having either 1) shortcut methods to build MD objects, or 2) pass `**kwargs`, etc.",
+          "file_path": "ase/test/md/test_mds.py",
+          "line_number": 69,
+          "commit_sha": "435a5d87e68ebbbb6e49ad2bc8acf21b3ab388a3",
+          "base_sha": "86ac1499d4c7e9097fbf6ca55354f86aea495342",
+          "created_at": "2020-11-02T12:46:34.111Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Duplication",
+          "label_confidence": "high",
+          "label_reasoning": "Points out 4-fold parameter duplication in test setup and suggests eliminating it via shortcut methods or **kwargs."
+        },
+        {
+          "id": "440216197",
+          "author": "jamsler",
+          "body": "reduced duplications via usage of kwargs and an additional function",
+          "file_path": "ase/test/md/test_mds.py",
+          "line_number": 69,
+          "commit_sha": "435a5d87e68ebbbb6e49ad2bc8acf21b3ab388a3",
+          "base_sha": "86ac1499d4c7e9097fbf6ca55354f86aea495342",
+          "created_at": "2020-11-02T17:18:40.314Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests eliminating 4-fold parameter duplication in the test file using shortcut methods or `**kwargs`."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "439978342",
+          "author": "askhl",
+          "body": "(Why are we deleting the reference?)\n\nThe two tests look alike.  It would be good to replace them via common functions, fixtures, or parametrization, so it's easy to see (without prior knowledge of all the files) that they belong together and what their exact differences are.",
+          "file_path": "ase/test/md/test_mds_asap.py",
+          "line_number": 37,
+          "commit_sha": "3e204c23880831bcb545f2be21da9ac41e5af4ed",
+          "base_sha": "86ac1499d4c7e9097fbf6ca55354f86aea495342",
+          "created_at": "2020-11-02T12:46:34.370Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Duplication",
+          "label_confidence": "high",
+          "label_reasoning": "Notes that the two tests look alike and should be unified via common functions, fixtures, or parametrization."
+        },
+        {
+          "id": "440228839",
+          "author": "jamsler",
+          "body": "No idea, the reference was deleted in the old tests. Now, I removed the deletion.\n\nThe major differences between the two tests are\n- the calculator (asap3.EMT vs. TestPotential)\n- the atomic system\n- the use of pbc\n- the specific tests (temperature ramping, reproduction of Verlet by Langevin and Andersen with zero thermostat, conservation of total energy, average temperature, ...)\n\nI think this is it for now. Perhaps one could concatenate the two files into one file to stress that they belong together.",
+          "file_path": "ase/test/md/test_mds_asap.py",
+          "line_number": 37,
+          "commit_sha": "3e204c23880831bcb545f2be21da9ac41e5af4ed",
+          "base_sha": "86ac1499d4c7e9097fbf6ca55354f86aea495342",
+          "created_at": "2020-11-02T17:42:48.915Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions deletion of a reference and requests the two similar tests be unified via common functions, fixtures, or parametrization."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "439978343",
+          "author": "askhl",
+          "body": "Back in the days this test was probably fully random and would fail if temperature fell outside the interval.\n\nNow we control the seed centrally (with rng) so we won't get random failures.  Hence, let's tighten the criterion so it's within perhaps 300 +/- 50 K (I don't know the actual numbers).",
+          "file_path": "ase/test/md/test_mds.py",
+          "line_number": 72,
+          "commit_sha": "c12172abe9dadc576af62b6aceee7302f388df19",
+          "base_sha": "86ac1499d4c7e9097fbf6ca55354f86aea495342",
+          "created_at": "2020-11-02T12:46:34.632Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "medium",
+          "label_reasoning": "Suggests the test assertion criterion is too loose and should be tightened now that randomness is controlled via a seed, indicating a weak/incorrect test condition."
+        },
+        {
+          "id": "440236714",
+          "author": "jamsler",
+          "body": "Actually, the temperature fluctuates heavily. The thermostats conserve temperature only on average over long trajectories. Here we can detect problems in the units or errors with similar orders of magnitude (see comment in the code).",
+          "file_path": "ase/test/md/test_mds.py",
+          "line_number": 72,
+          "commit_sha": "c12172abe9dadc576af62b6aceee7302f388df19",
+          "base_sha": "86ac1499d4c7e9097fbf6ca55354f86aea495342",
+          "created_at": "2020-11-02T17:59:13.955Z",
+          "is_outdated": false
+        },
+        {
+          "id": "441235616",
+          "author": "askhl",
+          "body": "OK, I see.  But if we can't verify the temperature after 10000 steps, shouldn't we just delete it?  I mean either it tests 10000 steps *and* we gain a verifiable quantitative agreement, *or* we simply delete the test (less is more) and rely on the one using asap3.",
+          "file_path": "ase/test/md/test_mds.py",
+          "line_number": 72,
+          "commit_sha": "c12172abe9dadc576af62b6aceee7302f388df19",
+          "base_sha": "86ac1499d4c7e9097fbf6ca55354f86aea495342",
+          "created_at": "2020-11-03T23:05:53.703Z",
+          "is_outdated": false
+        },
+        {
+          "id": "441469372",
+          "author": "jamsler",
+          "body": "Right, it may help to summarize what we want to test:\n- conservation of total energy using `Verlet` (long traj)\n- reproduction of `Verlet` by `Langevin` and `Andersen` for switched off thermostats (short traj)\n- thermalization by `MaxwellBoltzmannDistribution` to target temperature\n- ability of thermostats to conserve temperature on average (long traj)\n\nAnything else may probably be deleted, e.g.:\n- repetition of tests for varying pbc\n- repetition of tests for varying atomic systems\n- repetition of tests for varying calculators\n- several `QuasiNewton` optimizations after MD runs in test_mds.py\n- rough temperature checks in test_mds.py",
+          "file_path": "ase/test/md/test_mds.py",
+          "line_number": 72,
+          "commit_sha": "c12172abe9dadc576af62b6aceee7302f388df19",
+          "base_sha": "86ac1499d4c7e9097fbf6ca55354f86aea495342",
+          "created_at": "2020-11-04T10:20:26.290Z",
+          "is_outdated": false
+        },
+        {
+          "id": "442212587",
+          "author": "jamsler",
+          "body": "I have merged the tests according to the above listed summary.",
+          "file_path": "ase/test/md/test_mds.py",
+          "line_number": 72,
+          "commit_sha": "c12172abe9dadc576af62b6aceee7302f388df19",
+          "base_sha": "86ac1499d4c7e9097fbf6ca55354f86aea495342",
+          "created_at": "2020-11-05T11:08:57.951Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests tightening the temperature test criterion (e.g., 300 \u00b1 50 K) since random failures are no longer a concern with a seeded RNG."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "444134488",
+          "author": "askhl",
+          "body": "I now realize: We should try to avoid having many methods on Atoms that grow in different \"directions\".  The atoms.py change should really be expressed via a keyword in `atoms.center()`, maybe atoms.center(about='cou') (meaning center of unit cell) following an existing convention from atoms.rotate().\n\nBut upon looking more closely, atoms.center() has some old behaviours wrt. periodicity and cell vector definitions which make it slightly non-straightforward.  I might try to improve that.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2020-11-09T13:38:10.426Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Class Design Guidelines",
+          "label_confidence": "medium",
+          "label_reasoning": "Raises concern about adding methods to Atoms that grow in different directions, suggesting the change should instead extend existing API (atoms.center()) to avoid poor class design."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests replacing the atoms.py change with a keyword on `atoms.center()` instead of adding a new method, indicating a concrete refactoring request."
+    }
+  ],
+  "review_thread_count": 30,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "420842198",
+            "author": "jamsler",
+            "body": "Adhering to the new convention from !2065 the Andersen class takes the temperature input in Kelvin. Since the Andersen feature is newly introduced, backwards compatibility is not required. @schiotz, please feel free to review.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-09-29T21:11:03.423Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "421161275",
+            "author": "jamsler",
+            "body": "Thank you very much!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-09-30T09:18:25.734Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_inline": true,
+        "comments": [
+          {
+            "id": "421299414",
+            "author": "askhl",
+            "body": "nitpick: `boltzmann_random`",
+            "file_path": "ase/md/andersen.py",
+            "line_number": 85,
+            "commit_sha": "68130e30e27140a2069d268f01b97ac2af88677d",
+            "base_sha": "059df1c5059f1b945038488bf8ff521062990b78",
+            "created_at": "2020-09-30T12:14:01.586Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_too_short"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "422591924",
+            "author": "jamsler",
+            "body": "Thank you for the discussion! All threads are resolved. Ready to be merged, @askhl?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-10-02T09:22:48.403Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "439765230",
+            "author": "jamsler",
+            "body": "Hi @schiotz, hi @askhl. Are we ready to merge this without the asap3 counterpart?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-11-02T08:50:21.099Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "439853343",
+            "author": "schiotz",
+            "body": "Yes",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-11-02T10:46:16.916Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_too_short"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "440255623",
+            "author": "jamsler",
+            "body": "All done.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-11-02T18:45:21.602Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "443057235",
+            "author": "jamsler",
+            "body": "Hi @askhl, I have merged the essence of the old 'messy' tests into test_verlet_thermostats.py. It looks much cleaner now. Ready to be merged?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-11-06T11:09:34.468Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "421157080",
+            "author": "schiotz",
+            "body": "I do not have merge privileges, so it will have to wait for Ask or JJ.\nAnd it is always good if one of them looks at it, too :-)",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-09-30T09:13:21.464Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Meta-discussion about merge privileges and review logistics; no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "439980858",
+            "author": "askhl",
+            "body": "Thanks @jamsler and @schiotz.\n\nThe existing old tests are little bit messy, and some of my comments really apply to old stuff.  I think it would be great to clean up the old stuff, but if you feel it's too much for just now then that's probably okay too, as some improvements were already made.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-11-02T12:50:32.760Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "General acknowledgment and soft suggestion to clean up old tests, but explicitly says it may be deferred; no concrete change required."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "444128594",
+            "author": "askhl",
+            "body": "Thank you @jamsler!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2020-11-09T13:29:58.205Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment/thank-you with no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 30,
+    "stage1_kept": 22,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 6,
+    "stage1_filtered_too_short": 2,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 3,
+    "stage3_cost_usd": 0.041390249999999996
+  }
+}

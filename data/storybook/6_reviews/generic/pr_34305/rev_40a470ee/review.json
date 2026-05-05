@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/vitest/src/use-test-provider-state.ts",
+      "line_number": 48,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `as TestStatusValue` cast is unsafe and hides a potential runtime crash. `statusValueToStoryIdsMap` is only initialized with 5 keys (`pending`, `success`, `error`, `warning`, `unknown`). If a story's status has `value: 'status-value:new'` (or `modified`/`affected`) and shares a `typeId` with component tests or a11y checks \u2014 possible today via any addon that re-uses those type IDs, or if the separation between test and change-detection type IDs ever leaks \u2014 then `statusValueToStoryIdsMap['status-value:new']` will be `undefined` and `.push()` will throw at runtime. The cast tells TypeScript to trust that this never happens, but there is no guard to enforce it. Replace with a runtime check:\n\n```typescript\nconst testValue = status.value as TestStatusValue;\nif (testValue in statusValueToStoryIdsMap) {\n  statusValueToStoryIdsMap[testValue].push(status.storyId);\n}\n```",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/StatusButton.tsx",
+      "line_number": 20,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The colors assigned here for the three new values (`theme.fgColor.accent` for all three) contradict the colors defined for the same values in `status.tsx`. In `status.tsx`, `new` maps to `theme.color.positive`, `modified` to `theme.color.secondary`, and `affected` to `theme.color.warning`. Using `fgColor.accent` for all three in `StatusButton` means the sidebar icon color and the button color will differ for the same status, breaking visual consistency. Either delegate to `getStatus(theme, status).iconColor` (as the existing entries in the map implicitly duplicate), or align the tokens across both files.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager/utils/status.test.ts",
+      "line_number": 57,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The test is named \"should rank affected above modified **and below warning**\", but the \"below warning\" claim is never actually asserted. Both `expect` calls use `status-value:modified`, not `status-value:affected`, so neither proves that `affected < warning`. The second assertion (`getMostCriticalStatusValue(['status-value:modified', 'status-value:warning']) \u2192 'warning'`) only covers `modified < warning`. To satisfy the stated contract, add:\n\n```typescript\nexpect(getMostCriticalStatusValue(['status-value:affected', 'status-value:warning'])).toBe('status-value:warning');\n```",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager/utils/status.test.ts",
+      "line_number": 33,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test description says \"rank **new and modified** between success and warning\", implying both values satisfy the constraint. However, the single `expect` only verifies that `new` beats `modified` and `success`. The assertion that `modified` itself outranks `success` (and that the name's claim about `modified` is true) is never checked. Consider adding `getMostCriticalStatusValue(['status-value:modified', 'status-value:success']) \u2192 'status-value:modified'` to fully cover the advertised invariant.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/types/modules/core-common.ts",
+      "line_number": 543,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`@default true` in the JSDoc conflicts with the actual default. The preset at `code/core/src/core-server/presets/common-preset.ts` explicitly sets `changeDetection: false`. Documenting the wrong default value will mislead users who rely on the JSDoc (e.g. in editor hover tooltips or generated API docs). Change the annotation to `@default false`, and consider adding a note about when it will be enabled (e.g. a `@experimental` tag or a TODO with a target version).",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/IconSymbols.tsx",
+      "line_number": 130,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `affected` icon is a hand-crafted SVG with no reference to the Storybook icon library, while the `new` and `modified` symbols both link back to their canonical sources in `@storybookjs/icons` (via the source URL comments). If the icon library is ever audited, updated, or the SVG viewBox assumptions change, this symbol will drift silently. Either source an equivalent icon from the library (e.g. a ripple or broadcast icon if one exists) and add the same-style URL comment, or at minimum document why it is custom.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "There is no `getGroupStatus` propagation test for `status-value:modified`. The diff adds tests that confirm `new` and `affected` bubble up correctly through group aggregation, but `modified` \u2014 the third new value \u2014 is left without equivalent coverage. Since `getGroupStatus` drives the sidebar group icons, a regression for `modified` would be invisible. Adding a third test mirroring the existing two would complete the coverage.",
+      "index": 6
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description states '`new` uses `theme.color.positive` (green), `modified` uses `theme.color.secondary` (purple)' but never explicitly documents the intended color for `affected`. The diff assigns `theme.color.warning` to `affected` in `status.tsx`, yet all three receive `theme.fgColor.accent` in `StatusButton.tsx`. With three distinct semantic states (new story, directly changed, indirectly affected), having three visually distinguishable colors is important; the PR description and code should agree on what those colors are and why, especially since `affected` using `theme.color.warning` (the same token as the pre-existing `warning` status) could create confusion in the sidebar.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.5925846,
+  "duration_seconds": 355.91002893447876
+}

@@ -1,0 +1,58 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/types/modules/core-common.ts",
+      "line_number": 428,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `@example` block uses assignment syntax (`deviceAddons = [...]`) rather than object-literal property syntax (`deviceAddons: [...],`). All other `@example` blocks on adjacent properties in this interface use the property form. This should read:\n```ts\n// .rnstorybook/main.ts\nexport default {\n  deviceAddons: ['@storybook/addon-ondevice-controls'],\n};\n```\nSame applies to line 429.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 18,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `link` property references the MIGRATION.md anchor `#react-native-on-device-addons-moved-to-deviceaddons`, but no matching section appears in MIGRATION.md (the diff contains no MIGRATION.md changes, and a search of the file found no such section). This is a broken link that will be surfaced to every user who follows it from the automigration prompt. Either the MIGRATION.md section needs to be added (and included in this diff), or the link should be removed until the anchor exists.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 28,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `includes('ondevice')` substring check will match any addon whose name contains the word \"ondevice\" \u2014 including third-party or user-authored addons that are server-side presets and should stay in `addons` (e.g., `my-org/addon-ondevice-analytics`). Moving such an addon to `deviceAddons` would silently break it.\n\nIf the intent is to target only official Storybook on-device packages, narrow the check:\n```ts\nconst ondeviceAddons = addons.filter((addon) =>\n  getAddonName(addon).startsWith('@storybook/addon-ondevice-')\n);\n```\nIf the broader match is intentional (to catch community on-device addons too), add an inline comment explaining the design choice so future maintainers understand why the broad match is safe.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 146,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test description \"handles the case where @storybook/react-native is in dependencies (not devDependencies)\" implies the implementation contains a branch that distinguishes between `dependencies` and `devDependencies`. It does not \u2014 `getAllDependencies()` merges all dependency categories, and the check is a simple key lookup. This test exercises exactly the same code path as the \"returns the ondevice addons when string addons with 'ondevice' are present\" test above, just with a single addon instead of two.\n\nEither rename the test to describe what actually distinguishes it (e.g., \"returns a single ondevice addon when only one is present\"), or remove it as a duplicate. Per the project maintainability guidelines, duplicate test names make failures ambiguous and suggest a scenario is being tested twice.",
+      "index": 3
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The PR description explicitly states: \"Note: `deviceAddons` is intentionally not added to the shared `StorybookConfigRaw` core type since it is React Native-specific. The automigration uses `ConfigFile`'s string-path APIs to write the field without requiring a type declaration.\" However, the diff in `core-common.ts` does add `deviceAddons?: Preset[]` to `StorybookConfigRaw`. Adding it to the shared type is arguably the right call \u2014 it gives TypeScript users type-checking and autocomplete \u2014 but the contradiction between the PR description and the actual change may cause reviewers to assume the type addition is an oversight rather than a deliberate decision. The PR description should be corrected to reflect the actual approach.",
+      "index": 4
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "MIGRATION.md changes are absent from the diff. The PR checklist marks documentation as complete, the description says a MIGRATION.md section was added with a TOC entry and before/after examples, and the `link` field in the migration fix references the anchor `#react-native-on-device-addons-moved-to-deviceaddons`. A search of the repository's MIGRATION.md found no such section. If these changes were accidentally omitted from the diff, they need to be included before merging \u2014 both because the documentation checklist requires it and because the broken `link` anchor will be surfaced to end users running the automigration.",
+      "index": 5
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `run` method calls `main.appendValueToArray(['deviceAddons'], addon)` for each on-device addon without first verifying the addon is not already present in `deviceAddons`. `ConfigFile.appendValueToArray` does not deduplicate. If `addons` contains duplicate entries for the same on-device package (malformed but possible), `check` returns both, and `run` calls `removeEntryFromArray` twice for the same name. According to the `ConfigFile` source, `removeEntryFromArray` throws when the entry is not found, so the second call would throw after the first already removed it \u2014 leaving the migration in a partially-applied state. A guard such as filtering `ondeviceAddons` to unique names (e.g., via a `Set` on `getAddonName`) before processing would make the run phase safe against this.",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.6285883500000001,
+  "duration_seconds": 363.9350426197052
+}

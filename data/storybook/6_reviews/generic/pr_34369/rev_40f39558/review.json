@@ -1,0 +1,100 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/git-diff-provider.ts",
+      "line_number": 62,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Untracked (new, unstaged) files are placed only in `new`, never in `changed`. However, `buildStatuses` in `service.ts` only iterates over `changedFiles` (derived from `changes.changed`), so an untracked story file will never be processed and will never receive a `status-value:new` status. The test in `service.test.ts` masks this by manually including the file in both `changed` and `new`, but the real `GitDiffProvider` doesn't do that. To fix, either add `...parseChangedFiles(untracked.stdout)` to the `changed` set, or extend the `buildStatuses` loop to also iterate over `newFiles`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 44,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Dead-code comment (`// logger.info(\\`Story ${entry.id} absolute path: ${absolutePath}\\`);`) was left in from debugging. Remove it before merging.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 207,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`newFiles` is declared as an `Array`, but is used with `.includes()` inside a nested loop (once per story file per changed file). That is O(n) per lookup. Declare it as a `Set` instead \u2014 `const newFiles = new Set(Array.from(changes.new).map(...))` \u2014 so the inner check `newFiles.has(storyFile)` is O(1).",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 235,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`changedFile.replace(\\`${repoRoot}/\\`, '')` is fragile and will silently produce the wrong result on Windows. `node:path`'s `resolve()` returns OS-native separators (backslashes on Windows), but `git rev-parse --show-toplevel` always returns forward slashes. The literal string `C:/repo/` will never match `C:\\repo\\src\\file.ts`. Use `path.relative(repoRoot, changedFile)` instead, which is cross-platform and handles all separator differences correctly.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 28,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`JSON.stringify(a.data) === JSON.stringify(b.data)` is used for deep equality of the `data` field. While V8's key ordering is deterministic in practice for plain objects, this is not specified by the JSON spec and can silently diverge if `data` is ever populated with keys in different insertion orders (e.g. from two separate code paths). Consider using a proper structural equality utility (e.g. `fast-deep-equal` or a simple recursive comparator) to make intent clear and behaviour reliable.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/dev-server.ts",
+      "line_number": 120,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`changeDetectionService` is declared with `const` inside the `if (!options.ignorePreview)` block, so it is not in scope for the `cancelTelemetry` function defined at line 205 (the SIGINT/SIGTERM handler). On graceful shutdown, `cancelTelemetry` calls `process.exit(0)` without ever calling `changeDetectionService.dispose()`, leaving any pending debounce timer and the `onModuleGraphChange` subscription unreleased. The process exit does free OS resources, but the intent of `dispose()` (and the pattern set by the error path on line 143) suggests explicit cleanup is expected. Consider hoisting the service reference or passing a dispose callback to `cancelTelemetry`.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/core-server/index.ts",
+      "line_number": 33,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`ChangeDetectionService` is re-exported directly from `'./change-detection/service'`, bypassing the barrel at `'./change-detection'`. The barrel (`change-detection/index.ts`) already exports `ChangeDetectionService`, and the other symbols from the same module (`getChangeDetectionReadiness`, `ChangeDetectionReadiness`) are correctly sourced from the barrel. Exporting directly from the leaf file is inconsistent and weakens the barrel's ability to control the public surface. Change to `export { ChangeDetectionService } from './change-detection';`.",
+      "index": 6
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 370,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The assertion `expect(fakeViteServer.watcher.listenerCount('all')).toBe(0)` after the second `start()` + 1000 ms advance was changed from the original `.toBe(1)`. After bail, `watcherChangeHandler` is reset to `undefined`, but a new one is set during the second `start()` call, and `fileToModulesMap` is still populated from the earlier `startChangeDetection()` helper. When the 1-second polling interval fires, the module graph is non-empty and `watcherChangeHandler` is set, so `server.watcher.on('all', watcherChangeHandler)` should execute and produce a listener count of 1. Asserting 0 appears incorrect and would mean the subsequent `expect(cb).toHaveBeenCalled()` assertion below it can never pass (no watcher listener would fire `cb`). This deserves a closer look to ensure the test accurately reflects intended behaviour.",
+      "index": 7
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.test.ts",
+      "line_number": 167,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The mock for `getChangedFiles` in the 'marks new story files as new' test includes `'src/NewButton.stories.tsx'` in both `changed` and `new`. However, the real `GitDiffProvider.getChangedFiles()` (as implemented in the diff) only puts tracked-but-modified files in `changed`; untracked files go exclusively into `new`. This means the test is verifying behaviour that the production `GitDiffProvider` cannot actually produce: an untracked story file that hasn't been staged won't appear in `changed`, so `buildStatuses` will never process it and the story will never be marked `status-value:new`. The test should either be updated to reflect what the real provider returns, or the bug in `GitDiffProvider` / `buildStatuses` should be fixed first.",
+      "index": 8
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 91,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The 30-second wall-clock timeout guard `process.hrtime(startTime)[0] > 30` mixes real time with Vitest's fake-timer environment. `process.hrtime` is not affected by `vi.useFakeTimers()`, so in tests the real time elapsed between timer ticks is near zero and this branch can never fire. In production, fast machines or CI may never hit 30 s, while slow ones will silently skip watcher registration with no log message. Consider logging a warning before giving up (`logger.warn('Change detection startup timed out after 30s')`) and/or making the timeout configurable.",
+      "index": 9
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`readiness.ts` uses module-level mutable singletons (`readinessDeferred`, `readinessState`) rather than encapsulating state inside the `ChangeDetectionService` class. The escape hatch `resetChangeDetectionReadiness` (exported as `internal_resetChangeDetectionReadiness`) is test-only plumbing exposed in the production module graph. If a second `ChangeDetectionService` instance is created in the same process (e.g. during hot-reload of `storybookDevServer`), the constructor's `resetChangeDetectionReadiness()` call would silently invalidate any pending `getChangeDetectionReadiness()` promises held by earlier callers. Encapsulating the deferred inside the service instance, or using a context/factory pattern, would eliminate this shared-state hazard.",
+      "index": 10
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `ChangeDetectionService` class guards against double-resolution in two independent places: the `this.readinessResolved` flag in `resolveReadiness()` and the `if (readinessState) return` guard inside `setChangeDetectionReadiness()`. The service-level flag exists to prevent a stale service instance from updating the newly reset deferred after `resetChangeDetectionReadiness()` is called, while the module-level guard prevents any second call from taking effect. This layered, non-obvious interaction is easy to misread. Adding a short comment on `resolveReadiness()` explaining why its own guard is necessary even though `setChangeDetectionReadiness` also short-circuits would improve future maintainability.",
+      "index": 11
+    }
+  ],
+  "cost_usd": 0.99073435,
+  "duration_seconds": 569.1290040016174
+}

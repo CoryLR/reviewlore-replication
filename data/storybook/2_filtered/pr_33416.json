@@ -1,0 +1,514 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33416,
+  "title": "Core: Add `getStoryHrefs` manager API and add hotkey for \"open in isolation\"",
+  "body": "## What I did\r\n\r\n- Added `getStoryHrefs` method to `urls` manager API module\r\n- Added keyboard shortcut for \"open in isolation mode\" (`Option-Shift-I` / `Alt-Shift-I`), using `api.getStoryHrefs`\r\n- Updated preview iframe URL to use `api.getStoryHrefs`\r\n- Updated `ShareMenu` component to use `api.getStoryHrefs` for all URLs, including QR code\r\n- Deprecated old `getStoryHref` util in manager components\r\n- Copied old `getStoryHref` into addon-docs source, because that's the only place it's still used and cannot be replaced with `api.getStoryHrefs` due to being in the preview. Yet another reason to not render docs pages in the preview.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [x] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n1. Open a story, select a few globals (e.g. Grid and Viewport tools), and change some Controls to get args in the URL. Verify that the preview behaves accordingly.\r\n2. Press Option-Shift-I (or Alt-Shift-I). This should open a new browser tab with the story preview (iframe.html). Verify that both globals and args are still applied.\r\n3. Use the Share tool (top-right) to check the story link, isolation mode link and QR code to all link to the story correctly.\r\n4. Navigate to a composed Storybook's story (setup composition if you have to) and check the same things. Globals should _not_ be carried over in isolation mode.\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  - Added `getStoryHrefs` API method for retrieving manager and preview URLs with support for custom query parameters, ref linking, and view modes.\n  - Added \"Open story in isolation\" shortcut (Alt+Shift+I).\n  - Added `STORYBOOK_NETWORK_ADDRESS` and `PREVIEW_URL` global configuration options.\n\n* **Bug Fixes**\n  - Fixed \"Open in editor\" context menu option appearing when no file path is available.\n\n* **Documentation**\n  - Added comprehensive addon API documentation and code examples for `getStoryHrefs`, `openInEditor`, `toggleFullscreen`, `togglePanel`, `addNotification`, and `getCurrentStoryData`.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ghengeveld",
+  "merged_at": "2026-01-05T14:34:53Z",
+  "base_ref": "next",
+  "merge_commit_sha": "426fa7382afc5edaf4507fb8ac4f159e9a3b065e",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "47e331ffbaa61a476ddb873bdb12bf46a93a5131",
+    "e5187543eddeebd8b83bb57894e61bed52cab5d9"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6diJ0V",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Missing URL encoding when building query parameters.**\n\nLines 10-12 construct the query string without URL-encoding the parameter values. While the `parseQuery` helper properly decodes parameters (line 21), the output construction doesn't encode them, which could cause issues with special characters in parameter values.\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix to add URL encoding</summary>\n\n```diff\n   return `${url}?${Object.entries(params)\n-    .map((item) => `${item[0]}=${item[1]}`)\n+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)\n     .join('&')}`;\n```\n\nThis ensures proper encoding of special characters in both keys and values, consistent with the decoding in `parseQuery`.\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/addons/docs/src/blocks/getStoryHref.ts around lines 1 to 13, the\nfunction builds the query string without URL-encoding keys or values; update the\nquery-string assembly to URL-encode both parameter names and values (e.g., use\nencodeURIComponent on item[0] and item[1] or build the query with\nURLSearchParams) so special characters are safely encoded when returning\n`${url}?\u2026`. Ensure the same ordering and inclusion of id and additionalParams\nare preserved.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits b59c127 to 68aae62",
+          "file_path": "code/addons/docs/src/blocks/getStoryHref.ts",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "85af5a45ed03bacb499ffa57f316e58f118c896a",
+          "created_at": "2025-12-23T12:04:52Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests URL encoding of query parameters with a specific code fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dinKr",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Guard against undefined `storyId`.**\n\nIf no story is selected (e.g., user is on the about page), `storyId` will be undefined, and `getStoryHrefs` may produce an invalid URL or throw. Consider adding a guard similar to other shortcut handlers that depend on story context.\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n case 'openInIsolation': {\n+  if (!storyId) {\n+    break;\n+  }\n   const { previewHref } = fullAPI.getStoryHrefs(storyId, { refId });\n   window.open(previewHref, '_blank', 'noopener,noreferrer');\n   break;\n }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n        case 'openInIsolation': {\n          if (!storyId) {\n            break;\n          }\n          const { previewHref } = fullAPI.getStoryHrefs(storyId, { refId });\n          window.open(previewHref, '_blank', 'noopener,noreferrer');\n          break;\n        }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/manager-api/modules/shortcuts.ts around lines 403 to 407, the\nhandler for 'openInIsolation' calls fullAPI.getStoryHrefs(storyId, { refId })\nwithout checking if storyId is defined; add a guard that returns early (or\nshows/dispatches the same feedback used by other story-dependent shortcuts) when\nstoryId is undefined to avoid calling getStoryHrefs with an invalid id,\notherwise proceed to compute previewHref and open it in a new window.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 35fe467 to e5d6628",
+          "file_path": "code/core/src/manager-api/modules/shortcuts.ts",
+          "line_number": 410,
+          "start_line": 404,
+          "commit_sha": "e5187543eddeebd8b83bb57894e61bed52cab5d9",
+          "created_at": "2025-12-23T12:51:31Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding a guard for undefined storyId with a specific code fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dinKv",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Handle undefined ref gracefully.**\n\nIf `refId` is provided but `refs[refId]` is undefined (e.g., ref not loaded yet), `refs[refId]?.url` evaluates to `undefined`, resulting in `\"undefined/iframe.html\"` as the preview base URL.\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n-      const previewBase = refId\n-        ? refs[refId]?.url + '/iframe.html'\n+      const refUrl = refId ? refs[refId]?.url : undefined;\n+      const previewBase = refUrl\n+        ? refUrl + '/iframe.html'\n         : global.PREVIEW_URL || `${managerBase}iframe.html`;\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/manager-api/modules/url.ts around lines 246 to 248,\nconstructing previewBase uses refs[refId]?.url which can be undefined and\nproduces \"undefined/iframe.html\"; change the logic to only use refs[refId].url\nwhen refs[refId] exists and has a url, otherwise fall back to global.PREVIEW_URL\nor managerBase; implement this by testing refs[refId]?.url (or using nullish\ncoalescing e.g. (refs[refId]?.url ?? global.PREVIEW_URL ?? managerBase) +\n'/iframe.html') so the final previewBase never contains \"undefined\".\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager-api/modules/url.ts",
+          "line_number": 254,
+          "start_line": 252,
+          "commit_sha": "e5187543eddeebd8b83bb57894e61bed52cab5d9",
+          "created_at": "2025-12-23T12:51:31Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a bug where undefined ref URL produces 'undefined/iframe.html' and provides a fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dinKx",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Mock property names don't match API implementation.**\n\nThe mock returns `{ manager, preview }` but the actual `getStoryHrefs` API (in url.ts) returns `{ managerHref, previewHref }`. This mismatch could cause issues if the ShareMenu component is tested against this story.\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n     getStoryHrefs: () => ({\n-      manager: '/?path=/story/manager-preview-tools-share--default',\n-      preview: '/iframe.html?id=manager-preview-tools-share--default&viewMode=story',\n+      managerHref: '/?path=/story/manager-preview-tools-share--default',\n+      previewHref: '/iframe.html?id=manager-preview-tools-share--default&viewMode=story',\n     }),\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    getStoryHrefs: () => ({\n      managerHref: '/?path=/story/manager-preview-tools-share--default',\n      previewHref: '/iframe.html?id=manager-preview-tools-share--default&viewMode=story',\n    }),\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/manager/components/preview/tools/share.stories.tsx around lines\n22 to 25, the mock getStoryHrefs returns properties named { manager, preview }\nbut the real API returns { managerHref, previewHref }; update the mock to use\nmanagerHref and previewHref keys with the same URL values so tests and the\nShareMenu component receive the correct property names.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 35fe467 to e5d6628",
+          "file_path": "code/core/src/manager/components/preview/tools/share.stories.tsx",
+          "line_number": 25,
+          "start_line": 22,
+          "commit_sha": "e5187543eddeebd8b83bb57894e61bed52cab5d9",
+          "created_at": "2025-12-23T12:51:31Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a property name mismatch in mock and requests renaming manager/preview to managerHref/previewHref."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6di-JE",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Handle colons in serialized parameter values.**\n\n`split(':')` splits on every colon occurrence. If a value contains colons (e.g., `\"theme:dark:blue\"`), the destructuring `[key, value]` only captures the first two segments, discarding the rest. This could cause data loss when merging args or globals that have colon-separated values.\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix using split with limit</summary>\n\n```diff\n const parseSerializedParam = (param: string) =>\n   Object.fromEntries(\n     param\n       .split(';')\n-      .map((pair) => pair.split(':'))\n+      .map((pair) => pair.split(':', 2))\n       .filter(([key, value]) => key && value)\n   );\n```\n\nThis limits the split to at most 2 parts, preserving colons in the value.\n\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nconst parseSerializedParam = (param: string) =>\n  Object.fromEntries(\n    param\n      .split(';')\n      .map((pair) => pair.split(':', 2))\n      .filter(([key, value]) => key && value)\n  );\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/manager-api/modules/url.ts around lines 35 to 41, the parsing\nlogic uses pair.split(':') which splits on every colon and loses parts when\nvalues contain colons; change the split to limit to two parts (e.g.,\npair.split(':', 2)) so the first segment is the key and the remainder (including\nany colons) is the value, keep the existing filter for truthy key/value and\npreserve Object.fromEntries usage.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager-api/modules/url.ts",
+          "line_number": 43,
+          "start_line": 35,
+          "commit_sha": "e5187543eddeebd8b83bb57894e61bed52cab5d9",
+          "created_at": "2025-12-23T13:28:13Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies data loss bug with colon-containing values and requests using split with limit of 2."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6di-JJ",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Validate that `refs[refId].url` exists.**\n\nThe check at line 242-244 throws an error if `refs[refId]` is falsy, but after this check, line 251 directly accesses `refs[refId].url` without verifying it exists. If a ref object is present but missing the `url` property, the result would be `\"undefined/iframe.html\"`.\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix to validate url property</summary>\n\n```diff\n   if (refId && !refs[refId]) {\n     throw new Error(`Invalid refId: ${refId}`);\n   }\n+  if (refId && !refs[refId].url) {\n+    throw new Error(`Ref ${refId} does not have a url`);\n+  }\n\n   const originAddress = global.window.location.origin + location.pathname;\n   const networkAddress = global.STORYBOOK_NETWORK_ADDRESS ?? originAddress;\n   const managerBase =\n     base === 'origin' ? originAddress : base === 'network' ? networkAddress : location.pathname;\n   const previewBase = refId\n     ? refs[refId].url + '/iframe.html'\n     : global.PREVIEW_URL || `${managerBase}iframe.html`;\n```\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/manager-api/modules/url.ts around lines 242 to 252, after\nconfirming refs[refId] exists you must also validate that refs[refId].url is a\nnon-empty string before using it; update the logic so if refId is provided but\nrefs[refId].url is missing/invalid you either throw a clear error (e.g. `Invalid\nrefId url: ${refId}`) or fall back to the existing\nglobal.PREVIEW_URL/managerBase iframe path \u2014 ensure you do not construct\n`${refs[refId].url}/iframe.html` when url is undefined.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager-api/modules/url.ts",
+          "line_number": 254,
+          "start_line": 244,
+          "commit_sha": "e5187543eddeebd8b83bb57894e61bed52cab5d9",
+          "created_at": "2025-12-23T13:28:13Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6dsL1m",
+          "author": "Sidnioulz",
+          "body": "Url is mandatory in that type.",
+          "file_path": "code/core/src/manager-api/modules/url.ts",
+          "line_number": 254,
+          "start_line": 244,
+          "commit_sha": "e5187543eddeebd8b83bb57894e61bed52cab5d9",
+          "created_at": "2025-12-24T12:33:16Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests validation of refs[refId].url property existence before use."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6di-JK",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**URL-encode serialized parameters and path segments.**\n\nThe serialized `argsParam` and `globalsParam` (containing characters like `;`, `:`) are concatenated directly into query strings without URL encoding, which can break URLs if values contain reserved characters. Additionally, `refId` and `storyId` in the `managerHref` path (line 269) are not URL-encoded, though `refId` is correctly encoded when used as a query parameter at line 254.\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix to add URL encoding</summary>\n\n```diff\n-  argsParam = argsParam && `&args=${argsParam}`;\n-  globalsParam = globalsParam && `&globals=${globalsParam}`;\n+  argsParam = argsParam && `&args=${encodeURIComponent(argsParam)}`;\n+  globalsParam = globalsParam && `&globals=${encodeURIComponent(globalsParam)}`;\n   customParams = customParams && `&${customParams}`;\n\n   return {\n-    managerHref: `${managerBase}?path=/${viewMode}/${refId ? `${refId}_` : ''}${storyId}${argsParam}${globalsParam}${customParams}`,\n+    managerHref: `${managerBase}?path=/${viewMode}/${refId ? `${encodeURIComponent(refId)}_` : ''}${encodeURIComponent(storyId)}${argsParam}${globalsParam}${customParams}`,\n     previewHref: `${previewBase}?id=${storyId}&viewMode=${viewMode}${refParam}${argsParam}${refId ? '' : globalsParam}${customParams}`,\n   };\n```\n\nNote: Verify that `stringify()` from picoquery already handles encoding for `customParams`.\n\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n      argsParam = argsParam && `&args=${encodeURIComponent(argsParam)}`;\n      globalsParam = globalsParam && `&globals=${encodeURIComponent(globalsParam)}`;\n      customParams = customParams && `&${customParams}`;\n\n      return {\n        managerHref: `${managerBase}?path=/${viewMode}/${refId ? `${encodeURIComponent(refId)}_` : ''}${encodeURIComponent(storyId)}${argsParam}${globalsParam}${customParams}`,\n        previewHref: `${previewBase}?id=${storyId}&viewMode=${viewMode}${refParam}${argsParam}${refId ? '' : globalsParam}${customParams}`,\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager-api/modules/url.ts",
+          "line_number": 275,
+          "start_line": 269,
+          "commit_sha": "e5187543eddeebd8b83bb57894e61bed52cab5d9",
+          "created_at": "2025-12-23T13:28:13Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests URL encoding of serialized parameters and path segments."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6drKSz",
+          "author": "Sidnioulz",
+          "body": "Any particular reason we don't use `Object.fromEntries(new URLSearchParams(queryString))`?",
+          "file_path": "code/addons/docs/src/blocks/getStoryHref.ts",
+          "line_number": 14,
+          "start_line": null,
+          "commit_sha": "1846ad023d6a1f1c7ed260573335f87bd933203b",
+          "created_at": "2025-12-24T10:10:55Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Phrased as a question but implies a suggestion to use URLSearchParams instead of the custom parsing logic."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6drM17",
+          "author": "Sidnioulz",
+          "body": "We could clarify why this version of the util exists.\n\nBesides, docs users may want to compute a manager URL so they can pass it to `NAVIGATE_URL` events. We should still return a manager href here too.",
+          "file_path": "code/addons/docs/src/blocks/getStoryHref.ts",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "e5187543eddeebd8b83bb57894e61bed52cab5d9",
+          "created_at": "2025-12-24T10:15:39Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6drM-6",
+          "author": "Sidnioulz",
+          "body": "It'll also help us refactor in the future (if docs moves to manager) if both functions have identical return types.",
+          "file_path": "code/addons/docs/src/blocks/getStoryHref.ts",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "e5187543eddeebd8b83bb57894e61bed52cab5d9",
+          "created_at": "2025-12-24T10:16:00Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6droer",
+          "author": "ndelangen",
+          "body": "I see your point @Sidnioulz, I foresee when the docs move happens we'll start using the manager's API; this would mean touching every usage/instance.\r\n\r\nSo I'm not convinced making the change you suggest would actually save us any effort in the future.\r\n\r\nThere's no way to make a managerURL from the preview, because the preview might be composed, and the desired behavior is undetermined.",
+          "file_path": "code/addons/docs/src/blocks/getStoryHref.ts",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "e5187543eddeebd8b83bb57894e61bed52cab5d9",
+          "created_at": "2025-12-24T11:13:46Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6druZ6",
+          "author": "Sidnioulz",
+          "body": "I see!\r\n\r\nLet's just add JSDoc to document the duplication then.",
+          "file_path": "code/addons/docs/src/blocks/getStoryHref.ts",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "e5187543eddeebd8b83bb57894e61bed52cab5d9",
+          "created_at": "2025-12-24T11:28:18Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6drusI",
+          "author": "ndelangen",
+          "body": "This function used to be defined (and still is only for backwards compat) in `storybook/internal/components`.\r\n\r\nThis seemed not the right place, but removal is a backwards incompatible change, so we duplicated the code into addon-docs to remove usage, to make the removal easier, hopefully by SB11.\r\n\r\nNow it's internal to addon-docs, not exposed as a public API.\r\nDocs users cannot access/use it.",
+          "file_path": "code/addons/docs/src/blocks/getStoryHref.ts",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "e5187543eddeebd8b83bb57894e61bed52cab5d9",
+          "created_at": "2025-12-24T11:29:09Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests clarifying comment and returning a manager href in addition to the preview href."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6drYCS",
+          "author": "Sidnioulz",
+          "body": "We do have rather inconsistent usage of this stringify util. In some code paths, we ensure it supports nesting, and in others, we don't.\n\nThis is what router utils use which I believe we should align with:\n```ts\n  return stringify(encodeSpecialValues(object), {\n    delimiter: ';', // we don't actually create multiple query params\n    nesting: true,\n    nestingSyntax: 'js', // encode objects using dot notation: obj.key=val\n  })\n```\n\nIdeally we'd call this directly: https://github.com/storybookjs/storybook/blob/next/code/core/src/router/utils.ts#L186-L214; if not possible we should ensure logics are identical.",
+          "file_path": "code/core/src/manager-api/modules/url.ts",
+          "line_number": 262,
+          "start_line": null,
+          "commit_sha": "1846ad023d6a1f1c7ed260573335f87bd933203b",
+          "created_at": "2025-12-24T10:40:01Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6dro1O",
+          "author": "ndelangen",
+          "body": "We should be able to use it, I think.",
+          "file_path": "code/core/src/manager-api/modules/url.ts",
+          "line_number": 262,
+          "start_line": null,
+          "commit_sha": "1846ad023d6a1f1c7ed260573335f87bd933203b",
+          "created_at": "2025-12-24T11:14:37Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6dsN4W",
+          "author": "ghengeveld",
+          "body": "I don't think the `;` delimiter makes sense for custom query params. Those should just be actual query params, delimited by `&`, I think that's what users would expect. The other options are good but that's already how it works currently.",
+          "file_path": "code/core/src/manager-api/modules/url.ts",
+          "line_number": 262,
+          "start_line": null,
+          "commit_sha": "1846ad023d6a1f1c7ed260573335f87bd933203b",
+          "created_at": "2025-12-24T12:38:50Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6dsUJb",
+          "author": "Sidnioulz",
+          "body": "@ghengeveld you're right, I jumped to conclusions a little. We do only want to call those options for args. I can see that the code that merges serialized params is completely agnostic to args specifics, and so manages to preserve both encoded special values and the `;` delimiter for multiple args.\r\n\r\nI'll add sanity checks for specially encoded values in the tests and add the `nesting`/`nestingSyntax` options so the code is more explicit. I think we would do users a service if we used the same nesting syntax throughout args/globals/custom params though so I'll align on `js`.",
+          "file_path": "code/core/src/manager-api/modules/url.ts",
+          "line_number": 262,
+          "start_line": null,
+          "commit_sha": "1846ad023d6a1f1c7ed260573335f87bd933203b",
+          "created_at": "2025-12-24T12:52:08Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests aligning stringify usage with router utils for consistency, with a specific code reference."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6drZYA",
+          "author": "Sidnioulz",
+          "body": "We should test value escaping for custom query params.",
+          "file_path": "code/core/src/manager-api/tests/url.test.js",
+          "line_number": 372,
+          "start_line": null,
+          "commit_sha": "e5187543eddeebd8b83bb57894e61bed52cab5d9",
+          "created_at": "2025-12-24T10:42:24Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding test coverage for value escaping in custom query params."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6drjkA",
+          "author": "Sidnioulz",
+          "body": "Not the same here as in the codebase, not sure if intentional?\n```suggestion\n      copyStoryLink: ['alt', 'shift', 'l'],\n```",
+          "file_path": "code/core/src/manager/components/preview/tools/share.stories.tsx",
+          "line_number": 19,
+          "start_line": null,
+          "commit_sha": "1846ad023d6a1f1c7ed260573335f87bd933203b",
+          "created_at": "2025-12-24T11:01:09Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a mismatch in hotkey definition and suggests a correction via code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6el-ux",
+          "author": "ndelangen",
+          "body": "```suggestion\r\n/**\r\n * Only for internal use in addon-docs code, because the parent util in `core` cannot be imported.\r\n * Unlike the parent util, this one only returns the preview URL.\r\n */\r\n```\r\n\r\nJS-doc comments show up in editor when hovering, since this is helpful advice at usage, JSdoc/block comments are slightly better here.",
+          "file_path": "code/addons/docs/src/blocks/getStoryHref.ts",
+          "line_number": 2,
+          "start_line": null,
+          "commit_sha": "2e9e27618042e8c9d283aa165e52f2fb826fb7d5",
+          "created_at": "2026-01-05T09:03:06Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests changing an inline comment to a JSDoc block comment with specific suggested text."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6el_pW",
+          "author": "ndelangen",
+          "body": "```suggestion\r\n/** @deprecated Use the api.getStoryHrefs method instead (from `storybook/manager-api`) */\r\n```",
+          "file_path": "code/core/src/components/components/utils/getStoryHref.ts",
+          "line_number": 14,
+          "start_line": null,
+          "commit_sha": "2e9e27618042e8c9d283aa165e52f2fb826fb7d5",
+          "created_at": "2026-01-05T09:04:34Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding a @deprecated JSDoc tag with specific suggested text."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6enbj4",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find the getStoryHrefs implementation\nrg -n \"getStoryHrefs\" code/core/src/manager-api --type=ts -B 2 -A 10 | head -80\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4219\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the shortcuts.ts file around the copyStoryLink handler\nsed -n '410,430p' code/core/src/manager-api/modules/shortcuts.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 646\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for the function that contains this case statement to understand storyId context\nsed -n '1,450p' code/core/src/manager-api/modules/shortcuts.ts | tail -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2933\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Get the full getStoryHrefs implementation\nsed -n '230,280p' code/core/src/manager-api/modules/url.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2213\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check what state provides storyId - look at the beginning of shortcuts.ts\nhead -150 code/core/src/manager-api/modules/shortcuts.ts | tail -80\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2547\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's any logic that disables shortcuts on certain pages\nrg -n \"shouldSkipShortcut|handleKeydownEvent\" code/core/src/manager-api/modules/shortcuts.ts -A 5 -B 2 | head -80\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1555\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for any conditions that might prevent copyStoryLink from being triggered without storyId\nrg -n \"copyStoryLink\" code/core/src/manager-api --type=ts -B 5 -A 5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2854\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the full context of handleShortcutFeature to see where storyId comes from\nsed -n '240,250p' code/core/src/manager-api/modules/shortcuts.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 431\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for the entire handleShortcutFeature function definition\nast-grep --pattern $'handleShortcutFeature($$$) {\n  $$$\n}' code/core/src/manager-api/modules/shortcuts.ts | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# More directly, check what storyId refers to in the switch statement\nsed -n '380,425p' code/core/src/manager-api/modules/shortcuts.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1524\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Get the full handleShortcutFeature function to see where storyId comes from\nsed -n '249,430p' code/core/src/manager-api/modules/shortcuts.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4722\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check where storyId is set in the store/state\nrg -n \"storyId\" code/core/src/manager-api --type=ts | grep -E \"setState|reducer|initialState\" | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2883\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check for store initialization to see if storyId starts as undefined\nfd -n \"index.ts\" code/core/src/manager-api | head -3 | xargs grep -l \"storyId\" 2>/dev/null\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 297\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for where storyId is initialized in the store\nrg -n \"storyId.*undefined|storyId.*null|storyId.*:.*null\" code/core/src/manager-api --type=ts -B 2 -A 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2090\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there are any tests for copyStoryLink to see expected behavior\nrg -n \"copyStoryLink\" code/core/src --type=ts -B 3 -A 3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 5773\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the copy function behavior\nrg -n \"^const copy|^function copy\" code/core/src/manager-api --type=ts -A 10 | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for how the copy function is imported\nrg -n \"import.*copy\" code/core/src/manager-api/modules/shortcuts.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 105\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's any mechanism that disables copyStoryLink shortcut when storyId is undefined\nrg -n \"getShortcutKeys|enableShortcuts\" code/core/src/manager-api/modules/shortcuts.ts -B 2 -A 5 | head -60\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2066\n\n---\n\n\n\n</details>\n\n**Guard against undefined `storyId` in copyStoryLink.**\n\nThe `copyStoryLink` handler calls `getStoryHrefs(storyId, { refId })` without verifying that `storyId` is defined, unlike the similar `openInIsolation` handler which guards with `if (storyId && viewMode === 'story')`. When triggered on settings or about pages where `storyId` is undefined, this results in a malformed URL (e.g., `?path=/story/undefined`) being copied to the clipboard.\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n case 'copyStoryLink': {\n+  if (!storyId) {\n+    break;\n+  }\n   const { managerHref } = fullAPI.getStoryHrefs(storyId, { refId });\n   copy(managerHref);\n   break;\n }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n        case 'copyStoryLink': {\n          if (!storyId) {\n            break;\n          }\n          const { managerHref } = fullAPI.getStoryHrefs(storyId, { refId });\n          copy(managerHref);\n          break;\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/manager-api/modules/shortcuts.ts around lines 419-422, The\ncopyStoryLink handler calls fullAPI.getStoryHrefs(storyId, { refId }) without\nchecking storyId, causing \"undefined\" URLs; update the copyStoryLink case to\nfirst verify that storyId exists (and optionally that viewMode === 'story' to\nmatch openInIsolation) and only call getStoryHrefs and copy when the guard\npasses; if storyId is absent, do nothing (or handle gracefully) to avoid copying\nmalformed URLs.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 16761a3 to 6f12897",
+          "file_path": "code/core/src/manager-api/modules/shortcuts.ts",
+          "line_number": 424,
+          "start_line": 419,
+          "commit_sha": "e5187543eddeebd8b83bb57894e61bed52cab5d9",
+          "created_at": "2026-01-05T11:10:47Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies missing guard for undefined storyId in copyStoryLink handler and provides a fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6enbkC",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Fix copy-paste error: incorrect story name.**\n\nLine 59 assigns parameters to `WorkingStory.parameters` but this code is within the `WorkingDocs` export context. This should be `WorkingDocs.parameters`.\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n-WorkingStory.parameters = {\n+WorkingDocs.parameters = {\n   chromatic: { disableSnapshot: true },\n };\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nWorkingDocs.parameters = {\n  chromatic: { disableSnapshot: true },\n};\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/manager/components/preview/Iframe.stories.tsx around lines\n59-60, The parameters assignment uses the wrong story identifier: change the\nassignment from WorkingStory.parameters to WorkingDocs.parameters so the\nparameters apply to the WorkingDocs export; locate the block where\nWorkingStory.parameters = { chromatic: { disableSnapshot: true } } and update\nthe left-hand identifier to WorkingDocs.parameters to correct the copy-paste\nerror.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 16761a3 to 6f12897",
+          "file_path": "code/core/src/manager/components/preview/Iframe.stories.tsx",
+          "line_number": 60,
+          "start_line": null,
+          "commit_sha": "2e9e27618042e8c9d283aa165e52f2fb826fb7d5",
+          "created_at": "2026-01-05T11:10:47Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a copy-paste error where WorkingStory should be WorkingDocs and provides a fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6enbkD",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, find the preview.ts file and examine the beforeAll function\nfd -t f \"preview.ts\" code/core/template/stories -x cat -n {}\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3649\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find the E2E test file mentioned\nfd -t f \"storybook-hooks.spec.ts\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 103\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Now examine the E2E test file to verify test coverage\ncat -n code/e2e-tests/storybook-hooks.spec.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3251\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the context around test.skip() to understand the test structure\nsed -n '24,30p' code/e2e-tests/storybook-hooks.spec.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 295\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Also check if there are any other E2E tests related to cross-origin scenarios\nrg -i \"cross-origin\\|cross origin\" code/e2e-tests/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\n\n</details>\n\n**E2E tests are currently disabled and don't verify the cross-origin error path.**\n\nThe tests in `storybook-hooks.spec.ts` are disabled with `test.skip()` (line 25, marked \"TODO remove\"). Even if enabled, they only validate the same-origin happy path. The cross-origin error scenario\u2014the exact condition the try-catch in `beforeAll` is designed to handle\u2014has no test coverage. The error path (lines 32-34 in preview.ts) must be tested to verify the fallback cleanup behavior and meet branch coverage requirements.\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/template/stories/preview.ts",
+          "line_number": 36,
+          "start_line": 25,
+          "commit_sha": "d7dc2d511c66ff6c324e4fbd951b07dd68fed4a3",
+          "created_at": "2026-01-05T11:10:47Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags missing test coverage for the cross-origin error path and implies tests should be added."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6enbkI",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check the file structure and content of the nextjs-vite framework\necho \"=== Listing nextjs-vite directory structure ===\"\nfind code/frameworks/nextjs-vite -type f -name \"*.ts\" -o -name \"*.tsx\" | head -20\n\necho -e \"\\n=== Checking the target file ===\"\nif [ -f \"code/frameworks/nextjs-vite/src/export-mocks/headers/index.ts\" ]; then\n  cat -n \"code/frameworks/nextjs-vite/src/export-mocks/headers/index.ts\"\nelse\n  echo \"File not found\"\nfi\n\necho -e \"\\n=== Comparing with webpack version ===\"\nif [ -f \"code/frameworks/nextjs/src/export-mocks/headers/index.ts\" ]; then\n  cat -n \"code/frameworks/nextjs/src/export-mocks/headers/index.ts\"\nelse\n  echo \"Webpack version not found\"\nfi\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3283\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for Vite configuration files in nextjs-vite\necho \"=== Searching for Vite config files ===\"\nfind code/frameworks/nextjs-vite -name \"*vite*\" -o -name \"vite.config.*\" | head -20\n\necho -e \"\\n=== Checking for Next.js version handling in vite config ===\"\nrg -l \"vite\" code/frameworks/nextjs-vite --type ts --type js | head -10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 854\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for alias configuration patterns\necho \"=== Searching for alias configurations ===\"\nrg -n \"alias|resolve\" code/frameworks/nextjs-vite -A 5 -B 2 --type ts --type js | head -50\n\necho -e \"\\n=== Searching for draft-mode references ===\"\nrg -rn \"draft-mode|draftMode\" code/frameworks/nextjs-vite --type ts --type js\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4273\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check the vite plugin for any import handling\necho \"=== Checking vite-plugin index.ts ===\"\nif [ -f \"code/frameworks/nextjs-vite/src/vite-plugin/index.ts\" ]; then\n  wc -l \"code/frameworks/nextjs-vite/src/vite-plugin/index.ts\"\n  head -100 \"code/frameworks/nextjs-vite/src/vite-plugin/index.ts\"\nfi\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 392\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check if there's any webpack alias configuration mentioned in vite setup\necho \"=== Searching for webpack or alias handling in vite context ===\"\nrg -n \"webpack|alias|draft-mode\" code/frameworks/nextjs-vite/src/vite-plugin --type ts --type js -A 3 -B 3\n\n# Check build-config for any special handling\necho -e \"\\n=== Checking build-config.ts ===\"\nif [ -f \"code/frameworks/nextjs-vite/build-config.ts\" ]; then\n  cat -n \"code/frameworks/nextjs-vite/build-config.ts\"\nfi\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1839\n\n---\n\n\n\n</details>\n\n**Use dynamic import with error handling like the webpack version to support both Next.js 14 and 15+ versions.**\n\nThe static import of `draftMode` from `'next/dist/server/request/draft-mode.js'` will fail in Next.js 14, where this module doesn't exist. In Next.js 14, `draftMode` is exported from `'next/dist/client/components/headers'` instead. The webpack version correctly handles this with a try/catch block around a dynamic `require()`, but the Vite version uses a static import that will cause a build error with Next.js 14 projects.\n\nChange to a dynamic import approach (as in the webpack version) to enable graceful fallback across Next.js versions without relying on Vite alias configuration:\n\n<details>\n<summary>Suggested approach</summary>\n\n```ts\nimport * as headers from 'next/dist/server/request/headers.js';\nimport { fn } from 'storybook/test';\n\n// re-exports of the actual module\nexport * from 'next/dist/server/request/headers.js';\n\n// mock utilities/overrides (as of Next v14.2.0)\nexport { headers } from './headers';\nexport { cookies } from './cookies';\n\n// passthrough mocks - keep original implementation but allow for spying\nlet originalDraftMode: any;\ntry {\n  originalDraftMode = (await import('next/dist/server/request/draft-mode.js')).draftMode;\n} catch {\n  originalDraftMode = (headers as any).draftMode;\n}\n\nconst draftMode = fn(originalDraftMode).mockName('draftMode');\nexport { draftMode };\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/frameworks/nextjs-vite/src/export-mocks/headers/index.ts around line 1,\nThe static import of draftMode from 'next/dist/server/request/draft-mode.js'\nwill break on Next.js 14; change to a dynamic import with try/catch like the\nwebpack version: remove the top-level static import, import headers via\n'next/dist/server/request/headers.js' for fallback, attempt to dynamically\nimport 'next/dist/server/request/draft-mode.js' and fall back to\nheaders.draftMode if that fails, then wrap the resolved originalDraftMode with\nthe existing fn(...) mockName('draftMode') export so draftMode continues to be\nexported as before.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/frameworks/nextjs-vite/src/export-mocks/headers/index.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "d7dc2d511c66ff6c324e4fbd951b07dd68fed4a3",
+          "created_at": "2026-01-05T11:10:47Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a critical compatibility bug with Next.js 14 and requests switching to dynamic imports with try/catch."
+    }
+  ],
+  "review_thread_count": 18,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 18,
+    "stage1_kept": 18,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

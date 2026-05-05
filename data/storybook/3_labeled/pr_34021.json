@@ -1,0 +1,56 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34021,
+  "title": "Docs: Ensure unique control id attributes across multiple Controls blocks",
+  "body": "Closes #26144\r\n\r\n  ## What I did\r\n\r\n  When multiple `<Controls>` blocks render on the same docs page (for different stories), all controls generate identical `id` attributes (e.g., `control-disabled`). This causes `<label\r\n  htmlFor>` to always target the control in the **first** table instead of the correct one.\r\n\r\n  **Root cause:** `getControlId(name)` in `helpers.ts` only uses the arg name, without any story context.\r\n\r\n  **Fix:** Added an optional `storyId` parameter to `getControlId()` and `getControlSetterButtonId()`, and threaded it through the component chain: `Controls \u2192 ArgsTable \u2192 ArgRow \u2192\r\n  ArgControl \u2192 all control components`. When `storyId` is provided, IDs become unique per story (e.g., `control-story--name-disabled`). Existing usage without `storyId` is unaffected.\r\n\r\n  ## Checklist for Contributors\r\n\r\n  ### Testing\r\n\r\n  #### The changes in this PR are covered in the following automated tests:\r\n\r\n  - [x] stories\r\n  - [x] unit tests\r\n  - [ ] integration tests\r\n  - [ ] end-to-end tests\r\n\r\n  #### Manual testing\r\n\r\n  1. Run a sandbox: `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n  2. Open Storybook in your browser\r\n  3. Navigate to a docs page that has multiple `<Controls>` blocks for different stories (e.g., create an MDX page with two `<Controls of={Story1} />` and `<Controls of={Story2} />`)\r\n  4. Inspect the control elements \u2014 each control `id` should now include the story ID prefix, making them unique across tables\r\n  5. Click on a label in the second table \u2014 it should toggle/focus the control in **that** table, not in the first one\r\n\r\n  The `MultipleControlsOnSamePage` story in `Controls.stories.tsx` also verifies this automatically \u2014 it renders two Controls blocks and asserts all `id` attributes are unique.\r\n\r\n  ### Documentation\r\n\r\n  - [ ] Add or update documentation reflecting your changes\r\n  - [ ] If you are deprecating/removing a feature, make sure to update\r\n        [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n  ## Checklist for Maintainers\r\n\r\n  - [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be\r\n   found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n  - [ ] Make sure this PR contains **one** of the labels below:\r\n     <details>\r\n       <summary>Available labels</summary>\r\n\r\n    - `bug`: Internal changes that fixes incorrect behavior.\r\n    - `maintenance`: User-facing maintenance tasks.\r\n    - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n    - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n    - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n    - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n    - `feature request`: Introducing a new feature.\r\n    - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n    - `other`: Changes that don't fit in the above categories.\r\n\r\n     </details>",
+  "author": "TheSeydiCharyyev",
+  "merged_at": "2026-03-19T07:18:49Z",
+  "base_ref": "next",
+  "merge_commit_sha": "2121254105b5d20331b811ec080b17354e02b2f1",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "8e95824ad6372448818e7c7d993dc8cf85094f0c",
+    "4d7213fbea04d8cfe14baa5582927fb82a4cfc66"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6sHxNs",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**`storyId` alone can still collide for repeated `<Controls of={sameStory}>` blocks.**  \nOn Line 5, using only `storyId` as scope means two Controls blocks bound to the same story will still generate identical control IDs. Consider extending `ControlProps` with an optional per-block scope token (e.g., `controlsId`) and threading that into ID helpers for full uniqueness.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/docs/src/blocks/controls/types.ts` at line 5, ControlProps\ncurrently only uses storyId for scoping which allows collisions for multiple\nControls blocks bound to the same story; add an optional per-block token (e.g.,\ncontrolsId?: string) to the ControlProps interface in types.ts and update any ID\ngeneration helpers (the functions that build control element IDs and the code\nreferencing storyId) to include this controlsId when present so each <Controls\nof={...}> block can produce unique IDs; ensure defaults preserve existing\nbehavior when controlsId is undefined and propagate the new property through\ncomponents/functions that call the ID helpers (search for ControlProps, storyId,\nand the control ID helper functions to update).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/docs/src/blocks/controls/types.ts",
+          "line_number": 5,
+          "start_line": null,
+          "commit_sha": "4d7213fbea04d8cfe14baa5582927fb82a4cfc66",
+          "created_at": "2026-03-05T05:33:10Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The comment identifies a collision scenario where using only `storyId` as a scope is insufficient when multiple `<Controls>` blocks reference the same story, resulting in duplicate control IDs \u2014 this is an incorrect/incomplete logic for ensuring uniqueness."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a potential collision bug and specifically requests adding an optional `controlsId` property to `ControlProps`, updating ID generation helpers to include it, and propagating it through relevant components \u2014 concrete code changes are clearly implied."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34114,
+  "title": "Maintenance: Use std-env for AI agent detection in telemetry",
+  "body": "Storybook had its own bespoke agent detection logic that was already drifting behind the ecosystem. `std-env` v4 ships a well-maintained `detectAgent()` that covers more agents and supports the standard `AI_AGENT` env var (used by Vitest 4.1's new agent reporter).\n\n## Changes\n\n- **`detect-agent.ts`** \u2014 Replaces all custom env var checks and heuristics with a thin wrapper around `std-env`'s `detectAgent()`:\n  - Removed: `CLAUDECODE`, `GEMINI_CLI`, `CODEX_SANDBOX`, `CURSOR_AGENT`, `AGENT` checks, and `TERM=dumb` / `GIT_PAGER=cat` heuristics\n  - Gained: `claude`, `gemini`, `codex`, `opencode`, `cursor`, `replit`, `auggie`, `goose`, `devin`, `kiro`, `pi`, and any agent via `AI_AGENT`\n  - `AgentInfo.name` widened from a closed `KnownAgentName` union to `string`\n\n- **`telemetry.ts`** \u2014 `detectAgent()` call drops the `{ stdoutIsTTY, env }` options (std-env reads `process.env` directly)\n\n- **`detect-agent.test.ts`** \u2014 Tests rewritten to use `vi.stubEnv` against the new std-env-backed detection\n\n- **`package.json`** \u2014 `std-env@^4.0.0` added as a `devDependency` (bundled, not a runtime external)\n\n## Behavioural changes to note\n\n| Before | After |\n|---|---|\n| `claude-code` | `claude` |\n| `gemini-cli` | `gemini` |\n| `AGENT=amp` detected | `AI_AGENT=amp` (std-env explicit override) |\n| `TERM=dumb` / `GIT_PAGER=cat` heuristics | removed |\n\n> [!WARNING]\n>\n> <details>\n> <summary>Firewall rules blocked me from connecting to one or more addresses (expand for details)</summary>\n>\n> #### I tried to connect to the following addresses, but was blocked by firewall rules:\n>\n> - `ofcncog2cu-dsn.algolia.net`\n>   - Triggering command: `/opt/hostedtoolcache/node/22.22.1/x64/bin/node /opt/hostedtoolcache/node/22.22.1/x64/bin/node /home/REDACTED/work/storybook/storybook/.yarn/releases/yarn-4.10.3.cjs add --dev std-env@^4.0.0` (dns block)\n>\n> If you need me to access, download, or install something from one of these locations, you can either:\n>\n> - Configure [Actions setup steps](https://gh.io/copilot/actions-setup-steps) to set up my environment, which run before the firewall is enabled\n> - Add the appropriate URLs or hosts to the custom allowlist in this repository's [Copilot coding agent settings](https://github.com/storybookjs/storybook/settings/copilot/coding_agent) (admins only)\n>\n> </details>\n\n<!-- START COPILOT CODING AGENT SUFFIX -->\n\n[View original Slack conversation](https://chromaticqa.slack.com/archives/C02K88CKTFW/p1773324764595399?thread_ts=1773324764.595399&cid=C02K88CKTFW)\n\n<!-- START COPILOT CODING AGENT TIPS -->\n---\n\n\ud83d\udcac Send tasks to Copilot coding agent from [Slack](https://gh.io/cca-slack-docs) and [Teams](https://gh.io/cca-teams-docs) to turn conversations into code. Copilot posts an update in your thread when it's finished.\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Refactor**\n  * Simplified agent-detection to use a dedicated environment-detection library for more consistent results.\n\n* **Tests**\n  * Reworked tests to drive detection via environment stubs, added cleanup between tests, and improved coverage for precedence and normalization.\n\n* **Chores**\n  * Added a new runtime dependency to support environment detection.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "copilot-swe-agent",
+  "merged_at": "2026-03-13T14:26:27Z",
+  "base_ref": "next",
+  "merge_commit_sha": "078be021766bd4e4020b10342e0c6449ec4d10a8",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "e448aeccc7046cd5f077bf77526b358fd41f93b5",
+    "98579cd42759aaa3622a108b465b38592a96c592"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uWlka",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udf10 Web query:\n\n`std-env detectAgent function API`\n\n\ud83d\udca1 Result:\n\n`std-env` (the UnJS npm package) does **not** expose a `detectAgent()` function. Its public API is primarily **environment flags**, plus **CI/provider detection** and **runtime detection** via exported constants like `provider`, `providerInfo`, `runtime`, and `runtimeInfo`. [1][2][3]\n\nExample usage:\n\n```ts\nimport { provider, providerInfo, runtime, runtimeInfo, isCI } from \"std-env\";\n\nconsole.log({ isCI, provider, providerInfo, runtime, runtimeInfo });\n```\n\nIf you meant a different \u201cstd-env\u201d library (or a different package that *does* have `detectAgent`), share a link/repo name and I\u2019ll pull the exact API. [1][2]\n\n**Sources:** [1] [2] [3]\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg \"detectAgent\" --type js --type ts -B 2 -A 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 5940\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/telemetry/detect-agent.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 803\n\n---\n\n\n\n</details>\n\n**Critical: std-env v4.0.0 does not export `detectAgent` function.**\n\nThe code imports `detectAgent` from `std-env` (line 1 of `detect-agent.ts`), but std-env v4's public API provides only `provider`, `providerInfo`, `runtime`, `runtimeInfo`, and `isCI`. This import will fail at runtime. Either use a different package that provides agent detection, or implement the agent detection logic directly without external dependency.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/package.json` at line 360, The project imports detectAgent from\nstd-env but std-env v4 doesn't export it; update detect-agent.ts to stop\nimporting detectAgent from std-env and provide your own implementation or switch\nto a package that actually exposes that API. Specifically, in detect-agent.ts\nremove the failing import, implement and export a local detectAgent function (or\nuse a compatible library) that inspects known environment indicators (e.g.,\nprocess.env variables like VERCEL, NETLIFY, GITHUB_ACTIONS, CI, etc.) and any\nruntime/provider info you need, and then update any callers to use this local\ndetectAgent; if you prefer to keep std-env, change package.json to a std-env\nversion that exports detectAgent and adjust imports accordingly.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/package.json",
+          "line_number": 360,
+          "start_line": null,
+          "commit_sha": "98579cd42759aaa3622a108b465b38592a96c592",
+          "created_at": "2026-03-12T14:43:37Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uWp7V",
+          "author": "huang-julien",
+          "body": "This may break former telemetry as name are not exactly the same as before. 'claude-code' for example is 'claude' in std-env",
+          "file_path": "code/core/src/telemetry/telemetry.ts",
+          "line_number": 54,
+          "start_line": null,
+          "commit_sha": "98579cd42759aaa3622a108b465b38592a96c592",
+          "created_at": "2026-03-12T14:46:16Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6uYZjA",
+          "author": "huang-julien",
+          "body": "cc @copilot ",
+          "file_path": "code/core/src/telemetry/telemetry.ts",
+          "line_number": 54,
+          "start_line": null,
+          "commit_sha": "98579cd42759aaa3622a108b465b38592a96c592",
+          "created_at": "2026-03-12T15:49:12Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6uYeIy",
+          "author": "copilot-swe-agent",
+          "body": "Yes, this is an intentional breaking change that comes with adopting std-env's naming conventions. It's documented in the PR description's \"Behavioural changes to note\" table:\n\n| Before | After |\n|---|---|\n| `claude-code` | `claude` |\n| `gemini-cli` | `gemini` |\n\nSince the goal is to use std-env as the canonical source for agent detection, these new names are the ones std-env uses and will continue to maintain. Any telemetry dashboards/queries that filter on the old names would need to be updated to account for the rename. Let me know if you'd prefer to add a name-mapping layer to preserve backward compatibility with historical telemetry data, and I'll implement that.",
+          "file_path": "code/core/src/telemetry/telemetry.ts",
+          "line_number": 54,
+          "start_line": null,
+          "commit_sha": "98579cd42759aaa3622a108b465b38592a96c592",
+          "created_at": "2026-03-12T15:52:23Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6uZFqk",
+          "author": "huang-julien",
+          "body": "This will break our telemetry. It is probably better to have a name-mapping. ",
+          "file_path": "code/core/src/telemetry/telemetry.ts",
+          "line_number": 54,
+          "start_line": null,
+          "commit_sha": "98579cd42759aaa3622a108b465b38592a96c592",
+          "created_at": "2026-03-12T16:19:56Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6uaLww",
+          "author": "huang-julien",
+          "body": "cc @shilman ",
+          "file_path": "code/core/src/telemetry/telemetry.ts",
+          "line_number": 54,
+          "start_line": null,
+          "commit_sha": "98579cd42759aaa3622a108b465b38592a96c592",
+          "created_at": "2026-03-12T17:06:39Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6uojq4",
+          "author": "huang-julien",
+          "body": "@copilot+claude-sonnet-4.6 ok let's keep the breaking change and stick with std-env result",
+          "file_path": "code/core/src/telemetry/telemetry.ts",
+          "line_number": 54,
+          "start_line": null,
+          "commit_sha": "98579cd42759aaa3622a108b465b38592a96c592",
+          "created_at": "2026-03-13T08:49:18Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 2
+}

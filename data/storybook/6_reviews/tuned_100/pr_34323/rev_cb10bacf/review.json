@@ -1,0 +1,114 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 98,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Event name mismatch: the handler is registered with `server.watcher.on('all', watcherChangeHandler)` (line 155) but deregistered here with `watcher.off('change', watcherChangeHandler)`. Chokidar's `off` only removes a listener from the specific event you name, so this call is a no-op \u2014 the `'all'` listener is never removed and will continue firing after `bail()` returns. Change `'change'` to `'all'` here.",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 157,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `waitForModuleGraph` interval handle is never stored in a module-level variable and is therefore never cleared in `bail()`. If `bail()` is called while `fileToModulesMap` is still empty, the interval keeps firing every second, calling `server.moduleGraph.fileToModulesMap` on a server that has already been closed via `server?.close()`. Store the handle (e.g. `let waitForModuleGraph: ReturnType<typeof setInterval> | undefined`) and `clearInterval` it inside `bail()`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 155,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`server.watcher.on('all', ...)` fires for every chokidar event, including `addDir` and `unlinkDir`. Directory events do not invalidate any modules in Vite's module graph, but they will still schedule a full `buildModuleGraph` snapshot via the debounce. Register only the three meaningful events: `'change'`, `'add'`, and `'unlink'`. If you keep `'all'`, filter out dir events in `watcherChangeHandler` by checking the event type argument (the first arg passed by chokidar for `'all'`).",
+      "index": 2
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 140,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`start()` unconditionally sets `watcherChangeHandler` and calls `server.watcher.on('all', ...)` without first removing any previously registered handler. If `start()` is invoked a second time (e.g. during hot-reload of the dev server), the old closure remains registered on the watcher while `watcherChangeHandler` is overwritten, making the stale listener impossible to remove. Before registering a new handler, check if one already exists and call `server.watcher.off('all', watcherChangeHandler)` to clean it up.",
+      "index": 3
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 157,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `setInterval` callback is `async`, but `setInterval` ignores the returned Promise. If `server.waitForRequestsIdle()` rejects (e.g. because the server closed mid-poll), the error is silently swallowed as an unhandled rejection. Wrap the async body in a try/catch and handle or log the error, or restructure to avoid async in the interval callback.",
+      "index": 4
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 315,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This test asserts `off` was called with `'change'`, but the handler is registered on `'all'`. The assertion validates the buggy behavior in `bail()` rather than catching it. Change the expected event to `'all'` \u2014 and fix the corresponding `bail()` implementation \u2014 so this test actually guards against future regressions.",
+      "index": 5
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 188,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `afterEach` calls `bail()` and `vi.clearAllMocks()`, but `vi.clearAllMocks()` resets all mock state globally. Per the project's spy-mocking convention, place `vi.clearAllMocks()` (or `vi.resetAllMocks()`) in a single top-level `beforeEach`, not in `afterEach`, so state is cleaned before each test rather than after, which is more predictable when a test throws mid-execution.",
+      "index": 6
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 10,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The mock is written as a full factory replacement (`vi.mock('./vite-server', () => ({ createViteServer: vi.fn() }))`). Per the project's spy-mocking convention, `vi.fn()` calls inside factory bodies are discouraged \u2014 prefer `vi.mock('./vite-server', { spy: true })` and then configure `.mockResolvedValue(...)` in `beforeEach`. A full factory is only warranted when the module cannot be imported at all; `vite-server` can be imported (even if its real impl can't run in tests), so spy-mode is appropriate here.",
+      "index": 7
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 44,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`buildModuleGraph` is exported, making it part of the public API surface of `@storybook/builder-vite`. It appears to be an internal conversion utility used only by the watcher handler and tests. Exporting it for testability is fine, but consider whether it should be documented and intentionally stable \u2014 if it is internal, a comment to that effect (or a `@internal` JSDoc tag) would prevent consumers from depending on its signature.",
+      "index": 8
+    },
+    {
+      "file_path": "code/core/src/types/modules/core-common.ts",
+      "line_number": 279,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`ModuleGraph = Map<ModuleNode['file'], Set<ModuleNode>>` \u2014 `ModuleNode['file']` resolves to `string`. The indirect lookup adds indirection without adding information. Writing `Map<string, Set<ModuleNode>>` directly is clearer and more consistent with the rest of the type definitions in this file.",
+      "index": 9
+    },
+    {
+      "file_path": "code/core/src/types/modules/core-common.ts",
+      "line_number": 279,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `ModuleNode` and `ModuleGraph` types lack `@since` version tags. Per the project guidelines, new types on public interfaces should document when they were introduced so consumers know the minimum version requirement. Add `@since 8.x` (or whatever the target release is) to both type declarations.",
+      "index": 10
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The module-level mutable state (`listeners`, `debounce`, `watcherChangeHandler`) is shared across the entire process lifetime. Combined with the missing cleanup paths identified in the inline comments (stale `'all'` listener, un-cleared interval), this creates a class of bugs where a second `start()` call or an unexpected `bail()` timing leaves the system in an inconsistent state. Consider encapsulating all per-server state into an object created in `start()` and closed in `bail()`, rather than using bare module-level variables. This would also make the cleanup logic easier to audit and the unit tests less order-dependent.",
+      "index": 11
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The debounce delay of `100` ms is a magic number that appears in both the implementation (`index.ts`) and multiple test assertions (`advanceTimersByTimeAsync(100)`). Extract it to a named constant (e.g. `const MODULE_GRAPH_DEBOUNCE_MS = 100`) so future tuning only requires a single change, and so tests can derive their wait duration from the same constant (per the project rule: 'derive wait/sleep durations from the named constants that control the real behavior').",
+      "index": 12
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `waitForModuleGraph` polling approach (checking every 1000 ms whether the module graph is non-empty) has no upper bound \u2014 it will poll forever if the Vite server never populates the module graph. Add a maximum retry count or overall timeout and emit a `logger.warn` if the graph remains empty after that limit, so users get a signal when initialization stalls rather than silent indefinite polling.",
+      "index": 13
+    }
+  ],
+  "cost_usd": 0.44798285,
+  "duration_seconds": 420.54796528816223
+}

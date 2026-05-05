@@ -1,0 +1,448 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3973,
+  "title": "Add RFO for geometry minimizations",
+  "body": "**When merged this MR will:**\n\n- Add RFO for geometry optimization.\n- Factor out setup of distorted bulk gold in FIRE and FIRE2 test cases to fixture.\n\n**Background:**\n\nRFO (Rational Function Optimizer) is a popular modification to quasi-Newton for geometry optimizations. The concrete implementation follows reference [1] by solving the eigenproblem of the gradient-augmented Hessian in equation (9c). The keyword argument `damping` corresponds to $\\frac{1}{a}$ and controls the extend of damped vs quasi-Newton-like regimes. The Hessian is currently updated by inheriting from `BFGS`.\n\n[1] A. Banerjee, N. Adams, J. Simons, R. Shepard, [Search for Stationary Points on Surfaces](https://doi.org/10.1021/j100247a015), J. Phys. Chem. 1985, 89, 52-57.\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [x] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [x] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [x] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [~] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "SebastianWellig",
+  "merged_at": "2026-03-23T15:58:28.803Z",
+  "base_ref": "master",
+  "merge_commit_sha": "ff8876e8a1fbd3b5b147b1f2d4e980bf175fc4b0",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3091486243",
+          "author": "yuzie007",
+          "body": "For a new file, Ruff formatting should be turned on from the beginning, so we should remove `# fmt: off`.",
+          "file_path": "ase/optimize/rfo.py",
+          "line_number": 2,
+          "commit_sha": "590db60c692ec186e88dcd399a23a9112c0be435",
+          "base_sha": "d21d2a17359ce033c6cff497a09f04fa39a10849",
+          "created_at": "2026-02-17T21:39:28.529Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Trailing/Unused/Incorrect Formattings",
+          "label_confidence": "high",
+          "label_reasoning": "The comment asks to remove `# fmt: off` which disables Ruff formatting, a formatting/style directive that should not be present in new files."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removal of `# fmt: off` to enable Ruff formatting."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3091486305",
+          "author": "yuzie007",
+          "body": "All the parameters except `damping` is passed to the `BFGS` superclass, so we can/should do\n```python\ndef __init__(\n    self,\n    *args,\n    damping: float | None = None,\n    **kwargs,\n):\n```\n(Note: this makes `damping` as a keyword-only parameter, and I think this is reasonable.)\n\nWith this, we can also omit several import statements only for typing.",
+          "file_path": "ase/optimize/rfo.py",
+          "line_number": 34,
+          "commit_sha": "d0651261152e2a407a5b64b4ccd6e43dc434c98c",
+          "base_sha": "d21d2a17359ce033c6cff497a09f04fa39a10849",
+          "created_at": "2026-02-17T21:39:28.827Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Redundancy Handling",
+          "label_confidence": "high",
+          "label_reasoning": "The comment suggests simplifying the constructor by using *args/**kwargs to pass parameters to the superclass, reducing redundant explicit parameter forwarding and unnecessary imports."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests refactoring `__init__` signature to use `*args` and `**kwargs`, with specific code example."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3091486326",
+          "author": "yuzie007",
+          "body": "Corresponding to the above change, we can also simplify the docstring e.g. as\n```python\n        \"\"\"\n        Parameters\n        ----------\n        *args\n            Positional arguments passed to :class:`~ase.optimize.bfgs.BFGS`.\n\n        damping: float\n            Determines transition threshold between quasi-Newton-like and\n            rational function damped steps. The larger the value, the larger\n            and stronger the damped regime. (default is 1.0 \u00c5^-1).\n\n        **kwargs\n            Keyword arguments passed to :class:`~ase.optimize.bfgs.BFGS`.\n        \"\"\"\n```",
+          "file_path": "ase/optimize/rfo.py",
+          "line_number": 52,
+          "commit_sha": "d0651261152e2a407a5b64b4ccd6e43dc434c98c",
+          "base_sha": "d21d2a17359ce033c6cff497a09f04fa39a10849",
+          "created_at": "2026-02-17T21:39:29.009Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "The comment requests simplifying the docstring to align with the proposed *args/**kwargs refactor, improving documentation accuracy and conciseness."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests simplification of the docstring, with a specific example of what it should look like."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3091486338",
+          "author": "yuzie007",
+          "body": "Together with the above change, we can simplify\n```python\nsuper().__init__(*args, **kwargs)\n```",
+          "file_path": "ase/optimize/rfo.py",
+          "line_number": 82,
+          "commit_sha": "590db60c692ec186e88dcd399a23a9112c0be435",
+          "base_sha": "d21d2a17359ce033c6cff497a09f04fa39a10849",
+          "created_at": "2026-02-17T21:39:29.188Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Redundancy Handling",
+          "label_confidence": "high",
+          "label_reasoning": "The comment points out that the `super().__init__()` call can be simplified by removing redundant explicit argument forwarding in favor of *args/**kwargs."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests simplification of the `super().__init__` call to use `*args, **kwargs`."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3091486373",
+          "author": "yuzie007",
+          "body": "Since we use `autoclass`, we can implement the above info also in the class docstring. Then we can manage the relevant documentation in one place.",
+          "file_path": "doc/ase/optimize.rst",
+          "line_number": 218,
+          "commit_sha": "590db60c692ec186e88dcd399a23a9112c0be435",
+          "base_sha": "d21d2a17359ce033c6cff497a09f04fa39a10849",
+          "created_at": "2026-02-17T21:39:29.438Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "The comment recommends consolidating documentation into the class docstring using `autoclass` to manage relevant info in one place, a documentation organization concern."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests moving documentation into the class docstring to consolidate it in one place."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3179504026",
+          "author": "yuzie007",
+          "body": "Please remove it `# fmt: off` in order to activate Ruff formatting.\n(This has been added just for old un-Ruffed codes, and for new codes we should always turn on Ruff formatting.)",
+          "file_path": "ase/optimize/__init__.py",
+          "line_number": 2,
+          "commit_sha": "a2676cd2932fc596e7c938339460bdacfee65c72",
+          "base_sha": "d21d2a17359ce033c6cff497a09f04fa39a10849",
+          "created_at": "2026-03-21T12:59:53.824Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Trailing/Unused/Incorrect Formattings",
+          "label_confidence": "high",
+          "label_reasoning": "Same as index 0 \u2014 the `# fmt: off` directive should be removed to enable Ruff formatting, a formatting/style directive issue."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removal of `# fmt: off` in `__init__.py` to activate Ruff formatting."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3179504029",
+          "author": "yuzie007",
+          "body": "Is there some reason to use ``dampling`` rather than ``a``? For example, is this the convention used in other software?",
+          "file_path": "ase/optimize/rfo.py",
+          "line_number": 22,
+          "commit_sha": "d0651261152e2a407a5b64b4ccd6e43dc434c98c",
+          "base_sha": "d21d2a17359ce033c6cff497a09f04fa39a10849",
+          "created_at": "2026-03-21T12:59:54.471Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "high",
+          "label_reasoning": "The comment questions the choice of the variable name `dampling` versus `a`, raising a naming convention concern about clarity and adherence to domain conventions."
+        },
+        {
+          "id": "3179691834",
+          "author": "SebastianWellig",
+          "body": "I have not yet seen a precedent for the parameter being directly exposed. But then again, RFO is often used in conjunction with redundant internal coordinates, where scalings are introduced in the coordinate transformation. The paper also does not really discuss the effect of the parameter in detail. I went on to see what it actually does by plotting the step length vs `a` for a Hessian and two different gradients and noted that it basically controls the amount of damping. I find the reciprocal value more intuitive, as a larger value then implies more damping.\n\n![image](/uploads/0c9fb30ccb73b222b3640794258ab7fb/image.png){width=515 height=340}",
+          "file_path": "ase/optimize/rfo.py",
+          "line_number": 22,
+          "commit_sha": "d0651261152e2a407a5b64b4ccd6e43dc434c98c",
+          "base_sha": "d21d2a17359ce033c6cff497a09f04fa39a10849",
+          "created_at": "2026-03-21T16:56:30.066Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3180303906",
+          "author": "yuzie007",
+          "body": "Wonderful survey! Thank you for the information. So, if I understand correctly, `damping`/`a` governs the maximum step length during the position update; `1/damping (= a)` corresponds to the allowed step length. From this view, both have physical meanings, but I am OK with `damping` as this is obviously more descriptive than `a` and is also a used terminology in e.g. `lbfgs.py`.",
+          "file_path": "ase/optimize/rfo.py",
+          "line_number": 22,
+          "commit_sha": "d0651261152e2a407a5b64b4ccd6e43dc434c98c",
+          "base_sha": "d21d2a17359ce033c6cff497a09f04fa39a10849",
+          "created_at": "2026-03-21T17:42:03.660Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3181036856",
+          "author": "SebastianWellig",
+          "body": "> So, if I understand correctly, `damping`/`a` governs the maximum step length during the position update\n\nYes, exactly. The fundamental idea of RFO is that it will take a reduced step length outside of quadratic regime and QN-like inside. `damping`/`a` essentially determines how early/late the transition between damped and QN-like regimes take place along an optimization trajectory.",
+          "file_path": "ase/optimize/rfo.py",
+          "line_number": 22,
+          "commit_sha": "d0651261152e2a407a5b64b4ccd6e43dc434c98c",
+          "base_sha": "d21d2a17359ce033c6cff497a09f04fa39a10849",
+          "created_at": "2026-03-22T00:07:19.902Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions the naming convention (`dampling` vs `a`), implying a possible rename is warranted."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3179504033",
+          "author": "yuzie007",
+          "body": "I am not immediately sure if the hard-coded `maxiter=50` is always good. Is there any reason for this value?",
+          "file_path": "ase/optimize/rfo.py",
+          "line_number": 81,
+          "commit_sha": "8cc92765fd93bf5d6cc8f2cd9fdd8ec553aa9438",
+          "base_sha": "d21d2a17359ce033c6cff497a09f04fa39a10849",
+          "created_at": "2026-03-21T12:59:54.666Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment questions the rationale for the hard-coded `maxiter=50` value, indicating unclear intent \u2014 there is no comment or documentation explaining why this specific magic number was chosen."
+        },
+        {
+          "id": "3179668863",
+          "author": "SebastianWellig",
+          "body": "It's more of a placeholder value. Ideally, one would pick a value that would lead to a similar order of magnitude as `eigh` in terms of cost and that could very well be system-dependent. Maybe could find an example that could be used to guess the value and make it configurable as kwarg.",
+          "file_path": "ase/optimize/rfo.py",
+          "line_number": 81,
+          "commit_sha": "8cc92765fd93bf5d6cc8f2cd9fdd8ec553aa9438",
+          "base_sha": "d21d2a17359ce033c6cff497a09f04fa39a10849",
+          "created_at": "2026-03-21T16:27:03.515Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags concern about hard-coded `maxiter=50`, implying it should be reconsidered or made configurable."
+    }
+  ],
+  "review_thread_count": 14,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3099002547",
+            "author": "SebastianWellig",
+            "body": "The eigenproblem seems to be overall the bottleneck, so I explored different approaches. `eigsh` turned out to be much faster than `eigh`, especially since we can pass the eigenvector of the previous step as guess. \nBelow is an example of optimizing PubChem's cholesterol with xTB's GFN-FF calculator:\n\n`RFO` with `eigsh`:\n```\n   ncalls  tottime  percall  cumtime  percall filename:lineno(function)\n        1    0.000    0.000   30.969   30.969 optimize.py:490(run)\n      127    0.034    0.000    0.636    0.005 rfo.py:69(prepare_step)\n      127    0.011    0.000    0.543    0.004 arpack.py:1360(eigsh)\n```\n`RFO` with `eigh`:\n```\n   ncalls  tottime  percall  cumtime  percall filename:lineno(function)\n        1    0.000    0.000   61.723   61.723 optimize.py:490(run)\n      127    0.038    0.000   21.022    0.166 rfo.py:69(prepare_step)\n      127   20.860    0.164   20.891    0.164 _decomp.py:271(eigh)\n```\n`BFGS`:\n```\n   ncalls  tottime  percall  cumtime  percall filename:lineno(function)\n        1    0.000    0.000   90.276   90.276 optimize.py:490(run)\n      128    0.016    0.000   48.197    0.377 bfgs.py:111(prepare_step)\n      128   48.018    0.375   48.025    0.375 _linalg.py:1485(eigh)\n```\n\nHowever, `eigsh` tends to have convergence issues when there are near-degenerate eigenvalues, so I added a fallback logic to `eigh`.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-19T19:50:15.557Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3091486426",
+            "author": "yuzie007",
+            "body": "Thank you @SebastianWellig for the MR!\nThe addition of the RFO looks interesting to me.\n\nI would first like to request a few changes about Python coding. Then we will also discuss about the core methodology as well.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-17T21:39:29.812Z",
+            "is_outdated": false
+          },
+          {
+            "id": "3094653613",
+            "author": "SebastianWellig",
+            "body": "Thank you for the feedback. I implemented your suggestions accordingly.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-18T19:06:30.107Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Meta/social comment thanking the contributor and describing the review process; no code change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3179504035",
+            "author": "yuzie007",
+            "body": "Thank you @SebastianWellig for the revision, and sorry for the delay to re-review. I have also gone through the algorithmic part, and it looks so good. I have just a few minor questions as left.\n\nAnother question just out of my curiosity: In the Banerjee1985 paper, they also mentioned about P-RFO for the transition-state search. This could also be an interesting follow-up, but what's your view?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-21T12:59:55.066Z",
+            "is_outdated": false
+          },
+          {
+            "id": "3179629868",
+            "author": "SebastianWellig",
+            "body": "I think the main concern would be the Hessian guess, as TS optimizations are much more sensitive to it. From what I have seen, analytical Hessians are often used in practice.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-21T16:18:48.874Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Primarily a meta/social comment thanking the contributor and asking a curiosity question about future work (P-RFO); no concrete change requested on the current code."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3181661642",
+            "author": "yuzie007",
+            "body": "Thank you @SebastianWellig for all the revisions! The present version is OK to me for merging. Let's wait for a few days if other people have further suggestions, then let's merge.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-22T22:28:01.569Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment and merge approval; no code change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": true,
+        "comments": [
+          {
+            "id": "3184014499",
+            "author": "askhl",
+            "body": "In general it's better to use composition over inheritance, i.e., I'd prefer this to inherit from Optimizer and use a BFGS instance internally.  But actually due to limitations of the current design, that would probably be at least somewhat awkward.  So no change is required, we'll try to improve the design in `ase._4.optimize` so as to avoid subclassing (except ABCs)",
+            "file_path": "ase/optimize/rfo.py",
+            "line_number": 7,
+            "commit_sha": "d0651261152e2a407a5b64b4ccd6e43dc434c98c",
+            "base_sha": "d21d2a17359ce033c6cff497a09f04fa39a10849",
+            "created_at": "2026-03-23T15:57:35.002Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Explicitly states 'no change is required'; the design concern is deferred to future work."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3184017556",
+            "author": "askhl",
+            "body": "Since this was already reviewed and improved (thanks @yuzie007) and I have no further comments, I'll just merge it now.  There are quite a few MRs waiting :sweat_smile: \n\nThanks a lot @SebastianWellig!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-23T15:58:19.997Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Meta comment about merging the PR; no code change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 14,
+    "stage1_kept": 13,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 1,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 5,
+    "stage3_cost_usd": 0.02684425
+  }
+}

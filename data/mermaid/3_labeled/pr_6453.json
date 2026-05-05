@@ -1,0 +1,352 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 6453,
+  "title": "Add metadata for diagrams",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nAdds title and descriptions and examples to all diagrams, so that tools like mermaid.live, editor plugins, etc can use examples provided by diagram authors rather than maintaining a different copy, which will have to be updated manually whenever there is a new diagram in mermaid. \r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nExamples is an array, to facilitate adding different ones if the author wishes to.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [ ] :book: have read the [contribution guidelines](https://mermaid.js.org/community/contributing.html)\r\n- [ ] :computer: have added necessary unit/e2e tests.\r\n- [ ] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://mermaid.js.org/community/contributing.html#update-documentation) is used for all new features.\r\n- [ ] :butterfly: If your PR makes a change that should be noted in one or more packages' changelogs, generate a changeset by running `pnpm changeset` and following the prompts. Changesets that add features should be `minor` and those that fix bugs should be `patch`. Please prefix changeset messages with `feat:`, `fix:`, or `chore:`.\r\n",
+  "author": "sidharthv96",
+  "merged_at": "2025-07-07T19:41:27Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "d8bd4dea93c02569a2ccffa555b06eda38c71411",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "1aa28702245f9c874dc7b24ba20cb24d29a8bc17",
+    "6deb476182d6acc860b944abe2d685836836b95c"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J855LS8d",
+          "author": "copilot-pull-request-reviewer",
+          "body": "Consider correcting the typo 'som' to 'some' in the example description.\n```suggestion\n    id6[Create renderer so that it works in all cases. We also add some extra text here for testing purposes. And some more just for the extra flare.]\n```",
+          "file_path": "packages/examples/src/examples/kanban.ts",
+          "line_number": 21,
+          "start_line": null,
+          "commit_sha": "6deb476182d6acc860b944abe2d685836836b95c",
+          "created_at": "2025-04-08T11:39:15Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "high",
+          "label_reasoning": "The comment points out a typo ('som' instead of 'some') in an example description string, which affects the clarity and correctness of the code's textual content."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests a specific typo fix with a code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J856F1Xf",
+          "author": "aloisklink",
+          "body": "**nitpick**: Can we remove this?\r\n\r\nIf we keep it, removing or changing anything in our `dist/` folder might be a breaking change.",
+          "file_path": "packages/examples/package.json",
+          "line_number": 15,
+          "start_line": null,
+          "commit_sha": "6deb476182d6acc860b944abe2d685836836b95c",
+          "created_at": "2025-04-17T06:51:59Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Modularity and Architecture",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment warns against exposing the dist/ folder in package.json exports, as it would create unintended breaking change risks \u2014 a concern about package API surface and component boundaries."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removal of something from the file to avoid breaking changes."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J856F-km",
+          "author": "aloisklink",
+          "body": "**suggestion(non-blocking)**: I think this is a good enough for a v1, but I would much rather store the examples as `.mmd` files instead (or even in `.md` files).\r\n\r\nThat way, us developers get to use syntax highlighting and Mermaid plugins in the IDE when using these examples.\r\n\r\nMaybe a structure could work something like the following?\r\n\r\nWe have an `index.ts` file with the metadata, then a `default.mmd` file with the default diagram and all the other examples can have `xxxx.mmd` file names.\r\n\r\n```diff\r\ndiff --git a/architecture/default.mmd b/architecture/default.mmd\r\nnew file mode 100644\r\nindex 000000000..8ea7afd46\r\n--- /dev/null\r\n+++ b/architecture/default.mmd\r\n@@ -0,0 +1,14 @@\r\n+---\r\n+title: Basic System Architecture\r\n+---\r\n+architecture-beta\r\n+    group api(cloud)[API]\r\n+\r\n+    service db(database)[Database] in api\r\n+    service disk1(disk)[Storage] in api\r\n+    service disk2(disk)[Storage] in api\r\n+    service server(server)[Server] in api\r\n+\r\n+    db:L -- R:server\r\n+    disk1:T -- B:server\r\n+    disk2:T -- B:db\r\ndiff --git a/architecture/index.ts b/architecture/index.ts\r\nnew file mode 100644\r\nindex 000000000..5ab821ea9\r\n--- /dev/null\r\n+++ b/architecture/index.ts\r\n@@ -0,0 +1,7 @@\r\n+export default {\r\n+  name: 'Architecture Diagram',\r\n+  description: 'Visualize system architecture and components',\r\n+  examples: [\r\n+    // add some cool Vite script here to automatically load them from the `.mmd` file\r\n+  ]\r\n+};\r\n```",
+          "file_path": "packages/examples/src/examples/architecture.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "3e6f680df2d89ddbd4d9570d1881815cb7704867",
+          "created_at": "2025-04-17T07:20:15Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "high",
+          "label_reasoning": "The suggestion proposes reorganizing example files from .ts to .mmd/.md files for better IDE support and developer ergonomics, which is fundamentally a code/file organization and structure concern."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J856IzPo",
+          "author": "sidharthv96",
+          "body": "I like this!",
+          "file_path": "packages/examples/src/examples/architecture.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "3e6f680df2d89ddbd4d9570d1881815cb7704867",
+          "created_at": "2025-04-17T14:51:38Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J856Izb6",
+          "author": "sidharthv96",
+          "body": "Will check esbuild and vite loaders for markdown.",
+          "file_path": "packages/examples/src/examples/architecture.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "3e6f680df2d89ddbd4d9570d1881815cb7704867",
+          "created_at": "2025-04-17T14:52:03Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J856I-ZP",
+          "author": "aloisklink",
+          "body": "> esbuild and vite loaders\r\n\r\nYou can just do a `?raw` import in Vite to import the `.mmd` as a string. And it should bundlify into the exact same bundle.\r\n\r\nHaving it in a markdown file would be even cooler, but then you'd have to parse it to ensure it's exactly in the correct format, e.g.\r\n\r\n````markdown\r\n# Diagram Name\r\n\r\nDiagram Description goes Here\r\n\r\n## Examples\r\n\r\n### Example Name Here (maybe the default one is the first one?)\r\n\r\nOptional Example Description Here\r\n\r\n```mermaid\r\ninfo\r\n    %% My example here\r\n```\r\n### Second Example Name Here\r\n\r\nOptional example description here\r\n\r\n```mermaid\r\ninfo\r\n    %% My second example here\r\n```\r\n````",
+          "file_path": "packages/examples/src/examples/architecture.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "3e6f680df2d89ddbd4d9570d1881815cb7704867",
+          "created_at": "2025-04-17T15:13:20Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests storing examples as .mmd files instead of .ts files, with a concrete diff showing how to restructure."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J856GA9R",
+          "author": "aloisklink",
+          "body": "**nitpick**: I don't think we should be using `NodeNext`.\r\n\r\nThe TypeScript v5.8 (the latest version) has changed `module: \"NodeNext\"` to no longer be the same as `module: \"Node16\"` and there's now a new `modue: \"Node18\"` setting.\r\n\r\nCould we switch this too:\r\n\r\n```suggestion\r\n    \"module\": \"Node16\",\r\n    \"moduleResolution\": \"Node16\"\r\n```\r\n\r\nor to:\r\n\r\n```suggestion\r\n    \"module\": \"Node18\",\r\n    \"moduleResolution\": \"Node16\"\r\n```",
+          "file_path": "packages/examples/tsconfig.json",
+          "line_number": 7,
+          "start_line": null,
+          "commit_sha": "6deb476182d6acc860b944abe2d685836836b95c",
+          "created_at": "2025-04-17T07:26:56Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "high",
+          "label_reasoning": "The comment addresses an incorrect TypeScript compiler option (NodeNext vs Node16/Node18), which is a TypeScript-specific configuration convention and language standard concern."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests switching from NodeNext to Node16 or Node18 with specific code suggestions."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J856GFHY",
+          "author": "aloisklink",
+          "body": "**nitpick**: It's not obvious what this function does or is for.\r\n\r\nCould we maybe rename this to `getRegisteredDiagramIDs`?\r\n\r\nIf you can't think of a good name for this function, then we should probably also add a docstring that explains what it does!",
+          "file_path": "packages/mermaid/src/mermaid.ts",
+          "line_number": 418,
+          "start_line": null,
+          "commit_sha": "6deb476182d6acc860b944abe2d685836836b95c",
+          "created_at": "2025-04-17T07:38:47Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "high",
+          "label_reasoning": "The comment explicitly suggests renaming the function to something more descriptive (e.g., getRegisteredDiagramIDs) because its current name is not obvious about what it does."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests renaming the function or adding a docstring to clarify its purpose."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J856GFod",
+          "author": "aloisklink",
+          "body": "I think this should be split into two separate changesets.\r\n\r\nOtherwise, the following message would appear both in the `@mermaid-js/examples` release notes/`CHANGELOG.md` and the `mermaid` release notes.\r\n\r\nBut I think you'd rather want to have the first line only in the `@mermaid-js/examples` and the second line only in the `mermaid` release notes.",
+          "file_path": ".changeset/gold-olives-rule.md",
+          "line_number": 7,
+          "start_line": null,
+          "commit_sha": "6deb476182d6acc860b944abe2d685836836b95c",
+          "created_at": "2025-04-17T07:40:10Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment recommends splitting a single changeset into two separate ones to ensure release notes/changelogs appear in the correct packages, which is an issue of release and project organization structure."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests splitting the changeset into two separate changesets."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J856GHSz",
+          "author": "aloisklink",
+          "body": "Should we add a `peerDependency` on Mermaid so we know what version of the examples is compatible with which Mermaid version?",
+          "file_path": "packages/examples/package.json",
+          "line_number": 26,
+          "start_line": 24,
+          "commit_sha": "6deb476182d6acc860b944abe2d685836836b95c",
+          "created_at": "2025-04-17T07:44:40Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Class Design Guidelines",
+          "label_confidence": "medium",
+          "label_reasoning": "The suggestion to add a peerDependency in package.json is about package design and encapsulation \u2014 explicitly declaring which version of Mermaid is compatible with the examples package, which relates to package/module design guidelines."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J856JUDk",
+          "author": "sidharthv96",
+          "body": "The devDependency is only for the tests. \r\nI'm open to adding peerDependency, but I'm not sure if it'll be kept up-to-date. \r\nIs there an option to automate it? We can add later if that's the case. ",
+          "file_path": "packages/examples/package.json",
+          "line_number": 26,
+          "start_line": 24,
+          "commit_sha": "6deb476182d6acc860b944abe2d685836836b95c",
+          "created_at": "2025-04-17T16:05:30Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J856SfMf",
+          "author": "sidharthv96",
+          "body": "@aloisklink why don't we lock the package versions of `mermaid` & `@mermaid-js/examples`?\r\n\r\nI've done it for the `@mermaid-js/tiny` package in https://github.com/mermaid-js/mermaid/pull/4734, we can use the same approach here as well. \r\n\r\nUnlike `@mermaid-js/tiny`, there will be some unnecessary releases in `@mermaid-js/examples`, but it'll make the UX much easier, as it's clear that the examples for `mermaid@x.y.z` will be in `@mermaid-js/examples@x.y.z`.",
+          "file_path": "packages/examples/package.json",
+          "line_number": 26,
+          "start_line": 24,
+          "commit_sha": "6deb476182d6acc860b944abe2d685836836b95c",
+          "created_at": "2025-04-20T08:22:42Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J856Z475",
+          "author": "aloisklink",
+          "body": "> @aloisklink why don't we lock the package versions of mermaid & @mermaid-js/examples?\r\n\r\nHmmmm, you mean if you have version `11.7.0` of `mermaid`, you want the `@mermaid-js/examples` version to also be `11.7.0`?\r\n\r\nThe problem is that there wouldn't be a warning if you install `mermaid: \"11.7.0\"` and `@mermaid-js/examples: \"11.8.1-different-version\"`, unless `@mermaid-js/examples` has a `peerDependencies` field on `mermaid`.\r\n\r\nBut each time you make `peerDependencies` stricter, you're supposed to do a major version bump of `@mermaid-js/examples` (and I believe that's what changesets will do for us automatically if we use a `peerDependencies`).\r\n\r\nMaybe we could instead have a `peerDependencies: {mermaid: \"~11.7.0\"}`? If it's the `~` specifier, then we could do patch changes to `mermaid` without bumping `@mermaid-js/examples`, but minor changes would publish a new version, even if it's a no-op?",
+          "file_path": "packages/examples/package.json",
+          "line_number": 26,
+          "start_line": 24,
+          "commit_sha": "6deb476182d6acc860b944abe2d685836836b95c",
+          "created_at": "2025-04-22T08:27:01Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding a peerDependency on Mermaid in package.json."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J856GIrL",
+          "author": "aloisklink",
+          "body": "**thought**: Hmmmmmm, I don't think changeset will make a `1.0.0` release. If you give it a `minor` release, it would probably publish a `0.1.0`.\r\n\r\nI think I'd slightly prefer a `1.0.0` release, just so we know that `minor` = `feat`, but that's up to you.",
+          "file_path": "packages/examples/package.json",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "6deb476182d6acc860b944abe2d685836836b95c",
+          "created_at": "2025-04-17T07:48:32Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "low",
+          "label_reasoning": "The comment raises a concern about versioning strategy (0.1.0 vs 1.0.0 for the initial release), which relates to project/package structure and release conventions rather than a specific code category. Confidence is low as this is more of a process/tooling concern."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J856IbYA",
+          "author": "sidharthv96",
+          "body": "I wanted the release to be `0.1.0`, to make breaking changes easily till we finalise everything. ",
+          "file_path": "packages/examples/package.json",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "6deb476182d6acc860b944abe2d685836836b95c",
+          "created_at": "2025-04-17T14:04:02Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J856Iu6c",
+          "author": "aloisklink",
+          "body": "Sounds good to me then! I was just confused since we used `feat:` with changeset's `minor`!",
+          "file_path": "packages/examples/package.json",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "6deb476182d6acc860b944abe2d685836836b95c",
+          "created_at": "2025-04-17T14:41:15Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a concern about versioning behavior and implies a preference for a 1.0.0 release, suggesting a change to the changeset configuration."
+    }
+  ],
+  "review_thread_count": 9,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J856F_TG",
+            "author": "aloisklink",
+            "body": "**nitpick**: I know you're just copying the example from mermaid.js.org (so don't fix this in this PR), but I wish we could instead use an open-source thing (like https://github.com/mermaid-js/mermaid), so this diagram is actually usable).",
+            "file_path": "packages/examples/src/examples/kanban.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "6deb476182d6acc860b944abe2d685836836b95c",
+            "created_at": "2025-04-17T07:22:20Z",
+            "is_outdated": true
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Explicitly says not to fix this in the PR; it's a wish/opinion with no actionable request."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 9,
+    "stage1_kept": 9,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1
+  }
+}

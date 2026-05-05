@@ -1,0 +1,387 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33835,
+  "title": "Core: Add host/origin validation to requests and websocket connections",
+  "body": "Telescopes on https://github.com/storybookjs/storybook/pull/33820\r\n\r\n## What I did\r\n\r\nThis change enhances security and usability for all requests, but specifically WebSocket connections.\r\n\r\nCustom allowed hosts can be configured through `core.allowedHosts` in Storybook main config. It accepts an array of hosts (e.g. `[\"sb.example.com:8000\"]`) or `true` to disable host/origin validation (allow all). In Storybook 10, `true` will be the default to avoid a breaking change. Localhost and local network (or `--host` if specified) are always allowed.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n**Prerequisites**\r\n\r\nStart Storybook dev server:\r\n```bash\r\nyarn task --task sandbox --start-from auto --template react-vite/default-ts\r\n```\r\n\r\n**Normal Operation**\r\n\r\n1. Open Storybook at `http://localhost:6006` and open DevTools \u2192 Network \u2192 WS tab\r\n2. Verify WebSocket connects: `ws://localhost:6006/storybook-server-channel?token=<uuid>`\r\n3. Verify Storybook functions normally (stories load, controls work, HMR works, Vitest works)\r\n\r\n**Cross-Origin Attack Blocked**\r\n\r\n1. Open any external website (e.g., `https://example.com`)\r\n2. Open DevTools Console\r\n3. Try to connect:\r\n   ```javascript\r\n   const ws = new WebSocket('ws://localhost:6006/storybook-server-channel?token=test');\r\n   ws.onerror = (e) => console.log('Blocked:', e);\r\n   ```\r\n4. Check Storybook server console for: `\"Rejecting WebSocket connection: Invalid websocket origin\"`\r\n\r\n**Network Address Access**\r\n\r\n1. Note network address from server startup (e.g., `http://192.168.1.100:6006`)\r\n2. Access Storybook from another device on same network using network address\r\n3. Verify it works as expected (with websocket)\r\n\r\n**Production Build**\r\n\r\n1. Build static Storybook: `yarn build-storybook`\r\n2. Serve it: `npx serve storybook-static`\r\n3. Verify it works as expected (no websocket)\r\n\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\r\n## Summary by CodeRabbit\r\n\r\n* **New Features**\r\n  * Server uses configured host/port for listening and chooses the browser URL from those settings.\r\n  * WebSocket origin-based access control with allowed-hosts support.\r\n\r\n* **Bug Fixes**\r\n  * Improved, timing-safe token validation and consistent 403 handling for invalid connections.\r\n  * Startup no longer exposes computed addresses prematurely.\r\n\r\n* **Tests**\r\n  * Expanded tests for origin/token validation, upgrade handling, and channel behavior.\r\n\r\n* **Chores**\r\n  * Server configuration expanded to accept allowedHosts and address-related options.\r\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ghengeveld",
+  "merged_at": "2026-03-03T14:54:38Z",
+  "base_ref": "next",
+  "merge_commit_sha": "7284b33476dd792b3da85ed0cc6ea271af848f9e",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "349399d91963920a98e8a0abe58e2aae7cab2d17",
+    "c7de8a8287c8e85aee74d434d0d97ea06518bdbd"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6m4Eru",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check wsToken usage and initialization\nrg -n \"wsToken\" --type=ts -C 3 -m 50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2995\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Look at the dev-server.ts file around the lines in question\ncat -n code/core/src/core-server/dev-server.ts | sed -n '30,50p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1181\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Find getServerChannel function implementation\nrg -n \"function getServerChannel|const getServerChannel|export.*getServerChannel\" --type=ts -A 20 -m 10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2132\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Find isValidToken function\nrg -n \"function isValidToken|const isValidToken|export.*isValidToken\" --type=ts -A 10 -m 10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1018\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Find ServerChannelTransport class and its token usage\nrg -n \"class ServerChannelTransport|ServerChannelTransport\" --type=ts -A 30 | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 9433\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check the full ServerChannelTransport implementation\ncat -n code/core/src/core-server/utils/get-server-channel.ts | sed -n '1,96p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3864\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Find where isValidToken is used with the token from getServerChannel\nrg -n \"isValidToken\" --type=ts -B 5 -A 5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 9508\n\n---\n\n\n\n</details>\n\n**Type mismatch: `wsToken` can be undefined but function expects `string`.**\n\nThe optional chaining in `core?.channelOptions?.wsToken` allows undefined to be passed to `getServerChannel`, which has a parameter typed as `token: string`. While the runtime behavior is safe (undefined token causes `isValidToken` to return false, rejecting all WebSocket connections), this silently breaks the server channel with no warning logged. \n\nSince `wsToken` is always initialized in `common-preset.ts`, the optional chaining suggests defensive programming for edge cases. Either:\n1. Make the token parameter explicitly optional with `string | undefined` and add logging when undefined, or\n2. Ensure `core` and `core.channelOptions` are always defined and remove the optional chaining.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/core/src/core-server/dev-server.ts` around lines 40 - 43, The call site\npasses core?.channelOptions?.wsToken (which may be undefined) into\ngetServerChannel; change getServerChannel's parameter type to accept token:\nstring | undefined and add a clear log when token is undefined so the absence is\nsurfaced (update the function signature of getServerChannel and its internal\nchecks like isValidToken to accept undefined and log a warning), then keep the\ncall using core?.channelOptions?.wsToken as-is so runtime behavior stays safe\nbut now emits a warning when no token is provided; reference getServerChannel,\nserverChannel, and core?.channelOptions?.wsToken when making these changes.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/dev-server.ts",
+          "line_number": 43,
+          "start_line": null,
+          "commit_sha": "fba3173a79fe837862cc6e52bc17abc2536c9d09",
+          "created_at": "2026-02-12T16:02:27Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6m4EsL",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n**Use `logger` instead of `console.warn` for server-side logging.**\n\nAs per coding guidelines, server-side Node.js code in `code/core/**` should use `logger` from `storybook/internal/node-logger` instead of direct console methods.\n\n\n<details>\n<summary>\u267b\ufe0f Proposed fix</summary>\n\nAdd the import at the top of the file:\n```typescript\nimport { logger } from 'storybook/internal/node-logger';\n```\n\nThen update line 52:\n```diff\n-        console.warn('Rejecting WebSocket connection:', error);\n+        logger.warn('Rejecting WebSocket connection:', error);\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/core/src/core-server/utils/get-server-channel.ts` at line 52, Replace\nthe direct console usage with the shared logger: add an import for logger from\n'storybook/internal/node-logger' at the top of the file and change the\nconsole.warn('Rejecting WebSocket connection:', error) call inside\ngetServerChannel (the WebSocket rejection/error handler) to use logger.warn\nwhile preserving the message and error object.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/get-server-channel.ts",
+          "line_number": 52,
+          "start_line": null,
+          "commit_sha": "453de7925e55e09262fcadcaaf873f1d14f55be4",
+          "created_at": "2026-02-12T16:02:27Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6m4EsU",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Missing error handling for URL parsing.**\n\n`new URL(requestOrigin)` will throw a `TypeError` if `requestOrigin` is not a valid URL (e.g., `\"not-a-url\"` or malformed strings). This could cause unexpected behavior or crashes when processing malicious requests.\n\n\n<details>\n<summary>\ud83d\udee1\ufe0f Proposed fix: Wrap URL parsing in try-catch</summary>\n\n```diff\n export const isValidOrigin = (\n   requestOrigin: string | undefined,\n   { localAddress, networkAddress }: Options\n ): boolean => {\n   if (!requestOrigin || !localAddress) {\n     return false;\n   }\n \n+  try {\n     const localUrl = new URL(localAddress);\n     const requestUrl = new URL(requestOrigin);\n     if (localUrl.origin === requestUrl.origin) {\n       return true;\n     }\n \n     const networkUrl = networkAddress && new URL(networkAddress);\n     if (networkUrl && networkUrl.origin === requestUrl.origin) {\n       return true;\n     }\n \n     return (\n       requestOrigin === `${localUrl.protocol}//localhost:${localUrl.port}` ||\n       requestOrigin === `${localUrl.protocol}//127.0.0.1:${localUrl.port}`\n     );\n+  } catch {\n+    return false;\n+  }\n };\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/core/src/core-server/utils/validate-websocket.ts` around lines 13 - 14,\nThe URL construction for localAddress and requestOrigin can throw (TypeError) on\nmalformed input; wrap both new URL(localAddress) and new URL(requestOrigin) in a\ntry-catch inside the validate websocket function (the block containing localUrl\nand requestUrl), catch parsing errors, log or trace the error, and return a safe\nfailure (e.g., false / reject the handshake) instead of allowing the exception\nto bubble up; ensure the catch distinguishes which URL failed (localAddress vs\nrequestOrigin) so the log message includes the symbol name (localUrl/requestUrl)\nand the original value.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit f095cf7",
+          "file_path": "code/core/src/core-server/utils/validate-websocket.ts",
+          "line_number": 14,
+          "start_line": null,
+          "commit_sha": "08bdbd9050ff8c129252eb646125cb5a95afaf03",
+          "created_at": "2026-02-12T16:02:28Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6pmM3d",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nrg -n --type=ts --type=js -C3 '\\blocalAddress\\b' | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 8456\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nrg -n --type=ts --type=js -C3 '\\bnetworkAddress\\b' | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 8095\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nrg -n --type=ts --type=js -C3 '\\ballowedHosts\\b' | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 9871\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nrg -n --type=ts 'DEFAULT_ALLOWED_HOSTS' -B2 -A2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 959\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check the entire validate-websocket.ts file\ncat -n code/core/src/core-server/utils/validate-websocket.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2226\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Look for all references to localAddress being set or unset\nrg -n --type=ts 'localAddress\\s*=' -B3 -A3 | head -80\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 598\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Look at build-dev.ts more carefully around the getServerAddresses call\ncat -n code/core/src/core-server/build-dev.ts | sed -n '80,130p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1949\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check if there are multiple branches that might skip setting localAddress\nrg -n --type=ts 'options\\.localAddress' | head -30\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 265\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Look at getServerAddresses function to understand how address is created\ncat -n code/core/src/core-server/utils/server-address.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1974\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for all calls to isValidOrigin to see how it's actually used\nrg -n --type=ts 'isValidOrigin' -B2 -A2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 13971\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check if there are any scenarios where BuilderOptions might be created without localAddress\nrg -n --type=ts 'BuilderOptions' -B3 -A3 | head -80\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 5627\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Look at the full test file to understand the issue better\ncat -n code/core/src/core-server/utils/__tests__/validate-websocket.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 8493\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nrg -n --type=ts 'isValidOrigin' --no-heading | grep -v test | grep -v '\\.test\\.ts'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 397\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check if there are any other code paths that might create BuilderOptions without localAddress\nrg -n --type=ts 'allowedHosts\\s*=' -B5 -A5 | head -150\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2218\n\n---\n\n\n\n</details>\n\n**Add explicit loopback origin fallback to prevent rejecting localhost/127.0.0.1 in edge cases.**\n\nWhen `allowedHosts` is empty (strict mode) and `localAddress` is undefined, requests from `localhost` or `127.0.0.1` are rejected. While the current code path in `build-dev.ts` always sets `localAddress` to localhost, adding an explicit loopback fallback would make `isValidOrigin` more robust and prevent regressions if upstream code changes. Consider accepting common loopback origins (`localhost`, `127.0.0.1`, `::1`) as a safety net when `localAddress` and `networkAddress` are not provided.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/core-server/utils/validate-websocket.ts` around lines 15 - 38,\nThe isValidOrigin function currently relies on localAddress/networkAddress or\nallowedHosts, which can reject loopback requests in strict mode; update\nisValidOrigin to, after parsing requestUrl and before returning\nallowedHosts.includes(...), check if both localAddress and networkAddress are\nfalsy and then allow requestUrl.hostnames/origins that match common loopback\naddresses (\"localhost\", \"127.0.0.1\", \"::1\") (or their origins) so requests from\nloopback are accepted as a fallback while preserving existing allowedHosts/ '*'\nbehavior; use the existing parameters/variables (isValidOrigin, requestOrigin,\nallowedHosts, localAddress, networkAddress, requestUrl) to implement this guard.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/validate-websocket.ts",
+          "line_number": 38,
+          "start_line": null,
+          "commit_sha": "f095cf7438fb9e2dc8c4b2c5f738785c0c24695d",
+          "created_at": "2026-02-24T08:39:34Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6qAa7c",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Hardcoded ngrok domain and commented-out `disableTelemetry` look like testing artifacts.**\n\n`allowedHosts: ['storybook.ngrok-free.dev']` is developer-specific and will be meaningless (or confusing) for other contributors. Similarly, commenting out `disableTelemetry` appears to be a local change. These should likely be reverted before merge.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/.storybook/main.ts` around lines 141 - 142, Remove the\ndeveloper-specific testing artifacts: delete or replace the hardcoded\nallowedHosts entry (allowedHosts: ['storybook.ngrok-free.dev']) and restore the\noriginal telemetry setting by re-enabling or explicitly setting disableTelemetry\n(e.g., disableTelemetry: true) instead of leaving it commented out; if a runtime\noverride is needed, wire allowedHosts or telemetry to an environment variable or\nconfig variable rather than hardcoding those values so the Storybook config\nremains generic and safe to commit.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit ba31175",
+          "file_path": "code/.storybook/main.ts",
+          "line_number": 142,
+          "start_line": null,
+          "commit_sha": "57d1759398bfdfdeacecf01842f3a63cb3a4629d",
+          "created_at": "2026-02-25T10:41:13Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6qAa7i",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Same concern: hardcoded ngrok domain in Vite server config.**\n\n`'nonstatutory-hydrodynamically-twila.ngrok-free.dev'` is another developer-specific testing domain that shouldn't be committed.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/.storybook/main.ts` around lines 175 - 176, The Vite server config in\n.storybook/main.ts currently hardcodes a developer-specific ngrok domain in the\nserver.allowedHosts array; update the server configuration to remove the\nhardcoded entry and instead read allowed hosts from a configurable source (e.g.,\nan environment variable like STORYBOOK_ALLOWED_HOSTS or a condition that enables\nngrok hosts only in local/dev), or use a safer pattern such as a wildcard or\nempty array for CI, so modify the server.allowedHosts reference to use that\nenvironment/config value rather than the literal\n'nonstatutory-hydrodynamically-twila.ngrok-free.dev'.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit ba31175",
+          "file_path": "code/.storybook/main.ts",
+          "line_number": 176,
+          "start_line": null,
+          "commit_sha": "307e283e5a7d0c71a9f93f2a4ee0b2dd14721fb6",
+          "created_at": "2026-02-25T10:41:13Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6qAa7l",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg -n 'isValidOrigin' --type=ts -C10 -g '!node_modules'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 26360\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the vite-server.ts file at the specified lines\nfd 'vite-server.ts' --type f | head -1 | xargs -I {} cat -n {} | sed -n '30,60p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 859\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check build-dev.ts for the warning message about \"Allowing all hosts\"\nfd 'build-dev.ts' --type f | head -1 | xargs -I {} cat -n {}\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 13928\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for \"Allowing all hosts\" warning mentioned in the comment\nrg -n \"Allowing all hosts\" --type=ts -C5 -g '!node_modules'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 941\n\n---\n\n\n\n</details>\n\n**Fix inconsistent handling of empty `allowedHosts` array when `host='0.0.0.0'`.**\n\nThe condition `!config.server.allowedHosts` only catches `undefined`/falsy values, not empty arrays. When `allowedHosts = []` (empty array, which is truthy), the fallback to `true` is skipped, leaving Vite with an empty allow-list. However, `build-dev.ts` warns \"Allowing all hosts\" for this same case (lines 187: `allowedHosts.length === 0`), and `isValidOrigin` in websocket validation actually allows all origins. This creates a mismatch: the warning claims all hosts are allowed, but Vite receives an empty array instead of `true`.\n\nUpdate the condition at line 43 to also handle empty arrays:\n```typescript\nif (options.host === '0.0.0.0' && (!config.server.allowedHosts || (Array.isArray(config.server.allowedHosts) && config.server.allowedHosts.length === 0))) {\n  config.server.allowedHosts = true;\n}\n```\n\nAlternatively, ensure the logic consistently treats empty arrays the same as `undefined` across all three locations (vite-server.ts, build-dev.ts, and websocket validation).\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/builders/builder-vite/src/vite-server.ts` around lines 42 - 45, The\ncheck in vite-server.ts that sets config.server.allowedHosts to true when\noptions.host === '0.0.0.0' misses the case where allowedHosts is an empty array;\nupdate the condition around options.host and config.server.allowedHosts to also\ntreat Array.isArray(config.server.allowedHosts) &&\nconfig.server.allowedHosts.length === 0 as \"unset\" so you assign true (i.e.,\ntreat empty arrays like undefined), and ensure the same semantics are applied\nconsistently in build-dev.ts and the websocket origin validation (isValidOrigin)\nso all three locations handle empty allowedHosts the same way.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/builders/builder-vite/src/vite-server.ts",
+          "line_number": 38,
+          "start_line": 32,
+          "commit_sha": "c7de8a8287c8e85aee74d434d0d97ea06518bdbd",
+          "created_at": "2026-02-25T10:41:13Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6qAa70",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**`invariant(port, ...)` will reject port `0` as falsy.**\n\n`getServerPort` theoretically can return `0` (OS-assigned port). Since `0` is falsy, the invariant would throw. In practice this is very unlikely for Storybook, but `invariant(port != null, ...)` would be more precise.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/core-server/build-dev.ts` around lines 95 - 101, The current\ncheck invariant(port, 'expected options to have a port') treats 0 as falsy and\nwould incorrectly throw when the OS assigns port 0; change the check to\nexplicitly allow 0 by asserting non-null/undefined instead (e.g., use\ninvariant(port != null, 'expected options to have a port')) where the invariant\nis called and before getServerAddresses is invoked so functions like\ngetServerAddresses/getServerPort can return 0 without failing.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/build-dev.ts",
+          "line_number": 101,
+          "start_line": 95,
+          "commit_sha": "c7de8a8287c8e85aee74d434d0d97ea06518bdbd",
+          "created_at": "2026-02-25T10:41:13Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6qAa74",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Double-arrow functions mean the error messages will never be logged.**\n\n`() => () => console.error(...)` returns a function without executing it. When `send()` or `setHandler()` is called on this stub transport, `console.error` is never reached.\n\n\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n     channel: new Channel({\n       transports: [\n         {\n-          setHandler: () => () => console.error('CHANNEL IS NOT READY YET'),\n-          send: () => () => console.error('CHANNEL IS NOT READY YET'),\n+          setHandler: () => console.error('CHANNEL IS NOT READY YET'),\n+          send: () => console.error('CHANNEL IS NOT READY YET'),\n         },\n       ],\n     }),\n```\n\n</details>\n\nAlso, per project guidelines, consider using `logger` from `storybook/internal/node-logger` instead of `console.error`. Based on learnings: \"Applies to \\*\\*/\\*.{ts,tsx,js,jsx}: Use 'logger' from 'storybook/internal/node-logger' for server-side logging instead of console methods.\"\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/core-server/build-dev.ts` around lines 171 - 178, The stub\ntransport passed into the Channel constructor uses nested arrow functions (e.g.,\nsetHandler: () => () => console.error(...)) so the error never executes; change\nsetHandler and send to actual functions that perform logging when invoked (e.g.,\nsetHandler: (handler) => { logger.error(...) or handler(...) } or send: (msg) =>\n{ logger.error(...) } as appropriate) and replace console.error with the server\nlogger imported from 'storybook/internal/node-logger'; update the transport\nobject in the Channel creation (the transports array entry) to call logger.error\ndirectly when invoked rather than returning a function.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/build-dev.ts",
+          "line_number": 178,
+          "start_line": 171,
+          "commit_sha": "c7de8a8287c8e85aee74d434d0d97ea06518bdbd",
+          "created_at": "2026-02-25T10:41:13Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6qAa78",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Find the validate-websocket file\nfind . -type f -name \"*validate-websocket*\" | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 191\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for isValidOrigin implementation\nrg -n \"isValidOrigin\" --type=ts -A 10 -B 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 24066\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check the get-server-channel file to see imports and context\ncat -n code/core/src/core-server/utils/get-server-channel.ts | head -60\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2778\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check if there are tests or other code that depends on the current URL parsing behavior\nrg \"request\\.headers\\.origin\" --type=ts -B 3 -A 3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1103\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Verify what request.url typically contains in Node.js HTTP\n# Check if there's any documentation or tests showing the format\nrg \"request\\.url\" --type=ts code/core/src/core-server/utils/get-server-channel.ts -B 2 -A 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 314\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check if there are other upgrade handlers in the codebase that might be affected\nfd \"upgrade\" --type=ts | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 234\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for tests related to get-server-channel\nfind . -name \"*get-server-channel*test*\" -o -name \"*get-server-channel.test*\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check if there are integration tests that might show request.url format\nrg \"new URL\" --type=ts -B 2 -A 2 | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3893\n\n---\n\n\n\n</details>\n\n**Use a dummy origin base to allow proper validation error messages.**\n\nWhen `request.headers.origin` is `undefined` (common for non-browser WebSocket clients), `new URL(request.url, undefined)` throws a `TypeError` because `request.url` is a relative path. The catch block returns 403, but the logged error message will be about URL parsing rather than origin validation.\n\nCall `isValidOrigin()` to provide a clear rejection message:\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n     server.on('upgrade', (request: IncomingMessage, socket, head) => {\n       try {\n-        const url = request.url && new URL(request.url, request.headers.origin);\n+        const url = request.url && new URL(request.url, 'http://localhost');\n         if (!url || url.pathname !== '/storybook-server-channel') {\n           return;\n         }\n \n         if (!isValidOrigin(request.headers.origin, options)) {\n           throw new Error('Invalid websocket origin');\n         }\n```\n\n</details>\n\nThis way path matching works regardless of origin, and the `isValidOrigin` call cleanly rejects missing origins with a clear error message.\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n      try {\n        const url = request.url && new URL(request.url, 'http://localhost');\n        if (!url || url.pathname !== '/storybook-server-channel') {\n          return;\n        }\n\n        if (!isValidOrigin(request.headers.origin, options)) {\n          throw new Error('Invalid websocket origin');\n        }\n\n        const requestToken = url.searchParams.get('token');\n        if (!isValidToken(requestToken, options)) {\n          throw new Error('Invalid websocket token');\n        }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/core-server/utils/get-server-channel.ts` around lines 29 - 42,\nWhen constructing the URL in get-server-channel, avoid passing undefined as the\nbase: create the URL using request.headers.origin if present, otherwise a dummy\nbase (e.g. 'http://localhost') so relative request.url values parse instead of\nthrowing; keep the subsequent pathname check and then call\nisValidOrigin(request.headers.origin, options) so missing/invalid origins\nproduce the intended validation error, and leave token checks (requestToken and\nisValidToken) unchanged.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:phoenix -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/get-server-channel.ts",
+          "line_number": 49,
+          "start_line": 35,
+          "commit_sha": "c7de8a8287c8e85aee74d434d0d97ea06518bdbd",
+          "created_at": "2026-02-25T10:41:13Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6qxEVz",
+          "author": "ghengeveld",
+          "body": "Unfortunately Polka's types did not align with `host-validation-middleware` and we want to support a default, so I had to write a custom middleware.",
+          "file_path": "code/core/src/core-server/utils/getHostValidationMiddleware.ts",
+          "line_number": 68,
+          "start_line": null,
+          "commit_sha": "c7de8a8287c8e85aee74d434d0d97ea06518bdbd",
+          "created_at": "2026-02-27T15:49:51Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6qxFOp",
+          "author": "ghengeveld",
+          "body": "This was moved from `validate-websocket-token.ts` and only slightly refactored.",
+          "file_path": "code/core/src/core-server/utils/validate-token.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "c7de8a8287c8e85aee74d434d0d97ea06518bdbd",
+          "created_at": "2026-02-27T15:50:39Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6qxGB6",
+          "author": "ghengeveld",
+          "body": "This logging was pulled up into `build-dev.ts` to it applies not just to Vite.",
+          "file_path": "code/builders/builder-vite/src/vite-server.ts",
+          "line_number": 42,
+          "start_line": null,
+          "commit_sha": "c7de8a8287c8e85aee74d434d0d97ea06518bdbd",
+          "created_at": "2026-02-27T15:51:22Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6qxG16",
+          "author": "ghengeveld",
+          "body": "Interestingly `config.server.allowedHosts` was never defined before.",
+          "file_path": "code/builders/builder-vite/src/vite-server.ts",
+          "line_number": 33,
+          "start_line": null,
+          "commit_sha": "c7de8a8287c8e85aee74d434d0d97ea06518bdbd",
+          "created_at": "2026-02-27T15:52:06Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rUbUB",
+          "author": "valentinpalkovic",
+          "body": "Loading `allowedHosts` via preset loading mechanism theoretically allows third-party addons to override the user's `allowedHosts` setting without the user knowing about it! @ndelangen How can we make sure that the preset is indeed only loaded from the `main.<ts|js> file? I think for this case, we would need to adjust the preset loading mechanism to restrict the loading for a dedicated list of origins (in this case, only the main configuration).",
+          "file_path": "code/builders/builder-vite/src/vite-server.ts",
+          "line_number": 14,
+          "start_line": null,
+          "commit_sha": "c7de8a8287c8e85aee74d434d0d97ea06518bdbd",
+          "created_at": "2026-03-02T19:31:20Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6rj6lv",
+          "author": "ghengeveld",
+          "body": "We could simply print the list of allowed hosts on boot: \r\n\r\n<img width=\"1032\" height=\"306\" alt=\"image\" src=\"https://github.com/user-attachments/assets/3b2cdfdc-bd09-4c2b-86c1-d917bc88823d\" />\r\n\r\n",
+          "file_path": "code/builders/builder-vite/src/vite-server.ts",
+          "line_number": 14,
+          "start_line": null,
+          "commit_sha": "c7de8a8287c8e85aee74d434d0d97ea06518bdbd",
+          "created_at": "2026-03-03T13:37:10Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rUb6r",
+          "author": "valentinpalkovic",
+          "body": "```suggestion\n  const allowedHosts = options.allowedHosts ?? DEFAULT_ALLOWED_HOSTS;\n```",
+          "file_path": "code/core/src/core-server/utils/getHostValidationMiddleware.ts",
+          "line_number": 27,
+          "start_line": null,
+          "commit_sha": "dd5bfac3a453eb449409498cabd5627b98b04f5f",
+          "created_at": "2026-03-02T19:31:56Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6rjyXa",
+          "author": "ghengeveld",
+          "body": "This comes down to either `''` or `false` having been passed. Right now it would silently use the default value (`[]`, i.e. allow none). Your suggestion would crash. Is that preferable?",
+          "file_path": "code/core/src/core-server/utils/getHostValidationMiddleware.ts",
+          "line_number": 27,
+          "start_line": null,
+          "commit_sha": "dd5bfac3a453eb449409498cabd5627b98b04f5f",
+          "created_at": "2026-03-03T13:30:03Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6rkYJG",
+          "author": "valentinpalkovic",
+          "body": "I would prefer to crash indeed, because these are invalid settings.",
+          "file_path": "code/core/src/core-server/utils/getHostValidationMiddleware.ts",
+          "line_number": 27,
+          "start_line": null,
+          "commit_sha": "dd5bfac3a453eb449409498cabd5627b98b04f5f",
+          "created_at": "2026-03-03T14:00:50Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rUcXh",
+          "author": "valentinpalkovic",
+          "body": "```suggestion\n    const allowedHosts = options.allowedHosts ?? DEFAULT_ALLOWED_HOSTS;\n```",
+          "file_path": "code/core/src/core-server/utils/getHostValidationMiddleware.ts",
+          "line_number": 60,
+          "start_line": null,
+          "commit_sha": "dd5bfac3a453eb449409498cabd5627b98b04f5f",
+          "created_at": "2026-03-02T19:32:24Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rUec4",
+          "author": "valentinpalkovic",
+          "body": "Having another condition prior to `timingSafeEqual` somewhat contradicts the purpose of using'timingSafeEqual', because the timing-unsafe length comparison could already be exploited to determine the length of the requested token. In this case, likely it doesn't matter, because the tokens generated have likely the same length. So just fyi  ",
+          "file_path": "code/core/src/core-server/utils/validate-token.ts",
+          "line_number": 16,
+          "start_line": null,
+          "commit_sha": "c7de8a8287c8e85aee74d434d0d97ea06518bdbd",
+          "created_at": "2026-03-02T19:34:29Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6rjrQb",
+          "author": "ghengeveld",
+          "body": "Yes this is a known issue with timingSafeEqual (which _must_ get equal-length inputs), but it doesn't really matter. It's not the length of the string that's interesting, it's the individual characters. Normal string comparison bails as soon as it finds the first non-equal character, which can be exploited to figure out what the actual string is.",
+          "file_path": "code/core/src/core-server/utils/validate-token.ts",
+          "line_number": 16,
+          "start_line": null,
+          "commit_sha": "c7de8a8287c8e85aee74d434d0d97ea06518bdbd",
+          "created_at": "2026-03-03T13:24:06Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 18
+}

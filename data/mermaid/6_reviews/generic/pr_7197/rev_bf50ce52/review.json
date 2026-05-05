@@ -1,0 +1,114 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 616,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`maxTime - minTime` produces `NaN` if either domain endpoint is an invalid `Date` object. `Math.ceil(NaN)` is `NaN`, and `NaN > MAX_TICK_COUNT` is `false`, so the guard is silently bypassed and custom ticks are still applied \u2014 potentially reproducing the exact crash this PR is meant to prevent. Add an explicit guard at the top of the function:\n```js\nif (isNaN(minTime) || isNaN(maxTime)) return Infinity;\n```",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 627,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "When `minTime > maxTime` (an inverted or degenerate domain), `timeDiffMs` is negative, `Math.ceil(negative / positive)` is a non-positive number, and `nonPositive > MAX_TICK_COUNT` is `false`. The guard is bypassed again. Add:\n```js\nif (timeDiffMs <= 0) return Infinity;\n```\nbefore the `intervalMs` calculation.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 615,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`getEstimatedTickCount` is declared with `function` inside `draw`, so it is recreated (hoisted within `draw`'s scope) on every render call. It has no closure dependencies on `draw`'s locals \u2014 it only uses its own parameters. Move it to module level alongside `getMaxIntersections` so it is a stable, reusable utility and easier to unit-test independently.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 719,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The entire block \u2014 `every`, `interval`, `weekday`, `domain`, `minTime`, `maxTime`, and `estimatedTicks` \u2014 is computed identically for both the bottom and top axis (lines 658\u2013666 vs. 720\u2013728). The `timeScale.domain()` call is particularly wasteful since the scale doesn't change between the two. Extract a shared helper or compute once before the `if (resultTickInterval !== null)` block and pass results into both branches.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 668,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `log.warn(...)` is emitted only in the bottom-axis branch; the top-axis branch (line 731) silently skips without logging. If a user enables `topAxis` but not a duplicate bottom axis, or if the two branches diverge in the future, excessive ticks on the top axis would be swallowed with no diagnostic output. Either log in both branches or extract a shared guarded-tick helper that handles logging internally.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 674,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The comment reads `// D3 using its default automatic tick generation` \u2014 the participle \"using\" is grammatically incorrect here; it should be `// D3 will use its default automatic tick generation` or `// Fall through to D3's default automatic tick generation`.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 81,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`MAX_TICK_COUNT = 10000` is a magic number with no explanation of how it was derived. A short comment explaining the rationale (e.g., empirical threshold above which rendering noticeably hangs, or the maximum ticks D3 can iterate without blocking the event loop) would help future maintainers tune or justify the value.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttDb.js",
+      "line_number": 307,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`dateFormat.trim()` is called three times in this block (twice in the `isTimestampFormat` expression, once in the error message on line 310). Store the result in a variable \u2014 e.g., `const trimmedFormat = dateFormat.trim();` \u2014 to avoid repeated string allocation and make the code easier to read.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttDb.spec.ts",
+      "line_number": 506,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The assertion was loosened from `toThrowError('Invalid date:202304')` (exact substring) to `toThrowError(/Invalid date/)`. The regex matches any error whose message contains \"Invalid date\", including errors thrown by unrelated code paths (e.g., a generic Date API error deeper in D3 rendering). The old specific string was a stronger contract that proved the right validation path was hit; consider something like `/Invalid date.*202304/` to preserve that specificity while still being flexible about minor message wording.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttDb.spec.ts",
+      "line_number": 526,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The task string `'task1, 00, 6s'` uses `'6s'` as the duration. The Gantt duration parser recognises shorthand units like `d`, `h`, `m`, `w` \u2014 it is not clear that `s` (seconds) is a valid unit. If `'6s'` is silently treated as zero or falls back to a default, the test may pass vacuously. Verify `'s'` is a documented/tested duration unit; if it is not, use `'6m'` or `'1h'` to make the happy-path test deterministic.",
+      "index": 9
+    },
+    {
+      "file_path": "cypress/integration/rendering/gantt.spec.js",
+      "line_number": 125,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Placing a Chai `expect()` assertion inside the `cy.on('uncaught:exception')` callback is unsafe. If `err.message` does not include `'Invalid date'`, the assertion throws an `AssertionError` before `return false` is reached. Cypress's handling of exceptions thrown inside event handlers is not well-defined, and the test may report a confusing error or \u2014 worse \u2014 pass silently. A safer pattern: capture the message in a variable and assert outside the callback:\n```js\nlet caughtMessage;\ncy.on('uncaught:exception', (err) => { caughtMessage = err.message; return false; });\n// ... imgSnapshotTest ...\ncy.then(() => {\n  expect(caughtMessage).to.include('Invalid date');\n  expect(errorCaught).to.equal(true);\n});\n```",
+      "index": 10
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The PR description credits a \"Temporal Dead Zone (TDZ) error\" as a root cause, but no TDZ fix is visible in the diff. `MAX_TICK_COUNT` is defined at module scope (before `draw`), so there is no TDZ concern there. If the TDZ issue was real and existed in a prior iteration of this branch, it should be documented; if it was incorrectly diagnosed, the PR description should be corrected to avoid misleading future readers of the git history.",
+      "index": 11
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `getEstimatedTickCount` helper uses `30 * 24 * 60 * 60 * 1000` ms for a month, which is a rough approximation. D3's `timeMonth.every(n)` uses calendar months (28\u201331 days). For a chart spanning several years with monthly ticks, this approximation can be off by ~3\u20134 ticks per year. While this is unlikely to cause false positives at the 10,000-tick threshold, a comment acknowledging the approximation already exists \u2014 consider using `365.25 / 12 * 86400 * 1000 \u2248 2629800000` ms (the standard mean month) as a slightly less inaccurate fallback.",
+      "index": 12
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The new strict-throwing behaviour in `getStartDate` (throwing for any non-timestamp format with an invalid date) is a behavioural breaking change. Diagrams that previously rendered silently \u2014 relying on the `new Date()` fallback for formats like `'D'`, `'MM/DD'`, or locale-specific formats \u2014 will now throw at parse time. This is the correct fix, but it is worth confirming that the changeset is accurately scoped as `patch` rather than `minor`, and that the migration path is documented for users whose existing valid-looking diagrams may now surface errors.",
+      "index": 13
+    }
+  ],
+  "cost_usd": 0.39574095,
+  "duration_seconds": 281.6818289756775
+}

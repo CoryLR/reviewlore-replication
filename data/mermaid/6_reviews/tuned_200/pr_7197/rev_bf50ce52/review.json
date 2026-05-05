@@ -1,0 +1,98 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttDb.js",
+      "line_number": 310,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This `throw` for non-timestamp formats is a breaking behavioral change for previously-valid Gantt diagrams. Before this PR, when strict dayjs parsing failed for any format, the code fell through to `new Date(str)` as a last resort \u2014 e.g., `2019-09-1` (single-digit day) with `dateFormat YYYY-MM-DD` would have been successfully parsed by `new Date()` and rendered correctly. That diagram source is now broken by this change.\n\nThe Cypress test being modified in this very PR (issue #1060) actually demonstrates this: the diagram under test includes `2019-09-1`, which previously rendered via the `new Date()` fallback. The project rule is explicit: 'Mermaid diagram syntax changes must not break previously-valid diagram source.' A related rule: 'prefer `log.warn` over throwing exceptions when detecting input that violates a soft constraint but was previously silently tolerated.'\n\nA less breaking approach would be to keep the `new Date(str)` fallback for all formats (not just `x`/`X`) but keep the existing year-range check (`< -10000 || > 10000`), then throw only when that check fails. The year-range check is what protects against the infinite-loop regression, since it already has a `throw` on line 325.",
+      "index": 0
+    },
+    {
+      "file_path": ".changeset/tricky-rivers-stand.md",
+      "line_number": 2,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The bump type should be `minor`, not `patch`. The change in `ganttDb.js` throws an error for diagrams that previously rendered (those relying on the `new Date()` fallback for non-timestamp formats). Per project rules: 'A bugfix that changes rendered output for users who had previously configured specific settings \u2014 even if correcting incorrect behavior \u2014 should be released as a MINOR semver bump, not a PATCH, because it constitutes a visible behavior change for existing users.'",
+      "index": 1
+    },
+    {
+      "file_path": "cypress/integration/rendering/gantt.spec.js",
+      "line_number": 125,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Placing `expect(err.message).to.include('Invalid date')` inside the `cy.on('uncaught:exception')` handler is problematic. If a *different* uncaught error occurs with a message that doesn't include 'Invalid date' (e.g., a separate rendering failure), Chai will throw a new assertion error from inside the event handler. This can prevent the handler from returning `false`, causing Cypress to treat the original uncaught exception as a test failure \u2014 a confusing error cascade that masks the real issue.\n\nThe handler should simply capture the flag and return `false`: \n```js\ncy.on('uncaught:exception', (err) => {\n  if (err.message.includes('Invalid date')) {\n    errorCaught = true;\n  }\n  return false;\n});\n```\nAssertions on specific message content can then be deferred to a `cy.then()` block.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 615,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`getEstimatedTickCount` is defined inside the `draw` function but does not close over any `draw`-specific variables \u2014 every value it needs is received as a parameter. It should be moved to module scope alongside `MAX_TICK_COUNT`. Benefits: (1) the function object isn't recreated on every `draw` invocation, (2) it can be independently unit-tested without setting up an entire diagram render, (3) it is easier to discover alongside other module-level helpers.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 659,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The block that extracts the domain, calls `getEstimatedTickCount`, and conditionally applies the tick interval via a `switch` statement is duplicated almost identically for the bottom axis (here) and the top axis (~line 719). Consider extracting a helper such as `applyTickInterval(axis, interval, every, minTime, maxTime, weekday)` to eliminate the duplication and reduce the risk of the two code paths diverging.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 81,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`MAX_TICK_COUNT = 10000` has no inline comment explaining why 10,000 was chosen as the threshold. Future maintainers may wonder whether this is an arbitrary constant or empirically derived. A brief comment such as `// D3 rendering degrades significantly beyond this value; guards against malformed date ranges generating near-infinite tick sequences` would make the intent self-evident.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttDb.spec.ts",
+      "line_number": 506,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The assertion was loosened from the exact string `'Invalid date:202304'` to the broad regex `/Invalid date/`. The previous assertion verified both that an error is thrown *and* that it identifies the offending value. Since the error message format has now changed to `Invalid date: \"202304\" does not match format \"YYYYMMDD\"`, the test should assert on the new specific message (e.g., `toThrowError(/Invalid date: \"202304\"/)`) rather than widening the check, to preserve meaningful coverage.",
+      "index": 6
+    },
+    {
+      "file_path": "cypress/integration/rendering/theme.spec.js",
+      "line_number": 289,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Changing `dateFormat :YYYY-MM-DD` to `dateFormat YYYY-MM-DD` (removing the leading colon) changes the format string the diagram uses and therefore changes what gets rendered. The visual snapshot for this test will differ from the existing baseline, causing the CI image-comparison check to fail unless the baseline is explicitly regenerated. If this diagram was previously parsing with `:YYYY-MM-DD` as the format string and the tasks were being parsed with that wrong format, the rendering output before and after will be visually different \u2014 the PR should include the updated snapshot or explicitly note that baselines need to be reset.",
+      "index": 7
+    },
+    {
+      "file_path": ".changeset/tricky-rivers-stand.md",
+      "line_number": 5,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "\"diagramtype\" should be two words: \"diagram type\".",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The PR description attributes the crash to a 'Temporal Dead Zone (TDZ) error', but no explicit TDZ fix is visible anywhere in the diff. A TDZ occurs when a `let`/`const` binding is read before its declaration is reached at runtime; nothing in the changed code matches this description. The actual changes are (a) an early throw for invalid dates and (b) a tick-count ceiling in the renderer. If there was a genuine TDZ that was fixed incidentally, it should be called out explicitly per project convention. If the description is simply inaccurate, it should be corrected so reviewers and future bisects have a reliable record of what root cause was addressed.",
+      "index": 9
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The new tick-count validation logic in `ganttRenderer.js` (the `getEstimatedTickCount` check and the `> MAX_TICK_COUNT` guard) has no unit test coverage. The existing spec file only exercises `ganttDb.js` date-parsing paths. Per project rules, new diagram features affecting the data model and visual output require test coverage at all three layers: DB unit tests, parser unit tests, and end-to-end rendering tests. At minimum, a unit test should verify that `getEstimatedTickCount` returns a value exceeding `MAX_TICK_COUNT` for a tiny interval over a long date range, and that the renderer falls back gracefully.",
+      "index": 10
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `msPerUnit` map inside `getEstimatedTickCount` approximates a month as exactly 30 days. The inline comment `// Approximate` is good, but there is no entry for `year` (which is outside the tick-interval regex and therefore unreachable, but the absence is non-obvious). A short comment such as `// 'year' is intentionally absent \u2014 it is not accepted by the reTickInterval regex` would prevent future contributors from adding it unnecessarily.",
+      "index": 11
+    }
+  ],
+  "cost_usd": 0.54666105,
+  "duration_seconds": 376.44601798057556
+}

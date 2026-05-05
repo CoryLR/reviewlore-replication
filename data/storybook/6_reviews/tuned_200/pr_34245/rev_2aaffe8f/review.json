@@ -1,0 +1,98 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/builders/builder-vite/input/iframe.html",
+      "line_number": 73,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The formatter re-indented the JavaScript inside the `<script>` block, which silently changed the *content* of the template literal. In the original code, the continuation lines of the `message` string started at column 0 after each newline. Now they carry 6 leading spaces (`      It looks like\u2026`, `      Please re-run\u2026`, `      See:`). Template literals preserve whitespace exactly as written in source, so the value of `message` now includes those 6 leading spaces on every line after the first. This means:\n\n1. `console.error(...)` will print lines with 6 leading spaces in the browser DevTools console \u2014 visually wrong.\n2. The `innerHTML` assignment calls `message.replaceAll('\\n', '<br/>')`, so the spaces will appear at the start of those HTML lines. While browsers collapse consecutive spaces in normal flow, a single leading space before the text *will* remain visible.\n\nTo fix, dedent the string content back to column 0 (as it was originally), or use a tagged template / `.trim()` / `.dedent` utility to strip leading indentation consistently.",
+      "index": 0
+    },
+    {
+      "file_path": "scripts/project.json",
+      "line_number": 8,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `pretty-docs` NX target now runs `yarn fmt:check` from `{workspaceRoot}` (the repo root), which executes `oxfmt --check .`. However, two problems arise:\n\n1. **Wrong scope for the cache key.** The `inputs` array (line 10) only includes `\"{workspaceRoot}/docs/**/*\"`. NX will therefore return a cached result when non-docs files (e.g. `code/` or `scripts/`) change, even though the command checks those files. Conversely, docs-only changes will invalidate the cache but run a broader check than docs alone.\n\n2. **Docs formatting is no longer verified.** `docs` itself is in `ignorePatterns` in `.oxfmtrc.json`, so `oxfmt --check .` from the root skips the entire `docs/` tree (except `docs/_snippets/**` which is un-excluded). The original purpose of `pretty-docs` \u2014 verifying docs snippet formatting \u2014 is now delegated to the general `fmt` / `lint` CI job, making the `pretty-docs` target a duplicate of that job with a misleading name and mismatched cache inputs.\n\nSuggested fix: either keep the target pointing at `yarn --cwd scripts fmt:check` (which specifically checks `docs/_snippets`), or remove the target and rely solely on the consolidated format-check CI job.",
+      "index": 1
+    },
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 49,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The override block for `[\"*.md\", \"*.mdx\"]` is dead configuration. Both `*.md` and `*.mdx` are listed in `ignorePatterns` (lines 38\u201339), so oxfmt never processes those files and these override options are never applied. Additionally, `importOrderSeparation` and `importOrderSortSpecifiers` are JS/TS import-sorting options that have no meaning for markdown files even if they were processed. This override block should be removed to avoid misleading readers into thinking markdown files are formatted with these settings.",
+      "index": 2
+    },
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 62,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The second glob in this override \u2014 `\"**/frameworks/angular/template/**/*.ts\"` \u2014 is dead. The ignore pattern `\"code/frameworks/angular/template/**\"` (line 31) causes oxfmt to skip all files under that directory, so the override's `parser: \"babel-ts\"` is never applied to them. Only the first glob `\"**/frameworks/angular/src/**/*.ts\"` is live. Consider removing the dead second glob or leaving a comment to avoid confusion.",
+      "index": 3
+    },
+    {
+      "file_path": "code/package.json",
+      "line_number": 27,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `lint` script uses `cd ..` as a shell built-in within a yarn script: `\"yarn lint:js && cd .. && yarn fmt:check\"`. On POSIX systems this works because the entire script runs in a subshell, but it is fragile and will silently fail on Windows (cmd.exe / PowerShell) which are not always the CI targets but may be developer machines. Prefer the idiomatic cross-platform form: `\"yarn lint:js && yarn --cwd .. fmt:check\"`, which is consistent with how the rest of this `package.json` invokes root-level scripts (e.g. `\"yarn --cwd .. i\"`).",
+      "index": 4
+    },
+    {
+      "file_path": "package.json",
+      "line_number": 44,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The new `lint-staged` configuration switches from auto-formatting (`\"oxfmt\"`) to a check-only mode (`\"oxfmt --check\"`) for staged files. The old behaviour automatically reformatted files during the commit, so developers rarely saw formatting failures. With `--check`, a commit is now rejected if any staged file is not already formatted \u2014 developers must manually run `oxfmt` (or `yarn fmt:write`) and re-stage before committing. This is a significant ergonomic regression. If the intent is to enforce that files are always pre-formatted, the PR description and CONTRIBUTING docs should call this out. If the intent is to preserve the previous behaviour, change `\"oxfmt --check\"` back to `\"oxfmt\"` so lint-staged auto-formats on commit.",
+      "index": 5
+    },
+    {
+      "file_path": "scripts/package.json",
+      "line_number": 11,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The old `docs:fmt:check` script included a helpful failure hint: `|| echo 'Please run \"docs:fmt:write\" in the \"scripts\" directory to fix the issues'`. The renamed `fmt:check` script drops this message. When the format check fails in CI or locally, developers receive only the raw oxfmt diff output with no guidance on how to fix it. Consider reinstating the `|| echo` hint, pointing to whichever command is now canonical (e.g. `yarn fmt:write` from the repo root).",
+      "index": 6
+    },
+    {
+      "file_path": ".vscode/extensions.json",
+      "line_number": 8,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The file is missing a trailing newline (noted by `\\ No newline at end of file` in the diff). This is ironic for a PR that enforces formatting standards. Most editors and formatters (including oxfmt itself) expect files to end with a newline.",
+      "index": 7
+    },
+    {
+      "file_path": ".vscode/settings.json",
+      "line_number": 75,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Same as `.vscode/extensions.json` \u2014 the file is missing a trailing newline (`\\ No newline at end of file`). Please add one to keep the file consistent with the rest of the codebase.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "**Template literal corruption is a systematic risk from this change.** The PR runs oxfmt over files that were previously excluded (the entire `code/` directory). The `iframe.html` case (error message indentation) demonstrates that the formatter can silently corrupt the *value* of multi-line template literals when it re-indents surrounding code. Before merging, every multi-line template literal in the newly formatted files should be audited \u2014 especially those used in user-facing strings (error messages, log output, HTML injection) \u2014 to verify that their content is unchanged. A programmatic approach: run `git diff --unified=0` filtered to template literals after formatting and check for leading-whitespace changes on non-first continuation lines.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**`scripts/**` files are missing `oxfmt --check` in lint-staged.** The new root `lint-staged` config runs `oxfmt --check` for `code/**/*.{js,jsx,mjs,ts,tsx}` staged files but only `lint:js:cmd` (no oxfmt) for `scripts/**/*.{html,js,json,jsx,mjs,ts,tsx}`. Since `scripts/` is not in `ignorePatterns`, it will be format-checked by `yarn fmt:check` in CI, but not during local pre-commit. This inconsistency means formatting violations in `scripts/` only surface in CI rather than being caught at commit time. Adding `\"oxfmt --check\"` (or `\"oxfmt\"` for auto-fix) to the `scripts/**` entry would keep the experience consistent.",
+      "index": 10
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "**CI `prettyDocs` and `lint` jobs both run `yarn fmt:check`.** After this PR, the `prettyDocs` job (renamed 'Format check') runs `yarn fmt:check`, and the `lint` job also gains a 'Format check' step running the same `yarn fmt:check` command. These are separate CI jobs that will both spin up nodes and run the full oxfmt check on the same codebase, wasting CI resources. One of these should be removed, or the `prettyDocs`/`fmt` job should be declared a dependency of `lint` so it only runs once.",
+      "index": 11
+    }
+  ],
+  "cost_usd": 0.6312070999999999,
+  "duration_seconds": 570.8446509838104
+}

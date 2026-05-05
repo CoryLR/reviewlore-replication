@@ -1,0 +1,160 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34086,
+  "title": "Addon-Docs: Add Reset story button to re-render stories in docs",
+  "body": "Closes #12101\r\n\r\n## What I did\r\nAdd a \"Reload story\" button to the Canvas action bar in Docs view.\r\nUses `FORCE_REMOUNT` event, matching the existing Story canvas reload behavior.\r\nThe button is shown by default for all inline stories \u2014 no configuration needed.\r\n\r\n## Checklist for Contributors\r\n### Testing\r\n#### The changes in this PR are covered in the following automated tests:\r\n- [ ] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n1. Run a sandbox: `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Open Storybook in your browser at `http://localhost:6006`\r\n3. Go to any story's Docs page\r\n4. Click the \"Reload story\" button in the action bar\r\n5. Verify the story remounts from scratch\r\n\r\n### Documentation\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update MIGRATION.MD\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Added a Reload Story button in the preview panel so users can reset and refresh the current story directly from documentation.\n  * The Reload action appears in the preview toolbar when available, offering a quick way to reinitialize the displayed story without leaving the docs.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "6810779s",
+  "merged_at": "2026-03-24T13:00:47Z",
+  "base_ref": "next",
+  "merge_commit_sha": "77d706fd0a5615bb4aae4bc1d94de794c8e49e74",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "33afce2ff2105dec326a86169015cdce17ed5770",
+    "da4e76a9d2d5355b6719ae4f57de726ff4695b4c"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tY8Hx",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Avoid triggering two reset render paths for one click.**\n\n`RESET_STORY_ARGS` already drives an args update and rerender/remount in `code/core/src/preview-api/modules/preview-web/Preview.tsx:344-410`. Incrementing `resetKey` here adds a second render cycle from Docs, so `usesMount` stories can replay mount/play twice and other stories get an extra rerender on top of the args reset. This should be a single reset+remount path rather than emitting `RESET_STORY_ARGS` and forcing a separate local remount.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/docs/src/blocks/blocks/Canvas.tsx` around lines 86 - 89, The\nhandler currently emits RESET_STORY_ARGS and also bumps local resetKey\n(setResetKey), causing two remounts; remove the local remount path by deleting\nthe setResetKey((prev) => prev + 1) call (and remove/reset the resetKey state if\npresent) so handleResetStory only calls\ndocsContext.channel.emit(RESET_STORY_ARGS, { storyId: story.id }); update the\nhandleResetStory dependency array to only include docsContext.channel and\nstory.id and remove any references to setResetKey/resetKey elsewhere in this\ncomponent.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 0d2c2ea",
+          "file_path": "code/addons/docs/src/blocks/blocks/Canvas.tsx",
+          "line_number": 89,
+          "start_line": null,
+          "commit_sha": "0d2c2ea7d75d3a7825d24feaed4c2eef57c72d7d",
+          "created_at": "2026-03-10T02:47:22Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tY8H3",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Make the reset action configurable instead of always-on for inline canvases.**\n\nThis wires `onResetStory` for every inline Docs canvas, so there is no global, per-component, or per-story opt-out even though that configurability is part of the linked requirement. Please gate the button on a docs parameter/block prop before surfacing it.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/docs/src/blocks/blocks/Canvas.tsx` around lines 100 - 102, The\ninline Canvas currently always wires onResetStory (inline ? handleResetStory :\nundefined) which forces a reset button for every inline Docs canvas; change this\nto check a configurable prop/parameter (e.g., a block prop like allowReset or a\ndocs parameter like docs.disableReset) so the handler is only passed when inline\n&& !disableReset (or inline && allowReset). Update the Canvas component where\nonResetStory is assigned and ensure the Story usage (Story ...\nresetKey={resetKey}) remains unchanged; document/read the prop from props or\nprops.meta so consumers can opt out per-story, per-component, or globally.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 0d2c2ea",
+          "file_path": "code/addons/docs/src/blocks/blocks/Canvas.tsx",
+          "line_number": 102,
+          "start_line": null,
+          "commit_sha": "6e99fc3add663b4d66bb47db7790bfc0859c2631",
+          "created_at": "2026-03-10T02:47:22Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6t49Nk",
+          "author": "Sidnioulz",
+          "body": "We only use Emotion within the Storybook UI, so this classname is not necessary.\n\nWe'll also want `padding small` and `size small` to match the rest of the toolbar.",
+          "file_path": "code/addons/docs/src/blocks/components/Preview.tsx",
+          "line_number": 265,
+          "start_line": null,
+          "commit_sha": "64a45cf9726cbffed821db6aeb630d1eab67a816",
+          "created_at": "2026-03-11T10:28:25Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6t6kM4",
+          "author": "6810779s",
+          "body": "Done! Removed the className and added `padding=\"small\"` and `size=\"small\"`.",
+          "file_path": "code/addons/docs/src/blocks/components/Preview.tsx",
+          "line_number": 265,
+          "start_line": null,
+          "commit_sha": "64a45cf9726cbffed821db6aeb630d1eab67a816",
+          "created_at": "2026-03-11T11:39:29Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6t5Osl",
+          "author": "Sidnioulz",
+          "body": "We'll want this button to work like https://github.com/storybookjs/storybook/blob/next/code/core/src/manager/components/preview/tools/remount.tsx.\n\nWe want the same icon, and an `ariaLabel` for the text (which will automatically double up as a tooltip).",
+          "file_path": "code/addons/docs/src/blocks/components/Preview.tsx",
+          "line_number": 268,
+          "start_line": null,
+          "commit_sha": "e4e69c9c0b42ecb952950a3b5869c9be3e01fe65",
+          "created_at": "2026-03-11T10:41:13Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6t6lRM",
+          "author": "6810779s",
+          "body": "Done! Changed to icon-only with `ariaLabel=\"Reload story\"`, matching the remount.tsx pattern.",
+          "file_path": "code/addons/docs/src/blocks/components/Preview.tsx",
+          "line_number": 268,
+          "start_line": null,
+          "commit_sha": "e4e69c9c0b42ecb952950a3b5869c9be3e01fe65",
+          "created_at": "2026-03-11T11:40:29Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uon0F",
+          "author": "Sidnioulz",
+          "body": "I didn't catch this on the first review but your button goes into the actions bar, whereas we want story tool buttons to go into the Canvas toolbar.\n\nSee your UI: https://635781f3500dd2c49e189caf-acyvyqhwij.chromatic.com/?path=/docs/button-component--docs\n\nVs the canvas toolbar:\n<img width=\"1341\" height=\"366\" alt=\"Image\" src=\"https://github.com/user-attachments/assets/051b54da-82d1-40e3-8164-c5f74737f27a\" />",
+          "file_path": "code/addons/docs/src/blocks/components/Preview.tsx",
+          "line_number": 230,
+          "start_line": null,
+          "commit_sha": "e4e69c9c0b42ecb952950a3b5869c9be3e01fe65",
+          "created_at": "2026-03-13T08:52:49Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6uu6Yb",
+          "author": "6810779s",
+          "body": "Thanks for the feedback! \r\nI've moved the reload button to the start of the canvas toolbar, before the zoom buttons. \r\nThe toolbar now shows automatically for inline stories even without `withToolbar` being set. \r\nThe button follows the same pattern as `remount.tsx` with `ariaLabel`, `padding=\"small\"`, icon-only style using `SyncIcon`.\r\n\r\n",
+          "file_path": "code/addons/docs/src/blocks/components/Preview.tsx",
+          "line_number": 230,
+          "start_line": null,
+          "commit_sha": "e4e69c9c0b42ecb952950a3b5869c9be3e01fe65",
+          "created_at": "2026-03-13T14:26:22Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6w2JfS",
+          "author": "Sidnioulz",
+          "body": "```suggestion\n        {...{ withSource, withToolbar }}\n```\n\nI wouldn't change the condition here, because you'll virtually always have a reload story handler. We want to ensure that users can disable the toolbar in this block.",
+          "file_path": "code/addons/docs/src/blocks/components/Preview.tsx",
+          "line_number": 194,
+          "start_line": null,
+          "commit_sha": "4d664605d2679f3970ba69520e46d6024673e808",
+          "created_at": "2026-03-20T17:16:22Z",
+          "is_outdated": true
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 6
+}

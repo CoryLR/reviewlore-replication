@@ -1,0 +1,1038 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33395,
+  "title": "Core: Improve story generation and args extraction",
+  "body": "Closes #\r\n\r\n## What I did\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\nThis PR refactors the story generation logic (not save story, but create story) so that it is more detached, does not depend on Storybook to be running and also requires data from docgen and not argtypes directly. Something along the lines of:\r\n<img width=\"450\" height=\"2201\" alt=\"image\" src=\"https://github.com/user-attachments/assets/158e4edd-68b6-4a50-b270-5a9cc3520316\" />\r\n\r\nIt introduces a new preset which receives a component file path and export name, and then processes that over docgen (each renderer has to implement their own) and returns argtypes from that.\r\n\r\nAdditionally, there's a new function to generate dummy data based on argtypes, which is much improved and provides more features in the story generation. It now also accounts for handlers and uses `fn` from `storybook/test` and adds the necessary import for that.\r\n\r\nHere's an example of before/after the new capabilities\r\n<img width=\"650\" alt=\"image\" src=\"https://github.com/user-attachments/assets/823f4efa-b726-461e-a091-13573de3ff8e\" />\r\n\r\n<!-- Briefly describe what your PR does -->\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n1. Run Storybook\r\n2. Find a good component candidate to try this out, make sure it has types and required args. Also make sure that even for those required types, there are no default values in the prop usage in the component render function.\r\n3. Click on the + button to create a new story for that file\r\n4. Watch the resulting file and see whether it looks correct\r\n\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Automatic dummy prop generation for stories and propagation of args into generated templates (including CSF factory support and customizable preview imports).\n  * Function-placeholder handling so non-primitive props are injected with appropriate helpers.\n\n* **Improvements**\n  * Safer story-file creation with clearer result-driven outcomes and overwrite protection.\n  * Improved React component type extraction and richer arg-type mapping.\n  * Extended prop type support (date, node, literal, tuple, etc.).\n\n* **Tests**\n  * Expanded test coverage for generation, templates, and docgen extraction.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "yannbf",
+  "merged_at": "2026-01-09T11:46:03Z",
+  "base_ref": "yann/ghost-stories-research",
+  "merge_commit_sha": "15bc7d2916e2c2ad6ff5e756130797dc87915790",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "4593b86709e6e5d6a607f972cc19eb70a7fa4f73",
+    "9822b1d4ce562b1c0714ce0f3930638875e99291"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6c6-n7",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for generateMockValue function and tuple handling in getComponentProps.ts\nfind code/renderers/react/src/componentManifest -name \"*.ts\" -type f | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1144\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# List files in the componentManifest directory\nls -la code/renderers/react/src/componentManifest/\n\n# Search for generateMockValue implementation\nrg -n -A 50 \"function generateMockValue|const generateMockValue\" code/renderers/react/src/componentManifest/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 5958\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for tuple handling in the implementation\nrg -n -B 5 -A 15 \"tuple\" code/renderers/react/src/componentManifest/getComponentProps.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1306\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Read the test file around lines 961-978\nsed -n '961,978p' code/renderers/react/src/componentManifest/getComponentProps.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 507\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Get more context around the test - look for similar tuple tests\nrg -n -B 5 -A 15 \"tuple\" code/renderers/react/src/componentManifest/getComponentProps.test.ts | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1440\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check what generateMockValue returns for a number type\ngrep -A 2 \"case 'number':\" code/renderers/react/src/componentManifest/getComponentProps.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 101\n\n---\n\n\n\n</details>\n\n**Fix tuple mock to respect element types instead of hardcoding strings.**\n\nThe tuple handler at line 250-254 ignores each element's actual type and always generates string mocks. The implementation should iterate through the `elements` array and call `generateMockValue()` recursively with each element's type, so a `[number, number]` tuple generates `[42, 42]` instead of `['mock string', 'mock string']`. The test expectation should also be updated to reflect the correct mock values based on element types.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/renderers/react/src/componentManifest/getComponentProps.test.ts around\nlines 961 to 978, the tuple test and implementation are wrong: the tuple handler\ncurrently hardcodes string mocks for every element; update the tuple generation\nto iterate over tsType.elements and call generateMockValue(element) for each\nelement so a tuple like [{name:'number'},{name:'number'}] yields [42,42], and\nupdate the test expectation to expect numeric mocks (e.g. [42, 42]) instead of\n['mock string','mock string'].\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/getComponentProps.test.ts",
+          "line_number": 978,
+          "start_line": null,
+          "commit_sha": "fc2f410214586861fb6fdd8add9175db9d7fd67b",
+          "created_at": "2025-12-18T21:30:45Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The tuple handler ignores element types and hardcodes string mocks instead of recursively calling generateMockValue() with each element's actual type."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests a concrete fix: update tuple handler to iterate elements and call generateMockValue recursively, and update test expectations accordingly."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6c6-oC",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Wrap declaration in block scope to fix linting error.**\n\nAs flagged by Biome, the `const literalValue` declaration inside the switch case can be erroneously accessed by other switch clauses. Wrap it in a block.\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n-    case 'literal':\n-      const literalValue = tsType.value || 'mock literal';\n-      // Strip surrounding quotes from string literals\n-      if (\n-        typeof literalValue === 'string' &&\n-        literalValue.startsWith(\"'\") &&\n-        literalValue.endsWith(\"'\")\n-      ) {\n-        return literalValue.slice(1, -1);\n-      }\n-      return literalValue;\n+    case 'literal': {\n+      const literalValue = tsType.value || 'mock literal';\n+      // Strip surrounding quotes from string literals\n+      if (\n+        typeof literalValue === 'string' &&\n+        literalValue.startsWith(\"'\") &&\n+        literalValue.endsWith(\"'\")\n+      ) {\n+        return literalValue.slice(1, -1);\n+      }\n+      return literalValue;\n+    }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    case 'literal': {\n      const literalValue = tsType.value || 'mock literal';\n      // Strip surrounding quotes from string literals\n      if (\n        typeof literalValue === 'string' &&\n        literalValue.startsWith(\"'\") &&\n        literalValue.endsWith(\"'\")\n      ) {\n        return literalValue.slice(1, -1);\n      }\n      return literalValue;\n    }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\uddf0 Tools</summary>\n\n<details>\n<summary>\ud83e\ude9b Biome (2.1.2)</summary>\n\n[error] 257-257: Other switch clauses can erroneously access this declaration.\nWrap the declaration in a block to restrict its access to the switch clause.\n\nThe declaration is defined in this switch clause:\n\nSafe fix: Wrap the declaration in a block.\n\n\n(lint/correctness/noSwitchDeclarations)\n\n</details>\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/renderers/react/src/componentManifest/getComponentProps.ts around lines\n256 to 266, the const literalValue declared in the 'literal' switch case must be\nwrapped in its own block to satisfy Biome linting (preventing cross-case\nvariable access); fix by adding a block scope for the case (case 'literal': {\n... } ) and move the const and all related logic and returns inside that block,\nthen close the block before the next case.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/getComponentProps.ts",
+          "line_number": 266,
+          "start_line": null,
+          "commit_sha": "fc2f410214586861fb6fdd8add9175db9d7fd67b",
+          "created_at": "2025-12-18T21:30:45Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "high",
+          "label_reasoning": "Missing block scope around switch case declaration - a JavaScript/TypeScript language-specific best practice flagged by Biome linter (noSwitchDeclarations)."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests wrapping the switch case declaration in a block scope to fix a Biome linting error, with a specific code diff provided."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dDS3V",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n**Move inline mock implementations to `beforeEach` blocks.**\n\nBoth new test cases contain inline mock implementations that violate the coding guidelines. Lines 149-154 and 186-212 set up mocks directly within the test cases instead of in `beforeEach` blocks.\n\nTo follow the established patterns, either:\n1. Add test-specific `beforeEach` blocks within nested `describe` blocks, or\n2. Add conditional logic in the main `beforeEach` to handle test-specific scenarios\n\nThis improves maintainability and consistency with the codebase's mocking patterns.\n\n\n\n<details>\n<summary>Example restructuring approach</summary>\n\n```diff\n+  describe('when replacing __function__ placeholder', () => {\n+    beforeEach(() => {\n+      vi.mocked(generateMockPropsFromDocgen).mockReturnValue({\n+        required: {\n+          onClick: '__function__',\n+        },\n+        optional: {},\n+      });\n+    });\n+\n-  it('replaces __function__ placeholder via AST and adds fn import', async () => {\n-    vi.mocked(generateMockPropsFromDocgen).mockReturnValue({\n-      required: {\n-        onClick: '__function__',\n-      },\n-      optional: {},\n-    });\n-\n+    it('replaces __function__ placeholder via AST and adds fn import', async () => {\n       const { storyFileContent } = await getNewStoryFile(\n         // ... rest of test\n       );\n     });\n+  });\n```\n\nApply the same pattern for the CSF factory test.\n\n</details>\n\nBased on coding guidelines: \"Implement mock behaviors in `beforeEach` blocks in Vitest tests\" and \"Avoid inline mock implementations within test cases in Vitest tests\".\n\n\n> Committable suggestion skipped: line range outside the PR's diff.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\ncode/core/src/core-server/utils/get-new-story-file.test.ts lines 148-254: Two\ntests include inline mock implementations (lines ~149-154 and ~186-212); move\nthese mock setups into beforeEach blocks to follow project conventions. Create\neither (A) nested describe blocks for each test and place the corresponding\nvi.mocked(...).mockReturnValue / mockImplementation calls in a beforeEach inside\nthat describe, or (B) extend the file-level beforeEach to set conditionals based\non test-specific flags (e.g., set a variable in each test and have the global\nbeforeEach apply different mocks accordingly); ensure each test no longer\ncontains inline mock setup, and reset/restore mocks between tests as needed.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/get-new-story-file.test.ts",
+          "line_number": 254,
+          "start_line": null,
+          "commit_sha": "70531e42e7fd14f6d0fe4b011f9ef837346dfbaa",
+          "created_at": "2025-12-19T12:05:26Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "high",
+          "label_reasoning": "Inline mock implementations within test cases violate project coding guidelines that require mock behaviors in beforeEach blocks, affecting code organization and consistency."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests moving inline mock implementations to beforeEach blocks to follow coding guidelines, with example restructuring provided."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dDS3e",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Allowlist in Array handling is inconsistent with top-level React type mappings.**\n\nThe allowlist for \"known\" element types (lines 89-105) does not include React component types like `'JSX.Element'`, `'ComponentType'`, `'ReactElement'`, etc. that are properly mapped at the top level (lines 50-59).\n\nThis means `Array<JSX.Element>` would return `{ kind: 'array', element: { kind: 'other', name: 'JSX.Element' } }` instead of the expected `{ kind: 'array', element: { kind: 'node', renderer: 'react' } }`.\n\n<details>\n<summary>\ud83d\udd0e Suggested fix</summary>\n\n```diff\n       if (\n         element.name &&\n         ![\n           'string',\n           'number',\n           'boolean',\n           'Date',\n           'ReactNode',\n+          'ReactReactNode',\n+          'JSX.Element',\n+          'ComponentType',\n+          'ReactComponentType',\n+          'ReactElement',\n+          'ReactReactElement',\n+          'ElementType',\n           'ReactElementType',\n           'signature',\n           'union',\n           'Array',\n           'tuple',\n           'literal',\n           'null',\n           'void',\n           'any',\n           'unknown',\n         ].includes(element.name)\n       ) {\n         return { kind: 'array', element: { kind: 'other', name: element.name } };\n       }\n       return { kind: 'array', element: mapped };\n```\n</details>\n\n\n\n\n> Committable suggestion skipped: line range outside the PR's diff.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/renderers/react/src/componentManifest/reactDocgen/extractDocgenInfo.ts\naround lines 87 to 108, the allowlist used for Array element type handling omits\nReact component types (e.g. 'JSX.Element', 'ReactElement', 'ComponentType',\n'ReactNode' aliases) that are handled at the top-level, causing\nArray<JSX.Element> to be treated as 'other'; update the logic so element names\nare normalized using the same mapping as the top-level (either extend the\ncurrent allowlist to include the component type names used at lines ~50-59 or,\nbetter, invoke the shared mapping/normalize function used for top-level types to\nresolve element into a node/renderer mapping) and return the mapped node form\nwhen appropriate (i.e., return { kind: 'array', element: mappedNode } when\nmapping yields a node renderer), otherwise fall back to the existing { kind:\n'array', element: { kind: 'other', name: element.name } } behavior.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 370f58c to ad4ff98",
+          "file_path": "code/renderers/react/src/componentManifest/reactDocgen/extractDocgenInfo.ts",
+          "line_number": 116,
+          "start_line": 88,
+          "commit_sha": "9822b1d4ce562b1c0714ce0f3930638875e99291",
+          "created_at": "2025-12-19T12:05:26Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The allowlist for Array element type handling is inconsistent with top-level React type mappings, causing Array<JSX.Element> and similar types to be incorrectly classified as 'other' instead of 'node'."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags an inconsistency in the allowlist for Array element type handling and suggests adding missing React component types to fix incorrect behavior."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dDS3h",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n\n# First, find the utils.ts file and check its content around line 93\necho \"=== Checking code/renderers/react/src/componentManifest/utils.ts ===\" \nif [ -f \"code/renderers/react/src/componentManifest/utils.ts\" ]; then\n  wc -l \"code/renderers/react/src/componentManifest/utils.ts\"\n  echo \"\"\n  echo \"=== Lines 85-105 ===\" \n  sed -n '85,105p' \"code/renderers/react/src/componentManifest/utils.ts\"\nelse\n  echo \"File not found\"\nfi\n\necho \"\"\necho \"=== Looking for cached function definition ===\" \nrg -n \"export.*function.*cached|export const cached\" --type ts -A 5\n\necho \"\"\necho \"=== Looking for resolveImport function ===\" \nrg -n \"export.*function.*resolveImport|export const resolveImport\" --type ts -A 5\n\necho \"\"\necho \"=== Checking tsconfig for strict setting ===\" \nif [ -f \"tsconfig.json\" ]; then\n  grep -n \"strict\" tsconfig.json | head -5\nfi\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2283\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n\n# Check tsconfig.json more carefully\necho \"=== Full tsconfig.json (first 50 lines) ===\" \nhead -50 tsconfig.json\n\necho \"\"\necho \"=== Checking for strict setting ===\" \ngrep -i \"strict\" tsconfig.json\n\necho \"\"\necho \"=== Read full cached function ===\" \nsed -n '41,60p' code/renderers/react/src/componentManifest/utils.ts\n\necho \"\"\necho \"=== Check imports in utils.ts ===\" \nhead -20 code/renderers/react/src/componentManifest/utils.ts\n\necho \"\"\necho \"=== Check resolve.SyncOpts type ===\" \nrg \"resolve\\.SyncOpts\" --type ts code/renderers/react/src/componentManifest/utils.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1571\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n\n# Find tsconfig files in the repo\necho \"=== Finding tsconfig files ===\" \nfind . -name \"tsconfig.json\" -type f | head -10\n\necho \"\"\necho \"=== Check if there's a tsconfig in code/renderers/react ===\" \nfind code/renderers/react -name \"tsconfig.json\" -type f\n\necho \"\"\necho \"=== Look for resolve package types ===\" \nrg \"from.*resolve\" code/renderers/react/src/componentManifest/utils.ts --type ts\n\necho \"\"\necho \"=== Check the resolve.SyncOpts definition ===\" \nrg -n \"resolve\\.SyncOpts|from 'resolve'\" code/core/src/common/utils/interpret-files.ts --type ts -B2 -A2\n\necho \"\"\necho \"=== Check complete resolveImport function ===\" \nsed -n '25,40p' code/core/src/common/utils/interpret-files.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1442\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n\necho \"=== Check tsconfig in code/renderers/react ===\" \ncat code/renderers/react/tsconfig.json\n\necho \"\"\necho \"=== Check if strict mode is enabled ===\" \ngrep -i \"strict\" code/renderers/react/tsconfig.json\n\necho \"\"\necho \"=== Check parent tsconfig ===\" \ncat code/tsconfig.json | head -30\n\necho \"\"\necho \"=== Full resolve.SyncOpts definition context ===\" \nrg -n \"SyncOpts|SyncOpts.*interface|SyncOpts.*type\" --type ts --max-count 15 2>/dev/null | head -20\n\necho \"\"\necho \"=== Check if there are any type assertion issues in the file ===\" \nsed -n '85,100p' code/renderers/react/src/componentManifest/utils.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1682\n\n---\n\n\n\n</details>\n\n**Avoid using `any` type annotation; fix the underlying type inference.**\n\nPer coding guidelines, TypeScript strict mode is enabled. Using `: any` suppresses type checking entirely. If there's a type inference issue with the `cached` wrapper, consider:\n\n1. Explicitly typing the generic parameters of `cached`\n2. Fixing the type signature of `resolveImport` if it's incompatible\n\n<details>\n<summary>\ud83d\udd0e Suggested fix</summary>\n\n```diff\n-export const cachedResolveImport: any = cached(resolveImport, { name: 'resolveImport' });\n+export const cachedResolveImport = cached<[string, Parameters<typeof resolveImport>[1]], string>(\n+  resolveImport,\n+  { name: 'resolveImport' }\n+);\n```\n\nOr if the issue is with `resolve.SyncOpts` typing:\n\n```typescript\nexport const cachedResolveImport = cached(\n  resolveImport as (id: string, options: Record<string, unknown>) => string,\n  { name: 'resolveImport' }\n);\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/renderers/react/src/componentManifest/utils.ts around line 93, the\nexported cachedResolveImport is annotated with the unsafe any type; replace the\nany with a proper typed declaration by either supplying the generic parameters\nto cached or by casting resolveImport to the correct function signature before\npassing it to cached (e.g., a (id: string, options: Record<string, unknown>) =>\nstring or the actual signature that matches resolveImport/resolve.SyncOpts),\nthen export the resulting const without : any so TypeScript infers the precise\nfunction type; ensure the chosen signature matches resolveImport\u2019s\nparameters/return type and update resolve.SyncOpts typing if needed.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/utils.ts",
+          "line_number": 93,
+          "start_line": null,
+          "commit_sha": "9822b1d4ce562b1c0714ce0f3930638875e99291",
+          "created_at": "2025-12-19T12:05:26Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "high",
+          "label_reasoning": "Using `: any` type annotation to suppress TypeScript type checking, bypassing the type system rather than properly typing the generic parameters of the cached wrapper function."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests replacing the unsafe 'any' type annotation with a proper typed declaration, with suggested fixes provided."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dHLRA",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Wrap switch case declaration in a block to prevent accidental access from other cases.**\n\nThe `const objectTypes` declaration at line 230 is accessible from other switch cases, which can lead to unexpected behavior. Biome's static analysis correctly flagged this.\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n-    case 'intersection':\n-      // For intersections, combine all object types\n-      const objectTypes = sbType.value.filter((t) => t.name === 'object');\n-      if (objectTypes.length > 0) {\n-        const result: Record<string, unknown> = {};\n-        objectTypes.forEach((objType) => {\n-          if (objType.name === 'object') {\n-            Object.entries(objType.value).forEach(([key, type]) => {\n-              result[key] = generateMockValueFromSBType(type, key);\n-            });\n-          }\n-        });\n-        return result;\n-      }\n-      return {};\n+    case 'intersection': {\n+      // For intersections, combine all object types\n+      const objectTypes = sbType.value.filter((t) => t.name === 'object');\n+      if (objectTypes.length > 0) {\n+        const result: Record<string, unknown> = {};\n+        objectTypes.forEach((objType) => {\n+          if (objType.name === 'object') {\n+            Object.entries(objType.value).forEach(([key, type]) => {\n+              result[key] = generateMockValueFromSBType(type, key);\n+            });\n+          }\n+        });\n+        return result;\n+      }\n+      return {};\n+    }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    case 'intersection': {\n      // For intersections, combine all object types\n      const objectTypes = sbType.value.filter((t) => t.name === 'object');\n      if (objectTypes.length > 0) {\n        const result: Record<string, unknown> = {};\n        objectTypes.forEach((objType) => {\n          if (objType.name === 'object') {\n            Object.entries(objType.value).forEach(([key, type]) => {\n              result[key] = generateMockValueFromSBType(type, key);\n            });\n          }\n        });\n        return result;\n      }\n      return {};\n    }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\uddf0 Tools</summary>\n\n<details>\n<summary>\ud83e\ude9b Biome (2.1.2)</summary>\n\n[error] 230-230: Other switch clauses can erroneously access this declaration.\nWrap the declaration in a block to restrict its access to the switch clause.\n\nThe declaration is defined in this switch clause:\n\nSafe fix: Wrap the declaration in a block.\n\n\n(lint/correctness/noSwitchDeclarations)\n\n</details>\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/core-server/utils/get-mocked-props-for-args.ts around lines 228\nto 242, the local declaration const objectTypes in the 'intersection' switch\ncase is currently in the switch scope and can be accessed by other cases; wrap\nthe entire 'intersection' case body in its own block (add { ... } after the case\nlabel), move the const/object processing inside that block, and keep the\nexisting returns inside the block so objectTypes is block-scoped and cannot leak\ninto other cases.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/get-mocked-props-for-args.ts",
+          "line_number": 242,
+          "start_line": null,
+          "commit_sha": "0279839efa48469691b78e05e9853103290c311f",
+          "created_at": "2025-12-19T18:16:14Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "high",
+          "label_reasoning": "Missing block scope around switch case declaration flagged by Biome linter (noSwitchDeclarations), a JavaScript/TypeScript language-specific standard."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests wrapping the switch case declaration in a block scope to fix a Biome linting error, with a specific code diff provided."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dHLRD",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Bug: `dirname` is the imported function, not the directory path.**\n\nThe return object includes `dirname` which is the `dirname` function imported from `node:path` (line 3), not the `dir` variable computed at line 42. This will cause incorrect behavior for any consumer expecting the story file's directory path.\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n   return {\n     storyFilePath,\n     exportedStoryName,\n     storyFileContent: formattedStoryFileContent,\n-    dirname,\n+    dirname: dir,\n     alreadyContainsArgs: !!args,\n   };\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  return {\n    storyFilePath,\n    exportedStoryName,\n    storyFileContent: formattedStoryFileContent,\n    dirname: dir,\n    alreadyContainsArgs: !!args,\n  };\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/core-server/utils/get-new-story-file.ts around lines 139 to\n145, the returned object mistakenly returns the imported dirname function\ninstead of the computed directory path; replace the exported dirname property\nwith the actual dir variable (the directory path computed earlier, e.g. `dir`)\nso the return value contains the correct path, and ensure `dir` is in scope and\nnamed consistently before returning.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits be5ae52 to 0279839",
+          "file_path": "code/core/src/core-server/utils/get-new-story-file.ts",
+          "line_number": 147,
+          "start_line": 142,
+          "commit_sha": "9822b1d4ce562b1c0714ce0f3930638875e99291",
+          "created_at": "2025-12-19T18:16:14Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The returned object's `dirname` property references the imported `dirname` function instead of the computed `dir` variable, making the code behavior deviate from the intended purpose of returning the story file's directory path."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where 'dirname' returns the imported function instead of the computed directory path, with a specific fix provided."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dTJic",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Add error handling and consider JSDoc for the experimental API.**\n\nThe function lacks error handling around `extractArgTypesFromDocgen`, which could throw errors and crash the preset loading process. Additionally, as a public experimental API, it would benefit from JSDoc documentation explaining its purpose, parameters, and return values.\n\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed improvements</summary>\n\n**Add error handling:**\n\n```diff\n export async function experimental_getArgTypesData(\n   _input: unknown,\n   options: GetArgTypesDataOptions\n ): Promise<ArgTypes | null> {\n-  const { componentFilePath, componentExportName } = (options ?? {}) as GetArgTypesDataOptions;\n+  const { componentFilePath, componentExportName } = options ?? {};\n \n   if (!componentFilePath) {\n     return null;\n   }\n \n+  try {\n     const argTypesData = extractArgTypesFromDocgen({ componentFilePath, componentExportName });\n     if (!argTypesData?.props) {\n       return null;\n     }\n \n     const argTypes: ArgTypes = {};\n     for (const [propName, propInfo] of Object.entries(argTypesData.props)) {\n       argTypes[propName] = {\n         name: propName,\n         type: propInfo.required ? { ...propInfo.type, required: true } : propInfo.type,\n       };\n     }\n \n     return argTypes;\n+  } catch {\n+    return null;\n+  }\n }\n```\n\n**Add JSDoc documentation:**\n\n```typescript\n/**\n * Experimental preset function that extracts ArgTypes from React component docgen data.\n * \n * @param _input - Unused preset accumulator parameter (required for preset compatibility)\n * @param options - Configuration including componentFilePath and optional componentExportName\n * @returns Promise resolving to ArgTypes object or null if extraction fails\n * @experimental This API is experimental and may change in future releases\n */\nexport async function experimental_getArgTypesData(\n  _input: unknown,\n  options: GetArgTypesDataOptions\n): Promise<ArgTypes | null> {\n  // ... implementation\n}\n```\n\n</details>\n\n\n> Committable suggestion skipped: line range outside the PR's diff.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/renderers/react/src/preset.ts around lines 74 to 98, wrap the call to\nextractArgTypesFromDocgen in a try/catch so any thrown errors are caught and\nhandled (log the error or return null) to avoid crashing preset loading, and add\na JSDoc block above the function describing its experimental status, parameters\n(_input and options) and return value (Promise<ArgTypes | null>) as shown in the\nreview; ensure the catch returns null (or logs then returns null) and preserve\nexisting behavior when argTypesData or props are missing.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/preset.ts",
+          "line_number": 98,
+          "start_line": null,
+          "commit_sha": "70531e42e7fd14f6d0fe4b011f9ef837346dfbaa",
+          "created_at": "2025-12-22T08:21:06Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Unchecked Return",
+          "label_confidence": "medium",
+          "label_reasoning": "The function lacks error handling around extractArgTypesFromDocgen which could throw and crash the preset loading process; exceptions are not caught and handled."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding error handling around extractArgTypesFromDocgen and JSDoc documentation for the experimental API."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6drnft",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Critical: Test expects wrong placeholder value.**\n\nThe test expects `'__function__'` but the implementation in `get-dummy-props-for-args.ts` Line 12 defines `STORYBOOK_FN_PLACEHOLDER = '[[STORYBOOK_FN_PLACEHOLDER]]'` and Line 188 returns this constant. This mismatch will cause test failures.\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\nUpdate all test expectations to match the actual constant value:\n\n```diff\n-    expect(generateDummyValueFromSBType({ name: 'function' })).toBe('__function__');\n+    expect(generateDummyValueFromSBType({ name: 'function' })).toBe('[[STORYBOOK_FN_PLACEHOLDER]]');\n```\n\nApply similar changes to lines 63, 106, and 133.\n\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n      expect(generateDummyValueFromSBType({ name: 'function' })).toBe('[[STORYBOOK_FN_PLACEHOLDER]]');\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/core-server/utils/get-dummy-props-for-args.test.ts around line\n50 (and similarly update expectations at lines 63, 106, and 133), the tests\nassert the placeholder '__function__' but the implementation uses\nSTORYBOOK_FN_PLACEHOLDER = '[[STORYBOOK_FN_PLACEHOLDER]]'; update each failing\nexpect() to assert the actual constant value '[[STORYBOOK_FN_PLACEHOLDER]]' so\nthe tests match the implementation.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits e9cb546 to 70531e4",
+          "file_path": "code/core/src/core-server/utils/get-dummy-props-for-args.test.ts",
+          "line_number": 50,
+          "start_line": null,
+          "commit_sha": "0279839efa48469691b78e05e9853103290c311f",
+          "created_at": "2025-12-24T11:11:14Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "Test expectations use the wrong placeholder value ('__function__' instead of '[[STORYBOOK_FN_PLACEHOLDER]]'), causing a mismatch between test expectations and actual implementation behavior."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a mismatch between test expectations and the actual placeholder constant value, requesting test updates."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6drnfv",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Fix describe block name to match the imported function.**\n\nThe describe block refers to `'generateMockPropsFromDocgen'` but the imported function (Line 5) is named `generateDummyPropsFromDocgen`.\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n-  describe('generateMockPropsFromDocgen', () => {\n+  describe('generateDummyPropsFromDocgen', () => {\n```\n\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  describe('generateDummyPropsFromDocgen', () => {\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/core-server/utils/get-dummy-props-for-args.test.ts around line\n113, the describe block string is incorrect: it says\n'generateMockPropsFromDocgen' while the imported function on line 5 is named\ngenerateDummyPropsFromDocgen; update the describe block title to\n'generateDummyPropsFromDocgen' so the test name matches the actual imported\nfunction (or alternatively rename the import if the intended name was different)\nand run tests to confirm.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/get-dummy-props-for-args.test.ts",
+          "line_number": 117,
+          "start_line": null,
+          "commit_sha": "9822b1d4ce562b1c0714ce0f3930638875e99291",
+          "created_at": "2025-12-24T11:11:14Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "high",
+          "label_reasoning": "The describe block name 'generateMockPropsFromDocgen' doesn't match the actual function being tested 'generateDummyPropsFromDocgen', creating a misleading test description."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests renaming the describe block to match the actual imported function name."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6drnfx",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for ArgTypes and ArgType definitions\nrg -nP -A5 'type ArgTypes\\s*=' --type=ts\nrg -nP -A5 'interface ArgType\\b' --type=ts\nrg -nP -A10 'type ArgType\\b' --type=ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 552\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Get the full ArgType interface definition\ncat -n code/addons/docs/src/blocks/components/ArgsTable/types.ts | head -100\n\n# Also search for ArgTypes definition in CSF or related files\nrg -nP 'type ArgTypes' --type=ts -A3\nrg -nP 'required' code/addons/docs/src/blocks/components/ArgsTable/types.ts -B2 -A2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4497\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for InputType and StrictInputType definitions\nrg -nP 'type InputType|interface InputType' --type=ts -A5\nrg -nP 'type StrictInputType|interface StrictInputType' --type=ts -A5\n\n# Search for SBType definition\nrg -nP 'type SBType|interface SBType' --type=ts -A10\n\n# Look at the actual file being reviewed\ncat -n code/core/src/core-server/utils/get-dummy-props-for-args.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 10936\n\n---\n\n\n\n</details>\n\n**Fix the required property check on line 24.**\n\nThe current code checks `argType.type.required`, but `SBType` does not have a `required` property. This causes `isRequired` to always be falsy, resulting in all props being categorized as optional.\n\nLine 24 should check `argType.required` directly, consistent with the pattern in `generateDummyPropsFromDocgen` (line 278) which correctly accesses `propInfo.required` from `ComponentArgTypesInfo`.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/core-server/utils/get-dummy-props-for-args.ts around lines 18\nto 48, the required check is wrong: it inspects argType.type.required (SBType\nhas no required), so isRequired is always falsy and all props become optional;\nchange the check to use argType.required (i.e., read required directly from the\nArgTypes entry) and remove the incorrect dependency on argType.type.required so\nrequired props are classified into the required object as intended.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/get-dummy-props-for-args.ts",
+          "line_number": 48,
+          "start_line": 18,
+          "commit_sha": "9822b1d4ce562b1c0714ce0f3930638875e99291",
+          "created_at": "2025-12-24T11:11:14Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Checking argType.type.required instead of argType.required causes isRequired to always be falsy since SBType has no required property, resulting in all props being incorrectly categorized as optional."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where required property check uses wrong path (argType.type.required instead of argType.required), causing all props to be categorized as optional."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dsfNP",
+          "author": "copilot-pull-request-reviewer",
+          "body": "Missing documentation for the public exported function `experimental_getArgTypesData`. Since this is part of the preset API and marked as experimental, it should have comprehensive JSDoc comments explaining its purpose, parameters, return value, and usage.",
+          "file_path": "code/renderers/react/src/preset.ts",
+          "line_number": 77,
+          "start_line": null,
+          "commit_sha": "70531e42e7fd14f6d0fe4b011f9ef837346dfbaa",
+          "created_at": "2025-12-24T13:21:50Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "Missing JSDoc documentation for a public exported experimental API function, which should document purpose, parameters, return value, and experimental status."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding comprehensive JSDoc comments to the exported experimental function."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dsfNV",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The switch statement for the 'string' case is missing a default return statement after the switch on `mostLikelyType`. Although the code currently returns `name || 'Hello world'` after the switch, this makes the control flow less clear. Consider adding explicit return statements in each case or ensuring the default path is more obvious.",
+          "file_path": "code/core/src/core-server/utils/get-dummy-props-for-args.ts",
+          "line_number": 178,
+          "start_line": 161,
+          "commit_sha": "9822b1d4ce562b1c0714ce0f3930638875e99291",
+          "created_at": "2025-12-24T13:21:51Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "The control flow in the string case switch statement is unclear due to missing explicit default return statements, making the intent harder to understand."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding explicit return statements or making the default path more obvious in the switch statement for clarity."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dsfNd",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The `type` field is redundant in the SBNodeType since it's already implied by the parent 'name' field. Additionally, the comment mentions adding support for other frameworks but only 'react' is currently allowed, which creates a type that can't be extended without breaking changes. Consider using a more flexible type like `renderer?: string` or a union type that can be extended.\n```suggestion\n  renderer?: string; // Identifier for the renderer/framework (e.g. 'react', 'vue')\n```",
+          "file_path": "code/core/src/csf/SBType.ts",
+          "line_number": 17,
+          "start_line": null,
+          "commit_sha": "70531e42e7fd14f6d0fe4b011f9ef837346dfbaa",
+          "created_at": "2025-12-24T13:21:51Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Class Design Guidelines",
+          "label_confidence": "medium",
+          "label_reasoning": "The type design uses a hardcoded literal 'react' renderer value that can't be extended without breaking changes, and contains a redundant field implied by the parent type."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests changing the type to a more flexible 'renderer?: string' to allow future extension without breaking changes."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dsfNl",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The function placeholder value differs between the two similar files. In this file it's the string `'__function__'`, while in `get-dummy-props-for-args.ts` it's `STORYBOOK_FN_PLACEHOLDER = '[[STORYBOOK_FN_PLACEHOLDER]]'`. This inconsistency could lead to confusion and bugs if both are used in different contexts.\n```suggestion\n      return '[[STORYBOOK_FN_PLACEHOLDER]]';\n```",
+          "file_path": "code/core/src/core-server/utils/get-mocked-props-for-args.ts",
+          "line_number": 185,
+          "start_line": null,
+          "commit_sha": "0279839efa48469691b78e05e9853103290c311f",
+          "created_at": "2025-12-24T13:21:51Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "Inconsistent placeholder values between two similar files ('__function__' vs '[[STORYBOOK_FN_PLACEHOLDER]]') can lead to bugs when both are used in different contexts."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags an inconsistency between placeholder values in two files and suggests unifying them."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dsfNw",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The test expects the function placeholder to be `'__function__'`, but the actual value returned by `generateDummyValueFromSBType` for function types is `STORYBOOK_FN_PLACEHOLDER`, which equals `'[[STORYBOOK_FN_PLACEHOLDER]]'`. Update the test to use the correct expected value.",
+          "file_path": "code/core/src/core-server/utils/get-dummy-props-for-args.test.ts",
+          "line_number": 50,
+          "start_line": null,
+          "commit_sha": "0279839efa48469691b78e05e9853103290c311f",
+          "created_at": "2025-12-24T13:21:52Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "Test expectation uses wrong placeholder value ('__function__') that doesn't match the actual implementation value ('[[STORYBOOK_FN_PLACEHOLDER]]')."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests updating test expectations to match the actual placeholder value used by the implementation."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dsfN2",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The test expects the function placeholder to be `'__function__'`, but the actual value returned by `generateDummyValueFromSBType` for function types is `STORYBOOK_FN_PLACEHOLDER`, which equals `'[[STORYBOOK_FN_PLACEHOLDER]]'`. Update the test to use the correct expected value.",
+          "file_path": "code/core/src/core-server/utils/get-dummy-props-for-args.test.ts",
+          "line_number": 64,
+          "start_line": null,
+          "commit_sha": "0279839efa48469691b78e05e9853103290c311f",
+          "created_at": "2025-12-24T13:21:52Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "Test expectation uses wrong placeholder value ('__function__') that doesn't match the actual implementation value ('[[STORYBOOK_FN_PLACEHOLDER]]')."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests updating test expectations to match the actual placeholder value used by the implementation."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dsfN5",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The test expects the function placeholder to be `'__function__'`, but the actual value returned by `generateDummyValueFromSBType` for function types is `STORYBOOK_FN_PLACEHOLDER`, which equals `'[[STORYBOOK_FN_PLACEHOLDER]]'`. Update the test to use the correct expected value.",
+          "file_path": "code/core/src/core-server/utils/get-dummy-props-for-args.test.ts",
+          "line_number": 106,
+          "start_line": null,
+          "commit_sha": "0279839efa48469691b78e05e9853103290c311f",
+          "created_at": "2025-12-24T13:21:52Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "Test expectation uses wrong placeholder value ('__function__') that doesn't match the actual implementation value ('[[STORYBOOK_FN_PLACEHOLDER]]')."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests updating test expectations to match the actual placeholder value used by the implementation."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dsfN7",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The test expects the function placeholder to be `'__function__'`, but the actual value returned by `generateDummyValueFromSBType` for function types is `STORYBOOK_FN_PLACEHOLDER`, which equals `'[[STORYBOOK_FN_PLACEHOLDER]]'`. Update the test to use the correct expected value.",
+          "file_path": "code/core/src/core-server/utils/get-dummy-props-for-args.test.ts",
+          "line_number": 133,
+          "start_line": null,
+          "commit_sha": "0279839efa48469691b78e05e9853103290c311f",
+          "created_at": "2025-12-24T13:21:52Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "Test expectation uses wrong placeholder value ('__function__') that doesn't match the actual implementation value ('[[STORYBOOK_FN_PLACEHOLDER]]')."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests updating test expectations to match the actual placeholder value used by the implementation."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dsfN9",
+          "author": "copilot-pull-request-reviewer",
+          "body": "There appear to be two nearly identical files: `get-mocked-props-for-args.ts` and `get-dummy-props-for-args.ts`. These files contain almost the same code with only minor naming differences (mock vs dummy, `__function__` vs `STORYBOOK_FN_PLACEHOLDER`). This creates significant code duplication and maintenance burden. Consider consolidating these files into a single implementation.",
+          "file_path": "code/core/src/core-server/utils/get-mocked-props-for-args.ts",
+          "line_number": 282,
+          "start_line": null,
+          "commit_sha": "0279839efa48469691b78e05e9853103290c311f",
+          "created_at": "2025-12-24T13:21:52Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Code Duplication",
+          "label_confidence": "high",
+          "label_reasoning": "Two nearly identical files (get-mocked-props-for-args.ts and get-dummy-props-for-args.ts) contain almost the same code with only minor naming differences, creating significant duplication and maintenance burden."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests consolidating two nearly identical files to reduce code duplication and maintenance burden."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dsfOB",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The test description 'generateMockPropsFromDocgen' doesn't match the actual function being tested, which is `generateDummyPropsFromDocgen`. The describe block name should match the function name for clarity.\n```suggestion\n  describe('generateDummyPropsFromDocgen', () => {\n```",
+          "file_path": "code/core/src/core-server/utils/get-dummy-props-for-args.test.ts",
+          "line_number": 117,
+          "start_line": null,
+          "commit_sha": "9822b1d4ce562b1c0714ce0f3930638875e99291",
+          "created_at": "2025-12-24T13:21:52Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "high",
+          "label_reasoning": "The describe block name 'generateMockPropsFromDocgen' doesn't match the actual function being tested 'generateDummyPropsFromDocgen'."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests updating the describe block name to match the actual function being tested."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dsfOL",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The test verifies that `'__function__'` is not in the final output, but it should also verify that `STORYBOOK_FN_PLACEHOLDER` (which has the value `'[[STORYBOOK_FN_PLACEHOLDER]]'`) is not in the output. This would ensure that the placeholder replacement is working correctly for the actual placeholder value used by the code.",
+          "file_path": "code/core/src/core-server/utils/get-new-story-file.test.ts",
+          "line_number": 172,
+          "start_line": 169,
+          "commit_sha": "9822b1d4ce562b1c0714ce0f3930638875e99291",
+          "created_at": "2025-12-24T13:21:53Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "medium",
+          "label_reasoning": "The test only verifies '__function__' is not in the output but fails to also verify that the actual placeholder '[[STORYBOOK_FN_PLACEHOLDER]]' is not in the output, leaving an incomplete validation."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding an additional assertion to verify the actual placeholder constant is not in output, improving test coverage."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dsfOQ",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The JSDoc comment mentions `__function__` but the actual placeholder used in the code is `STORYBOOK_FN_PLACEHOLDER` which has the value `'[[STORYBOOK_FN_PLACEHOLDER]]'`. Update the documentation to accurately reflect the implementation.\n```suggestion\n * Replaces non-primitive args placeholders like `STORYBOOK_FN_PLACEHOLDER` (i.e. '[[STORYBOOK_FN_PLACEHOLDER]]')\n * where it needs more involved changes like adding imports, etc.\n```",
+          "file_path": "code/core/src/core-server/utils/get-new-story-file.ts",
+          "line_number": 194,
+          "start_line": null,
+          "commit_sha": "70531e42e7fd14f6d0fe4b011f9ef837346dfbaa",
+          "created_at": "2025-12-24T13:21:53Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "JSDoc comment references an outdated placeholder value ('__function__') instead of the actual implementation value ('[[STORYBOOK_FN_PLACEHOLDER]]'), making documentation inaccurate."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests updating JSDoc comment to accurately reflect the actual placeholder value used in the implementation."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6dsfOW",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The type annotation `: any` defeats TypeScript's type checking. Consider using a more specific type like `typeof cached` or the actual function signature that's expected.\n```suggestion\nexport const cachedResolveImport: typeof resolveImport = cached(resolveImport, {\n  name: 'resolveImport',\n});\n```",
+          "file_path": "code/renderers/react/src/componentManifest/utils.ts",
+          "line_number": 93,
+          "start_line": null,
+          "commit_sha": "9822b1d4ce562b1c0714ce0f3930638875e99291",
+          "created_at": "2025-12-24T13:21:53Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "high",
+          "label_reasoning": "Using `: any` type annotation defeats TypeScript's type checking and should be replaced with a proper specific type."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests replacing the 'any' type annotation with a more specific type to preserve TypeScript type checking."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fFA8D",
+          "author": "coderabbitai",
+          "body": "_\ud83d\udee0\ufe0f Refactor suggestion_ | _\ud83d\udfe0 Major_\n\n**Refactor `GenerateStoryResult` to use a discriminated union for type safety.**\n\nThe non-null assertions on `storyId`, `storyFilePath`, and `exportedStoryName` are necessary because `GenerateStoryResult` uses `success: boolean` instead of a discriminated union with literal types. This prevents TypeScript from narrowing the optional fields within the `if (result.success)` block.\n\n\n\n<details>\n<summary>\u267b\ufe0f Recommended refactor</summary>\n\nIn `code/core/src/core-server/utils/generate-story.ts`, restructure `GenerateStoryResult` as a discriminated union:\n\n```typescript\nexport type GenerateStoryResult =\n  | {\n      success: true;\n      storyId: string;\n      kind: string;\n      storyFilePath: string;\n      exportedStoryName: string;\n    }\n  | {\n      success: false;\n      kind?: string;\n      storyFilePath?: string;\n      error?: string;\n      errorType?: 'STORY_FILE_EXISTS' | 'UNKNOWN';\n    };\n```\n\nThis allows TypeScript to automatically narrow types inside `if (result.success)` blocks, eliminating the need for non-null assertions at lines 34-36 and line 54.\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/server-channel/create-new-story-channel.ts around\nlines 34 - 36, Refactor the GenerateStoryResult type into a discriminated union\n(success: true with required storyId, kind, storyFilePath, exportedStoryName;\nsuccess: false with optional fields and error info) in generate-story.ts so\nTypeScript can narrow inside if (result.success) blocks; then remove the\nnon-null assertions on result.storyId, result.storyFilePath, and\nresult.exportedStoryName in create-new-story-channel (where result.success is\nchecked) and rely on the narrowed types instead.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/server-channel/create-new-story-channel.ts",
+          "line_number": 36,
+          "start_line": 34,
+          "commit_sha": "9822b1d4ce562b1c0714ce0f3930638875e99291",
+          "created_at": "2026-01-07T15:21:42Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Class Design Guidelines",
+          "label_confidence": "high",
+          "label_reasoning": "Using boolean success flag instead of a discriminated union type prevents TypeScript from narrowing optional fields, forcing the use of non-null assertions and weakening type safety."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests refactoring GenerateStoryResult to use a discriminated union to eliminate non-null assertions and improve type safety."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fFA8H",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Fix path resolution inconsistency with getProjectRoot().**\n\nThe `storyFilePath` returned from `getNewStoryFile()` is constructed using `getProjectRoot()` (see get-new-story-file.ts line 136), but line 77 uses `process.cwd()` for relative path calculation. If the Node.js process is launched from a different directory than the project root, this produces incorrect relative paths.\n\n\n\n\n<details>\n<summary>\ud83d\udd27 Proposed fix</summary>\n\nFirst, import `getProjectRoot`:\n\n```diff\n import { relative } from 'node:path';\n \n-import { getStoryId } from 'storybook/internal/common';\n+import { getProjectRoot, getStoryId } from 'storybook/internal/common';\n import type { CreateNewStoryRequestPayload } from 'storybook/internal/core-events';\n```\n\nThen, use it for the relative path calculation:\n\n```diff\n-    const relativeStoryFilePath = relative(process.cwd(), storyFilePath);\n+    const relativeStoryFilePath = relative(getProjectRoot(), storyFilePath);\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nimport { relative } from 'node:path';\n\nimport { getProjectRoot, getStoryId } from 'storybook/internal/common';\nimport type { CreateNewStoryRequestPayload } from 'storybook/internal/core-events';\n\n    const relativeStoryFilePath = relative(getProjectRoot(), storyFilePath);\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/core/src/core-server/utils/generate-story.ts at line 77, The relative\npath calculation uses process.cwd() causing inconsistent results because\nstoryFilePath (from getNewStoryFile()) is built using getProjectRoot(); import\nand call getProjectRoot() and use its return value instead of process.cwd() when\ncomputing relativeStoryFilePath (i.e., replace the second argument to the\nrelative(...) call), ensuring relativeStoryFilePath is computed relative to the\nproject root used by getNewStoryFile().\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 9822b1d",
+          "file_path": "code/core/src/core-server/utils/generate-story.ts",
+          "line_number": 77,
+          "start_line": null,
+          "commit_sha": "70531e42e7fd14f6d0fe4b011f9ef837346dfbaa",
+          "created_at": "2026-01-07T15:21:42Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Using process.cwd() instead of getProjectRoot() for relative path calculation causes incorrect relative paths when the Node.js process is launched from a different directory than the project root."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a path resolution inconsistency and requests using getProjectRoot() instead of process.cwd() for relative path calculation."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fFkDK",
+          "author": "ndelangen",
+          "body": "I recommend renaming this to `internal_getArgTypesData`, it's a minor thing, but we've used `experiment` in placed we wanted users to try it.\nWhich is not the case here.",
+          "file_path": "code/renderers/react/src/preset.ts",
+          "line_number": 74,
+          "start_line": null,
+          "commit_sha": "70531e42e7fd14f6d0fe4b011f9ef837346dfbaa",
+          "created_at": "2026-01-07T15:58:35Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Naming Convention",
+          "label_confidence": "high",
+          "label_reasoning": "The function prefix 'experimental_' is semantically incorrect for this use case; 'internal_' would better convey that this is not intended for user experimentation."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Recommends renaming the function from 'experimental_getArgTypesData' to 'internal_getArgTypesData'."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fFqtG",
+          "author": "ndelangen",
+          "body": "Normally preset preset properties adhere to a system where they can be chained.\n\nSo the pattern to adhere to is:\n```ts\nfunction<A>(input: A, o: Options): A\n```\n\nThis `experimental_getArgTypesData`'s input and output are not the same; making it unchainable.\n\nIf this is likely to be replaced with some actual system later, that is likely okay for now..",
+          "file_path": "code/renderers/react/src/preset.ts",
+          "line_number": 74,
+          "start_line": null,
+          "commit_sha": "70531e42e7fd14f6d0fe4b011f9ef837346dfbaa",
+          "created_at": "2026-01-07T16:05:16Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Function Consistency",
+          "label_confidence": "high",
+          "label_reasoning": "The function's input and output types don't match the established preset pattern (input A \u2192 output A), making it incompatible with the preset chaining system used throughout the codebase."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Points out that the function's input and output types differ from the preset chaining pattern, implying the signature should be reconsidered."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fGFXr",
+          "author": "ndelangen",
+          "body": "I can see this is pre-existing code, so hard to do anything about it, but it's generally recommended to avoid using synchronous `fs`-APIs if it can be prevented.\n\nLike I mentioned in our call, I was very much expecting the argType functions to be async, because:\n\n1. It needs to interact with the `fs`\n2. We'll want to write these (at some point) for all renderers, and the API will have to be the same for all (since core-server will consume it) Though I guess there's no harm in `await`ing a synchronous value?",
+          "file_path": "code/renderers/react/src/componentManifest/utils.ts",
+          "line_number": 89,
+          "start_line": null,
+          "commit_sha": "70531e42e7fd14f6d0fe4b011f9ef837346dfbaa",
+          "created_at": "2026-01-07T16:35:10Z",
+          "is_outdated": true,
+          "dimension": "Performance Issue",
+          "category": "Resource Efficiency",
+          "label_confidence": "medium",
+          "label_reasoning": "Use of synchronous fs APIs is discouraged; the function should be async to avoid blocking the event loop and to maintain API consistency with future multi-renderer implementations."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Recommends making the argType functions async to avoid synchronous fs API usage, implying a refactor is needed."
+    }
+  ],
+  "review_thread_count": 40,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6dCzDC",
+            "author": "yannbf",
+            "body": "Explore the possibility of actually using argTypes as a standard instead.",
+            "file_path": "code/core/src/core-server/utils/get-mocked-props-for-args.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "0d925b7e5daab9903735993452275cf99e744fbd",
+            "created_at": "2025-12-19T11:13:00Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6dC5PJ",
+            "author": "yannbf",
+            "body": "createNewStoryResult.hasArgs",
+            "file_path": "code/core/src/manager/components/sidebar/CreateNewStoryFileModal.tsx",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "0d925b7e5daab9903735993452275cf99e744fbd",
+            "created_at": "2025-12-19T11:23:10Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6dC5qo",
+            "author": "yannbf",
+            "body": "Consider the manifest preset, or at least make it experimental",
+            "file_path": "code/renderers/react/src/preset.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "0d925b7e5daab9903735993452275cf99e744fbd",
+            "created_at": "2025-12-19T11:23:57Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6dT-bR",
+            "author": "yannbf",
+            "body": "Find a better name to mean data like dummy",
+            "file_path": "code/core/src/core-server/utils/get-mocked-props-for-args.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "0279839efa48469691b78e05e9853103290c311f",
+            "created_at": "2025-12-22T09:34:55Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6dT_P9",
+            "author": "yannbf",
+            "body": "add default case",
+            "file_path": "code/core/src/core-server/utils/get-mocked-props-for-args.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "0279839efa48469691b78e05e9853103290c311f",
+            "created_at": "2025-12-22T09:36:13Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6dUBxz",
+            "author": "yannbf",
+            "body": "use a symbol",
+            "file_path": "code/core/src/core-server/utils/get-mocked-props-for-args.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "0279839efa48469691b78e05e9853103290c311f",
+            "created_at": "2025-12-22T09:40:17Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": true,
+        "is_collapsed": false,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6dUD8h",
+            "author": "yannbf",
+            "body": "get a function from the preset instead of executing it",
+            "file_path": "code/core/src/core-server/utils/get-new-story-file.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "70531e42e7fd14f6d0fe4b011f9ef837346dfbaa",
+            "created_at": "2025-12-22T09:43:42Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6fF0BF",
+            "author": "ndelangen",
+            "body": "I'd say this is not super critical (also see my other comment).\n\nIt's something we could ignore for now, to maintain velocity, but we would want to ensure we don't create a system users start relying on too soon; because we know we'll want to change it.",
+            "file_path": "code/core/src/core-server/utils/get-new-story-file.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "70531e42e7fd14f6d0fe4b011f9ef837346dfbaa",
+            "created_at": "2026-01-07T16:16:34Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": true,
+        "is_collapsed": false,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6dUNW3",
+            "author": "yannbf",
+            "body": "reuse the new api",
+            "file_path": "code/core/src/manager/components/sidebar/CreateNewStoryFileModal.tsx",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "0279839efa48469691b78e05e9853103290c311f",
+            "created_at": "2025-12-22T09:56:51Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_collapsed": false,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6dUOTT",
+            "author": "yannbf",
+            "body": "try to see if this can be just reused with the MCP stuff",
+            "file_path": "code/renderers/react/src/componentManifest/reactDocgen/extractDocgenInfo.ts",
+            "line_number": 153,
+            "start_line": null,
+            "commit_sha": "9822b1d4ce562b1c0714ce0f3930638875e99291",
+            "created_at": "2025-12-22T09:58:23Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6fGBnh",
+            "author": "ndelangen",
+            "body": "I think it's okay if you/we do not.\n\nI suspect we'll iterate inside the renderer a little longer, and then core server uses it, and MCP will start using that.\n\nUltimately this is renderer-specific, so that is where this code belongs.",
+            "file_path": "code/renderers/react/src/componentManifest/reactDocgen/extractDocgenInfo.ts",
+            "line_number": 153,
+            "start_line": null,
+            "commit_sha": "9822b1d4ce562b1c0714ce0f3930638875e99291",
+            "created_at": "2026-01-07T16:31:04Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": true,
+        "is_collapsed": false,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6fFMES",
+            "author": "yannbf",
+            "body": "This is bad because you never know if the date will be past or future",
+            "file_path": "code/core/src/core-server/utils/get-dummy-props-for-args.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "70531e42e7fd14f6d0fe4b011f9ef837346dfbaa",
+            "created_at": "2026-01-07T15:33:03Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": true,
+        "is_collapsed": false,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6fFMuu",
+            "author": "yannbf",
+            "body": "same here",
+            "file_path": "code/core/src/core-server/utils/get-dummy-props-for-args.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "70531e42e7fd14f6d0fe4b011f9ef837346dfbaa",
+            "created_at": "2026-01-07T15:33:35Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 40,
+    "stage1_kept": 29,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 11,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

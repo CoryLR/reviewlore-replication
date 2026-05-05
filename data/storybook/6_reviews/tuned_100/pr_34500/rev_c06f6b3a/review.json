@@ -1,0 +1,58 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "MIGRATION.md",
+      "line_number": 529,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The body says \"In Storybook 9, on-device addons\u2026 **must be** listed under the `deviceAddons` key\" but this section is titled **From version 10.3.0 to 10.4.0**. That phrasing implies the requirement has always existed in Storybook 9, contradicting the section header that says it is newly introduced in 10.4.0. The sentence should describe the change being made now, e.g. \"Starting in Storybook 10.4.0, on-device addons \u2026 must be listed under `deviceAddons`\u2026\".",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 19,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`vi.mock('../helpers/mainConfigFile', ...)` omits the `.ts` extension, which is inconsistent with every other import in this file (e.g. line 6 uses `'./rn-ondevice-addons-to-device-addons.ts'`). The PR's stated convention is to use explicit `.ts` extensions; the mock path should follow suit: `vi.mock('../helpers/mainConfigFile.ts', ...)`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 160,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test description \"handles the case where @storybook/react-native is in dependencies (not devDependencies)\" is misleading. `makePackageManager` calls `getAllDependencies()`, which already returns a merged view of all deps and devDeps, so this test cannot distinguish between those two locations. The scenario being tested (RN detected, one ondevice addon present, returns it) is identical to the previous `check` tests; either rename the test to describe what it actually verifies (e.g. \"returns matching addons when only one ondevice addon is present\") or remove it as a duplicate.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 195,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`packageManager: {} as any` (repeated across all three `run` tests) bypasses TypeScript's type checking. Per project conventions, test fixture objects should avoid `as any` casts. Since `run` never touches `packageManager`, you can safely cast to the proper type: `packageManager: makePackageManager({})` (a typed mock), or at minimum use `{} as unknown as JsPackageManager` which is already imported at the top of the file.",
+      "index": 3
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "All nine `check` and `run` test cases pass `storybookVersion: '8.0.0'`, yet the migration section they exercise is titled \"From version 10.3.0 to 10.4.0\" and the `check` function does not use `storybookVersion` at all. Using `'8.0.0'` creates a misleading impression that the automigration is for Storybook 8 projects. Prefer a version consistent with the migration's target range (e.g. `'10.3.0'`) so the fixture data is self-documenting.",
+      "index": 4
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `check` function contains no version gate, so the migration fires for any `@storybook/react-native` project that still has ondevice addons in `addons`, regardless of Storybook version. The sibling fix `rnstorybookConfig` follows the same pattern, so this is consistent with the project's existing style. However, it would be worth a brief inline comment explaining that the guard is intentionally version-agnostic (the fix is idempotent: if `addons` is already clean, `check` returns `null` immediately). Without such a note a future reader may wonder whether a version check was accidentally omitted.",
+      "index": 5
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `prompt()` message does not tell the user which specific addons will be moved \u2014 it only describes the general rule. The `Fix` type constrains `prompt` to `() => string` (no access to the check result), so this cannot be fixed without a type change. It is worth filing a follow-up: either widen the type to `(result: ResultType) => string` (as `promptType` already supports a result-bearing variant) or log the addon names before/after migration from inside `run`. As-is, the user sees the prompt but has no idea which packages will change.",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.5880590499999998,
+  "duration_seconds": 426.61528420448303
+}

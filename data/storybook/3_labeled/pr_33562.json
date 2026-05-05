@@ -1,0 +1,167 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33562,
+  "title": "Vue: Make globals reactive in decorators",
+  "body": "Closes #23655\r\n\r\n## What I did\r\n\r\n* Allowed globals to be reactive\r\n* Added stories and E2E tests to avoid regressions\r\n* Documented code patterns for Vue decorators with reactivity\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\nUnit tests are very low quality. Really, we're testing the underlying update function used to update globals, rather than the whole setup. I'd want a dedicated story instead.\r\n\r\n- [x] stories\r\n- [x] unit tests\r\n- [x] E2E tests\r\n\r\n#### Manual testing\r\n\r\n1. Create a fresh Vue sandbox\r\n2. Add the code snippet below to your `.storybook/preview.ts`\r\n3. Open a [component story with the mood global set](http://localhost:6006/?path=/story/example-button--secondary&globals=mood:!hex(56db96))\r\n4. Change the mood value in the toolbar\r\n\r\n```ts\r\nimport { sb } from 'storybook/test';\r\n\r\nsb.mock('../template-stories/core/test/ModuleMocking.utils.ts');\r\nsb.mock('../template-stories/core/test/ModuleSpyMocking.utils.ts', { spy: true });\r\nsb.mock('../template-stories/core/test/ModuleAutoMocking.utils.ts');\r\nsb.mock(import('lodash-es'));\r\nsb.mock(import('lodash-es/add'));\r\nsb.mock(import('lodash-es/sum'));\r\nsb.mock(import('uuid'));\r\n\r\nimport * as templateAnnotations from \"../template-stories/core/preview\";\r\nimport \"../src/stories/renderers/vue3/preview.js\";\r\nimport \"../src/stories/components\";\r\nimport addonDocs from \"@storybook/addon-docs\";\r\nimport addonA11y from \"@storybook/addon-a11y\";\r\nimport { definePreview } from \"@storybook/vue3-vite\";\r\n\r\n\r\nimport { type DecoratorFunction, type Globals } from 'storybook/internal/types';\r\nimport { computed, inject } from 'vue';\r\n\r\nexport const MOODS = [\r\n  { color: '#eee', id: 'base', name: 'Base color' },\r\n  { color: '#111', id: 'inverse', name: 'Inverse' },\r\n  { color: '#56db96', id: 'emerald', name: 'Emerald' },\r\n]\r\n\r\nconst globalTypes = {\r\n  mood: {\r\n    defaultValue: 'base',\r\n    description: 'Change this global and watch the background colour change',\r\n    name: 'mood',\r\n    toolbar: {\r\n      dynamicTitle: true,\r\n      icon: 'paintbrush',\r\n      items: MOODS.map((mood) => ({\r\n        title: mood.name,\r\n        value: mood.color,\r\n      })),\r\n      title: 'Mood',\r\n    },\r\n  },\r\n}\r\n\r\nconst withMoodRootClass: DecoratorFunction = (story, { globals }) => {\r\n  return {\r\n    components: { story },\r\n    inheritAttrs: false,\r\n    setup() {\r\n      const mood = computed(() => `width: 100%; height: 60vh; margin: -20px; padding: 20px; background-color: ${globals?.mood};`)\r\n      return {\r\n        globals,\r\n        mood,\r\n      };\r\n    },\r\n    template: `<div :style=\"mood\" :data-mood=\"globals.mood\"><story /></div>`,\r\n  }\r\n}\r\n\r\nexport default definePreview({\r\n  decorators: [withMoodRootClass],\r\n  globalTypes,\r\n  // ...\r\n});\r\n```\r\n\r\n### Documentation\r\n\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [x] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [x] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Improvements**\n  * Vue 3 renderer now keeps globals reactive so UI updates immediately when args or globals change.\n  * Arg-update API is more type-safe and generalized for reliable dynamic updates.\n\n* **New Features**\n  * Added example stories and decorators demonstrating dynamic arg updates and reactive globals.\n  * Added preview configuration examples to enable locale-aware rendering.\n\n* **Tests**\n  * New unit and end-to-end tests cover reactive globals, decorator behavior, and arg-update flows.\n\n* **Documentation**\n  * Added snippets and docs showing decorators that use reactive globals and update args.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "Sidnioulz",
+  "merged_at": "2026-01-30T10:20:55Z",
+  "base_ref": "next",
+  "merge_commit_sha": "2669c84c8084d51e6e4af97c042fffe32aafa6fd",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "4d07f578f4bc7981ad6ca4786a84e8be175ee207",
+    "75d6e5d1084a3d8e34d46b2247d032cc98b84c74"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6hplMP",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n docs/_snippets/decorator-with-reactive-globals.md\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1639\n\n---\n\n\n\n</details>\n\n**Fix Vue `lang` binding syntax in template.**\n\n`lang={{...}}` isn't valid Vue template syntax and will render literally as text. Use `:lang=\"...\"` (v-bind) in both snippets.\n\n<details>\n<summary>\ud83d\udd27 Proposed fix</summary>\n\n```diff\n-          <div lang={{globals?.locale || 'en'}}>\n+          <div :lang=\"globals?.locale || 'en'\">\n```\n</details>\n\nAlso applies to: 41-42\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@docs/_snippets/decorator-with-reactive-globals.md` around lines 15 - 16, The\ntemplate uses invalid Vue binding syntax \"lang={{globals?.locale || 'en'}}\"\nwhich will render literally; update the attribute to use Vue v-bind syntax by\nreplacing the raw mustache binding with a bound expression (i.e., use :lang with\nthe same expression globals?.locale || 'en') in both occurrences (the shown\nsnippet around the div with lang and the other occurrence at lines ~41-42) so\nthe lang attribute is evaluated at runtime rather than printed as text.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "docs/_snippets/decorator-with-reactive-globals.md",
+          "line_number": 16,
+          "start_line": null,
+          "commit_sha": "1aae330c85f52990b56c24aff1433e98b6377e7b",
+          "created_at": "2026-01-21T10:54:19Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The template uses invalid Vue binding syntax (mustache `{{}}` inside an attribute instead of v-bind `:lang=\"...\"`), causing the attribute to render literally as text rather than being evaluated as a dynamic binding \u2014 the code does not behave as intended."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags invalid Vue template syntax and requests a specific fix: replacing `lang={{...}}` with `:lang=\"...\"` in two locations."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6hptSm",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udf10 Web query:\n\n`Vue 3 inject without provide warning behavior`\n\n\ud83d\udca1 Result:\n\nShort answer: Vue 3 will warn in dev if an injection key isn't found and you didn't pass a default. The warning is \"[Vue warn]: injection \\\"<key>\\\" not found.\" You can avoid the warning by supplying a default value (second inject() argument) or a factory default (third arg). Also, calling inject() outside setup()/functional components emits \"inject() can only be used inside setup() or functional components.\" Libraries can use hasInjectionContext() (Vue 3.3+) to avoid the wrong-place warning. [1][2][3]\n\nSources:\n- Vue API (inject signature, default value, hasInjectionContext). [1]\n- Vue source / explanation of inject behavior (dev warning when no default). [2]\n- Guide / examples showing the console warning message. [3]\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for other Vue3 decorator examples in Storybook with globals or inject usage\nfind . -path \"*/vue3*\" -name \"*.ts\" -o -name \"*.tsx\" | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1030\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for inject usage in Vue3-related files\nrg \"inject\\s*:\" --type ts --type tsx | grep -i vue\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look at the specific file mentioned in the review\ncat -n code/renderers/vue3/template/stories_vue3-vite-default-ts/decorators.stories.ts | sed -n '80,115p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1056\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for other decorator examples with similar patterns in vue3 renderer\nfind code/renderers/vue3 -name \"*.ts\" -o -name \"*.tsx\" | xargs rg \"inject\\s*:\" 2>/dev/null || true\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 169\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for provide patterns with 'globals' in vue3 renderer\nrg \"provide.*globals\" code/renderers/vue3/ 2>/dev/null || true\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there are other decorators in the same file that use inject\nrg \"Decorator.*=.*\\(.*{.*globals\" code/renderers/vue3/template/stories_vue3-vite-default-ts/decorators.stories.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 194\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look for any provide in the entire vue3 renderer setup\nfind code/renderers/vue3 -type f \\( -name \"*.ts\" -o -name \"*.tsx\" \\) -exec grep -l \"provide(\" {} \\; 2>/dev/null || true\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\n\n</details>\n\n**Remove `inject: ['globals']` to avoid missing-provider warnings.**\n\n`globals` already comes from the decorator context parameter and is reactive. The unused `inject: ['globals']` declaration will trigger a Vue 3 dev warning since there is no corresponding `provide`.\n\n<details>\n<summary>\ud83d\udd27 Proposed change</summary>\n\n```diff\n const localeDecorator: DecoratorFunction<VueRenderer> = (story, { globals }) => {\n   return {\n     components: { story },\n-    inject: ['globals'],\n     setup() {\n       const ctxGreeting = computed(() => getCaptionForLocale(globals?.locale) || 'Hello!');\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nconst localeDecorator: DecoratorFunction<VueRenderer> = (story, { globals }) => {\n  return {\n    components: { story },\n    setup() {\n      const ctxGreeting = computed(() => getCaptionForLocale(globals?.locale) || 'Hello!');\n\n      return {\n        ctxGreeting,\n        globals,\n      };\n    },\n    template: `\n      <div>\n        <p>Greeting: {{ctxGreeting}}</p>\n        <p>Locale: {{globals?.locale}}</p>\n        <story />\n      </div>\n    `,\n  };\n};\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn\n`@code/renderers/vue3/template/stories_vue3-vite-default-ts/decorators.stories.ts`\naround lines 87 - 107, The decorator localeDecorator currently declares inject:\n['globals'] which is unnecessary and causes Vue dev warnings; remove the inject\nproperty from the returned object in localeDecorator (leaving components, setup,\ntemplate intact) so that globals from the decorator context is used directly in\nsetup (where ctxGreeting is computed using\ngetCaptionForLocale(globals?.locale)), and verify no other code relies on Vue's\nprovide/inject for globals.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/vue3/template/stories_vue3-vite-default-ts/decorators.stories.ts",
+          "line_number": 106,
+          "start_line": 87,
+          "commit_sha": "75d6e5d1084a3d8e34d46b2247d032cc98b84c74",
+          "created_at": "2026-01-21T11:02:57Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Dead Code",
+          "label_confidence": "high",
+          "label_reasoning": "The `inject: ['globals']` declaration is unnecessary since `globals` is already available from the decorator context parameter, and it causes a Vue 3 dev warning due to no matching `provide`. It is unused/redundant code that should be removed."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where `inject: ['globals']` will trigger Vue 3 dev warnings due to missing provider, and requests removal of that property with a specific code diff."
+    }
+  ],
+  "review_thread_count": 6,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6hqLP0",
+            "author": "Sidnioulz",
+            "body": "```suggestion\n          <div :lang={{globals?.locale || 'en'}}>\n```",
+            "file_path": "docs/_snippets/decorator-with-reactive-globals.md",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "12e7f632d3ac0b8bc6e3c0668e93dc79655b8991",
+            "created_at": "2026-01-21T11:40:13Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6hqLYz",
+            "author": "Sidnioulz",
+            "body": "```suggestion\n          <div :lang={{globals?.locale || 'en'}}>\n```",
+            "file_path": "docs/_snippets/decorator-with-reactive-globals.md",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "12e7f632d3ac0b8bc6e3c0668e93dc79655b8991",
+            "created_at": "2026-01-21T11:40:23Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6hqL0W",
+            "author": "Sidnioulz",
+            "body": "```suggestion\n```",
+            "file_path": "code/renderers/vue3/template/stories_vue3-vite-default-ts/decorators.stories.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "37dc0322f586b5df56eb7f78bd689b0185ee2a13",
+            "created_at": "2026-01-21T11:40:57Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6hqMLe",
+            "author": "Sidnioulz",
+            "body": "```suggestion\n  test('Decorators can consume reactive globals', async ({ page }) => {\n```",
+            "file_path": "code/e2e-tests/framework-vue3.spec.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "fcc6ec12ff805ceb21671c59723f59c7578d97ef",
+            "created_at": "2026-01-21T11:41:26Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 6,
+    "stage1_kept": 2,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 4,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34185,
+  "title": "UI: Zoom faster when pressing shift",
+  "body": "Fixes an inconsistency we spotted during QA.\r\n\r\n#### Manual testing\r\n\r\nOpen SB, tab to zoom button, press Shift+ArrowUp and see it zooms by increments of 10% instead of 1%.\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Improvements**\n  * Zoom preview: Arrow keys now adjust zoom in finer increments; holding Shift applies larger jumps for faster scaling.\n  * Numeric inputs: Keyboard adjustments use a configurable step and support a Shift-multiplied (larger) step for quicker value changes.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "Sidnioulz",
+  "merged_at": "2026-03-18T10:29:20Z",
+  "base_ref": "next",
+  "merge_commit_sha": "37c4bdcacd8481e98f38f73f854cd00663975837",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "d3073e793723700d35bac25e0121391ba4398bf7",
+    "96340a8e43df86535ceaf33b3e73981c5c08539c"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6v8yO3",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nset -euo pipefail\n\necho \"=== NumericInput definition ===\"\nsed -n '69,205p' code/core/src/manager/components/preview/NumericInput.tsx\n\necho\necho \"=== In-repo NumericInput call sites using step/shiftStep ===\"\nrg -n -U -P '<NumericInput\\b(?:(?!/?>).|\\n)*\\b(step|shiftStep)\\s*=' --glob '*.{ts,tsx,js,jsx}' code\n\necho\necho \"=== Candidates for Form.Input prop typing / native input passthrough ===\"\nrg -n -C4 'Form\\.Input|interface .*InputProps|type .*InputProps|<input\\b|step\\??:|suffix\\??:' --glob '*.{ts,tsx}' code\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4027\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nset -euo pipefail\n\n# Find the Form component\necho \"=== Locating Form component ===\"\nfd -e ts -e tsx 'Form' code --type f | grep -i form | head -20\n\necho\necho \"=== Searching for Form.Input definition or Form component interface ===\"\nrg -n 'export.*Form|interface Form|const Form|type Form|Form\\.Input' code --glob '*.{ts,tsx}' | head -40\n\necho\necho \"=== Looking for form-related component files ===\"\nfd -type f -name '*form*' code --glob '*.{ts,tsx}' | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3670\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nset -euo pipefail\n\necho \"=== Form.tsx content ===\"\ncat -n code/core/src/components/components/Form/Form.tsx\n\necho\necho \"=== Check for Input component import/definition in Form ===\"\nhead -50 code/core/src/components/components/Form/Form.tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1329\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nset -euo pipefail\n\necho \"=== Input.tsx content ===\"\ncat -n code/core/src/components/components/Form/Input.tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2566\n\n---\n\n\n\n</details>\n\n**Rename `step` and `shiftStep` to avoid shadowing the native HTML `step` attribute.**\n\n`Form.Input` inherits `step` from `HTMLProps<HTMLInputElement>` (not explicitly omitted in its type definition), so it forwards the native HTML `step` attribute to the underlying input. However, `NumericInput` now destructures `step` locally and never forwards it via `...props`, which silently prevents the native attribute from reaching the DOM element.\n\nTo avoid this semantic ambiguity, rename to `keyboardStep` and `keyboardShiftStep` to make it clear these control arrow-key behavior, not native HTML input stepping.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager/components/preview/NumericInput.tsx` around lines 77 -\n80, NumericInput currently destructures step and shiftStep (preventing the\nnative HTML step attribute from being forwarded by ...props) and thus silently\nblocks the DOM attribute; rename these props to keyboardStep and\nkeyboardShiftStep throughout the component (update the prop type/interface and\nthe destructuring in the NumericInput function), use\nkeyboardStep/keyboardShiftStep for any internal arrow-key logic, and ensure the\noriginal ...props still forwards native HTML attributes (so Form.Input receives\nthe real step attribute) \u2014 update all references to step and shiftStep inside\nNumericInput to the new names to avoid shadowing the native attribute.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/preview/NumericInput.tsx",
+          "line_number": 80,
+          "start_line": null,
+          "commit_sha": "35cf0aadfa8ca10a480d3e11ab360e0ffcddc860",
+          "created_at": "2026-03-18T09:11:01Z",
+          "is_outdated": true
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 1
+}

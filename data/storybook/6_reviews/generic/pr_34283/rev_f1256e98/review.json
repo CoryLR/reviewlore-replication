@@ -1,0 +1,92 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 409,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`serializeTagsParam` returns `''` (empty string) when both filter arrays are empty. Nullish coalescing (`??`) only catches `null`/`undefined`, so `'' ?? null` evaluates to `''`. This passes `{ tags: '' }` to `applyQueryParams`, which (per the updated `setQueryParams` logic) sets `tags: ''` in `customQueryParams`. The `navigateTo` filter was also tightened from `.filter(([, v]) => v)` (truthiness, which catches `''`) to `.filter(([, v]) => v !== null && v !== undefined)`, so the empty string is no longer stripped from the URL. The result: `?tags=` appears in the URL whenever all filters are cleared. Fix: use `tagsValue || null` instead of `tagsValue ?? null`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 990,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`storyPassesFilter` only checks `filteredIndex[storyId]?.type === 'story'`, ignoring docs entries. A user navigating directly to a docs URL (e.g. `/docs/my-component--docs`) whose entry exists in `filteredIndex` will incorrectly be treated as failing the filter and will be redirected to the first filtered entry instead of staying on their docs page. The condition should include the docs case: `filteredIndex[storyId]?.type === 'story' || filteredIndex[storyId]?.type === 'docs'`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 1001,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`viewMode` here is taken from the STORY_SPECIFIED event (e.g. `'story'`), but `firstFiltered` is found by searching `filteredIndex` for `type === 'story' || type === 'docs'` (line 996). If the first matching filtered entry is a docs entry, this constructs `/story/<docs-id>` instead of the correct `/docs/<docs-id>`, producing a broken URL. The view mode should be derived from the matched entry's type: `const entryViewMode = filteredIndex[firstFiltered].type === 'docs' ? 'docs' : 'story'`, then use `entryViewMode` in the template string.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/tags.ts",
+      "line_number": 29,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`reverseBuiltInUrlTagMap` is rebuilt on every call to `serializeTagsParam` via `Object.fromEntries(Object.entries(BUILT_IN_URL_TAG_MAP).map(...))`. Both maps are derived entirely from a module-level constant and never change at runtime, so this allocation happens on every filter change or serialization. Define it once as a module-level constant alongside `BUILT_IN_URL_TAG_MAP` to avoid the repeated allocation.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/tags.ts",
+      "line_number": 26,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Returning `''` here, combined with the `?? null` in `persistFilters`, is what causes the `?tags=` URL bug described on the `persistFilters` line. Alternatively, fix it here by returning `undefined` (and updating the return type to `string | undefined`) so callers can rely on falsy-checking. Either the return value or the call site needs to be consistent; as-is they are mismatched.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 437,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`navigateWithQueryParams` re-implements the URL-construction logic that already exists in `navigateTo` inside `url.ts`: read `customQueryParams`, filter nulls, sort by key, join with `&`. This duplication creates a maintenance risk \u2014 if the URL serialization format changes in `url.ts` (e.g. encoding, separator, filtering rules), this copy will silently diverge. The functional distinction (not calling `setQueryParams` so `UPDATE_QUERY_PARAMS` isn't re-emitted on story navigation) is valid and should be preserved, but the URL-building part should delegate to a shared utility rather than being duplicated.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 566,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The filter-aware path in `selectFirstStory` only searches for `type === 'story'` entries, but the corresponding logic in the STORY_SPECIFIED handler (which runs on initial URL load) searches for both `type === 'story'` and `type === 'docs'`. When filters are active and only docs entries survive, `selectFirstStory` finds nothing and silently exits, leaving the UI in a blank/unselected state. The two code paths should use the same entry-type priority to be consistent.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 432,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`state: { location } = {} as any` escapes TypeScript's type system with `as any` to handle a potentially absent `state`. If `state` can be absent at this call site, the module args type should be updated to mark `state` as optional (e.g. `state?: { location?: Partial<Location> }`). Using `as any` suppresses all type errors for that parameter silently, including future ones unrelated to this change.",
+      "index": 7
+    },
+    {
+      "file_path": "code/core/src/manager-api/store.ts",
+      "line_number": 85,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "The migration reads each storage backend once, then the actual `getInitialState` merge reads them again (lines after the migration block), resulting in two reads per storage per page load \u2014 acknowledged by the updated test comment. Since the migration check and the state read both need the same persisted object, they could be merged into a single read by doing the key removal in-place before proceeding to the existing merge logic. As implemented, the double-read is a permanent overhead on every cold start, not just the first one after migration.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The store migration in `getInitialState` removes the top-level `includedTagFilters`/`excludedTagFilters` keys from localStorage and sessionStorage. However, the code it replaces explicitly supported a further fallback: `persistedState.layout?.includedTagFilters` (noted with the removed comment \"supporting migration from the old layout.xxx path\"). The store migration does not touch the `layout` key, so users who were on the older `layout.*` storage format will have their filters silently reset on upgrade with no warning. If this older format is still in use by any real users, it warrants either a migration or a note in `MIGRATION.md`.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `BUILT_IN_URL_TAG_MAP` in `tags.ts` defines the mapping between URL-friendly shorthand (`$play`, `$docs`, etc.) and internal tag names, but there is no documentation explaining the design contract: why these four tags need aliasing, what the `$` prefix convention means, or how a developer adding a new built-in tag should decide whether to add it here. A short JSDoc comment on the constant would reduce the chance of future built-in tags being overlooked when the map is updated.",
+      "index": 10
+    }
+  ],
+  "cost_usd": 1.0328783000000001,
+  "duration_seconds": 513.8741092681885
+}

@@ -1,0 +1,70 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/manager-api/modules/shortcuts.ts",
+      "line_number": 385,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `focusOnUIElement` call with `poll: true` always returns a `Promise<boolean>` (per the comment and implementation on the existing close-path just above), but the result is dropped here with no `.then()` handler. The close-path (lines 372\u2013381) uses the established pattern:\n```ts\n(fullAPI.focusOnUIElement(...) as Promise<boolean>).then((success) => {\n  if (success === false) { document.body.focus(); }\n});\n```\nThe open-path should follow the same convention. If focus polling times out (resolves `false`), there is currently no fallback and the user's focus silently stays wherever it was. Apply the same `.then()` + `document.body.focus()` fallback used by the close-path.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/shortcuts.ts",
+      "line_number": 414,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Same issue as the `togglePanel` open-path above: the `Promise<boolean>` returned by `focusOnUIElement` is silently dropped with no `.then()` handler or fallback. Add a `.then(success => { if (success === false) document.body.focus(); })` to be consistent with how the close-path is handled in the same `toggleNav` branch (lines 401\u2013410).",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager/components/preview/tools/addons.tsx",
+      "line_number": 20,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `showPanel` function is declared `async` but contains no `await` expression. The `focusOnUIElement` call on the next line fires a `Promise<boolean>` that is neither awaited nor returned, meaning it is completely decoupled from the `Promise<void>` that `async` implicitly wraps the function body in. Callers cannot observe focus completion. Either drop the `async` keyword (since the function has become fire-and-forget) or `await` the `focusOnUIElement` call and handle the result so the caller can act on success/failure.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager/components/preview/tools/addons.tsx",
+      "line_number": 22,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`focusOnUIElement` is invoked with `poll: true`, which means it returns a `Promise<boolean>` when the first synchronous focus attempt fails. That promise is neither awaited nor has `.catch()` attached. While the implementation resolves rather than rejects, the `false` resolution (focus polling timed out) is silently ignored with no fallback. Consider awaiting the result and falling back to `document.body.focus()` on failure, matching the pattern used in `shortcuts.ts`.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/manager/components/preview/tools/menu.tsx",
+      "line_number": 17,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`showSidebar` is still declared `async` but no longer contains an `await` expression. The internal `focusOnUIElement` promise is detached from the outer async wrapper, so the function effectively returns `Promise<void>` that resolves immediately while focus polling continues in the background. Drop the `async` keyword to accurately reflect the fire-and-forget nature of this function, or restore `await` and handle the result.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/manager/components/preview/tools/menu.tsx",
+      "line_number": 19,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Same dropped-promise issue as `addons.tsx`: `focusOnUIElement` with `poll: true` returns a `Promise<boolean>` that is discarded. A `false` resolution (focus failed after polling) produces no fallback behavior and no observable signal to the caller.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/manager/components/preview/tools/menu.tsx",
+      "line_number": 23,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Three lines of commented-out code (`// if (success) { ... }`) were left in without any `TODO` or explanatory note. Per project conventions, commented-out code blocks must either be removed or accompanied by a clearly actionable comment explaining why the code is disabled and when it should be re-enabled. If the landmark animation is intentionally removed, delete these lines.",
+      "index": 6
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "There is a systematic inconsistency in how the `Promise<boolean>` from `focusOnUIElement` (with `poll: true`) is handled across the three changed files. In `shortcuts.ts`, the **close** path explicitly chains `.then(success => { if (success === false) document.body.focus(); })`, but the new **open** paths in both `togglePanel` and `toggleNav` simply discard the promise. In `addons.tsx` and `menu.tsx` the promise is also dropped. A consistent pattern \u2014 either always attach a `.then()` fallback or define a shared wrapper that handles the fallback \u2014 would make the behavior predictable and easier to maintain.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.45311585,
+  "duration_seconds": 298.35671186447144
+}

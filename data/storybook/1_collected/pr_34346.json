@@ -1,0 +1,181 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34346,
+  "title": "Sidebar: Add dual-slot status icons for change detection and test results",
+  "body": "Closes https://github.com/storybookjs/storybook/issues/34266\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\nSeparated change-detection statuses (`new`, `modified`, `affected`) from test statuses (`error`, `warning`, `pending`, `success`) into two independent icon slots in the sidebar tree. This allows both types of status information to be visible simultaneously on story leaf nodes.\r\n\r\n- Added a `getChangeDetectionStatus` helper that splits statuses by `typeId` into change-detection vs test categories\r\n- Rendered two independent `StatusButton` components per leaf node (change slot + test slot)\r\n- Added SVG icons for `new`, `modified`, and `affected` status values using `UseSymbol`\r\n- Updated `statusOrder` to include all status values\r\n- Added comprehensive unit tests for the dual-slot splitting logic\r\n- Added story variants covering all combinations (change-only, test-only, both, affected, branch priority)\r\n\r\n<img width=\"292\" height=\"652\" alt=\"image\" src=\"https://github.com/user-attachments/assets/1122ea52-b538-4c56-be98-07d4db290580\" />\r\n\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [x] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n1. Run `cd code && yarn storybook:ui`\r\n2. Navigate to `Sidebar/Tree` stories\r\n3. Verify the new dual-slot stories (`WithChangeDetectionOnly`, `WithChangeDetectionAndTestStatus`, `WithTestStatusOnly`, `WithAffectedStatus`, `BranchWithChangeDetectionPriority`) render correctly with two separate status icon slots\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Sidebar now shows two separate status indicators per item: a \"change\" slot and a \"test\" slot, with selection/highlight behavior preserved.\n\n* **Storybook**\n  * Added example scenarios demonstrating various dual-slot status combinations and selection initializations.\n\n* **Bug Fixes**\n  * Unified status icon rendering and adjusted status priority so indicators reflect criticality more clearly.\n\n* **Tests**\n  * Added coverage for splitting statuses into change vs. test and for priority rules.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "valentinpalkovic",
+  "merged_at": "2026-04-07T11:07:06Z",
+  "base_ref": "next",
+  "merge_commit_sha": "7cb708bc21e24c3d5c066e0b737d7bb5a24be43c",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "6abc5278709d3d598392e8cb50f740ae6dd2eb4e",
+    "94996220579fc99685d8fdbf8de1b8f95ab6f60a"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6yhlcf",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Branch/group rows still use the old flattened priority path.**\n\nOnly the leaf path uses `getChangeDetectionStatus()`. Line 414 still flattens branch-local statuses to `StatusValue[]`, and Line 438 still merges branch and descendant state with `getMostCriticalStatusValue()`, so `{ 'storybook/change-detection': new, 'storybook/vitest': error }` still resolves to `error` on component/group/story-branch rows. That misses the linked branch acceptance criterion; please carry the split aggregation into the branch/group calculation too.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager/components/sidebar/Tree.tsx` around lines 303 - 305,\nBranch/group rows currently flatten branch-local statuses into a single\nStatusValue[] and use getMostCriticalStatusValue(), which loses the split\n(change vs test) aggregation; instead, compute the two-part aggregation for\nbranches using getChangeDetectionStatus() (like for leaves) so you obtain\nchangeStatus and testStatus for branch/group rows, then call getStatus(theme,\nchangeStatus) and getStatus(theme, testStatus) to derive changeIcon, testIcon\nand textColor; replace any flattening of statuses (the code using statuses || {}\nand the getMostCriticalStatusValue merge) with calls to getChangeDetectionStatus\non the branch-local status map and merge branch+descendant results per-channel\n(change/test) rather than as a single flattened value.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper:263a4c6a-c274-4496-9d6f-f7e76d72ad00 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 8f367da to b51e94b",
+          "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+          "line_number": 305,
+          "start_line": null,
+          "commit_sha": "9f3e65bd5cc4cfc4b173e9227be713607f4b55da",
+          "created_at": "2026-03-26T14:02:12Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6yhlco",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Render the two status slots as one fixed action cluster.**\n\n`LeafNodeStyleWrapper` still uses the adjacent-sibling selectors at Line 105 and Line 109 to swap a context-menu control with a single trailing status control. With two loose `StatusButton`s here, hover only targets the first icon, and returning `null` collapses the missing slot instead of keeping it empty. That breaks the \u201cboth slots always visible / opposite slot empty\u201d behavior.\n\n\n<details>\n<summary>Suggested direction</summary>\n\n```diff\n+// Define a fixed-width wrapper / placeholder outside this block so both slots\n+// are treated as one trailing action cluster.\n-        {changeIcon ? (\n-          <StatusButton\n-            ariaLabel={`Change status: ${changeStatus.replace('status-value:', '')}`}\n-            data-testid=\"tree-change-status-button\"\n-            type=\"button\"\n-            status={changeStatus}\n-            selectedItem={isSelected}\n-          >\n-            {changeIcon}\n-          </StatusButton>\n-        ) : null}\n-        {testIcon ? (\n-          <StatusButton\n-            ariaLabel={`Status: ${testStatus.replace('status-value:', '')}`}\n-            data-testid=\"tree-status-button\"\n-            type=\"button\"\n-            status={testStatus}\n-            selectedItem={isSelected}\n-          >\n-            {testIcon}\n-          </StatusButton>\n-        ) : null}\n+        <StatusSlots>\n+          {changeIcon ? (\n+            <StatusButton\n+              ariaLabel={`Change status: ${changeStatus.replace('status-value:', '')}`}\n+              data-testid=\"tree-change-status-button\"\n+              type=\"button\"\n+              status={changeStatus}\n+              selectedItem={isSelected}\n+            >\n+              {changeIcon}\n+            </StatusButton>\n+          ) : (\n+            <StatusSlotPlaceholder aria-hidden=\"true\" />\n+          )}\n+          {testIcon ? (\n+            <StatusButton\n+              ariaLabel={`Status: ${testStatus.replace('status-value:', '')}`}\n+              data-testid=\"tree-status-button\"\n+              type=\"button\"\n+              status={testStatus}\n+              selectedItem={isSelected}\n+            >\n+              {testIcon}\n+            </StatusButton>\n+          ) : (\n+            <StatusSlotPlaceholder aria-hidden=\"true\" />\n+          )}\n+        </StatusSlots>\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager/components/sidebar/Tree.tsx` around lines 344 - 365,\nThe two StatusButton elements must be rendered as a fixed two-slot action\ncluster so LeafNodeStyleWrapper's adjacent-sibling selectors continue to work;\nupdate the JSX around StatusButton to always render a container (e.g., a\n\"status-cluster\" div) with two children (left/change slot and right/test slot)\nand when changeIcon or testIcon is null render an empty placeholder element with\nthe same tag/attributes (data-testid, ariaLabel, status prop) but no children so\nthe DOM structure and selectors remain stable; ensure you reuse the existing\nidentifiers StatusButton, changeIcon, testIcon, changeStatus, testStatus and\npreserve ariaLabel/data-testid values for each slot.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper:263a4c6a-c274-4496-9d6f-f7e76d72ad00 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 8f367da to b51e94b",
+          "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+          "line_number": 365,
+          "start_line": null,
+          "commit_sha": "9f3e65bd5cc4cfc4b173e9227be713607f4b55da",
+          "created_at": "2026-03-26T14:02:12Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6yjpvd",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Dual-slot fixture data is brittle to index hierarchy changes.**\n\nAt Line 326, `dualSlotData` includes only `[dualSlotParentId]` and `[dualSlotStoryId]`. If the selected parent is nested (has its own parent), these stories can silently stop rendering as mock index ordering/title structure evolves.\n\n<details>\n<summary>Suggested hardening</summary>\n\n```diff\n const dualSlotStoryId = storyId;\n const dualSlotParentId = index[dualSlotStoryId].parent as string;\n \n+const getAncestorChain = (startId: string): IndexHash => {\n+  const chain: IndexHash = {};\n+  let currentId: string | null = startId;\n+  while (currentId) {\n+    chain[currentId] = index[currentId];\n+    currentId = (index[currentId]?.parent as string | null) ?? null;\n+  }\n+  return chain;\n+};\n+\n const dualSlotData: IndexHash = {\n+  ...getAncestorChain(dualSlotParentId),\n   [dualSlotParentId]: {\n     ...(index[dualSlotParentId] as ComponentEntry),\n     children: [dualSlotStoryId],\n   },\n   [dualSlotStoryId]: index[dualSlotStoryId],\n };\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager/components/sidebar/Tree.stories.tsx` around lines 323 -\n332, dualSlotData currently only seeds the immediate parent and story entries\n(dualSlotParentId, dualSlotStoryId), which breaks when the parent itself has a\nparent; update the construction of dualSlotData to include the full ancestor\nchain from index by walking index[parent] repeatedly and adding each ancestor\nentry (preserving their children arrays) so the tree hierarchy remains intact;\nreference the symbols dualSlotStoryId, dualSlotParentId, dualSlotData, index and\nComponentEntry and ensure the resulting map contains every ancestor id ->\nComponentEntry needed for rendering.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 8f367da to b51e94b",
+          "file_path": "code/core/src/manager/components/sidebar/Tree.stories.tsx",
+          "line_number": 343,
+          "start_line": 323,
+          "commit_sha": "94996220579fc99685d8fdbf8de1b8f95ab6f60a",
+          "created_at": "2026-03-26T15:07:58Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zqnJZ",
+          "author": "ghengeveld",
+          "body": "Let's use symbols for these as well.",
+          "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+          "line_number": 192,
+          "start_line": null,
+          "commit_sha": "43f9222c4e36bfd0922cfe6b4e017a15bc762d17",
+          "created_at": "2026-03-31T08:21:30Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zqnpe",
+          "author": "ghengeveld",
+          "body": "Weird to see this not at the top or in a constants file.",
+          "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+          "line_number": 215,
+          "start_line": null,
+          "commit_sha": "9f3e65bd5cc4cfc4b173e9227be713607f4b55da",
+          "created_at": "2026-03-31T08:21:55Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zqn1-",
+          "author": "ghengeveld",
+          "body": "Let's sort these.",
+          "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+          "line_number": 225,
+          "start_line": null,
+          "commit_sha": "9f3e65bd5cc4cfc4b173e9227be713607f4b55da",
+          "created_at": "2026-03-31T08:22:06Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6zqpvf",
+          "author": "ghengeveld",
+          "body": "```suggestion\n            ariaLabel={`Test status: ${testStatus.replace('status-value:', '')}`}\n```",
+          "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+          "line_number": 357,
+          "start_line": null,
+          "commit_sha": "9f3e65bd5cc4cfc4b173e9227be713607f4b55da",
+          "created_at": "2026-03-31T08:23:38Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60DhQm",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Leaf story rows still drop the change-detection slot.**\n\nLine 310 only reads `testStatus`, and Lines 350-360 only render the test button. A story with only `storybook/change-detection` statuses will therefore show no indicator at all, and mixed-status stories lose the left slot that this PR is meant to add.\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n-    const { testStatus } = getChangeDetectionStatus(statuses || {});\n-    const { icon: testIcon, textColor } = getStatus(theme, testStatus);\n+    const { changeStatus, testStatus } = getChangeDetectionStatus(statuses || {});\n+    const { icon: changeIcon } = getStatus(theme, changeStatus);\n+    const { icon: testIcon, textColor } = getStatus(theme, testStatus);\n...\n-        {testIcon ? (\n-          <StatusButton\n-            ariaLabel={`Test status: ${testStatus.replace('status-value:', '')}`}\n-            data-testid=\"tree-status-button\"\n-            type=\"button\"\n-            status={testStatus}\n-            selectedItem={isSelected}\n-          >\n-            {testIcon}\n-          </StatusButton>\n-        ) : null}\n+        <StatusSlots>\n+          {changeIcon ? (\n+            <StatusButton\n+              ariaLabel={`Change status: ${changeStatus.replace('status-value:', '')}`}\n+              data-testid=\"tree-change-status-button\"\n+              type=\"button\"\n+              status={changeStatus}\n+              selectedItem={isSelected}\n+            >\n+              {changeIcon}\n+            </StatusButton>\n+          ) : (\n+            <StatusSlotPlaceholder aria-hidden=\"true\" />\n+          )}\n+          {testIcon ? (\n+            <StatusButton\n+              ariaLabel={`Test status: ${testStatus.replace('status-value:', '')}`}\n+              data-testid=\"tree-status-button\"\n+              type=\"button\"\n+              status={testStatus}\n+              selectedItem={isSelected}\n+            >\n+              {testIcon}\n+            </StatusButton>\n+          ) : (\n+            <StatusSlotPlaceholder aria-hidden=\"true\" />\n+          )}\n+        </StatusSlots>\n```\n</details>\n\n\n\nAlso applies to: 350-360\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager/components/sidebar/Tree.tsx` around lines 310 - 311,\ngetChangeDetectionStatus is being partially destructured (only testStatus) which\ndrops the change-detection icon slot; instead capture the full return value and\nderive the icon from it when rendering. Change the code around\ngetChangeDetectionStatus/getStatus so you keep the whole result (e.g., const\nchange = getChangeDetectionStatus(statuses || {})) and then call\ngetStatus(theme, change.testStatus || change.status) to obtain icon/textColor\n(use those values where testIcon/textColor are used) and ensure the left-slot\nrendering (the block around the current test button rendering at the 350-360\narea) checks for change.* and renders the icon slot even when only\nstorybook/change-detection statuses exist.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper:e938f4fb-9d22-4e42-8449-9e73dfb4d00c -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+          "line_number": 311,
+          "start_line": null,
+          "commit_sha": "91b996516adbf63480f760ec98aaad2a7b8ee28c",
+          "created_at": "2026-04-01T09:13:37Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc60DhQx",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Branch/group rows no longer match the acceptance rules.**\n\nLines 512-549 render two separate status controls for branch rows, even though these rows are supposed to collapse to one prioritized indicator. There is also a secondary bug here: the left slot only renders when both icons exist, so a change-only branch falls through to the right-hand slot, and Line 455 still uses the generic merged priority instead of giving change-detection precedence.\n\nPlease derive one branch status (`branchChange` when it is not `status-value:unknown`, otherwise `branchTest`) and render only that indicator.\n\n\n\nAlso applies to: 512-549\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager/components/sidebar/Tree.tsx` around lines 441 - 456,\nThe branch rows currently render two separate status controls (branchChange and\nbranchTest) and compute overallStatus from both; instead derive a single branch\nstatus by choosing branchChange when it is not 'status-value:unknown' otherwise\nbranchTest (e.g. const branchStatus = branchChange !== 'status-value:unknown' ?\nbranchChange : branchTest), then compute a single branchIcon via\ngetStatus(theme, branchStatus) or the small dot SVG when branchStatus equals\n'status-value:error' | 'status-value:warning', and use that single branchStatus\nfor overallStatus/color (replace getMostCriticalStatusValue([branchChange,\nbranchTest]) with branchStatus). Update any places that expect\nbranchChangeIcon/branchTestIcon to use this single branchIcon so the left/right\nslot rendering no longer depends on both icons existing and change-detection\nprecedence is honored (refer to symbols: branchChange, branchTest, branchStatus,\nbranchIcon, overallStatus, getMostCriticalStatusValue, getStatus, UseSymbol,\ntheme).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper:e938f4fb-9d22-4e42-8449-9e73dfb4d00c -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+          "line_number": 372,
+          "start_line": 359,
+          "commit_sha": "94996220579fc99685d8fdbf8de1b8f95ab6f60a",
+          "created_at": "2026-04-01T09:13:38Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 9
+}

@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 103,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `while` loop in `ensureWatchers` can become an infinite async loop. When `setupWatchers` fails (e.g. the working directory is not a git repository, so `getGitDir` throws), the `catch {}` block swallows the error without setting any failure flag, and the `finally` block resets `watcherSetupInFlight = undefined` leaving `this.watchers` still empty. On the next iteration the condition `gitStateCallbacks.size > 0 && Object.keys(this.watchers).length === 0` is still true, so the loop retries indefinitely, scheduling new microtask frames forever and leaking memory.\n\nConsider breaking out of the loop (or tracking a `watcherSetupFailed` flag) when `setupWatchers` completes without registering any watchers:\n```ts\nif (!this.watcherSetupInFlight) {\n  this.watcherSetupInFlight = this.setupWatchers(this.watcherSetupGeneration);\n}\nawait this.watcherSetupInFlight;\n// If setup ran but produced no watchers, bail out instead of retrying.\nif (Object.keys(this.watchers).length === 0) break;\n```",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 122,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`void this.configureBranchWatcher(gitDir, generation)` discards the promise returned by `configureBranchWatcher`. If `readHeadRef` encounters a non-ENOENT error and re-throws it (see the `catch` block in `readHeadRef`), the rejection propagates out of `configureBranchWatcher` as an unhandled promise rejection. The initial call site inside `setupWatchers` is protected by the outer `try/catch`, but this runtime callback is not.\n\nAdd a `.catch` to prevent unhandled rejections:\n```ts\nvoid this.configureBranchWatcher(gitDir, generation).catch(() => {\n  // Reconfiguration is opportunistic; ignore errors here.\n});\n```",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 237,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The captured group `match[1]` from `^gitdir:\\s+(.+)$` retains any trailing whitespace that appears before end-of-line (e.g. a trailing space or carriage return on CRLF files). The `gitPointer.trim()` call only strips the outer file content, not the captured value. Passing a path with trailing whitespace to `resolvePath` would silently produce a wrong path. Consider trimming the captured group:\n```ts\nreturn resolvePath(repoRoot, match[1].trim());\n```",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.ts",
+      "line_number": 97,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `gitDiffProvider` option type was changed from `Pick<GitDiffProvider, 'getChangedFiles' | 'getRepoRoot'>` to the concrete `GitDiffProvider` class. This makes the API less flexible: callers can no longer pass a plain object that structurally satisfies the interface; they must extend the class. Although tests work around this via the new `MockGitDiffProvider` subclass, the loss of structural typing is a breaking change for any external consumer that builds a custom provider. If multi-subscriber support (`onGitStateChange`) is what necessitated moving to the full class, consider extracting a `GitDiffProviderInterface` (or simply re-exporting the expanded `Pick`) so the contract remains structural.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.test.ts",
+      "line_number": 3,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`FSWatcher` (line 1) and `watch` (line 3) are both imported from `'node:fs'` via two separate `import type` statements. These can be consolidated into one:\n```ts\nimport type { FSWatcher, watch } from 'node:fs';\n```\nThis also removes the need for the intermediary `node:fs/promises` import line to be sandwiched between them.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.test.ts",
+      "line_number": 107,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`void callback;` is an unusual idiom to suppress an \"unused variable\" warning. Readers unfamiliar with this pattern may mistake it for an intentional side-effect. The conventional TypeScript approach is to prefix the parameter with an underscore (`_callback`) to signal it is intentionally unused, which most linters and readers recognise without needing an explicit `void` expression.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The generation-counter approach (incrementing `watcherSetupGeneration` on every unsubscribe to invalidate in-flight setup) is a solid pattern for cancellable async workflows, but it means the counter is monotonically increasing and shared across all subscriber sessions. A comment explaining _why_ a generation number is used (rather than a simple boolean `cancelled` flag) would help future maintainers understand the design intent, especially since the watcher lifecycle spans several async methods (`ensureWatchers`, `setupWatchers`, `watchFile`, `configureBranchWatcher`) that all thread the generation through as a parameter.",
+      "index": 6
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `MockGitDiffProvider` class pattern introduced in the tests is cleaner than the previous plain-object mocks, but each test that needs specific mock behavior must call `createMockGitDiffProvider` with a configure callback. Tests that only need default behaviour (empty sets, no-op watchers) use `createMockGitDiffProvider()` with no argument, which is readable. However, the returned `MockGitDiffProvider` instance exposes `getChangedFilesMock`, `getRepoRootMock`, and `onGitStateChangeMock` as public readonly fields; any code with access to the instance can mutate the mock. Marking these as `readonly` is already done, but the naming convention (`*Mock` suffix) and direct access pattern differs from the rest of the test suite's `vi.fn()` usage \u2014 a brief comment explaining the pattern would help new contributors follow it.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.51025435,
+  "duration_seconds": 380.9906396865845
+}

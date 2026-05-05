@@ -1,0 +1,127 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3960,
+  "title": "ASEv4 `Atoms` (based on !3783, !3856, !3857)",
+  "body": "This MR cuts out `Atoms` related parts from !3783, !3856, !3857. Credit to @gelzinyte and @jameskermode.\n\nThe preceding MRs include also the suggestions for ASEv4 calculators.\nFor these, as many parts look the same as the ASEv3 correspondence, we will still need efforts to clean up.\n\nTo proceed step by step, here I cut out the implementation of ASEv4 `Atoms` together with `CalculationResults`.\nThese may be easier to review and I believe 80-90% we all can agree.\nThis is not a suggestion of fixed API; whenever necessary we can update during the ASEv4 development.\n\n@askhl, @ajjackson: Maybe we can chat about this MR in a discussion tomorrow.\n\nRelated to !3941 in the sense that the suggested optimizers should hopefully work with ASE4 `Atoms`.\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [ ] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [ ] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [ ] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [ ] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [ ] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "yuzie007",
+  "merged_at": "2026-04-09T17:45:38.983Z",
+  "base_ref": "master",
+  "merge_commit_sha": "59678a6e220915f4d3e97f9e5a29f39c0faa32e1",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3067647270",
+          "author": "AndrewRosen",
+          "body": "`dict | None = None`",
+          "file_path": "ase/_4/calculators/results.py",
+          "line_number": 47,
+          "commit_sha": "63ff86485e7598c7d94c9cb28fe2ed36efaee7c6",
+          "base_sha": "425030c87d3e14c3d3b4ce5ba15bbbe57101cc52",
+          "created_at": "2026-02-08T16:02:13.237Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3160946488",
+          "author": "gelzinyte",
+          "body": "@yuzie007 Thanks for separating out the `Atoms`-related changes!\n\n@yuzie007, @AndrewRosen anything else before this could be merged to `master`? Not as a finished fixed interface, but as a starting point to build other features on top.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-15T19:17:03.980Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3236256781",
+          "author": "askhl",
+          "body": "I think we need some more formalization of what these things are, what prefixes or suffixes mean.\n\nIf they're for namespacing then we should implement them as namespaces rather than by concatenating strings.\n\nCurrently the implementation will lose information because prefix, name, and suffix are compiled into a single string, but there's no way to split them into tokens again.\n\nEither we should use a separator (e.g. `.`) or we could do a dict of dicts (proper namespace).  Whatever we do, we can implement an API on top that is effectively namespaces.\n\nBut it still smells funny to me that we want complete flexibility while also some things like `numbers` and `positions` are still mandatory.\n\n(In my opinion this is not yet the right time to think about `store()`.)",
+          "file_path": "ase/_4/atoms.py",
+          "line_number": 26,
+          "commit_sha": "4cb8c46fbefc031803a7d7c254817c2729eb15b8",
+          "base_sha": "3b3646d227f223a6e549e7325a00ca865efdaa9c",
+          "created_at": "2026-04-09T15:08:05.701Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3237149046",
+          "author": "yuzie007",
+          "body": "Thank you @askhl for pointing this out! I think I also agree on:\n\n> If they're for namespacing then we should implement them as namespaces rather than by concatenating strings.\n\nSo, for example, this will rather be `def store(self, results: CalculationResults, namespace: str)` with also re-designing `self.arrays` and `self.info` to be accessed somehow like `self.arrays[namespace]['positions']`.\n\nLet's consider this in a follow-up MR!",
+          "file_path": "ase/_4/atoms.py",
+          "line_number": 26,
+          "commit_sha": "4cb8c46fbefc031803a7d7c254817c2729eb15b8",
+          "base_sha": "3b3646d227f223a6e549e7325a00ca865efdaa9c",
+          "created_at": "2026-04-09T17:45:23.315Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3236270000",
+          "author": "askhl",
+          "body": "Maybe we can merge after moving the tests into `ase/test/ase4/...`?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-04-09T15:09:59.258Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3237149117",
+          "author": "yuzie007",
+          "body": "Thank you @askhl for the suggestion! In the revised commit I have moved the tests accordingly.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-04-09T17:45:23.759Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3237149181",
+          "author": "yuzie007",
+          "body": "Thank you @AndrewRosen for the annotation suggestion, @gelzinyte for addressing it, and @askhl for suggesting moving the test directory to run them on the pipelines. With this done, we agreed to merge on today's maintainers' meeting, so I would like to merge now!",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-04-09T17:45:24.078Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 5
+}

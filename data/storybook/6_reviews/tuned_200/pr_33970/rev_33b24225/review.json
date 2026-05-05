@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/LiveRegion.tsx",
+      "line_number": 51,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Using `role=\"status\"` together with `aria-live=\"assertive\"` (when `politeness=\"assertive\"`) is semantically contradictory. The WAI-ARIA spec defines `role=\"status\"` as having an *implicit* `aria-live=\"polite\"`, while `role=\"alert\"` has an implicit `aria-live=\"assertive\"`. Some assistive technologies honour the implicit role semantics rather than the explicit attribute, which can cause assertive announcements to be treated as polite (or ignored). Fix by deriving the role from politeness:\n\n```tsx\nrole={politeness === 'assertive' ? 'alert' : 'status'}\n```\n\nThis also makes `VisibleFormError` story semantically correct when `politeness=\"assertive\"` is used.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/LiveRegion.tsx",
+      "line_number": 55,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`{...rest}` is spread *after* the explicit `role`, `aria-live`, and `aria-atomic` attributes. In JSX, a later prop wins on duplicates, so callers can inadvertently (or deliberately) override the accessibility-critical attributes by passing them in `rest`. To prevent accidental misuse, either spread `rest` *before* the explicit attrs, or explicitly omit them from `rest` via destructuring: `const { role: _role, 'aria-live': _al, 'aria-atomic': _aa, ...safeRest } = rest`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/LiveRegion.tsx",
+      "line_number": 67,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`export const announce: typeof ariaAnnounce = ariaAnnounce;` is an unnecessarily verbose re-export. Since `ariaAnnounce` is already imported under the alias `ariaAnnounce` purely to avoid a name conflict, a simpler alternative is to use a named re-export directly:\n\n```ts\nexport { announce } from '@react-aria/live-announcer';\n```\n\nThis removes the intermediate import alias and the redundant variable declaration.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/LiveRegion.tsx",
+      "line_number": 98,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`useState` is called after `useEffect`, which is an unusual ordering \u2014 convention is to declare all state at the top of the hook before effects. While React's rules of hooks only require *consistent* ordering across renders, placing state declarations after effects makes the data-flow harder to follow. Consider reordering so both `useRef` and `useState` appear before `useEffect`, and include a brief comment explaining why `useState` (rather than, say, a plain `useRef`) is used to expose a stable callback identity.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/toHaveLiveRegion.ts",
+      "line_number": 68,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`candidateDetails` is computed eagerly via `Array.from(candidates).map(...).join('\\n')` regardless of whether `pass` is `true` or `false`. Since `message` is itself a lazy function, the details string should be computed inside it so it's only evaluated on the failure path:\n\n```ts\nreturn {\n  pass,\n  message: () => {\n    const candidateDetails = Array.from(candidates)\n      .map(el => { ... })\n      .join('\\n');\n    return pass\n      ? `Expected container NOT to have...`\n      : `Expected container to have...\\n${candidateDetails || '  (none)'}`;\n  },\n};\n```",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/components/index.ts",
+      "line_number": 136,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`toHaveLiveRegion` is a Vitest/Jest custom matcher (a test utility) being exported from the main production components barrel alongside runtime components. Test utilities are generally consumed only in test files and don't belong in a production bundle. Consider exporting it from a dedicated test-only entry point (e.g. `storybook/internal/components/test`) so consumers importing it can do so explicitly without paying the cost of importing it in non-test contexts, and so the production API surface stays clean.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/LiveRegion.stories.tsx",
+      "line_number": 59,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `DynamicUpdates` play function verifies DOM text content updates but does not assert that an announcement was actually made to assistive technology. Given the PR explicitly introduces `extend-to-be-announced` for this purpose and frames these stories as demonstrating live-region behaviour, the play function should include a `toBeAnnounced` assertion (once the `extend-to-be-announced` setup is in place) to make the story a meaningful regression guard for screen-reader users, not just a DOM-state check.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/LiveRegion.stories.tsx",
+      "line_number": 107,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `VisibleFormError` story uses `politeness: 'assertive'` in its args but queries the live region via `canvas.getByRole('status')`. `role=\"status\"` has an implicit ARIA politeness of `polite`; for assertive politeness the correct implicit role is `alert`. This will become a real mismatch once issue #1 (the `role` being hardcoded to `\"status\"`) is fixed \u2014 the query would need to change to `getByRole('alert')`. Updating this story in the same PR as the component fix avoids a broken story.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The PR description and the diff are substantially out of sync. The description prominently details: (1) `extend-to-be-announced` being added as a devDependency and registered in `code/.storybook/storybook.setup.ts`; (2) `announce()` integration in the vitest addon's `TestProviderRender` component; (3) three new `TestProviderRender` stories using `toBeAnnounced` assertions. None of these appear in the diff. The diff only contains the standalone `LiveRegion` component, its stories, and its test file. If the `TestProviderRender` changes are intentionally left to a follow-up PR, the description should say so; if they are missing by mistake, they need to be included before merge.",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `LiveRegion` component exposes three separate public APIs layered on top of `@react-aria/live-announcer`: the declarative `<LiveRegion>` component, the `announce` / `clearAnnouncer` / `destroyAnnouncer` imperative functions, and the `useAnnouncer` hook. The main `index.ts` exports all of them, but the intended use cases and the relationship between them are only documented at the individual symbol level. A short module-level JSDoc block or an inline comment in `index.ts` grouping these three APIs and explaining when to reach for each (declarative DOM rendering vs. one-shot imperative announcement vs. hook-bound announcer) would help consumers pick the right tool without reading the implementation.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.48248510000000006,
+  "duration_seconds": 334.4566798210144
+}

@@ -1,0 +1,160 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyDiagram.ts",
+      "line_number": 2,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`// @ts-ignore: JISON parser lacks type declarations` is factually wrong \u2014 `wardleyParser.ts` is a hand-written TypeScript module with proper type declarations, not a Jison-generated file. Per project rules, `@ts-ignore` should be replaced with `// @ts-expect-error: <precise reason>`. Better yet, since `wardleyParser.ts` exports a typed `ParserDefinition`, the suppression may not be needed at all. Remove or correct the comment.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyDiagram.ts",
+      "line_number": 11,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Per project conventions, diagram definition objects should omit optional properties that are not yet implemented rather than filling them with empty stubs. `styles: () => ''` contributes nothing and should be removed. If styles are needed later, add a real implementation then.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyDetector.ts",
+      "line_number": 10,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `/i` flag makes detection case-insensitive (`WARDLEY`, `Wardley`, etc. all match). Every other diagram detector in the project (pie, radar, treemap, gantt, etc.) uses a case-sensitive regex. Remove the `/i` flag to stay consistent with the project convention: `return /^\\s*wardley/.test(text);`.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 28,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`themeVariables.wardley` is not defined in any of Mermaid's built-in theme files (`theme-default.js`, `theme-dark.js`, `theme-forest.js`, `theme-neutral.js`, `theme-base.js`). Every `themeVariables.wardley?.xxx` access will always produce `undefined`, silently falling back to the hardcoded defaults. Theme customization for Wardley Maps is non-functional as written. The Wardley-specific colour variables must be added to each of the five theme files before these expressions are meaningful.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 502,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`const height = configValues.nodeRadius * 4;` inside the pipeline `forEach` callback shadows the outer `height` variable (canvas height, defined around line 76). ESLint's `no-shadow` rule should catch this. Rename it to `pipelineBoxHeight` to eliminate the ambiguity and prevent accidental use of the wrong value.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 648,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The link endpoint calculations compute `const distance = Math.sqrt(dx * dx + dy * dy)` and then immediately divide by it: `(dx / distance) * radius`. When a source and target node share the exact same projected position, `distance` is `0`, producing `NaN` for all four endpoint attributes and rendering the link as invisible garbage. Add a guard before the division: `if (distance === 0) { /* skip rendering or return source position */ }`.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 808,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`textNode.getComputedTextLength()` and `textNode.getBBox()` are live-DOM APIs. They return `0` in jsdom (used by Vitest) and throw or produce incorrect results in server-side rendering contexts. This means the annotation box is always incorrectly sized outside a real browser. Use the project's existing utilities \u2014 `computeWidthOfText` / `computeDimensionOfText` from `packages/mermaid/src/rendering-util/createText.ts` \u2014 which handle the correct SVG font-metric context and clean up after themselves.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 815,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`const boxWidth = maxWidth + padding * 2 + 105;` \u2014 the literal `105` is an unexplained magic number. Extract it to a named constant with a comment explaining what it accounts for, e.g. `const ANNOTATION_TEXT_SAFETY_BUFFER = 105; // extra space for annotation number prefix and icon`. Without explanation, future maintainers have no idea whether this value is empirical, a font-metric constant, or arbitrary.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyRenderer.ts",
+      "line_number": 740,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`const textElements: any[] = [];` uses `any[]`. Give it an explicit D3 selection type (e.g., `d3.Selection<SVGTextElement, unknown, SVGGElement, unknown>[]`) or at minimum `SVGTextElement[]` so downstream accesses like `.node()` are type-safe.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyParser.ts",
+      "line_number": 700,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The dual-scale heuristic `visibility <= 1.0 ? visibility * 100 : visibility` has a silent gap: any value in the range `(1.0, 100.0)` passes the `<=1.0` check as false, falls through to the raw-value path, and then passes the `> 100` range guard. For example, `[1.5, 0.5]` is accepted with `visibility=1.5` mapped to the 1.5% Y-position \u2014 almost certainly an invalid user input (150% on the 0\u20131 scale) that should produce an error. Consider rejecting any value strictly between `1.0` and `100.0`, or simplifying to accept only the 0\u20131 range as documented.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyParser.ts",
+      "line_number": 208,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `visibility` and `value-chain` axis keywords always hardcode the Y-axis label to `'Visibility'` regardless of any text that follows the keyword. If a user writes `value-chain My Custom Y Axis`, the custom label is silently discarded. Implement label extraction analogous to the `x-axis` handler above it: `const label = line.slice('value-chain'.length).trim(); if (label) db.updateAxes({ yLabel: label });`.",
+      "index": 10
+    },
+    {
+      "file_path": "packages/mermaid/src/docs/syntax/wardley.md",
+      "line_number": 1,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The source documentation file hard-codes `(v11.0.0+)`. Per project rules, source files under `packages/mermaid/src/docs/` must use the placeholder `(v<MERMAID_RELEASE_VERSION>+)`, which the docs build pipeline substitutes automatically. The currently committed generated file `docs/syntax/wardley.md` therefore also has the hardcoded version, making both stale as of the next release.",
+      "index": 11
+    },
+    {
+      "file_path": "packages/mermaid/src/docs/syntax/wardley.md",
+      "line_number": 139,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The documentation lists `(build)` as \"Triangle symbol\", `(buy)` as \"Diamond symbol\", and `(outsource)` as \"Square symbol\". The renderer in `wardleyRenderer.ts` renders all three as circles with different fill colours (`#eee`, `#ccc`, and `#666` respectively) \u2014 not triangles, diamonds, or squares. `(market)` is listed as \"Circle\" and is the only one that matches. This is a significant accuracy issue. Either update the docs to describe what is actually rendered (circles with varying fills), or update the renderer to produce the documented shapes. Note that the original OWM tool uses different conventions (triangle = build, diamond = outsource, square = buy).",
+      "index": 12
+    },
+    {
+      "file_path": "packages/mermaid/src/config.type.ts",
+      "line_number": 1625,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`packages/mermaid/src/config.type.ts` is auto-generated from `packages/mermaid/src/schemas/config.schema.yaml` and must not be edited by hand. The `WardleyDiagramConfig` interface added here is correct in the YAML schema, but the TypeScript file must be regenerated via the project's build script rather than written manually. Manually edited entries in this file will be overwritten the next time the generator runs and may diverge from the schema.",
+      "index": 13
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyParser.spec.ts",
+      "line_number": 9,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The spec is missing test cases for diagram metadata fields. Per project requirements, diagram unit tests must explicitly cover `getDiagramTitle`, `getAccTitle`, and `getAccDescription`. Add tests that parse `title`, `accTitle:`, and `accDescr:` directives and assert the corresponding DB getter returns the expected value. Without these, screen-reader accessibility features are untested.",
+      "index": 14
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/wardley/wardleyBuilder.ts",
+      "line_number": 165,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`nodes.push(node as Required<WardleyNode>)` is a misleading cast. `Required<WardleyNode>` claims every field is non-optional, but optional fields like `className`, `labelOffsetX`, `inPipeline`, etc. remain `undefined` at runtime \u2014 the cast only silences TypeScript without enforcing anything. The renderer already handles `undefined` optionals, so the cast adds false confidence without safety. Remove the cast and widen the return type to accept `WardleyNode[]` directly.",
+      "index": 15
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`demos/wardley.html` is not registered in `demos/index.html`. Per project conventions, every new demo page must be linked from the demo index so it appears in the demo navigation. Without a link, the demo is effectively hidden from developers browsing the demo suite.",
+      "index": 16
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `wardleyDb.ts` module maintains state via a module-level `const builder = new WardleyBuilder()`. Per project conventions for functional-export DB modules, mutable state should use the `ImperativeState` utility from `packages/mermaid/src/utils/imperativeState.ts`. This ensures state is re-read from `getConfig()` and reset correctly between diagrams and aligns with the pattern used by other functional DB modules in the codebase.",
+      "index": 17
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `draw` function in `wardleyRenderer.ts` is approximately 1,000 lines long. Per project maintainability conventions (and basic good practice), it should be decomposed into focused helpers: e.g., `renderAxes`, `renderLinks`, `renderNodes`, `renderAnnotations`, `renderNotes`, `renderAccelerators`. Large monolithic render functions are difficult to test, review, and debug.",
+      "index": 18
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `slugify` function can produce colliding IDs for different component labels \u2014 e.g., \"API Gateway\" and \"api-gateway\" both slugify to `api_gateway`. When this happens, `WardleyBuilder.addNode` merges the two entries using the later call's data, silently overwriting the earlier component's coordinates with no warning. A collision check (or a uniqueness guard) should be added, or the slug should incorporate a counter to guarantee uniqueness.",
+      "index": 19
+    }
+  ],
+  "cost_usd": 1.0867649000000004,
+  "duration_seconds": 679.4131500720978
+}

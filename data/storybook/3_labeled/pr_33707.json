@@ -1,0 +1,145 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33707,
+  "title": "Docs: Edit JSON button is now accessible at 320x256 viewport (WCAG 2.1 Reflow test)",
+  "body": "Closes #24149 \r\n\r\nEdit JSON button is now accessible at 320x256 viewport (WCAG 2.1 Reflow test).                                                                                           \r\n                                                                                                                                                                                            \r\n  ## Changes Made                                                                                                                                                                           \r\n  - Added EditIcon to the Edit JSON button                                                                                                                                                  \r\n  - Changed button layout from position:absolute to flex layout                                                                                                                             \r\n  - Added media query to hide text on screens < 400px, showing only icon                                                                                                                    \r\n                                                                                                                                                                                            \r\n  ## Related Issue                                                                                                                                                                          \r\n  Fixes #24149                                                                                                                                                                              \r\n                                                                                                                                                                                            \r\n  ## Checklist                                                                                                                                                                              \r\n  - [x] Code compiles without errors                                                                                                                                                        \r\n  - [x] TypeScript check passes                                                                                                                                                             \r\n  - [x] Lint passes \r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Edit button now shows an icon alongside its label for clearer affordance.\n  * Added small-viewport examples demonstrating control behavior on narrow screens.\n\n* **Style**\n  * Button label hides on very small screens while keeping the icon visible for better mobile usability.\n  * Controls reflow vertically on narrow screens with adjusted spacing and alignment.\n\n* **Accessibility**\n  * Improved handling of hidden labels to better support assistive technologies.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "TheSeydiCharyyev",
+  "merged_at": "2026-03-02T16:14:03Z",
+  "base_ref": "next",
+  "merge_commit_sha": "9cbeb3bdbd8d7721dfc5f32e18d8bf2473e8eab8",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "b4ba7cde9f7acc0c9c8e55ce3c1c8778949e8cfa",
+    "1129728258744ad762944c5e93ea0641dc37f7b5"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6omAzE",
+          "author": "Sidnioulz",
+          "body": "Could you also add a container query?, and then add the below media query as a backup for users without container query support?\n\n```ts\nimport { css } from 'storybook/theming'\n\nconst styles = css`\n  @supports (container-type: inline-size) {\n    container-type: inline-size;\n\n    @container (max-width: 400px) {\n      // your css here\n    }\n  }\n`\n```\n\nThis will help the change happen more often when needed.",
+          "file_path": "code/addons/docs/src/blocks/controls/Object.tsx",
+          "line_number": 131,
+          "start_line": null,
+          "commit_sha": "310a764cb72752fa51170f7c45aae0deee1c3ebc",
+          "created_at": "2026-02-19T15:29:31Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment suggests adding container queries as a more appropriate and robust approach to responsive layout, improving the structural quality of the CSS/styling solution."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly requests adding a container query alongside the media query, with a concrete code example showing how to implement it."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6omFEW",
+          "author": "Sidnioulz",
+          "body": "We can't entirely hide the text, or screen readers will fail to properly announce the edit button.\n\nWe have a `sb-sr-only` class available in `code/core/src/theming/global.ts`. Could you try to export the `CSSObject` defined for that class and then to inject it to your style here?\n\ne.g.\n\n```ts\nimport { srOnlyStyles } from '../../../ ... ' // or maybe from 'storybook/theming';\n\n'@media (max-width: 400px)': {\n  // ...\n  '& > span': srOnlyStyles,\n}\n```\n\n@ndelangen would you object to us exporting our screenreader-only class in `storybook/theming` to simplify this kind of use case? It's definitely a piece of code we'll keep very long term, and one which we're unlikely to ever need to adjust.",
+          "file_path": "code/addons/docs/src/blocks/controls/Object.tsx",
+          "line_number": 136,
+          "start_line": null,
+          "commit_sha": "310a764cb72752fa51170f7c45aae0deee1c3ebc",
+          "created_at": "2026-02-19T15:32:46Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "Completely hiding text visually breaks screen reader accessibility, meaning the code's behavior deviates from the intended accessible UX. The fix involves using sr-only styles to preserve screen reader announcements while hiding text visually."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags an accessibility issue with hiding text from screen readers and requests a specific fix using the `sb-sr-only` / `srOnlyStyles` approach, with a code example."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6p-gGL",
+          "author": "Sidnioulz",
+          "body": "There's a specific size where shenanigans like this happen because you set flex direction only on media width and not container width. I've removed the column direction entirely in my commit.\n\n<img width=\"424\" height=\"177\" alt=\"Image\" src=\"https://github.com/user-attachments/assets/2aa08e88-0117-42a2-9bc0-2940bba51b25\" />\n\n",
+          "file_path": "code/addons/docs/src/blocks/controls/Object.tsx",
+          "line_number": 32,
+          "start_line": null,
+          "commit_sha": "46702456ae38aeb969a7f7805f725c6941b10343",
+          "created_at": "2026-02-25T09:05:48Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The flex direction was only applied conditionally on media width but not container width, causing layout issues at certain viewport sizes \u2014 a logic/condition error in the responsive styling implementation."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a visual layout bug caused by setting flex direction only on media width and not container width, and notes a fix was applied \u2014 implying the original code needs to be changed."
+    }
+  ],
+  "review_thread_count": 4,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6p-xo_",
+            "author": "Sidnioulz",
+            "body": "I've played a bit with your branch and taken the freedom to push a commit that aligns the button slightly closer to the original position. Please have a look!",
+            "file_path": "code/addons/docs/src/blocks/controls/Object.tsx",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "46702456ae38aeb969a7f7805f725c6941b10343",
+            "created_at": "2026-02-25T09:20:37Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6p-16z",
+            "author": "Sidnioulz",
+            "body": "<img width=\"489\" height=\"258\" alt=\"image\" src=\"https://github.com/user-attachments/assets/6072a8d1-c1d3-46de-bb28-b0b2bfcc9da1\" />\r\n",
+            "file_path": "code/addons/docs/src/blocks/controls/Object.tsx",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "46702456ae38aeb969a7f7805f725c6941b10343",
+            "created_at": "2026-02-25T09:24:04Z",
+            "is_outdated": true
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "This is a status/meta comment informing the author that the reviewer pushed a commit adjusting button alignment. It asks the author to review it but does not itself request a code change."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 4,
+    "stage1_kept": 4,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1
+  }
+}

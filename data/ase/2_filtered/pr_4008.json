@@ -1,0 +1,144 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 4008,
+  "title": "Add writers for MDL Molfile V2000 based MOL and SDF formats",
+  "body": "**When merged this MR will:**\n- Add ability to write MOL and SDF file formats. The following data gets serialized:\n  - Symbols and coordinates of `Atom`.\n  - `Atom::mass` converted to mass number if mass differs from default value.\n  - Optional title and comment lines.\n  - Bonds from optional connectivity via adjacency numpy array.\n- Factor out comment validation of xyz formats.\n- Factor out connectivity to bonds conversion of xsd and xtd formats.\n- Apply ruff formatting to MOL/SDF-related script files.\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [x] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [x] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [x] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [~] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "SebastianWellig",
+  "merged_at": "2026-03-04T18:22:38.651Z",
+  "base_ref": "master",
+  "merge_commit_sha": "0f25fae9585b5cc5094421e02a6262f6252cbd37",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3129808168",
+          "author": "yuzie007",
+          "body": "Maybe matter of preference, but I would re-write as\n```python\n    positions = atoms.get_positions()\n    chemical_symbols = atoms.get_chemical_symbols()\n    assert chemical_symbols == ['O'] * 2 + ['N'] * 4 + ['C'] * 8 + ['H'] * 10\n    assert positions[0] == pytest.approx((0.4700, 2.5688, 0.0006))\n    assert positions[-1] == pytest.approx((-2.9346, 2.1021, -0.8849))\n```",
+          "file_path": "ase/test/fio/test_sdf.py",
+          "line_number": 82,
+          "commit_sha": "42a772d6f77ffb81ae640c275782768339124341",
+          "base_sha": "d21d2a17359ce033c6cff497a09f04fa39a10849",
+          "created_at": "2026-03-04T04:49:30.636Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3130827024",
+          "author": "SebastianWellig",
+          "body": "> `    assert chemical_symbols == ['O'] * 2 + ['N'] * 4 + ['C'] * 8 + ['H'] * 10`\n\nAgreed, this is much cleaner.\n\n> `    assert positions[-1] == pytest.approx((-2.9346, 2.1021, -0.8849))`\n\n~~It exceeds the line length, which is why the ruff formatter wrapped it.~~",
+          "file_path": "ase/test/fio/test_sdf.py",
+          "line_number": 82,
+          "commit_sha": "42a772d6f77ffb81ae640c275782768339124341",
+          "base_sha": "d21d2a17359ce033c6cff497a09f04fa39a10849",
+          "created_at": "2026-03-04T11:44:40.101Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a specific code rewrite for the test assertions, providing concrete alternative code."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3129808174",
+          "author": "yuzie007",
+          "body": "I would probably use `write_sdf` and `read_sdf` directly; then we can just provide an `io.StringIO` object (cf. `ase/test/fio/test_extxyz.py::test_iread_xyz` etc.), without making `1.sdf` in the present directly.\n\nOr, we should use pytest `tmp_path` e.g.\n```python\ndef test_write_and_read_sdf(tmp_path) -> None:\n    ...\n    path = tmp_path / \"1.sdf\"\n    write(path, atoms0, ...)\n    atoms1 = read(path)\n    ...\n```",
+          "file_path": "ase/test/fio/test_sdf.py",
+          "line_number": 79,
+          "commit_sha": "e7e0b8b51d877e597282ab219c778a0f39ac70c6",
+          "base_sha": "d21d2a17359ce033c6cff497a09f04fa39a10849",
+          "created_at": "2026-03-04T04:49:31.040Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3130912472",
+          "author": "SebastianWellig",
+          "body": "Went for the `StringIO` approach",
+          "file_path": "ase/test/fio/test_sdf.py",
+          "line_number": 79,
+          "commit_sha": "e7e0b8b51d877e597282ab219c778a0f39ac70c6",
+          "base_sha": "d21d2a17359ce033c6cff497a09f04fa39a10849",
+          "created_at": "2026-03-04T12:16:50.189Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests using `write_sdf`/`read_sdf` with `io.StringIO` or pytest's `tmp_path` fixture instead of writing a file to the current directory, with concrete example code."
+    }
+  ],
+  "review_thread_count": 4,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3129808182",
+            "author": "yuzie007",
+            "body": "Thank you so much @SebastianWellig for the addition of many writers! This will allow us to add roundtrip tests and improve self-containedness of ASE.\n\nWhile I have nothing to add regarding functionality, I made a few minor suggestions on tests. Could you have a look and, if you find reasonable, make corresponding changes? Then we can merge this MR.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-04T04:49:31.406Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Meta-discussion about the PR review process and merging strategy; acknowledges the work and asks the author to review suggestions already made in other comments."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3132221118",
+            "author": "yuzie007",
+            "body": "Thank you @SebastianWellig for the update! I am going to merge :smile:",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-03-04T18:22:11.154Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment and status update indicating the PR will be merged; no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 4,
+    "stage1_kept": 4,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 2,
+    "stage3_cost_usd": 0.0162955
+  }
+}

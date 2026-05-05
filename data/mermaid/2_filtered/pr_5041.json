@@ -1,0 +1,316 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 5041,
+  "title": "Feature/4935 subgraph title margin config option",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nAdds the option to introduce top and/or bottom margins for subgraphs title.\r\n\r\nResolves #4935 \r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nThe approach is to increase height of subgraphs while keeping its children centered. Doing so creates space to move the\r\nlabel down which creates the margin. The label only moves down by the value provided for top margin, and everything else moves by the sum of top + bottom margins.\r\n\r\nThe height of the subgraph is increased by `2 * total margin` because of how the `y axis` is calculated for nodes.\r\n`y = node.y - height/2` means that if height is increased by twice the margin, the node will move up by the value of total margin, which is compensated in the code with `node.y + total margin`, returning the node to the center of its parent.\r\n\r\nIn the code, I chose to move the `y axis` of clusters themselves, that way everything inside of the cluster also moves, atleast that's what I understood from the code, so I went for that route for simplicity, other options would require me to also move every child node and edges inside each cluster.\r\n\r\nThis approach fails if a cluster has external connections, since it is considered a normal node with children, meaning it can't be repositioned as a cluster, from what I attempted, interacting with its `y axis` only moves its rectangle and not the whole node. I might be missing something, but from my understanding, all of its child nodes and externally connected nodes have to be repositioned along with every related edge individually. For this reason I asked in #4935 if title margins for this case could be moved to a new separate issue.\r\n\r\nIn summary, if I want to add 10 margin for top and 5 for bottom. I increase height by 30 (15x2), keep children centered, and move subgraph label down by 10 (only top margin):\r\n![image](https://github.com/mermaid-js/mermaid/assets/31048764/3f5b8137-2a1b-4a50-80f9-49efc5f16013)\r\n\r\nI didn't add anything to the docs since I couldn't find how exactly it works with config changes. I looked around in the code and assumed config docs are generated automatically based on types.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n- [ ] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/docs/community/development.md#3-update-documentation) is used for all new features.\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "mathbraga",
+  "merged_at": "2023-11-28T12:15:17Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "252a8a73b13647bec92c0ae1e32e5ee932be1b54",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "1564358421147017590b5fdd6b715f99ca78d526",
+    "5718be50ee9e10c38e84688da5ee692424ca24fa"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TWJbp",
+          "author": "sidharthv96",
+          "body": "For consistency, we always use `??` instead of `||` for default fallbacks as `||` could lead to bugs in certain cases.\r\n\r\n```suggestion\r\n  const subGraphTitleTopMargin = getConfig().flowchart?.subGraphTitleMargin?.top ?? 0;\r\n  const subGraphTitleBottomMargin = getConfig().flowchart?.subGraphTitleMargin?.bottom ?? 0;\r\n```",
+          "file_path": "packages/mermaid/src/utils/getSubGraphTitleMargins.ts",
+          "line_number": 9,
+          "start_line": null,
+          "commit_sha": "5718be50ee9e10c38e84688da5ee692424ca24fa",
+          "created_at": "2023-11-19T03:13:23Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TWJfQ",
+          "author": "sidharthv96",
+          "body": "Can you also remove the duplicate call to getConfig()?\r\n\r\n```suggestion\r\n  const { flowchart } = getConfig();\r\n  const subGraphTitleTopMargin = flowchart?.subGraphTitleMargin?.top ?? 0;\r\n  const subGraphTitleBottomMargin = flowchart?.subGraphTitleMargin?.bottom ?? 0;\r\n```\r\n\r\nOr even better, make config a parameter to the function, the config is already available from your callsites, so we can pass it in here, eliminating the call altogether. ",
+          "file_path": "packages/mermaid/src/utils/getSubGraphTitleMargins.ts",
+          "line_number": 9,
+          "start_line": null,
+          "commit_sha": "5718be50ee9e10c38e84688da5ee692424ca24fa",
+          "created_at": "2023-11-19T03:17:11Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TcNps",
+          "author": "mathbraga",
+          "body": "I added the parameter as a destructered `{ flowchart }` that will come if passing `getConfig()` as argument when calling the function.",
+          "file_path": "packages/mermaid/src/utils/getSubGraphTitleMargins.ts",
+          "line_number": 9,
+          "start_line": null,
+          "commit_sha": "5718be50ee9e10c38e84688da5ee692424ca24fa",
+          "created_at": "2023-11-21T00:49:11Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly requests replacing || with ?? for default fallbacks, with a code suggestion provided."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TWJc0",
+          "author": "sidharthv96",
+          "body": "This should be moved into the function, otherwise it'll cause bugs when multiple diagrams are rendered.",
+          "file_path": "packages/mermaid/src/dagre-wrapper/index.js",
+          "line_number": 18,
+          "start_line": null,
+          "commit_sha": "5718be50ee9e10c38e84688da5ee692424ca24fa",
+          "created_at": "2023-11-19T03:15:09Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TWhtu",
+          "author": "mathbraga",
+          "body": "The reason I put this here was because the recursive calls would keep calling `getSubGraphTitleMargins()` unnecessarily. But if it causes bugs, then I think there's no option, I'll put it back in.",
+          "file_path": "packages/mermaid/src/dagre-wrapper/index.js",
+          "line_number": 18,
+          "start_line": null,
+          "commit_sha": "5718be50ee9e10c38e84688da5ee692424ca24fa",
+          "created_at": "2023-11-19T14:44:07Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TWiLo",
+          "author": "sidharthv96",
+          "body": "If you add the config as parameter, then that call shouldn't be a big issue. \n\nhttps://github.com/mermaid-js/mermaid/pull/5041#discussion_r1398314960",
+          "file_path": "packages/mermaid/src/dagre-wrapper/index.js",
+          "line_number": 18,
+          "start_line": null,
+          "commit_sha": "5718be50ee9e10c38e84688da5ee692424ca24fa",
+          "created_at": "2023-11-19T14:56:11Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TcNrp",
+          "author": "mathbraga",
+          "body": "Done.",
+          "file_path": "packages/mermaid/src/dagre-wrapper/index.js",
+          "line_number": 18,
+          "start_line": null,
+          "commit_sha": "5718be50ee9e10c38e84688da5ee692424ca24fa",
+          "created_at": "2023-11-21T00:49:28Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests moving code inside a function to prevent bugs with multiple diagram rendering."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TWJkh",
+          "author": "sidharthv96",
+          "body": "Would prefer this in `utils/subGraphTitleMargins.spec.ts` instead.\r\n`utils.spec.ts` is overcrowded now, and there's a plan to split it up. \r\n\r\nAlso, please rename the file `getSubGraphTitleMargins.ts` => `subGraphTitleMargins.ts`",
+          "file_path": "packages/mermaid/src/utils.spec.ts",
+          "line_number": 618,
+          "start_line": null,
+          "commit_sha": "5718be50ee9e10c38e84688da5ee692424ca24fa",
+          "created_at": "2023-11-19T03:21:21Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TcN34",
+          "author": "mathbraga",
+          "body": "Done.",
+          "file_path": "packages/mermaid/src/utils.spec.ts",
+          "line_number": 618,
+          "start_line": null,
+          "commit_sha": "5718be50ee9e10c38e84688da5ee692424ca24fa",
+          "created_at": "2023-11-21T00:51:01Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests moving tests to a different file and renaming a file."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TWJs7",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n      `translate(${node.x - bbox.width / 2}, ${node.y - node.height / 2 + subGraphTitleTopMargin})`\r\n```",
+          "file_path": "packages/mermaid/src/dagre-wrapper/clusters.js",
+          "line_number": 76,
+          "start_line": null,
+          "commit_sha": "5718be50ee9e10c38e84688da5ee692424ca24fa",
+          "created_at": "2023-11-19T03:27:22Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TcN5Z",
+          "author": "mathbraga",
+          "body": "Done.",
+          "file_path": "packages/mermaid/src/dagre-wrapper/clusters.js",
+          "line_number": 76,
+          "start_line": null,
+          "commit_sha": "5718be50ee9e10c38e84688da5ee692424ca24fa",
+          "created_at": "2023-11-21T00:51:16Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Provides a direct code suggestion for a change in clusters.js."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TWJt7",
+          "author": "sidharthv96",
+          "body": "String templates here too.",
+          "file_path": "packages/mermaid/src/dagre-wrapper/clusters.js",
+          "line_number": 82,
+          "start_line": null,
+          "commit_sha": "5718be50ee9e10c38e84688da5ee692424ca24fa",
+          "created_at": "2023-11-19T03:29:02Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TcN6D",
+          "author": "mathbraga",
+          "body": "Done.",
+          "file_path": "packages/mermaid/src/dagre-wrapper/clusters.js",
+          "line_number": 82,
+          "start_line": null,
+          "commit_sha": "5718be50ee9e10c38e84688da5ee692424ca24fa",
+          "created_at": "2023-11-21T00:51:22Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests using string templates (template literals) in the code."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TcUVx",
+          "author": "sidharthv96",
+          "body": "getConfig() is already called multiple times in this function. You can replace those calls by a single call at the top of the function, and passing the results in the other places. ",
+          "file_path": "packages/mermaid/src/dagre-wrapper/clusters.js",
+          "line_number": 67,
+          "start_line": null,
+          "commit_sha": "5718be50ee9e10c38e84688da5ee692424ca24fa",
+          "created_at": "2023-11-21T01:41:16Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TwWZh",
+          "author": "mathbraga",
+          "body": "Done, I named the const `siteConfig`, is that an okay name? I avoided something generic like `config` since it already exists in the js default library.",
+          "file_path": "packages/mermaid/src/dagre-wrapper/clusters.js",
+          "line_number": 67,
+          "start_line": null,
+          "commit_sha": "5718be50ee9e10c38e84688da5ee692424ca24fa",
+          "created_at": "2023-11-25T17:40:28Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests consolidating multiple getConfig() calls into a single call at the top of the function."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TcUcA",
+          "author": "sidharthv96",
+          "body": "You can replace it here also. ",
+          "file_path": "packages/mermaid/src/dagre-wrapper/clusters.js",
+          "line_number": 180,
+          "start_line": null,
+          "commit_sha": "5718be50ee9e10c38e84688da5ee692424ca24fa",
+          "created_at": "2023-11-21T01:42:04Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests replacing another getConfig() call as part of the consolidation effort."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TxRzu",
+          "author": "sidharthv96",
+          "body": "Can you move this getConfig out of this recursive function? \r\nYou can make it a parameter of recursiveRender and pass it from render function in this file, or add it as a parameter of the render function and pass the config from it's 3 callsites, where it is already available. ",
+          "file_path": "packages/mermaid/src/dagre-wrapper/index.js",
+          "line_number": 106,
+          "start_line": null,
+          "commit_sha": "5718be50ee9e10c38e84688da5ee692424ca24fa",
+          "created_at": "2023-11-26T16:09:50Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85T3JKK",
+          "author": "mathbraga",
+          "body": "Done, went with your first suggestion.",
+          "file_path": "packages/mermaid/src/dagre-wrapper/index.js",
+          "line_number": 106,
+          "start_line": null,
+          "commit_sha": "5718be50ee9e10c38e84688da5ee692424ca24fa",
+          "created_at": "2023-11-28T01:21:29Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests moving getConfig() out of a recursive function, with specific suggestions on how to refactor."
+    }
+  ],
+  "review_thread_count": 8,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 8,
+    "stage1_kept": 8,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

@@ -1,0 +1,317 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3797,
+  "title": "Add support to parse general triclinic boxes in `read_lammps_data`, `read_lammps_dump_text`, and `read_lammps_dump_binary`",
+  "body": "Closes #1723 \n\nSince the [Feature release 17 April 2024](https://github.com/lammps/lammps/releases/tag/patch_17Apr2024), LAMMPS supports parsing general triclinic boxes, as done in most periodic DFT codes.\nThis MR adds supports for parsing the general triclinic boxes in `read_lammps_data`, `read_lammps_dump_text`, and `read_lammps_dump_binary`.\n\nThe substantial changes are as follows:\n\n- 39bc5945a843160f13e02e263b43b3694ffd7da7: Support in `read_lammps_data`\n- 986f52c06c13a5c676fa23994a536a5ed6c7c8de: Support in `read_lammps_dump_text`\n- 994a27b6a7fe6fdaaba4d011b8bafb7b73b65875: Support in `read_lammps_dump_binary`\n\nTests are added for `read_lammps_data` and `read_lammps_dump_text`. For `read_lammps_dump_binary`, it may be a bit challenging to prepare binary files for testing, and indeed now this function is tested only via `LAMMPS` calculator. At least the existing tests are passed, and I checked locally the modified code could parse my small test case.\n\nTaking this opportunity some relevant files are formatted with Ruff.\n\nWe can in principle also support writing general tricilinic boxes in `write_lammps_data`. This however requires a new argument to control it and a bit larger modification for handling vector-property rotations, so I would like to separate it into another MR.\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [~] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [x] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [x] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [x] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "yuzie007",
+  "merged_at": "2025-08-28T14:21:45.177Z",
+  "base_ref": "master",
+  "merge_commit_sha": "b11fbb9d6007ae0565c75d2b009a27e29f098fc7",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2715335840",
+          "author": "ajjackson",
+          "body": "Are these LAMMPS default values, or just placeholders?",
+          "file_path": "ase/io/lammpsdata.py",
+          "line_number": 88,
+          "commit_sha": "09dd444ae003c8ada39a83b1718dbbe468a31f35",
+          "base_sha": "0b1249c5f17ab94fd9f154cb356d85a26efd1a79",
+          "created_at": "2025-08-28T12:22:32.459Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2715617109",
+          "author": "yuzie007",
+          "body": "Yes, as stated in https://docs.lammps.org/read_data.html.\n(This is commented in Line 78 in the above source code:))",
+          "file_path": "ase/io/lammpsdata.py",
+          "line_number": 88,
+          "commit_sha": "09dd444ae003c8ada39a83b1718dbbe468a31f35",
+          "base_sha": "0b1249c5f17ab94fd9f154cb356d85a26efd1a79",
+          "created_at": "2025-08-28T13:38:17.868Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2715797458",
+          "author": "ajjackson",
+          "body": "Ahhh, _just_ out of the gitlab diff preview :laughing:",
+          "file_path": "ase/io/lammpsdata.py",
+          "line_number": 88,
+          "commit_sha": "09dd444ae003c8ada39a83b1718dbbe468a31f35",
+          "base_sha": "0b1249c5f17ab94fd9f154cb356d85a26efd1a79",
+          "created_at": "2025-08-28T14:14:36.890Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Question implies the values may need to be changed or clarified \u2014 flags a potential issue with default/placeholder values."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2715335855",
+          "author": "ajjackson",
+          "body": "No need for an extra branch here:\n```suggestion:-3+0\n    if len(tilt_items) >= 3:\n        pbc_items = tilt_items[-3:]\n```",
+          "file_path": "ase/io/lammpsrun.py",
+          "line_number": 265,
+          "commit_sha": "3a43aa9bf2dee7ab10dd2c6c3887e93931d39b86",
+          "base_sha": "9c9eabdb4eda350d6e606f5462dbe479085694b5",
+          "created_at": "2025-08-28T12:22:32.859Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2715617173",
+          "author": "yuzie007",
+          "body": "I agree! I found this part can even be written in one line with the ternary operator, as done in the new commit.",
+          "file_path": "ase/io/lammpsrun.py",
+          "line_number": 265,
+          "commit_sha": "3a43aa9bf2dee7ab10dd2c6c3887e93931d39b86",
+          "base_sha": "9c9eabdb4eda350d6e606f5462dbe479085694b5",
+          "created_at": "2025-08-28T13:38:18.381Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Explicit code suggestion to remove an unnecessary branch with a concrete code diff."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2715335861",
+          "author": "ajjackson",
+          "body": "Perhaps `cell_data_rows` and `cell_data` would be nicer to read.",
+          "file_path": "ase/io/lammpsrun.py",
+          "line_number": 276,
+          "commit_sha": "3a43aa9bf2dee7ab10dd2c6c3887e93931d39b86",
+          "base_sha": "9c9eabdb4eda350d6e606f5462dbe479085694b5",
+          "created_at": "2025-08-28T12:22:33.042Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2715617239",
+          "author": "yuzie007",
+          "body": "Thank you so much for the suggestion! In the new commit I renamed `celldatarows` as `cell_lines` to better indicate this is still a list of strings.",
+          "file_path": "ase/io/lammpsrun.py",
+          "line_number": 276,
+          "commit_sha": "3a43aa9bf2dee7ab10dd2c6c3887e93931d39b86",
+          "base_sha": "9c9eabdb4eda350d6e606f5462dbe479085694b5",
+          "created_at": "2025-08-28T13:38:18.870Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests renaming variables for readability \u2014 a style/naming improvement."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2715335870",
+          "author": "ajjackson",
+          "body": "Does this `reshape()` really do something when it is followed by `flatten()`?",
+          "file_path": "ase/io/lammpsrun.py",
+          "line_number": 285,
+          "commit_sha": "3a43aa9bf2dee7ab10dd2c6c3887e93931d39b86",
+          "base_sha": "9c9eabdb4eda350d6e606f5462dbe479085694b5",
+          "created_at": "2025-08-28T12:22:33.202Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2715617276",
+          "author": "yuzie007",
+          "body": "I fully agree. I removed `reshape`.",
+          "file_path": "ase/io/lammpsrun.py",
+          "line_number": 285,
+          "commit_sha": "3a43aa9bf2dee7ab10dd2c6c3887e93931d39b86",
+          "base_sha": "9c9eabdb4eda350d6e606f5462dbe479085694b5",
+          "created_at": "2025-08-28T13:38:19.108Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Question implies the reshape() call is redundant and should be removed."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2715335883",
+          "author": "ajjackson",
+          "body": "I'm not a LAMMPS expert, but the implementation seems fine and the formatting changes also look innocuous. I made some very minor comments/suggestions.\n\nI do wonder if mypy will really be happy working with this `dict[str, float \n| list[float]]`. A stricter implementation with one or two TypedDict is possible. But a lot more verbose and mypy seems quiet on the matter _for now_... So maybe we deal with that problem as it arises :sweat_smile:",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-28T12:22:33.648Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Raises a concern about mypy compatibility with the dict type annotation, suggesting a TypedDict approach may be needed eventually."
+    }
+  ],
+  "review_thread_count": 10,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2708490727",
+            "author": "yuzie007",
+            "body": "Thank you very much @askhl for the feedback! Then, if no further comments come within a few days, I would like to merge.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-08-26T05:28:23.080Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2715617318",
+            "author": "yuzie007",
+            "body": "Thank you @ajjackson for the review! In the new commit I addressed your suggestions accordingly.\n\nI also agree on the potential concern about `dict[str, float  | list[float]]`. Just now I played a bit with `TypedDict` and `dataclass` but found it a bit cumbersome to keep conciseness. For example, now I use `abc origin` as a key, but for this we need some adjustment for the whitespace in both `TypedDict` and `dataclass`. Since the `box` is a small placeholder used mainly only in the new private `_make_cell` method (which is thus easy to fix), I would suggest leaving it for now.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-08-28T13:38:19.308Z",
+            "is_outdated": false
+          },
+          {
+            "id": "2715807987",
+            "author": "ajjackson",
+            "body": "I agree. As it exists in this parser the data should not be used too many different ways in practice. A more rigid structure would be nice but not really worth the effort at this moment compared with other work on ASE.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-08-28T14:19:03.791Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2715814070",
+            "author": "yuzie007",
+            "body": "Thank you Adam! I would then like to merge now:)",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-08-28T14:21:40.168Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2708198305",
+            "author": "askhl",
+            "body": "Thanks a lot @yuzie007.  I don't know enough about lammps to properly review this, but it looks good to me.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-08-25T22:17:08.771Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment and social comment with no code change suggestions."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2715808842",
+            "author": "ajjackson",
+            "body": "Ok, that's everything from me :rocket:",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-08-28T14:19:26.303Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure status/acknowledgment comment indicating the review is complete, no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 10,
+    "stage1_kept": 7,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 3,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 2,
+    "stage3_cost_usd": 0.017824250000000003
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/create-storybook/src/bin/run.ts",
+      "line_number": 12,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`std-env` is not declared in `create-storybook/package.json`'s `dependencies` or `devDependencies`. The package only declares `semver` and `storybook` as dependencies. This import will fail at runtime unless `std-env` happens to be hoisted in the monorepo from another package, which is an unreliable assumption for a published npm package. Add `std-env` to the `dependencies` section of `package.json`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/index.ts",
+      "line_number": 54,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This early return is silent \u2014 no log message, no error \u2014 when the framework isn't `@storybook/react-vite`. Users on Angular, Vue, Svelte, Next.js (webpack), etc. will run `storybook ai init` and receive zero output with no explanation of why. At minimum, log an informative message before returning: e.g. `logger.warn('AI init currently only supports @storybook/react-vite. Support for other frameworks is coming soon.')`. Also, since the framework check only happens after config is already loaded, you might consider hoisting this message earlier or surfacing it in the `--help` text so users can discover the limitation before running the command.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/initiate.ts",
+      "line_number": 118,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`await import('../../cli-storybook/src/ai')` is a cross-package dynamic import using a relative filesystem path. This works in the local monorepo development environment but will break in a published npm package where the `create-storybook` and `cli-storybook` packages are installed to separate locations under `node_modules` and the relative path `../../cli-storybook/src` does not exist. The correct approach is to import from a package identifier (e.g. `storybook/internal/...` if `aiInit` is re-exported there, or by having `create-storybook` declare `cli-storybook` as a dependency and importing via its package name). Alternatively, `aiInit` could be moved to a shared internal package.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/commands/UserPreferencesCommand.ts",
+      "line_number": 190,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Returning `true` unconditionally when `skipPrompt` is true silently opts all non-interactive users into the AI feature (and consequently `@storybook/addon-mcp`). `skipPrompt` is `true` whenever `!process.stdout.isTTY || this.options.yes`, which includes CI environments, Docker containers, `npx storybook init --yes`, and piped usage. Adding a new addon dependency without explicit user consent in these contexts is surprising and could break CI pipelines or projects with locked lockfiles. Consider defaulting to `false` in skip mode (opt-out by default) or providing a dedicated `--ai` / `--no-ai` flag that can be passed explicitly.",
+      "index": 3
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/bin/run.ts",
+      "line_number": 130,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`options.agent ?? isAgent` is computed twice: first in the `preAction` hook (around line 95) and again here in the action handler. The `preAction` result isn't persisted back to `options`, so the action has to recompute it. To eliminate the duplication, set `options.agent = resolvedAgent` inside `preAction` after computing it \u2014 then the action can simply read `options.agent` directly.",
+      "index": 4
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/bin/run.ts",
+      "line_number": 105,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "When agent mode is detected, `logTracker.enableLogWriting()` is called without informing the user. According to the `--logfile` help text, when no path is provided the default output is `debug-storybook.log`. So every agent-mode run silently creates a log file in the working directory. Consider logging a message that indicates this behavior, e.g. `logger.log('Debug logs will be written to debug-storybook.log')`, so the file's appearance isn't surprising to users or CI systems.",
+      "index": 5
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/types.ts",
+      "line_number": 20,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The JSDoc comment says \"Represents a skill category\" \u2014 `skill` was the name of the predecessor command before this PR renamed it to `ai`. The comment is stale and should be updated to reflect the current terminology, e.g. \"Represents an AI setup prompt that can be provided to an LLM agent.\"",
+      "index": 6
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/commands/UserPreferencesCommand.ts",
+      "line_number": 220,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The comment `// If user has asked for AI setup, we provide the MCP addon` is inaccurate. This line only sets `Feature.AI` in the features set; the actual `@storybook/addon-mcp` package gets added later in `AddonService.getAddonsForFeatures`. The comment should describe what is actually happening here, e.g. `// Mark AI feature as selected \u2014 AddonService will install @storybook/addon-mcp`.",
+      "index": 7
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/prompt.ts",
+      "line_number": 140,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Both branches of `getPreviewConfigExample` label their code block as `preview.ts` but the example code uses JSX syntax (`<ThemeProvider>`, `<MemoryRouter>`, `<Story />`). JSX is not valid in `.ts` files by TypeScript's default configuration \u2014 the file must be `.tsx` (or the tsconfig must include `\"jsx\": ...` and the file still conventionally uses `.tsx`). An AI agent following these instructions verbatim will create a `preview.ts` file that fails TypeScript compilation. Change the filename in the comment to `preview.tsx` in both the CSF-factory and the regular CSF branches.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `@storybook/react-vite`-only restriction creates an invisible cliff: `storybook ai init` is wired into the `storybook init` flow (`initiate.ts`) for any project that selects the AI feature during setup, but it only produces output for one specific framework. A user on `@storybook/angular` or `@storybook/svelte-vite` who answers 'yes' to the AI setup prompt will get `@storybook/addon-mcp` installed by `AddonService` and then see the post-install instructions telling them to run `npx storybook ai init`, which will silently do nothing. The framework guard and the framework-level support scope should be enforced earlier in the flow (e.g. in `UserPreferencesCommand.promptAiSetup` or `determineFeatures`) so the AI feature is never offered to unsupported frameworks, rather than failing silently after the addon is already installed.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The new `AiInitOptions` type in `types.ts` and the `CommandOptions` type in `generators/types.ts` now both represent overlapping option shapes for triggering AI init (both have `configDir`, `packageManager`). As this feature grows, keeping two separate but related option types in sync will become error-prone. Consider whether `AiInitOptions` can simply extend or be derived from a shared base type to make the relationship explicit.",
+      "index": 10
+    }
+  ],
+  "cost_usd": 0.6738288500000001,
+  "duration_seconds": 431.8853340148926
+}

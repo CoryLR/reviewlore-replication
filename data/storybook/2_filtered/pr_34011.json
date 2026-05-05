@@ -1,0 +1,118 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34011,
+  "title": "Hotfix: Backport host/origin validation to requests and websocket connections",
+  "body": "## What I did\r\n\r\nThis is a backport of #33835 for Storybook v7.6.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n- Run `npx ngrok http 6006`\r\n- Verify that the ngrok URL serves an Invalid host error\r\n- Update `.storybook/main.ts` to set `core.allowedHosts` to include the ngrok hostname (no protocol), then restart Storybook\r\n- Verify that the ngrok URL serves Storybook properly, and it works\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\nThis pull request has been released as version `0.0.0-pr-34011-sha-c45b0f3f`. Try it out in a new sandbox by running `npx storybook@0.0.0-pr-34011-sha-c45b0f3f sandbox` or in an existing project with `npx storybook@0.0.0-pr-34011-sha-c45b0f3f upgrade`.\n<details>\n<summary>More information</summary>\n\n| | |\n| --- | --- |\n| **Published version** | [`0.0.0-pr-34011-sha-c45b0f3f`](https://npmjs.com/package/storybook/v/0.0.0-pr-34011-sha-c45b0f3f) |\n| **Triggered by** | @ghengeveld |\n| **Repository** | [storybookjs/storybook](https://github.com/storybookjs/storybook) |\n| **Branch** | [`origin-validation-v7`](https://github.com/storybookjs/storybook/tree/origin-validation-v7) |\n| **Commit** | [`c45b0f3f`](https://github.com/storybookjs/storybook/commit/c45b0f3f5fac3f1428870d8f7a806e926646a1d3) |\n| **Datetime** | Fri Mar  6 09:49:06 UTC 2026 (`1772790546`) |\n| **Workflow run** | [22757942644](https://github.com/storybookjs/storybook/actions/runs/22757942644) |\n\nTo request a new release of this pull request, mention the `@storybookjs/core` team.\n\n_core team members can create a new canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=34011`_\n</details>\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Host validation for HTTP and WebSocket connections with origin and token checks.\n  * New allowedHosts configuration; shown in startup logs (lists hosts or \"all (insecure)\").\n  * Server considers local and network addresses when validating connections and returns 403 for invalid hosts/origins.\n  * Runtime warning when binding to 0.0.0.0 without allowedHosts configured.\n\n* **Tests**\n  * Expanded tests covering host/origin and token validation scenarios.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ghengeveld",
+  "merged_at": "2026-03-06T10:49:59Z",
+  "base_ref": "v7",
+  "merge_commit_sha": "add05b449ca24a998e21c50d0c3f61d43b409937",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "736b0f1aac0c3c1d039ebfff07bc0eb88551b546",
+    "fdfb3392c32735af377f0d3d472f4a1b340c8fb8"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r4jvp",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Use second-pass `core.allowedHosts` for warning and startup output.**\n\n`allowedHosts` is captured at Line 104 before presets are rebuilt, then reused at Line 223 after the second pass. If later presets change `core.allowedHosts`, logs can be inaccurate and hide (or falsely report) insecure host behavior.\n\n\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n-  const { allowedHosts, renderer, builder, disableTelemetry } = await presets.apply('core', {});\n+  const { renderer, builder, disableTelemetry } = await presets.apply('core', {});\n...\n-  // '0.0.0.0' binds to all interfaces, which is useful for Docker and other containerized environments.\n-  // By default we allow requests from all hosts in this case, but the user should be made aware of the risk.\n-  if (\n-    options.host === '0.0.0.0' &&\n-    (!allowedHosts || (allowedHosts !== true && allowedHosts.length === 0))\n-  ) {\n-    logger.warn(dedent`\n-      --host is set to 0.0.0.0 but no allowedHosts are defined. Allowing all hosts.\n-      To restrict allowed hosts, set core.allowedHosts in your main Storybook config.\n-      See: https://storybook.js.org/docs/api/main-config/main-config-core\n-    `);\n-  }\n...\n   presets = await loadAllPresets({\n     corePresets: [\n       require.resolve('@storybook/core-server/dist/presets/common-preset'),\n       ...(managerBuilder.corePresets || []),\n       ...(previewBuilder.corePresets || []),\n       ...(resolvedRenderer ? [resolvedRenderer] : []),\n       ...corePresets,\n       require.resolve('@storybook/core-server/dist/presets/babel-cache-preset'),\n     ],\n     overridePresets: [\n       ...(previewBuilder.overridePresets || []),\n       require.resolve('@storybook/core-server/dist/presets/common-override-preset'),\n     ],\n     ...options,\n   });\n\n+  const { allowedHosts } = await presets.apply('core', {});\n+\n+  // '0.0.0.0' binds to all interfaces, which is useful for Docker and other containerized environments.\n+  // By default we allow requests from all hosts in this case, but the user should be made aware of the risk.\n+  if (\n+    options.host === '0.0.0.0' &&\n+    (!allowedHosts || (allowedHosts !== true && allowedHosts.length === 0))\n+  ) {\n+    logger.warn(dedent`\n+      --host is set to 0.0.0.0 but no allowedHosts are defined. Allowing all hosts.\n+      To restrict allowed hosts, set core.allowedHosts in your main Storybook config.\n+      See: https://storybook.js.org/docs/api/main-config/main-config-core\n+    `);\n+  }\n```\n</details>\n\n\nAlso applies to: 223-223\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/lib/core-server/src/build-dev.ts` around lines 104 - 117, The warning\nuses the stale allowedHosts value captured from the first presets.apply('core',\n{}) call; update the code to re-read core.allowedHosts from\npresets.apply('core', {}) (or from the second-pass presets where core is\nfinalized) immediately before emitting the logger.warn and any startup output so\nthe check uses the final allowedHosts value; locate the allowedHosts variable\nand the logger.warn block and replace its condition to reference the freshly\nobtained allowedHosts (or a helper like resolveAllowedHosts()) used later at\nstartup to ensure accurate warnings about --host 0.0.0.0.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/lib/core-server/src/build-dev.ts",
+          "line_number": 117,
+          "start_line": 104,
+          "commit_sha": "fdfb3392c32735af377f0d3d472f4a1b340c8fb8",
+          "created_at": "2026-03-04T13:14:16Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests moving the allowedHosts capture to after the second presets pass to ensure accurate values are used in warnings."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r4jvu",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Remove the implicit allow-all path for `0.0.0.0`.**\n\nLine 37 bypasses validation entirely when `allowedHosts` is empty, which weakens this host-validation hotfix and permits arbitrary Host headers.\n\n\n\n<details>\n<summary>Suggested change</summary>\n\n```diff\n-    // Setting host to 0.0.0.0 binds to all hosts, which implies allowing all hosts.\n-    // This is common in containerized environments like Docker.\n-    if (options.host === '0.0.0.0' && allowedHosts.length === 0) {\n-      return true;\n-    }\n+    // Keep host validation active even when binding to 0.0.0.0.\n+    // If callers truly want to disable checks, they can set allowedHosts: true explicitly.\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    // Keep host validation active even when binding to 0.0.0.0.\n    // If callers truly want to disable checks, they can set allowedHosts: true explicitly.\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/lib/core-server/src/utils/getHostValidationMiddleware.ts` around lines\n35 - 39, The current early-return in getHostValidationMiddleware that treats\noptions.host === '0.0.0.0' and allowedHosts.length === 0 as valid must be\nremoved; instead, do not bypass host validation for 0.0.0.0\u2014either remove that\nconditional entirely or change the logic to only allow all hosts when an\nexplicit wildcard entry (e.g., '*' or a documented allow-all marker) exists in\nallowedHosts; update the validation flow around options.host and the\nallowedHosts check so Host headers are always validated unless explicitly\nconfigured to allow all.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/lib/core-server/src/utils/getHostValidationMiddleware.ts",
+          "line_number": 37,
+          "start_line": 33,
+          "commit_sha": "fdfb3392c32735af377f0d3d472f4a1b340c8fb8",
+          "created_at": "2026-03-04T13:14:16Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removal of the implicit allow-all bypass for 0.0.0.0 to strengthen host validation."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6r4jv_",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Correct the Host-header behavior note in docs.**\n\nLine 52 is misleading: browser address-bar/same-origin HTTP/1.1 requests normally include a `Host` header. The current wording may confuse future maintainers.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/lib/core-server/src/utils/getHostValidationMiddleware.ts` around lines\n51 - 53, Update the misleading comment in getHostValidationMiddleware: change\nthe sentence that claims \"Requests with no Host header (e.g. same-origin\nnavigation, GET from address bar) are not allowed\" to accurately state that\nmodern browsers and address-bar navigations normally include a Host header\n(HTTP/1.1+), and clarify that missing Host headers occur only for\nolder/non-HTTP/1.1 clients or malformed requests; ensure this revised note\nappears alongside the getHostValidationMiddleware validation description so\nfuture maintainers are not confused.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/lib/core-server/src/utils/getHostValidationMiddleware.ts",
+          "line_number": 51,
+          "start_line": 49,
+          "commit_sha": "fdfb3392c32735af377f0d3d472f4a1b340c8fb8",
+          "created_at": "2026-03-04T13:14:16Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests updating a misleading comment about Host header behavior in the middleware."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6sTKl0",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, locate and examine the test file\ncat code/lib/core-server/src/utils/__tests__/server-channel.test.ts | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1679\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for ServerChannelTransport definition\nfd -t f \"server-channel\" code/lib/core-server/src --type f | grep -v test | grep -v __tests__\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 117\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find all files that export ServerChannelTransport\nrg -t ts -t tsx \"export.*ServerChannelTransport|class ServerChannelTransport\" code/lib/core-server/src\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Examine the ServerChannelTransport class definition\ncat code/lib/core-server/src/utils/get-server-channel.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3242\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for ConstructorParameters usage or type definitions in the file\nrg -t ts \"ServerChannelTransport|constructor\" code/lib/core-server/src/utils/get-server-channel.ts -A 5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 928\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for HostValidationOptions definition\nrg -t ts \"type HostValidationOptions|interface HostValidationOptions\" code/lib/core-server/src/utils\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 306\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check where it's exported from\nrg -t ts \"export.*HostValidationOptions\" code/lib/core-server/src/utils\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 481\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Get the full HostValidationOptions type definition\ncat code/lib/core-server/src/utils/getHostValidationMiddleware.ts | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1678\n\n---\n\n\n\n</details>\n\n**Avoid `as any` on shared transport options.**\n\nThe `as any` cast bypasses TypeScript strict mode and can hide option-shape regressions when `ServerChannelTransportOptions` evolves. Use the constructor parameter type directly:\n\n<details>\n<summary>\u267b\ufe0f Proposed fix</summary>\n\n```diff\n-const options = {\n+const options: ConstructorParameters<typeof ServerChannelTransport>[1] = {\n   localAddress: 'http://localhost:6006',\n   networkAddress: 'http://192.168.1.100:6006',\n   token: mockToken,\n-} as any;\n+};\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/lib/core-server/src/utils/__tests__/server-channel.test.ts` around lines\n11 - 15, The test creates a transport options object with a unsafe cast (\"as\nany\") which hides type mismatches; replace the cast by typing the object with\nthe proper interface used by the ServerChannel constructor\n(ServerChannelTransportOptions) or the constructor parameter type (e.g., use:\nconst options: ServerChannelTransportOptions = { localAddress: ...,\nnetworkAddress: ..., token: ... }), import that type if necessary, and remove\nthe \"as any\" so TypeScript will validate the option shape in\nserver-channel.test.ts (look for the options variable and the\nServerChannel/ServerChannelTransportOptions symbol to locate the code to\nchange).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/lib/core-server/src/utils/__tests__/server-channel.test.ts",
+          "line_number": 15,
+          "start_line": 11,
+          "commit_sha": "fdfb3392c32735af377f0d3d472f4a1b340c8fb8",
+          "created_at": "2026-03-05T15:27:57Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests replacing an unsafe 'as any' cast with a proper TypeScript type in the test file."
+    }
+  ],
+  "review_thread_count": 4,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 4,
+    "stage1_kept": 4,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

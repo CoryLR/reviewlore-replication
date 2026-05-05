@@ -1,0 +1,271 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3725,
+  "title": "Add `BaseAtoms`, which is `Atoms` without the calculator and the related methods",
+  "body": "(EDIT: 2025-07-01)\n\nThis MR makes a first step to achieve the idea of the CECAM ASE workshop to separate the calculator and the related methods from the core part of `Atoms`.\n\ncf. !3722\n\nI imagine the process would be:\n\n- Separate the calculator and the related methods from the core part of `Atoms` (named so far `BaseAtoms`) (this MR)\n- Start implementing ASE4-new-features in another namespace `ase.core`, maybe like below\n```\nase.atoms.BaseAtoms \u2500\u252c\u2500 ase.atoms.Atoms (ASE3)\n                     \u2502\n                     \u2514\u2500 ase.core.atoms.Atoms (ASE4, naming to be considered)\n```\n\n- At ASE 3.2X, we will add `FutureWarning` to all calculator-related getter methods in `Atoms` like `get_potential_energy()`\n- At ASE 4, we will remove `ase.Atoms` (ASE3), ~~rename `BaseAtoms` `Atoms`,~~ and make an alias of `ase.core.Atoms` in `ase` and `ase.atoms` to  switch ASE3 `Atoms` to ASE4 `Atoms`\n\nWith the above design, I think\n- casual users can keep using the present `Atoms` during the ASE3 lifetime\n- developers who are interested in ASE4 features can switch to `ase.core.atoms.Atoms` whenever they feel OK with the development version of it\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://wiki.fysik.dtu.dk/ase/development/contribute.html)\n- [x] [**Doc strings** in code changed in this MR are up to date.](https://wiki.fysik.dtu.dk/ase/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [~] [**Unit tests** have been added for new or changed code.](https://wiki.fysik.dtu.dk/ase/development/tests.html)\n- [x] [**Changes** have been added in `changelog.d` using `scriv`.](https://wiki.fysik.dtu.dk/ase/development/writing_changelog.html)\n- [~] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "yuzie007",
+  "merged_at": "2025-10-14T13:50:12.824Z",
+  "base_ref": "master",
+  "merge_commit_sha": "46ab6d439056497911badaeb8f846686561e0039",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2588425197",
+          "author": "yuzie007",
+          "body": "~~[The `doc` pipeline error](https://gitlab.com/ase/ase/-/jobs/10484384916) seems to be unrelated to the present MR.~~ My misunderstanding, hopefully fixed now.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-06-26T19:38:04.347Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2593611259",
+          "author": "askhl",
+          "body": "Thanks a lot @yuzie007 for getting started on this and for being careful about how it affects documentation as well.\n\nIn the draft I initially called it LimitedAtoms which is supposed to be a temporary name.  That's not a great name of course.  BaseAtoms sounds like it's intended to be subclassed, which is not really the case.  Can you think of a better name than LimitedAtoms which does not imply subclassing intent?\n\nI suggest that Atoms looks precisely the same (including docstring), for the time being.  After all we do not intend to make any changes at that level for a long time.  The current Atoms is still state of the art as far as \"ASE 3\" is concerned.\n\nWe should perhaps wait some time to communicate some of the main ideas better to establish some kind of understanding and community approval before we make changes that could look puzzling.  (I should write a kind of AEP)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-06-30T11:19:00.596Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2595156857",
+          "author": "yuzie007",
+          "body": "Thank you @askhl for the feedback!\n\nFirst, I revised the MR description above. Could you maybe review it again?\nParticularly, now I think such `BaseAtoms` can be indeed a base for both ASE3 `Atoms` and ASE4 `Atoms`.\nThis may enable starting the ASE4-feature implementation with mostly reusing the present code base as well as keeping the most `git blame` track.\n\nFor the names of `BaseAtoms` as well as ASE4 `Atoms` I am open and hope we can find better ones.\nFor example, we might name `BaseAtoms` as\n\n- `CoreAtoms`\n- `Geometry` (this is slightly different from what we discussed during the workshop)\n\nwhile the ASE4 `Atoms` as `Atoms4`.\n\n> I suggest that Atoms looks precisely the same (including docstring), for the time being.\n\nI think this is practically doable by just moving the class docstring of `BaseAtoms` to `Atoms`.\nThen we do not have to include `BaseAtoms` on the documentation.\nIs it a right way to go?\n\n> After all we do not intend to make any changes at that level for a long time. The current Atoms is still state of the art as far as \"ASE 3\" is concerned.\n\nI fully agree on this. Until ASE is version 3, we should maintain the present `Atoms` such that it works as expected now.\n\n> We should perhaps wait some time to communicate some of the main ideas better to establish some kind of understanding and community approval before we make changes that could look puzzling. (I should write a kind of AEP)\n\nI agree this particularly for the naming of ASE4 `Atoms`.\nI just would like to say, under the revised description of the present MR, the separation of `BaseAtoms` can also be understood just as a maintenance of ASE3, while also a preparation of ASE4.\nIn this sense, the decision could be made a bit easier.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-07-01T05:47:39.738Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2819546143",
+          "author": "askhl",
+          "body": "Maybe we should not advertise this as a public feature, because we don't want people to rely on BaseAtoms.\n\nIf we can find a slightly scarier name like _BaseAtoms that might also help.",
+          "file_path": "changelog.d/20250626_211824_yuji.ikeda.ac.jp_add_base_atoms.rst",
+          "line_number": 4,
+          "commit_sha": "a4f0799451c87a3fa19ca5d49fd50c160d334925",
+          "base_sha": "5ef79f6e128df0c016f6fd8fb433ea5dff0c92ac",
+          "created_at": "2025-10-14T11:14:01.112Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2819638426",
+          "author": "yuzie007",
+          "body": "I agree not making `_LimitedAtoms` (renamed) prominent for users.\nI now just mention about the removal of long-time deprecated `get_calculator` and `set_calculator` which I took over from !3756.",
+          "file_path": "changelog.d/20250626_211824_yuji.ikeda.ac.jp_add_base_atoms.rst",
+          "line_number": 4,
+          "commit_sha": "a4f0799451c87a3fa19ca5d49fd50c160d334925",
+          "base_sha": "5ef79f6e128df0c016f6fd8fb433ea5dff0c92ac",
+          "created_at": "2025-10-14T11:49:21.210Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2819548463",
+          "author": "askhl",
+          "body": "Probably the docstring should still go with the current user-facing class.  We can move it here when everything is ready.",
+          "file_path": "ase/atoms.py",
+          "line_number": 105,
+          "commit_sha": "0e228ba101afad61b835404c4e22e06828db6b9e",
+          "base_sha": "2518ebd1474060f53a303228d52eb328488d74aa",
+          "created_at": "2025-10-14T11:14:47.529Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2819638441",
+          "author": "yuzie007",
+          "body": "Following the suggestion, I moved the docstring also from `_LimitedAtoms` to `Atoms`.\nI also revised `doc/ase/atoms.rst` so that we see almost the same document as before (confirmed locally).",
+          "file_path": "ase/atoms.py",
+          "line_number": 105,
+          "commit_sha": "0e228ba101afad61b835404c4e22e06828db6b9e",
+          "base_sha": "2518ebd1474060f53a303228d52eb328488d74aa",
+          "created_at": "2025-10-14T11:49:21.753Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2819638450",
+          "author": "yuzie007",
+          "body": "@askhl @jameskermode I have updated this MR following Ask's suggestions. Hopefully it is ready to be merged.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-14T11:49:22.149Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2819900099",
+          "author": "askhl",
+          "body": "I checked that the documentation looks correct.  There are a few subtle changes, some of them for the better.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-14T13:20:50.194Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2819902465",
+          "author": "askhl",
+          "body": "The big question is whether now is the time to remove the depreacted `atoms.get_calculator()` and so on.  Maybe we should actually do that.  It has been deprecated for a long time with DeprecationWarning and for a few releases with FutureWarning.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-14T13:21:38.741Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2819910946",
+          "author": "askhl",
+          "body": "@ajjackson Is it now that we remove `atoms.set_calculator()` etc.?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-14T13:24:47.096Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2819926652",
+          "author": "jameskermode",
+          "body": "Thanks @yuzie007. I'm in favour of merging this now.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-14T13:30:03.577Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2819961331",
+          "author": "askhl",
+          "body": "The commit that promotes the old deprecation warning to FutureWarning (and hence maximum visibility) has been there for three actual releases:\n\n```\n(pyenv) askhl@alberich:~/src/ase/ase$ git log master --oneline | grep d698c4bca\nd698c4bca Switch to `FutureWarning`\n(pyenv) askhl@alberich:~/src/ase/ase$ git log 3.26.0  --oneline | grep d698c4bca\nd698c4bca Switch to `FutureWarning`\n(pyenv) askhl@alberich:~/src/ase/ase$ git log 3.25.0  --oneline | grep d698c4bca\nd698c4bca Switch to `FutureWarning`\n(pyenv) askhl@alberich:~/src/ase/ase$ git log 3.24.0  --oneline | grep d698c4bca\nd698c4bca Switch to `FutureWarning`\n(pyenv) askhl@alberich:~/src/ase/ase$ git log 3.23.0  --oneline | grep d698c4bca\n(pyenv) askhl@alberich:~/src/ase/ase$ \n```\n\nSo it's quite reasonable to expect people to have fixed this by now, or at the very least be prepared to fix/pin their versions.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-14T13:41:59.320Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2819987317",
+          "author": "askhl",
+          "body": "I guess that's it then.  Thanks @yuzie007!  So long old methods!",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-14T13:50:37.180Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2820392593",
+          "author": "ajjackson",
+          "body": "In ideal circumstances we would have some kind of \"really being deleted in next release!\" stage, but realistically we aren't working at that level of roadmap planning.\n\nIt has been less than one year of FutureWarning so this is very likely to surprise _somebody_ ... But again it is an easy fix, formal deprecation was there and we can put a big loud message in the release notes. It's defensible :rocket: \n\nThis split/refactor looks good to me. I agree with use of a private class name for now, so we retain the right to fiddle further with the internal API.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-10-14T16:17:03.457Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 13
+}

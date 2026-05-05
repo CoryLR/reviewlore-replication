@@ -1,0 +1,122 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 133,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`typescriptOptions.reactDocgen ?? 'react-docgen'` does not handle the `false` case. The nullish coalescing operator `??` only replaces `null` or `undefined`\u2014it passes `false` through unchanged. When a user has set `reactDocgen: false` to disable docgen, `docgenEngine` becomes `false`, which matches none of the `if/else if` branches in the extraction block below, silently falling through to the RCM else branch and returning no docgen data. The existing code in `getComponentImports.ts` explicitly handles this with `reactDocgen !== false ? reactDocgen : 'react-docgen'`. Fix: `(typescriptOptions.reactDocgen !== false ? typescriptOptions.reactDocgen : undefined) ?? 'react-docgen'` or use the same ternary pattern.",
+      "index": 0
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+      "line_number": 47,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`import('typescript').then((ts) => new ComponentMetaManager(ts))` is incorrect in ESM contexts. TypeScript is a CJS-only package; when dynamically imported from ESM (or an ESM interop loader), Node.js wraps the CJS exports in a module namespace object: `{ default: actualTs }`. The variable `ts` here would be that namespace object, not the TypeScript API itself. Calling `new ComponentMetaManager(ts)` would result in `this.typescript.sys`, `this.typescript.ScriptTarget`, etc. all being `undefined`, failing at the first usage. Fix: `import('typescript').then(({ default: ts }) => new ComponentMetaManager(ts))`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+      "line_number": 459,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`watch(dir, { recursive: true }, ...)` is not supported on Linux. Node.js's `recursive` option in `fs.watch` is backed by FSEvents on macOS and `ReadDirectoryChangesW` on Windows; on Linux the flag is silently ignored and only the top-level directory is watched. File changes in any subdirectory go undetected, breaking incremental HMR in virtually all CI/CD environments. Either use a cross-platform recursive watcher (e.g. `chokidar`) or add a Linux fallback that walks subdirectories and creates individual watchers, and document the platform constraint with a comment.",
+      "index": 2
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 123,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The preset options type declares `watch: boolean` (required), but `watch` is never passed by `writeManifests` and not passed by the test helper. At runtime the value is `undefined` and consumption is correctly guarded by `if (manager && watch)`, but the type promise is broken. Change to `watch?: boolean` in the type parameter to match actual usage and avoid misleading callers.",
+      "index": 3
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 109,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`findMatchingComponent` now only checks `it.componentName === componentName` when `componentName` is set. The previous implementation checked all of `[it.componentName, it.localImportName, it.importName]`. Consider a story with `import { Button as Btn } from './Button'` where `meta.component = Button` (the original export name written by the user, not the alias)\u2014`componentName` is `'Button'`, but `it.componentName` is `'Btn'` (from JSX traversal), so no match is found. The old code would have matched via `it.importName === 'Button'`. This is a behavioral regression for aliased imports where the meta references the original name.",
+      "index": 4
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 283,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "All three docgen fields (`reactDocgen`, `reactDocgenTypescript`, `reactComponentMeta`) are now always emitted in every manifest entry, even as `undefined` when inactive. The original code conditionally spread only the active engine's result. The snapshot tests already show the impact: every component now has `\"reactComponentMeta\": undefined` and `\"reactDocgenTypescript\": undefined` in the output. This increases manifest payload size for all users regardless of configuration and changes the manifest schema in a breaking way\u2014consumers that do `if (manifest.reactDocgen)` continue to work but tooling parsing the schema will see new nullable fields unconditionally.",
+      "index": 5
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+      "line_number": 19,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`import { type FSWatcher, existsSync, watch } from 'fs'` and `import * as path from 'path'` on the following line use the bare module specifiers. The test helpers in the same directory (`test-helpers.ts`) and the project's other Node.js files consistently use the `node:` prefix (`'node:child_process'`, `'node:os'`, `'node:path'`). Update to `'node:fs'` and `'node:path'` for consistency.",
+      "index": 6
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.ts",
+      "line_number": 253,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`getOrCreateConfiguredProject` does not cache parse failures. When `parseConfigWorker` throws, the `catch` block logs and returns `null`, but the tsconfig path is never stored in `configProjects`. Every subsequent call for the same broken tsconfig retries the full `ts.readJsonConfigFile` + `ts.parseJsonSourceFileConfigFileContent` cycle. For a persistently malformed tsconfig (e.g. a project with a syntax error), this creates repeated expensive I/O on every file lookup. Cache failures with a sentinel (`configProjects.set(tsconfig, null)`) and skip them on re-entry.",
+      "index": 7
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/componentMetaExtractor.ts",
+      "line_number": 354,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "In `serializeType`, the `isRequired` parameter is used to strip a single `| undefined` member from two-member optional unions, but the stripping only fires when `nonUndefinedTypes.length === 1 && nonUndefinedTypes.length < type.types.length`. If a prop is optional and also has a union with another type (e.g. `string | number | undefined`), the `| undefined` is kept in the serialized name since there are two non-undefined members. The comment acknowledges this deliberately. However, `required: false` is also set for these props (via `SymbolFlags.Optional`), so the type string `string | number | undefined` duplicates the optionality information. Verify that downstream manifest consumers (e.g. the controls addon) are robust to `required: false` + a type string that contains `| undefined`.",
+      "index": 8
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 218,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`ensureFiles` uses `Array.includes` (O(n)) inside a loop over `fileNames`, giving O(n \u00d7 m) overall where n = existing file count and m = new file count. For large projects this is called on every `extractPropsFromStories` invocation with all story + component paths. Consider maintaining a `Set<string>` alongside `commandLine.fileNames` for O(1) membership checks.",
+      "index": 9
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 452,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`arrayItemsEqual` performs set-equality, not array-equality: two arrays with the same distinct elements but different duplicate counts are treated as equal (e.g. `['a','a','b']` vs `['a','b','b']` both have length 3, set `{a,b}` matches). While file name lists in practice won't contain duplicates, the semantics differ from the name 'items equal', which implies order-independent exact-multiset equality. A comment clarifying this is set-equality would prevent misuse.",
+      "index": 10
+    },
+    {
+      "file_path": "code/package.json",
+      "line_number": 38,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `--max_old_space_size` limit in `storybook:ui:build` was bumped from 4096 MB to 5120 MB with no explanation in the PR description or inline comment. If this is required because the new `react-component-meta` LanguageService holds significantly more memory during the manifest build, that should be documented. If it's unrelated to this PR, it should be split out. At minimum, add a comment explaining the reason for this limit.",
+      "index": 11
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`componentMetaExtractor.checker.test.ts` is 2311 lines described as 'copies of the tests in `componentMetaExtractor.test.ts`, rewritten to use `ComponentMetaProject`'. Maintaining two near-identical test suites of this size will lead to divergence\u2014bugs fixed in one suite are silently missed in the other, and new patterns added to the existing suite won't be covered in the checker suite. Consider consolidating by parameterising the extraction backend (pass a `createExtractor` factory to the suite) so a single set of test cases runs against both code paths, or at minimum add a CI check that the two suites declare the same test case names.",
+      "index": 12
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `docgen` field in `ComponentsManifest.meta` now lists React-specific engine identifiers directly in the core-common shared type: `'react-docgen' | 'react-docgen-typescript' | 'react-component-meta'`. Per the project-specific rules, this field should use an open-ended string-union type (e.g. add `| string` or change to `string`) so future non-React engines (Vue docgen, Svelte2tsx, etc.) can be accommodated without a core-common change. The tight union currently makes adding a new engine a breaking schema change.",
+      "index": 13
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The singleton in `ComponentMetaManager.getInstance()` is never cleared after `dispose()`. The `process.on('exit')` handler calls `dispose()`, which closes all watchers and clears all internal state, but `ComponentMetaManager.instance` (the cached Promise) remains set. If\u2014in a future scenario such as HMR reloads or tests\u2014`getInstance()` is called after disposal, it returns the already-disposed (and now broken) manager rather than creating a fresh one. Add `ComponentMetaManager.instance = undefined` inside `dispose()`, or at minimum add a comment explaining that disposal is only expected at process exit.",
+      "index": 14
+    }
+  ],
+  "cost_usd": 1.303705,
+  "duration_seconds": 1001.3767738342285
+}

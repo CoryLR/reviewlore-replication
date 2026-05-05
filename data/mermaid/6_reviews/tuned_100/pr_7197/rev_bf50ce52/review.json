@@ -1,0 +1,106 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 616,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`getEstimatedTickCount` does not handle an inverted or invalid time domain. When `maxTime < minTime` (which can happen if date parsing produced garbage values), `timeDiffMs` is negative. Dividing a negative value by a positive `intervalMs` yields a negative (or zero) result from `Math.ceil`, which is always less than `MAX_TICK_COUNT`. Therefore the guard at line 668 (`estimatedTicks > MAX_TICK_COUNT`) will never fire, and the custom tick interval will be silently applied to the invalid domain \u2014 exactly the failure mode this PR aims to prevent.\n\nAdd an early guard at the top of the function:\n```js\nif (maxTime <= minTime) {\n  return Infinity; // invalid domain; treat as unbounded\n}\n```",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 615,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`getEstimatedTickCount` is a pure function that closes over nothing from the outer `draw` scope. Defining it inside `draw` causes it to be re-created on every render call and, more importantly, makes it untestable in isolation (there is no direct test for it \u2014 see general comment). Move it to module level alongside `getMaxIntersections`, which has the same pure-utility character.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 624,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Using a fixed 30-day approximation for a month (`30 * 24 * 60 * 60 * 1000`) can underestimate the interval length for months that have 31 days (or overestimate for February). When the estimated tick count is just below `MAX_TICK_COUNT`, a 31-day month yields ~3.3 % more ticks than estimated, potentially still causing a large number of ticks. Consider using `dayjs.duration({ month: every }).asMilliseconds()` (which uses the standard 30.4375-day average) or the equivalent constant `30.4375 * 24 * 60 * 60 * 1000`.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 669,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `log.warn` call concatenates three separate template literals with `+`. Per the project's code-style convention, this should be a single template literal to avoid unnecessary string concatenation:\n```js\nlog.warn(\n  `The tick interval \"${every}${interval}\" would generate ${estimatedTicks} ticks, which exceeds the maximum allowed (${MAX_TICK_COUNT}). This may indicate an invalid date or time range. Skipping custom tick interval.`\n);\n```",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 674,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The comment `// D3 using its default automatic tick generation` is grammatically incomplete. It should read `// D3 will use its default automatic tick generation` or `// Let D3 use its default automatic tick generation`.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 725,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The domain retrieval and estimated-tick-count computation (`const domain`, `minTime`, `maxTime`, `estimatedTicks`) is duplicated verbatim for the top axis (lines 725\u2013728) from the bottom axis (lines 663\u2013666). If the guard logic changes \u2014 for example to fix the inverted-domain bug \u2014 both copies must be updated in sync. Extract the check into a helper (or compute it once before both `bottomXAxis` and `topXAxis` are configured) to keep the two axes consistent.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 731,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "When `estimatedTicks > MAX_TICK_COUNT`, the top axis silently skips custom ticks with no log output. The bottom axis (lines 668\u2013674) correctly emits a `log.warn` in the same situation. Add a corresponding warning for the top axis so developers can diagnose misconfigured intervals without wondering why the top axis is behaving differently.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttDb.js",
+      "line_number": 307,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`dateFormat.trim()` is evaluated twice in the newly added `isTimestampFormat` check (line 307), and is also called in each of the two `log.debug` statements directly above it (lines 301\u2013302), giving a total of four `.trim()` calls in this `else` branch. Cache the trimmed value at the top of the `else` block:\n```js\nconst trimmedFormat = dateFormat.trim();\n// then use trimmedFormat everywhere below\n```",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttDb.spec.ts",
+      "line_number": 526,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`dayjs('00', 'ss', true)` succeeds in strict mode (seconds token is valid) but produces a date whose year, month, and day default to whatever dayjs injects for missing fields \u2014 typically the current date. This means the resulting task's `startTime` is non-deterministic and depends on when the test runs. Either:\n1. Assert on the specific field that _is_ determined by the format (e.g., `tasks[0].startTime.getSeconds() === 0`) to document the expected behavior, or\n2. Treat an `ss`-only format as unsupported for Gantt date ranges and expect an error instead, consistent with the `HH:mm` test above it.",
+      "index": 8
+    },
+    {
+      "file_path": "cypress/integration/rendering/gantt.spec.js",
+      "line_number": 123,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Calling `expect(err.message).to.include('Invalid date')` inside the `uncaught:exception` handler is fragile. If any _other_ uncaught exception fires during the test (e.g., a network error, a D3 rendering error), the `expect` call will throw inside the handler, producing an opaque Chai assertion failure rather than a clear test failure. A more defensive pattern only captures the expected error type:\n```js\ncy.on('uncaught:exception', (err) => {\n  if (err.message.includes('Invalid date')) {\n    errorCaught = true;\n  }\n  return false; // prevent Cypress from failing on any uncaught exception\n});\n```\nThe assertion on `errorCaught` at the end of the test is then sufficient to verify the expected error occurred.",
+      "index": 9
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "**Breaking behavioral change to `getStartDate` is under-documented.** Before this PR, any date that failed dayjs strict parsing could silently fall through to `new Date()` as a last resort, for _all_ date formats. After this PR, only the `x`/`X` Unix timestamp formats retain that fallback; every other format now throws immediately. The `theme.spec.js` fix (removing the stray colon from `dateFormat :YYYY-MM-DD`) exposes that at least one existing test relied on the old fallback. Any user diagram that incidentally survived via this path will now render as an error. Since the old behavior was effectively undocumented, the changeset message (`fix: validate dates and tick interval\u2026`) is accurate but does not signal to users that previously-rendering diagrams may start failing. Consider adding a note to the changeset and/or PR description calling out this change explicitly.",
+      "index": 10
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**`getEstimatedTickCount` has no unit tests.** The new tick-overflow guard is the primary safety net in the renderer, yet it is exercised only indirectly through Cypress rendering tests. The inverted-domain edge case (see inline comment), unknown interval units, and the month-approximation boundary are untested. Moving the function to module level (see inline comment) would allow targeted unit tests covering: a standard valid range, an inverted/zero range, a range exactly at `MAX_TICK_COUNT`, a range one tick above it, and an unknown `interval` value.",
+      "index": 11
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**PR description incorrectly attributes the root cause to a Temporal Dead Zone (TDZ) error.** The description states the crash was \"caused by a Temporal Dead Zone (TDZ) error,\" but no TDZ fix appears in the diff: `MAX_TICK_COUNT` is a module-level `const` and `getEstimatedTickCount` uses a hoisted `function` declaration, neither of which involves TDZ semantics. The actual root causes visible in the diff are (a) dates being silently coerced to unexpected values (e.g., 1970-01-01) via the `new Date()` fallback, and (b) no upper bound on tick generation. Correcting the root-cause description prevents future maintainers from searching for a non-existent TDZ bug when revisiting this area.",
+      "index": 12
+    }
+  ],
+  "cost_usd": 1.0906476,
+  "duration_seconds": 605.0055050849915
+}

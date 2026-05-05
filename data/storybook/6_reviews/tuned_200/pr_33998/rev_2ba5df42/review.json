@@ -1,0 +1,46 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/Color.tsx",
+      "line_number": 338,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `Number.isInteger` guard is overly strict: any positive non-integer float (e.g., `maxPresetColors: 3.5`) fails the check and silently falls back to 27, which is surprising and undocumented. Since `color` quantities are always whole numbers in practice, prefer truncating the value and validating the result:\n\n```ts\nconst limit = Number.isFinite(maxPresetColors) && maxPresetColors > 0\n  ? Math.trunc(maxPresetColors)\n  : 27;\n```\nThis also makes `Infinity` correctly fall through to the guard on line 335 instead of needing a separate special-case check there.",
+      "index": 0
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/types.ts",
+      "line_number": 27,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The JSDoc documents `0` and `Infinity` as escape hatches but is silent about what happens with other invalid inputs (negative numbers, non-integer floats). Both silently fall back to 27. Adding a sentence \u2014 e.g., \"Any other non-positive or non-integer value is treated as invalid and falls back to `27`\" \u2014 would make the contract explicit and prevent confusion for callers who accidentally pass a float or negative value.",
+      "index": 1
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/Color.stories.tsx",
+      "line_number": 100,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `WithInvalidMaxPresetColors` story claims to demonstrate \"falls back to 27\" but only supplies 5 preset colors. Because 5 < 27, the rendered output is identical to any normal 5-color story regardless of what `maxPresetColors` is set to \u2014 the fallback is invisible. To actually exercise and visually verify the fallback, supply more than 27 preset colors; then the story would show 27 while a story without the invalid value shows all of them.",
+      "index": 2
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/Color.stories.tsx",
+      "line_number": 68,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The three new stories rely on `startOpen: true` to show the open state for visual regression testing, but none include a `play` function. Per project guidelines, interactive component stories (pickers, popovers, expandable sections) should drive interaction programmatically via a `play` function so the open/expanded state is reliably captured in visual tests. `startOpen` is a convenience prop, not a substitute \u2014 it bypasses the real open/close code path. A `play` function that clicks the color swatch to open the picker would also verify the toggle interaction itself.",
+      "index": 3
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "There are no unit tests for the new `maxPresetColors` logic in `usePresets`. The stories provide visual coverage, but they do not programmatically assert edge cases like `0` (no limit), `Infinity` (no limit), a negative value (fallback to 27), `NaN`, or a non-integer float. A unit test file (or additions to an existing one) that directly tests the slicing/fallback behavior would make future regressions immediately obvious and document the intended semantics more precisely than stories alone.",
+      "index": 4
+    }
+  ],
+  "cost_usd": 0.393745,
+  "duration_seconds": 237.07992100715637
+}

@@ -1,0 +1,92 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/edges.js",
+      "line_number": 99,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`useHtmlLabels` is being passed as the `addBackground` parameter (5th argument) to `createLabel`. The `addBackground` parameter controls whether to apply the `labelBkg` CSS class to the label container, but `useHtmlLabels` is a boolean indicating whether the HTML label rendering path is active \u2014 a completely different concept. Since HTML labels are enabled by default, this will unconditionally add the background class to all four edge terminal labels (`startLabelLeft`, `startLabelRight`, `endLabelLeft`, `endLabelRight`) for the vast majority of users, causing unintended background styling on edge labels. The same mistake appears at lines 120, 143, and 167. These calls should pass `false` (or an explicit `edge.addBackground` if edge labels are ever meant to have a background), not `useHtmlLabels`.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/util.ts",
+      "line_number": 17,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This line was changed from `evaluate(getConfig()?.htmlLabels)` to `evaluate(getConfig()?.flowchart?.htmlLabels)`. This bypasses the canonical `getEffectiveHtmlLabels()` helper in `config.ts`, which (a) prefers the top-level `config.htmlLabels` over the deprecated `config.flowchart.htmlLabels`, and (b) issues the `FLOWCHART_HTML_LABELS_DEPRECATED` warning when the old location is used. By accessing `flowchart?.htmlLabels` directly, nodes rendered through `labelHelper` will silently ignore a user's top-level `htmlLabels: true` setting and only honour the deprecated nested path. Replace with `evaluate(getEffectiveHtmlLabels(getConfig()))` to stay consistent with how every other caller determines HTML label mode.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/clusters.js",
+      "line_number": 489,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`createLabel` is an `async` function, so this call returns a `Promise`, not a DOM element. `elem.node().appendChild(label)` will append the Promise object rather than a node, and `label.getBBox()` will throw a `TypeError`. This function needs to be made `async` and the call needs `await`. This was a pre-existing bug, but the PR modified this line (adding `false, node.width`) without correcting it, so it remains broken.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/dagre-wrapper/createLabel.js",
+      "line_number": 109,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`style.replace('color:', 'fill:')` will throw a `TypeError` if `style` is `null` or `undefined`. Notice that the HTML-label path directly above (line 104) already guards against this with a ternary: `style ? style.replace('fill:', 'color:') : style`. The same guard is missing here for the SVG text path. Callers such as `rectWithTitle.ts` pass `node.labelStyle` which can be `undefined`. Add the same guard: `style ? style.replace('color:', 'fill:') : ''`.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/createLabel.js",
+      "line_number": 114,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Same unchecked `.replace()` on `style` as in `dagre-wrapper/createLabel.js` line 109. If `style` is `undefined`, this will throw. The HTML-label path on line 108 of this file already guards with a ternary. Apply the same null check here.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/dagre-wrapper/createLabel.js",
+      "line_number": 97,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`log.debug` was changed to `log.info` here. Project guidelines specify using `log.debug()` or `log.trace()` for development tracing inside rendering utilities, not `log.info()`. This line should be reverted to `log.debug('vertexText' + vertexText)` \u2014 or removed entirely before merging if it is not expected to survive in production.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/labelImageUtils.ts",
+      "line_number": 34,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`getConfig()` is called twice in the ternary: once for the truthiness check on line 34 and again to read the value on line 35. Each call traverses and merges config state. Cache the result in a local variable before the ternary: `const config = getConfig(); const bodyFontSize = config.fontSize ? config.fontSize : window.getComputedStyle(document.body).fontSize;`",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/createLabel.js",
+      "line_number": 44,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The previous implementation had `div.style('padding-right', '1px')` which has been silently removed. While the intent may be to align with `createText`, this is a visible style change for all existing callers (cluster titles, `rectWithTitle`, edge labels, etc.). If the removal is intentional, the PR description should explain why the padding is no longer needed and any visual regression testing should confirm no layout shifts.",
+      "index": 7
+    },
+    {
+      "file_path": ".changeset/vast-masks-say.md",
+      "line_number": 2,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The changeset is marked `patch` with the message \"no markdown-specific changes\", but the PR actually enables KaTeX rendering (`hasKatex` / `renderKatexSanitized`) and text wrapping in `addHtmlLabel` \u2014 features that were not available through `createLabel` before. Per project rules, changesets that add features should be `minor`. The description is also inaccurate: KaTeX is a math/markdown rendering feature. Consider updating both the semver level and the description to accurately reflect the new capabilities.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The PR's stated goal is to reduce duplication by making `createLabel` a thin wrapper, but the diff introduces *more* duplication. `dagre-wrapper/createLabel.js` and `rendering-util/rendering-elements/createLabel.js` now contain near-identical copies of `addHtmlLabel`, `getWrappingWidth`, and `DEFAULT_WRAPPING_WIDTH = 200`. Any future change to the label rendering logic (e.g., a layout tweak or a KaTeX fix) will need to be applied in both files. Consider extracting the shared `addHtmlLabel` implementation into a single location (e.g., a new `rendering-util/rendering-elements/htmlLabel.js`) and importing it in both `createLabel` files, or \u2014 since both files are already marked `@deprecated` in favour of `createText` \u2014 evaluate whether one of them can simply re-export the other.",
+      "index": 9
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "In both `addHtmlLabel` implementations (`dagre-wrapper/createLabel.js` and `rendering-util/rendering-elements/createLabel.js`), a hidden `tempSvg` element is appended to `document.body` for measurement and then removed at the end. If `configureLabelImages` throws (e.g., a rejected Promise inside), execution never reaches `tempSvg.remove()`, permanently leaking the hidden SVG into the DOM. Wrap the measurement block in a `try/finally` to guarantee cleanup: `try { await configureLabelImages(...); ... fo.attr(...); } finally { tempSvg.remove(); }`.",
+      "index": 10
+    }
+  ],
+  "cost_usd": 0.8486632000000001,
+  "duration_seconds": 446.81780099868774
+}

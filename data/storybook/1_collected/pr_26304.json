@@ -1,0 +1,91 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 26304,
+  "title": "Core: Fix composition of storybooks on same origin",
+  "body": "Closes https://github.com/storybookjs/storybook/issues/25957\n\n## What I did\n\nThis makes it possible to have refs share the same origin as each other and as well as the main storybook.\n\nThis is useful if you have static-storybooks in static directories\n\n## Checklist for Contributors\n\n### Testing\n\n#### The changes in this PR are covered in the following automated tests:\n- [ ] stories\n- [ ] unit tests\n- [ ] integration tests\n- [ ] end-to-end tests\n\n#### Manual testing\n\nWhat I did was:\n\n- I created a sandbox\n- I ran `yarn build-storybook` in the sandbox\n- I renamed the `static-storybook` directory to `foo` and copied it into the `static` directory of the sandbox\n- I added a ref to the sandboxs `main.ts` file:\n\n```\n  refs: {\n    'test-component': {\n      title: 'test-component',\n      url: 'http://localhost:6006/foo/',\n    },\n  },\n```\n\n- I ran `yarn storybook` (dev-mode).\n- I was able to observe the preview load correctly\n- I was able to switch between the ref and the main\n- I able to verify the currect `iframe` was being shown on both routes\n\n### Documentation\n\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\n\n- [ ] Add or update documentation reflecting your changes\n- [ ] If you are deprecating/removing a feature, make sure to update\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\n\n## Checklist for Maintainers\n\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli/src/sandbox-templates.ts`\n- [ ] Make sure this PR contains **one** of the labels below:\n   <details>\n     <summary>Available labels</summary>\n\n     - `bug`: Internal changes that fixes incorrect behavior.\n     - `maintenance`: User-facing maintenance tasks.\n     - `dependencies`: Upgrading (sometimes downgrading) dependencies.\n     - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\n     - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\n     - `documentation`: Documentation **only** changes. Will not show up in release changelog.\n     - `feature request`: Introducing a new feature.\n     - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\n     - `other`: Changes that don't fit in the above categories.\n   \n   </details>\n\n### \ud83e\udd8b Canary release\n\n<!-- CANARY_RELEASE_SECTION -->\nThis pull request has been released as version `0.0.0-pr-26304-sha-8cbb06d9`. Try it out in a new sandbox by running `npx storybook@0.0.0-pr-26304-sha-8cbb06d9 sandbox` or in an existing project with `npx storybook@0.0.0-pr-26304-sha-8cbb06d9 upgrade`.\n<details>\n<summary>More information</summary>\n\n| | |\n| --- | --- |\n| **Published version** | [`0.0.0-pr-26304-sha-8cbb06d9`](https://npmjs.com/package/@storybook/cli/v/0.0.0-pr-26304-sha-8cbb06d9) |\n| **Triggered by** | @ndelangen |\n| **Repository** | [storybookjs/storybook](https://github.com/storybookjs/storybook) |\n| **Branch** | [`norbert/composition-loading-state-fix`](https://github.com/storybookjs/storybook/tree/norbert/composition-loading-state-fix) |\n| **Commit** | [`8cbb06d9`](https://github.com/storybookjs/storybook/commit/8cbb06d941b4ba1d72d7cef80bf4b8f6eeba3464) |\n| **Datetime** | Tue Mar  5 14:54:44 UTC 2024 (`1709650484`) |\n| **Workflow run** | [8158297657](https://github.com/storybookjs/storybook/actions/runs/8158297657) |\n\nTo request a new release of this pull request, mention the `@storybookjs/core` team.\n\n_core team members can create a new canary release [here](https://github.com/storybookjs/storybook/actions/workflows/canary-release-pr.yml) or locally with `gh workflow run --repo storybookjs/storybook canary-release-pr.yml --field pr=26304`_\n</details>\n<!-- CANARY_RELEASE_SECTION -->\n",
+  "author": "ndelangen",
+  "merged_at": "2024-03-05T13:24:50Z",
+  "base_ref": "next",
+  "merge_commit_sha": "20c596e12b69c57e4c1f48cf81b016b7c9ec000e",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "6a0c82705e7466a1b83b0e51ead4428e26964437",
+    "8cbb06d941b4ba1d72d7cef80bf4b8f6eeba3464"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc5aJeR_",
+          "author": "ndelangen",
+          "body": "I added this block because when you have 2 iFrames with the same origin, it seems they might share a [WindowProxy](https://developer.mozilla.org/en-US/docs/Glossary/WindowProxy)\r\n\r\nI tested this code manually, the `pathname` comparison does the trick.",
+          "file_path": "code/lib/channels/src/postmessage/getEventSourceUrl.ts",
+          "line_number": 17,
+          "start_line": 10,
+          "commit_sha": "8cbb06d941b4ba1d72d7cef80bf4b8f6eeba3464",
+          "created_at": "2024-03-05T09:13:46Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc5aJfgl",
+          "author": "ndelangen",
+          "body": "The bug was here:\r\n\r\n`fullAPI.findRef` would match too eagerly. But I found that I could prevent that problem from occurring, by stricter checking and only call `findRef` when `sourceType === 'external'`.",
+          "file_path": "code/lib/manager-api/src/lib/events.ts",
+          "line_number": 28,
+          "start_line": 22,
+          "commit_sha": "8cbb06d941b4ba1d72d7cef80bf4b8f6eeba3464",
+          "created_at": "2024-03-05T09:16:00Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc5aJgmj",
+          "author": "ndelangen",
+          "body": "The findFilename regex was complex, and wasn't working well.\r\n\r\nComposed storybooks will always look for `iframe.html`, so there's no need for this to be so dynamic.\r\n",
+          "file_path": "code/lib/manager-api/src/modules/refs.ts",
+          "line_number": 79,
+          "start_line": 76,
+          "commit_sha": "8cbb06d941b4ba1d72d7cef80bf4b8f6eeba3464",
+          "created_at": "2024-03-05T09:17:47Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc5aJg1q",
+          "author": "ndelangen",
+          "body": "This test was simply wrong.",
+          "file_path": "code/lib/manager-api/src/tests/refs.test.ts",
+          "line_number": 28,
+          "start_line": null,
+          "commit_sha": "8cbb06d941b4ba1d72d7cef80bf4b8f6eeba3464",
+          "created_at": "2024-03-05T09:18:10Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 4
+}

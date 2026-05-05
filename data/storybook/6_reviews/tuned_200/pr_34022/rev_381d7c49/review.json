@@ -1,0 +1,52 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/builders/builder-vite/src/plugins/vite-inject-mocker/plugin.ts",
+      "line_number": 44,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The filter regex `/\\/vite-inject-mocker-entry\\.js/` is more permissive than the handler's exact `source === ENTRY_PATH` check. It would pass any import specifier that contains the substring (e.g., `/node_modules/foo/vite-inject-mocker-entry.js`). For Vite < 6.3 the handler's inner guard protects correctness, but tightening the filter to `/^\\/vite-inject-mocker-entry\\.js$/` would make the outer filter's intent explicit and reduce the window of false positives on Vite 6.3+.",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/plugins/vite-mock/plugin.ts",
+      "line_number": 166,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Using a plain file-path string (`normalizedPreviewConfigPath`) as `filter.id` is fragile. Vite's filter system interprets strings as glob patterns via picomatch, and a literal file path could fail to match if Vite appends query strings to the module ID (e.g., `preview.ts?v=abc`), or if rolldown normalizes the path differently before comparison. A regex is the idiomatic, reliable form here: `new RegExp(normalizedPreviewConfigPath.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&') + '$')`. The inner `if (id === normalizedPreviewConfigPath)` guard still ensures correctness for Vite < 6.3 regardless.",
+      "index": 1
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/plugins/storybook-external-globals-plugin.ts",
+      "line_number": 95,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "With the outer `filter: { code: globalsCodeFilter }` now pre-screening files in Vite 6.3+, this inner check is redundant for those versions (the filter already guarantees at least one global name appears in `code`). It is still necessary for Vite < 6.3 where the outer filter is silently ignored. Without a comment this reads as dead code and is likely to be removed in a future cleanup. Add a short note, e.g.: `// Backward compat for Vite < 6.3 where the outer code filter is not applied.`",
+      "index": 2
+    },
+    {
+      "file_path": "code/frameworks/vue3-vite/src/plugins/vue-component-meta.ts",
+      "line_number": 154,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `catch` binding was changed from the original `catch {}` (no-binding catch clause, valid since ES2019) to `catch (e)`, but `e` is never referenced inside the block. This introduces an unused variable that will trigger `@typescript-eslint/no-unused-vars` / `no-unused-locals`. Restore the no-binding form: `} catch {`.",
+      "index": 3
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The backward-compatibility pattern applied throughout \u2014 outer `filter` on the HookObject for Vite 6.3+, inner `filter()` / guard check for Vite 5\u20136.2 (where the outer `filter` property is silently ignored) \u2014 is never explained in a comment anywhere in the changed files. Without that explanation, the inner checks look redundant and are at real risk of being removed in a future cleanup, silently breaking backward compat for users on Vite 5\u20136.2. Given that the peer dependency supports `^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0`, this is a meaningful concern. Adding a short comment on at least one representative plugin (or a shared utility function) explaining the dual-filter contract would protect this invariant.",
+      "index": 4
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "No automated tests are added or updated by this PR. The structural change \u2014 moving plugin hooks from function form to HookObject form \u2014 alters how Vite dispatches each hook. While the inner guard functions provide a correctness safety net for Vite < 6.3, there are no tests verifying that: (a) the outer filter regex/pattern correctly pre-screens the expected files, and (b) the handlers are not invoked for files that should be excluded. At minimum a unit test for the most complex filter (e.g., the code-content filter in `storybook-external-globals-plugin`) would help catch regressions.",
+      "index": 5
+    }
+  ],
+  "cost_usd": 0.5729852,
+  "duration_seconds": 416.3467879295349
+}

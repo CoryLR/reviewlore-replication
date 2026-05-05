@@ -1,0 +1,52 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34076,
+  "title": "CI: Allow the GitHub Actions bot to make release PRs ",
+  "body": "## What I did\r\n\r\nAllowed GitHub Actions Bot to bypass the PR branch check.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n\u00f8\r\n\r\n#### Manual testing\r\n\r\n\u00f8 (needs to be merged to test it)\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Chores**\n  * Updated pull request validation to allow automated bot-generated PRs (e.g., GitHub Actions) to bypass target-branch and manual-testing checks.\n  * Extended skip conditions to include bot authors alongside existing owner/member exemptions.\n  * No changes to public/exported signatures or external behavior.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "Sidnioulz",
+  "merged_at": "2026-03-16T10:23:42Z",
+  "base_ref": "next",
+  "merge_commit_sha": "d522903f3f357bf0a2fbce45f616000e30a179a2",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "ebc6315616ea1d0c9b1efa0eb96d697c6a567f70",
+    "4ad27609c226cb5770bf8d3a002784645f446392"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6tKXJu",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n scripts/dangerfile.js | sed -n '145,160p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 616\n\n---\n\n\ud83c\udf10 Web query:\n\n`Danger JS GitHub PR object API danger.github.pr user vs author field`\n\n\ud83d\udca1 Result:\n\nIn **Danger JS**, the GitHub PR object is `danger.github.pr` (type `GitHubPRDSL`) and the PR submitter/author is exposed as **`user`** (a `GitHubUser`) \u2014 there is **no `author` field** on `danger.github.pr`. Use:\n\n- `danger.github.pr.user` (object)\n- `danger.github.pr.user.login` (username)\n\nThis matches the Danger JS DSL reference, which documents `user: GitHubUser` as \u201cThe User who submitted the PR.\u201d [1] and even shows example usage like `danger.github.pr.user.login`. [2]\n\nIf you\u2019re looking for a string like \u201cpr author\u201d, that\u2019s a **Danger Ruby** convenience accessor (`github.pr_author`), not the Danger JS PR object shape. [3]\n\n**Sources:**  \n[1] ([danger.systems](https://danger.systems/js/reference.html))  \n[2] ([danger.systems](https://danger.systems/js/changelog?utm_source=openai))  \n[3] ([danger.systems](https://danger.systems/reference.html))\n\nCitations:\n\n- 1: https://danger.systems/js/reference.html\n- 2: https://danger.systems/js/changelog?utm_source=openai\n- 3: https://danger.systems/reference.html\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg 'danger\\.github\\.pr\\.' scripts/dangerfile.js -A 2 -B 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 796\n\n---\n\n\n\n</details>\n\n**Use `danger.github.pr.user` here; `pr.author` will break contributor PRs.**\n\nLine 150 uses `danger.github.pr.author`, but Danger's GitHub PR DSL exposes the PR submitter as `danger.github.pr.user`. This makes `author` undefined, causing line 156 to throw a TypeError when accessing `author.login` on any non-`OWNER`/`MEMBER` PR, which aborts the Danger run. The same file uses the correct field elsewhere (see `checkManualTestingSection`).\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n-  const author = danger.github.pr.author;\n+  const author = danger.github.pr.user;\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  const author = danger.github.pr.user;\n  const authorAssociation = danger.github.pr.author_association;\n\n  // Only check for non-team members (not OWNER, MEMBER) and skip GitHub Actions bot\n  if (\n    ['OWNER', 'MEMBER'].includes(authorAssociation) ||\n    (author.login === 'github-actions[bot]' && author.type === 'Bot')\n  ) {\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@scripts/dangerfile.js` around lines 150 - 157, The code incorrectly reads\ndanger.github.pr.author into the variable author causing undefined for\ncontributor PRs; update the assignment to use danger.github.pr.user instead and\nensure subsequent checks that reference author (and authorAssociation) still\nwork (the conditional that checks ['OWNER','MEMBER'].includes(authorAssociation)\nand the bot check that uses author.login and author.type should operate on the\nnew author variable). Locate the author/authorAssociation initialization and\nreplace the source for author from pr.author to pr.user so the bot/type access\nno longer throws a TypeError.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:grasshopper -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "scripts/dangerfile.js",
+          "line_number": 157,
+          "start_line": null,
+          "commit_sha": "8c7472f490d8d752868913220d2eb7d7374b1c0e",
+          "created_at": "2026-03-09T12:38:51Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a bug where `danger.github.pr.author` should be `danger.github.pr.user`, provides a specific code fix with a diff, and explains the TypeError it causes. This is clearly actionable."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

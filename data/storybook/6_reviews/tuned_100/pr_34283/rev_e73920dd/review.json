@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 441,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The truthiness filter `.filter(([, v]) => v)` deviates from the project's own `buildNavigationUrl` helper (in `lib/url.ts`), which uses an explicit `.filter(([, v]) => v !== null && v !== undefined)`. Although `customQueryParams` values are typed as `string | undefined` (no `null`), a truthiness check silently drops empty-string values while the explicit check does not. Align with `buildNavigationUrl`'s guard and with the project-wide convention of using explicit null/undefined checks rather than truthiness for string-presence tests.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 453,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`tagsValue || null` should be `tagsValue ?? null`. `serializeTagsParam` returns `string | undefined` (never an empty string), so both behave identically at runtime, but `||` would silently coerce a hypothetical empty string to `null` rather than surfacing it. The project rule is to prefer `??` over `||` for default-value fallbacks to avoid masking falsy-but-valid values.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 962,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`filteredIndex[storyId]?.type === 'story'` treats any docs entry as \"not passing\" the filter even when it is present in `filteredIndex`. Consider the scenario: the user navigates to `?path=/docs/my-component&tags=some-tag` and the docs entry passes the filter (i.e., `filteredIndex['my-component']` exists with `type: 'docs'`). The check still evaluates to `false`, so the redirect fires and the user is bounced away from the page they explicitly requested. The guard should check for presence in `filteredIndex` regardless of entry type:\n\n```typescript\nconst entryPassesFilter = !!(filteredIndex && filteredIndex[storyId]);\n```\nor at minimum:\n```typescript\nconst entryPassesFilter =\n  !!(filteredIndex &&\n    (filteredIndex[storyId]?.type === 'story' ||\n     filteredIndex[storyId]?.type === 'docs'));\n```",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 973,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`navigateWithQueryParams(\\`/\\${viewMode}/\\${firstFiltered}\\`)` uses the `viewMode` delivered by the `STORY_SPECIFIED` event (the preview iframe's current mode), not the type of the `firstFiltered` entry. If `firstFiltered` resolves to a docs entry (e.g., `type: 'docs'`) while the event carries `viewMode: 'story'`, the manager navigates to `/story/<docs-id>`, which is an invalid path and will fail to render the docs page. The navigation path should be derived from the target entry's own type:\n\n```typescript\nif (firstFiltered) {\n  const targetType = filteredIndex![firstFiltered].type; // 'story' | 'docs'\n  navigateWithQueryParams(`/${targetType}/${firstFiltered}`);\n}\n```",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/manager-api/store.ts",
+      "line_number": 129,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "If the `'url'` persistence handler has not been registered yet (e.g., because the url-module's `init()` hasn't run) when the first `setState` with `persistence: 'url'` is called, the block silently does nothing \u2014 filter changes are neither reflected in the URL nor surfaced as an error. Add an `else` branch that logs a warning:\n\n```typescript\n} else {\n  logger.warn('[Store] No URL persistence handler registered; filter state was not written to the URL.');\n}\n```\nThis makes timing / wiring bugs visible during development.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/tags.ts",
+      "line_number": 48,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Tag values are interpolated directly into the URL string without any percent-encoding. A tag name containing `&`, `=`, `;`, or `!` would corrupt the URL structure: `&` would be parsed as a parameter delimiter, `=` as a key/value separator, and `;` as a tag-list delimiter. While Storybook tag names are typically simple identifiers, the encoder should guard against edge cases:\n\n```typescript\nconst serializedIncluded = included.map(\n  (tag) => encodeURIComponent(reverseBuiltInUrlTagMap[tag] ?? tag)\n);\nconst serializedExcluded = excluded.map(\n  (tag) => `!${encodeURIComponent(reverseBuiltInUrlTagMap[tag] ?? tag)}`\n);\n```\nAnd `parseTagsParam` should correspondingly call `decodeURIComponent` after splitting.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR removes the migration path for localStorage-persisted tag filter state (`layout.includedTagFilters` / `layout.excludedTagFilters` / top-level `includedTagFilters`) without any MIGRATION.md entry. Users who have saved filter preferences in localStorage will silently lose them on upgrade \u2014 after refreshing, they will see the preset defaults rather than their previous selections. This is a user-visible behavior change that warrants a MIGRATION.md note, even if the migration path is intentionally dropped.",
+      "index": 6
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The new filter-aware initial story selection code path (the `hasActiveFilters && !stateHasSelection` block inside the `STORY_SPECIFIED` handler) and the updated `selectFirstStory` have no dedicated unit tests. The existing `tags.test.js` tests only the pure serialization/parse helpers. Consider adding tests that assert: (1) navigating to a docs page whose tag passes the active filter is not redirected, (2) navigating to a story that fails the filter redirects to the first matching story, (3) when no story passes the filter, `selectFirstStory` returns without navigating (verifying the intentional no-op), and (4) the redirect for a docs `firstFiltered` entry uses `docs` as the view-mode prefix.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 1.0163474,
+  "duration_seconds": 721.5875520706177
+}

@@ -1,0 +1,38 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/cli-storybook/src/bin/run.ts",
+      "line_number": 309,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `-o, --output` option is defined on `aiCommand` (the parent `ai` command) instead of the `prepare` subcommand. In Commander.js, options defined on a parent command must appear *before* the subcommand name in the CLI invocation. This means the actual working syntax would be `storybook ai -o path.md prepare`, but the PR description documents `npx storybook ai prepare -o path/to/prompt.md` \u2014 that form will fail with `error: unknown option '-o'` because the `prepare` subcommand doesn't define that option.\n\nThe fix is to move the `.option('-o, --output <path>', ...)` call to the `prepare` subcommand block (alongside the existing `--config-dir` option), and revert the action handler back to its simpler original form since the parent-option-merging workaround would no longer be needed for `--output`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/bin/run.ts",
+      "line_number": 319,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `cmd.parent?.opts()` merging was introduced here as a workaround to access `--output` from the parent command's option bag. If `--output` is moved to the `prepare` subcommand (fixing the placement bug above), this workaround becomes unnecessary and the action handler can be simplified back to the original `async (options) => { ... }` form. As-is, the workaround also silently changes how `logfile` is resolved for this command (picking it up from parent opts rather than from `options` directly), which may or may not reflect a pre-existing bug in the original code.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/index.ts",
+      "line_number": 73,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`writeFile` will throw `ENOENT` if the parent directory of `outputPath` does not exist. For example, `storybook ai prepare -o some/new/dir/prompt.md` fails if `some/new/dir/` hasn't been created yet. Consider adding a `mkdir` call before writing:\n```ts\nimport { mkdir, writeFile } from 'node:fs/promises';\nimport { dirname, resolve } from 'node:path';\n\nconst outputPath = resolve(output);\nawait mkdir(dirname(outputPath), { recursive: true });\nawait writeFile(outputPath, markdownOutput, 'utf-8');\n```\nOtherwise the error message from `handleCommandFailure` will be confusing to users who don't realize they need to pre-create the directory.",
+      "index": 2
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "No automated tests are added for the new `--output` functionality (the PR checklist has all test categories unchecked). At minimum, a unit test for `aiPrepare` that asserts the file is written when `output` is provided \u2014 and that `logger.log` is called with the confirmation message rather than the markdown content \u2014 would prevent regressions and document the expected behavior.",
+      "index": 3
+    }
+  ],
+  "cost_usd": 0.24166559999999998,
+  "duration_seconds": 176.5578739643097
+}

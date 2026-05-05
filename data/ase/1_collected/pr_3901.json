@@ -1,0 +1,33 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3901,
+  "title": "ase.parallel: Do not create communicator too early",
+  "body": "I want to detect whenever we fail to control how communicators are passed in different places.  Often someone forgets to set a communicator and it defaults to world.  That likely causes a nasty deadlock when the caller tries to do processing on a different communicator.\n\nSo we want to monkeypatch the world communicator so it is 'broken', so we get a crash instead of a deadlock.\n\nIn order to 'break' it (by monkeypatching, e.g. from inside test suite) we need to mutate it, and that is impossible on GPAW's C communicator: Both the instance and its type are completely immutable.  So we need to import the Python wrapper (which we can monkeypatch), and we need to be not-too-eager about it in order not to get a crash due to cyclic import.  Hence this change.\n\nAlthough this could probably be achieved in nicer ways, the communicator import order is a bit of a minefield.\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [ ] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [ ] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [ ] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [ ] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [ ] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "askhl",
+  "merged_at": "2025-11-28T12:01:45.449Z",
+  "base_ref": "master",
+  "merge_commit_sha": "1d95872236fc37e9e09716662b40faf3654ddb9f",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2920281548",
+          "author": "askhl",
+          "body": "Thank you @schiotz!",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-11-28T12:01:40.750Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 1
+}

@@ -1,0 +1,307 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3990,
+  "title": "Legacy opt.converged()",
+  "body": "Move current `converged(gradient)` to `gradient_converged(gradient)` and add legacy-style `opt.converged(forces=None)` ensuring it is tested.\n\nCloses #1744 #1878 \n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [ ] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [ ] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [ ] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [ ] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [ ] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "askhl",
+  "merged_at": "2026-03-10T10:30:27.268Z",
+  "base_ref": "master",
+  "merge_commit_sha": "578dce819a4ae0eccb9456a2de1c02595d58c939",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3101041780",
+          "author": "askhl",
+          "body": "@ajjackson @yuzie007 opinions?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-20T13:42:16.305Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3101225851",
+          "author": "yuzie007",
+          "body": "Thank you @askhl for the MR!\n\nI have not fully followed the old and the present behaviors of `opt.converged()`, so likely I miss the point, but I get a naive question.\n\nI was wondering what the actual issue is, then reading #1878, and noticed that, in their `ase_adsorption_finder_mol.py`, they did\n```python\nforces = system.get_forces()\n...\nif relax.converged(forces):\n```\nwhich, if I understand correctly, can actually simply be replaced with\n```python\nif relax.converged():\n```\nwith rather reverting the `gradient=None` default like\n```python\n    def converged(self, gradient=None):\n        \"\"\"Did the optimization converge?\"\"\"\n        if gradient is None:\n            gradient = self.optimizable.get_gradient()\n        assert gradient.ndim == 1\n        return self.optimizable.converged(gradient, self.fmax)\n```\nWas there any issue with the `gradient=None` default?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-20T14:38:49.779Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3101259546",
+          "author": "ajjackson",
+          "body": "@yuzie007 The issue with that scheme is it requires changes on both sides: the `converged(gradient)` function needs modifying to provide a default argument (currently `gradient` is mandatory) and the user code needs modifying to stop passing the forces.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-20T14:50:49.564Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3101271895",
+          "author": "ajjackson",
+          "body": "If I understand correctly, the proposed MR:\n- renames the \"new-style\" `converged(gradient)` method to `gradient_converged(forces)` on the `Dynamics` class and some derived optimisers.\n- implements a wrapper to restore the \"old-style\" `converged(forces=None)` on the `Optimizer` class (i.e. it is not available on other `Dynamics` - but in practice all `Dynamics` are optimizers anyway.)\n\nThis would break code that inherits `Dynamics` (rather than Optimizer) and uses `converged`, and any Optimizer implemented outside ASE that used the new version of `converged`.\nAs it reverts a recent API break that might please more people than it annoys. I think the release note needs to be emphatic that this changes the behaviour of `converged()`.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-20T14:54:21.995Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3119828528",
+          "author": "askhl",
+          "body": "If we like it better, we can also refrain from changing this again.  But here we go:\n\nPreviously most implementations defined either `def converged(forces=None)` or `def converged(f=None)`.  IIRC the actual superclass had `def converged(self): pass` but that was ignored by all the subclasses.  The keywords have never been consistent but probably everyone who actually passed forces would pass them positionally anyway.\n\nWhat we can do for maximal compatibility is `def converged(forces=None)` which reshapes automatically so it does not care about Nx3 versus flat layout, and also, it doesn't care about the sign because it calculates a norm.  That way it'll be the same if someone passes flat gradient or Nx3 forces, and of course it'll also work when nothing is passed.\n\nWe could make that change, then leave it at that, and focus on ASE4 API for further improvements.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-27T14:41:40.017Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3122779509",
+          "author": "miro.ilias",
+          "body": "Dear @askhl , thanks for the fix of our issue https://gitlab.com/ase/ase/-/issues/1878 . Cc: @dipayanster",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-01T20:32:51.550Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3123201786",
+          "author": "miro.ilias",
+          "body": "FYI, in  https://gitlab.com/ase/ase/-/blob/master/ase/utils/abc.py?ref_type=heads   we have ` def converged` and `def gradient_norm(self, gradient):` ...",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-02T04:05:18.118Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3124004465",
+          "author": "askhl",
+          "body": "@miro.ilias Those are on Optimizable, i.e., not Optimizer.  They are meant to be like that.\n\nThe Optimizable is what the Optimizer is optimizing.  It is better for the Optimizable to know things like whether it converged, because the Optimizer doesn't know *what* it is optimizing (Atoms, NEB, some other function) whereas the Optimizable would know and hence implement a reasonable criterion (e.g. knowing differences between stresses and forces).  But even the Optimizable interface does not fully disentangle the knowledge, we try to do that in !3941 (still just a prototype, may not be easy to understand currently)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-02T10:10:07.197Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3124005923",
+          "author": "askhl",
+          "body": "So the opt.converged() just calls the Optimizable in a way that makes it work as before.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-02T10:10:32.033Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3127776552",
+          "author": "askhl",
+          "body": "@ajjackson @yuzie007 do we want this or do we prefer not to?\n\nThe milestone %\"3.28.0\" (renamed from 3.27.1) is complete but I feel that this question should also be decided.\n\nIt seems some people are happier if we restore the old interface, and I think I'll shift focus to `_4` where that will not be a limitation.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-03T14:06:28.598Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3127797314",
+          "author": "askhl",
+          "body": "> I think the release note needs to be emphatic that this changes the behaviour of `converged()`\n\nIt will only break the most recent behaviour in the case where the gradient was explicitly passed as a keyword.  That could also be avoided by having an *additional* optional `gradient=` keyword.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-03T14:12:43.834Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3127851590",
+          "author": "ajjackson",
+          "body": "I see! Then it's a bit cumbersome but if we _can_ include that extra keyword with a `DeprecationWarning` attached to it that should cover all bases.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-03T14:27:03.674Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3127897109",
+          "author": "askhl",
+          "body": "done",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-03T14:38:19.218Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3127950986",
+          "author": "miro.ilias",
+          "body": "Thanks for your work ! Will check https://gitlab.com/ase/ase/-/issues/1878 soon.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-03T14:53:15.748Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3128167442",
+          "author": "yuzie007",
+          "body": "Thank you @askhl and @ajjackson for further explanation! I think I can also mostly understand the motivation and agree on the way to recover the old `converged` behavior.\n\nWhile it does not very directly related to the present MR, I just got one question about the `Optimizable` design. Now it has\n```python\n    def gradient_norm(self, gradient):\n        forces = gradient.reshape(-1, 3)  # XXX Cartesian\n        return np.linalg.norm(forces, axis=1).max()\n```\nwhere the reshaping the gradient seems to me a domain knowledge to be rather in `OptimizableAtoms`.\nIs it somehow planned to move this to `OptimizableAtoms`, or do I misunderstand something?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-03T15:47:13.583Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3145652482",
+          "author": "askhl",
+          "body": "It *should* basically be an abstract method yes.  It must necessarily be overridden by an optimizable that has non-divisble-by-three DOFs.  The thing is, all current optimizables do this the same way so the price of making it abstract now is that we'll duplicate it in many places.\n\nThanks @yuzie007, I'll merge.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-10T10:30:22.221Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3145653562",
+          "author": "askhl",
+          "body": "...and thanks @ajjackson  as well",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-03-10T10:30:42.088Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 15
+}

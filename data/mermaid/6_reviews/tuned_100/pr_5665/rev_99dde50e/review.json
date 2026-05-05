@@ -1,0 +1,128 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/db.ts",
+      "line_number": 14,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`cnt`, `auxRoot`, and `stack` are module-level mutable variables. The project rule explicitly prohibits this pattern in DB modules because it leaks state across parallel diagram renders. If two treeView diagrams are rendered concurrently, both share these variables and will corrupt each other's tree. Wrap all mutable state in `ImperativeState`, following the canonical pattern in `packages/mermaid/src/diagrams/packet/db.ts`.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/db.ts",
+      "line_number": 36,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`getCount` is exported in the `TreeViewDb` interface and referenced in the `db` object, but it is never called by the renderer, the parser (jison grammar), or any other code in the diff. Per project rules, unreferenced exported functions are dead code and should be removed before merging.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/detector.ts",
+      "line_number": 2,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`DiagramDetector`/`DiagramLoader` and `ExternalDiagramDefinition` are imported from the same module in two separate `import type` statements. They should be combined into one: `import type { DiagramDetector, DiagramLoader, ExternalDiagramDefinition } from '../../diagram-api/types.js';`. See `packages/mermaid/src/diagrams/packet/detector.ts` for the canonical single-statement pattern.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/parser/parser.jison",
+      "line_number": 12,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `NL` token is dead code. Jison lex resolves rule conflicts by (1) longest match wins and (2) first-listed rule wins on ties. Since `[\\s]+` (line 11) matches `\\n`, any input that `[\\n]+` could match is also matched by `[\\s]+` with equal or greater length, so `[\\s]+` always wins. `NL` is never produced. The grammar's `eol: NL` branch can therefore never reduce. Fix by moving the `[\\n]+` rule above `[\\s]+` and restricting `[\\s]+` to non-newline whitespace: `[ \\t\\r]+ return \"SPACELIST\";`.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/parser/parser.jison",
+      "line_number": 11,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Because `[\\s]+` consumes newlines, a sequence like `\"\\n  \"` (newline + 2 spaces) becomes a single SPACELIST token of length 3 rather than a NL token followed by a SPACELIST of length 2. Indentation level is calculated as `$2.length`, so the level values are inflated by the number of newline characters in the token. While siblings with consistent indentation still compare correctly (the +1 newline offset is consistent), blank lines between items double-count newlines: `\"\\n\\n  \"` has length 4 instead of 2, making an item that should be a sibling appear as a child of the previous node. Fix the lexer so that SPACELIST only matches non-newline whitespace (see preceding comment).",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/renderer.ts",
+      "line_number": 70,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`positionLine` is called unconditionally with `x1 = indent - config.rowIndent`. For the virtual `auxRoot` node rendered at depth 0, `indent = 0`, so `x1 = 0 - 10 = -10`. This draws a horizontal connector line from x=-10 to x=0. The `viewBox` only extends left by `config.lineThickness / 2` (0.5 with the default of 1), so virtually the entire line is clipped and invisible \u2014 but the off-screen geometry is still present in the DOM. A guard such as `if (depth > 0)` before the `positionLine` call should skip the connector for the virtual root.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/renderer.ts",
+      "line_number": 105,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Uses `+` string concatenation: `'Rendering treeView diagram\\n' + text`. Per project convention, prefer template literals: `` `Rendering treeView diagram\\n${text}` ``.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/renderer.ts",
+      "line_number": 118,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`svg.attr('viewBox', ...)` is called before `configureSvgSize`. Per project rules, `configureSvgSize(svg, height, width, config.useMaxWidth)` must be called *before* setting the `viewBox` attribute, following the established pattern in `pieRenderer.ts`. Swap the two calls.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/styles.ts",
+      "line_number": 8,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `fontFamily` default string contains mismatched quotes: `'trebuchet ms\",verdana,arial,sans-serif'`. The outer single-quotes delimit the JavaScript string, but the embedded `\"` after `trebuchet ms` is unmatched CSS \u2014 the rendered `font-family` property value becomes `trebuchet ms\",verdana,arial,sans-serif`, which is syntactically invalid CSS. The correct value should be `'\"trebuchet ms\",verdana,arial,sans-serif'` so the string's runtime value is `\"trebuchet ms\",verdana,arial,sans-serif` \u2014 a valid CSS font-family list with the multi-word name properly double-quoted per W3C spec.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/treeView/types.ts",
+      "line_number": 13,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`export interface Node` shadows the browser-global `Node` DOM interface. Any file that imports both this type and a DOM API that returns `Node` (e.g., `document.getElementById`) will face an ambiguous name. Per project rules, use a project-scoped name \u2014 e.g., `TreeViewNode` \u2014 to avoid the collision.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid/src/defaultConfig.ts",
+      "line_number": 263,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Two issues with the `treeView` entry:\n\n1. **Missing `useMaxWidth: true`**: Per project convention, all new diagrams must explicitly set `useMaxWidth: true` in `defaultConfig.ts` (only `gitGraph` intentionally omits it). Add `useMaxWidth: true` after spreading `defaultConfigJson.treeView`.\n\n2. **Spurious `useWidth: undefined`**: No other diagram entry in `defaultConfig.ts` sets `useWidth: undefined` explicitly. Since `BaseDiagramConfig.useWidth` is already optional, this assignment is at best redundant and at worst a type violation \u2014 `db.ts` annotates the result as `Required<TreeViewDiagramConfig>`, which makes `useWidth: number` required (non-undefined). Remove the `useWidth: undefined` line.",
+      "index": 10
+    },
+    {
+      "file_path": "packages/mermaid/src/schemas/config.schema.yaml",
+      "line_number": 2108,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`rowIndent`, `paddingX`, and `paddingY` are declared as `type: number`. Per project rules, non-negative spatial dimensions should use `type: integer` with a `minimum` constraint, which also validates that callers don't accidentally pass fractional pixel values for these layout dimensions. `lineThickness` is a legitimate candidate for a float (e.g., `0.5`), so `type: number` is appropriate there.",
+      "index": 11
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "**Missing test in `styles.spec.ts`**: The new `treeView` diagram is not added to the diagram list in `packages/mermaid/src/styles.spec.ts`. Per project rules, every new diagram's `styles.ts` must have a corresponding entry there (alongside `packet`, `block`, etc.) so that CSS generation is validated across all built-in themes.",
+      "index": 12
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "**Missing user-facing documentation**: There is no source documentation file under `packages/mermaid/src/docs/syntax/` for the treeView diagram. The auto-generated changes in `docs/config/setup/` (type reference docs) do not constitute user documentation. Per project rules, a new diagram requires a syntax documentation page reachable from the VitePress sidebar config (`packages/mermaid/src/docs/.vitepress/config.ts`), written with the `v<MERMAID_RELEASE_VERSION>` placeholder, and covering all supported syntax including edge cases.",
+      "index": 13
+    },
+    {
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "**Missing changeset**: The diff contains no `.changeset/*.md` file. Introducing a new diagram type is a net-new additive feature, which per project rules requires a `minor`-level changeset entry. The entry should name the new diagram type and describe the behavioral addition (e.g., `minor: add treeView diagram for rendering hierarchical directory-like structures`).",
+      "index": 14
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**PR description example is misleading**: The \"Code\" block in the PR description shows `treeView-beta` as the opening line. The detector (`/^\\s*treeView/`) correctly detects this, but the parser's `\"treeView\"` lex rule consumes only the literal `treeView`, leaving `-beta` to be matched by `[\\S]+` \u2192 `TEXT`. The grammar rule `body TEXT` then calls `addNode(0, \"-beta\")`, creating an unintended node named `-beta` as the root-level child. The rendered diagram would show `-beta` (not `treeView-beta`) as the root item. Either align the detector and parser keyword (e.g., `treeView-beta`, as `packet-beta` does), or update the PR description example to use the plain `treeView` keyword so that the code block accurately reflects what the parser produces.",
+      "index": 15
+    }
+  ],
+  "cost_usd": 0.9514186500000001,
+  "duration_seconds": 727.3433239459991
+}

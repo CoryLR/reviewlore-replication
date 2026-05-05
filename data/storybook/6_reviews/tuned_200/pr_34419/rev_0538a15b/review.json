@@ -1,0 +1,31 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/build-dev.ts",
+      "line_number": 316,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`logger.outro('')` with an empty string is the only such call in the entire codebase \u2014 every other `logger.outro` call carries a meaningful status message (e.g., `'Storybook build completed successfully'` or `'Storybook exited with an error'` in `core.ts`). In clack TUI mode, passing an empty string renders a blank closing box (`\u2514\u2500\u2500\u2500`) after the step/error line, which is visually noisy without adding information. Consider consolidating the status text into `outro` directly and removing the redundant `logger.step`/`logger.error` calls:\n\n```ts\nif (problems.length > 0) {\n  logger.log(problems.map((p) => p.stack).join('\\n'));\n  logger.outro(CLI_COLORS.error('Smoke tests failed.'));\n} else {\n  logger.outro(CLI_COLORS.success('Smoke tests passed, exiting.'));\n}\n```\n\nThis matches the established pattern and uses `outro` for what it is semantically meant for: the final exit message.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/build-dev.ts",
+      "line_number": 311,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`logger.error(CLI_COLORS.error('Smoke tests failed.'))` applies color twice: `CLI_COLORS.error` is `picocolors.red` (wraps the string in red ANSI codes), and `logger.error` in clack TUI mode calls `clack.log.error()` which adds its own red `\u2716` indicator styling. The same double-wrapping applies to `logger.step(CLI_COLORS.success(...))` on line 314. In practice this is harmless (outer styling overrides or nests cleanly), but in non-clack fallback mode `logger.error` falls back to bare `console.error` without color \u2014 so the `CLI_COLORS` wrapper may be intentional for that path only. If so, a brief inline comment would clarify the intent and prevent a future refactor from removing what looks like redundant wrapping.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/build-dev.ts",
+      "line_number": 314,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`logger.step` is semantically for intermediate progress steps in a multi-step flow (clack renders it as `\u25c7 message`). Using it for the final \"all done\" success output is a semantic mismatch \u2014 `logger.outro` is the right primitive for a concluding message. The current arrangement (`logger.step` for success + `logger.outro('')` to close the UI) is inside-out compared to how the rest of the codebase uses these APIs.",
+      "index": 2
+    }
+  ],
+  "general_comments": [],
+  "cost_usd": 0.2759801,
+  "duration_seconds": 163.98582005500793
+}

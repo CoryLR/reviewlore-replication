@@ -1,0 +1,60 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/common/svgDrawCommon.ts",
+      "line_number": 152,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The background color `'#ffffde'` and the border `'1px solid #333'` on the next line are hardcoded light-theme values that will not adapt to dark or custom themes. The CSS in `packages/mermaid/src/diagrams/flowchart/styles.ts` already defines `div.mermaidTooltip` with theme variables (`tertiaryColor` for background, `border2` for the border), but that rule is SVG-scoped and never reaches the body-level `<div>`. This PR was a good opportunity to read those values from `getConfig().themeVariables` instead:\n```ts\nconst { tertiaryColor, border2 } = getConfig().themeVariables ?? {};\ntooltipElem\n  .style('background', tertiaryColor ?? '#ffffde')\n  .style('border', `1px solid ${border2 ?? '#333'}`)\n```\nHardcoding hex literals here means users on dark or custom themes will always see a light-yellow tooltip with a dark border.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+      "line_number": 492,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The selector was broadened from the specific `svg.selectAll('g.node')` to every `<g>` element that carries a `title` attribute. In a class-diagram SVG, `<g>` elements are used for many levels of structural grouping \u2014 not only top-level node containers. If an inner group (e.g., a member list row or icon group) also carries a `title` attribute, this registers overlapping `mouseover`/`mouseout` handlers for the same logical node, causing the tooltip to flicker or fire multiple times as the cursor moves within the node. `flowDb.ts` still uses the narrowed `'g.node'` selector. Identify the exact CSS class applied to top-level node containers in the class-diagram renderer and use that instead of filtering all `<g>` elements.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+      "line_number": 500,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The guard changed from `if (title === null)` to `if (!title)`. D3's `.attr()` returns `null` when the attribute is absent and the attribute's string value otherwise. A falsy check incorrectly skips a node with `title=\"\"` (empty string), which is a valid but semantically different case from a missing attribute. Per the project's coding standards, use strict equality: `if (title === null)`. `flowDb.ts` still uses the strict form (`if (title === null)`) on line 589, so this also creates an inconsistency between the two implementations.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+      "line_number": 507,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The tooltip is populated via `.html(this.escapeHtml(title).replace(...))`, which uses a custom hand-rolled escape function. `flowDb.ts` uses the established safer pattern: call `.text()` (letting D3 encode all entities), then read back `.html()` to substitute `<br/>`:\n```ts\ntooltipElem.text(title);\ntooltipElem.html(tooltipElem.html().replace(/&lt;br\\/&gt;/g, '<br/>'));\n```\nThis pattern delegates entity encoding to D3 (which handles edge cases correctly) rather than a separate `escapeHtml` implementation. Using `.html()` directly \u2014 even after manual escaping \u2014 keeps two divergent encoding implementations alive simultaneously and eliminates the need for the private `escapeHtml` method entirely.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+      "line_number": 478,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`escapeHtml` is a generic HTML-escaping utility with no dependency on `ClassDB` state. Declaring it `private` on the class makes it invisible and unreusable to other diagram types (including `flowDb`) that perform the same HTML manipulation on tooltip content. It belongs in a shared location \u2014 either `packages/mermaid/src/diagrams/common/common.ts` or alongside `createTooltip` in `svgDrawCommon.ts`. If the recommendation in the `.html()` comment above is adopted (use the `.text()` \u2192 `.html()` pattern), the method becomes unnecessary altogether.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The refactoring of `flowDb.ts` is incomplete. This PR updates `flowDb.ts` to use `createTooltip()`, but the rest of its tooltip handler remains unchanged. After the PR, the two implementations diverge on multiple axes:\n\n| Aspect | `classDb.ts` (updated) | `flowDb.ts` (unchanged) |\n|---|---|---|\n| Node selector | All `g` with title attr | `g.node` |\n| Null guard | `!title` (falsy) | `=== null` (strict) |\n| HTML encoding | custom `escapeHtml` | `.text()` \u2192 `.html()` |\n| Top offset | `rect.bottom + 4` | `rect.bottom` |\n| String templates | template literals | string concatenation |\n\nIf the 4 px bottom offset and other improvements are correct, they should be applied consistently to `flowDb.ts` in the same PR to prevent the two implementations from drifting further apart.",
+      "index": 5
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "No unit or end-to-end tests were added (the PR checklist acknowledges this). The fix changes three distinct behaviors for class diagrams: the node selector, the bounding-rect retrieval (the core bug fix), and the tooltip position relative to the element. At minimum, a Cypress `imgSnapshotTest` in `cypress/integration/rendering/classDiagram.spec.js` should assert that a tooltip appears near the hovered node rather than at the document bottom, and a unit test should verify that tooltip text containing `<br/>` and HTML special characters is rendered correctly.",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.7491380000000002,
+  "duration_seconds": 491.91062092781067
+}

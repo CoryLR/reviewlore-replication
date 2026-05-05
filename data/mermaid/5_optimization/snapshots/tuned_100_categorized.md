@@ -1,0 +1,639 @@
+# Categorized rules: mermaid / tuned_100
+
+Each rule is annotated with its BitsAI-CR sub-category (within its existing dimension), generalizability (project_specific / generalizable), and lintability (lintable / partially_lintable / requires_llm). Generated via one Sonnet pass per project.
+
+## Summary
+
+- Total rules: 200
+- Generalizability:
+    - `project_specific`: 110
+    - `generalizable`: 90
+- Lintability:
+    - `lintable`: 5
+    - `partially_lintable`: 51
+    - `requires_llm`: 144
+- Top categories:
+    - Logic Error: 64
+    - Structural Issues: 22
+    - Language-Specific Standards: 20
+    - Documentation: 11
+    - Code Smelling: 10
+    - Naming Convention: 9
+    - Redundancy Handling: 9
+    - Code Duplication: 6
+    - Unclear Code Descriptions: 6
+    - Class Design Guidelines: 5
+
+## Rules by dimension
+
+### Code Defect
+
+- **[Semantic Deviation]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When broadening a TypeScript type annotation to accept additional input shapes (e.g., `string` → `string | string[]`), verify that all runtime consumers already handle the new shape. Type-only changes can compile cleanly while runtime behavior remains broken — check the actual implementation, not just the signature.
+    - _reasoning:_ Type-only changes hiding runtime breakage require semantic analysis beyond static typing.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a JS→TS refactor rewrites a guard clause (e.g., `if (value !== undefined) { ... }` → `if (value === undefined) return;`), verify the rewritten check preserves original runtime behavior for edge-case inputs like `''`, `null`, and `0`. TS annotations may not reflect all values arriving from parser-generated or loosely-typed call sites. When a JS→TS conversion also silently fixes a misspelled property name, grep the entire codebase for the old (misspelled) name before merging to confirm no caller depends on it, and add or point to a regression test that exercises the renamed property.
+    - _reasoning:_ Verifying guard clause equivalence across edge inputs and detecting renamed property dependencies requires semantic reasoning.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When checking whether an optional parameter was provided, use a strict `=== undefined` (or `!= null`) check rather than a truthy/falsy test (`if (text)`, `if (value)`). A falsy check incorrectly treats empty strings `''` and the numeric `0` as absent — and `0` is a valid value for numeric enums such as `commitType.NORMAL`, so `if (type)` silently drops normal commits.
+    - _reasoning:_ Falsy vs. strict checks can be partially flagged by linters but context-dependent correctness requires LLM reasoning.
+- **[Semantic Deviation]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When modifying a `class` attribute on any DOM element or template, preserve Plausible analytics tracking classes (e.g., `plausible-event-name=...`). They are easy to drop silently when rewriting a class list, and their removal breaks analytics event tracking.
+    - _reasoning:_ Preserving Plausible analytics classes is project-specific and requires understanding intent of class list changes.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding tool-setup steps (e.g., `pnpm/action-setup`) to a GitHub Actions workflow, make the dependency explicit via inline comment or PR description. This project uses pnpm (pnpm-lock.yaml present), so `npx` commands that auto-detect lock files will try to invoke pnpm and fail without the setup step. When adding or updating a pnpm installation step in any GitHub Actions workflow, reuse the canonical pnpm setup block from `.github/workflows/lint.yml` (including its pinned commit SHA and version comment) rather than introducing a different `pnpm/action-setup` configuration.
+    - _reasoning:_ References project-specific workflow files and pnpm setup conventions requiring cross-file reasoning.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - In GitHub Actions workflows, pin each `uses:` reference by full commit SHA (e.g., `uses: actions/checkout@<full-sha>`) rather than by semver tag, with an inline comment noting the human-readable version (e.g., `# v4.1.7`). This satisfies OpenSSF Scorecard's pinned-dependencies requirement; Dependabot will keep the hashes up to date automatically.
+    - _reasoning:_ SHA pinning in GitHub Actions can be detected via regex/custom lint rules but edge cases require context.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In GitHub Actions workflows, scrutinize any `write` permission granted at the job or workflow level (e.g., `contents: write`, `pull-requests: write`). Confirm the permission is the minimum required for the specific actions in that job, verify it cannot be replaced with a finer-grained or read-only alternative, and require an inline comment explaining why the elevated permission is necessary.
+    - _reasoning:_ Evaluating minimum necessary permissions requires understanding what each job step actually does.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When adding a `schedule:` cron trigger in any GitHub Actions workflow, use a non-zero minute offset (e.g., `28 3 * * *`) rather than scheduling at the exact top of the hour (minute `0`); GitHub's docs warn that on-the-hour schedules face higher risk of being delayed or dropped due to scheduler congestion.
+    - _reasoning:_ Cron minute=0 can be detected via regex on workflow files but semantic scheduling intent requires context.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When a GitHub Actions workflow step commits files back to the repository (e.g., via `EndBug/add-and-commit`), set the commit author to the bot identity: `author_name: 'github-actions[bot]'` and `author_email: '41898282+github-actions[bot]@users.noreply.github.com'`. Without this, scheduled runs attribute commits to the repository owner's personal account rather than the bot.
+    - _reasoning:_ References specific bot identity values and commit-action configuration tied to this project's CI setup.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When enabling pnpm via corepack in the Dockerfile, do not hardcode a pnpm version. Use `corepack enable` (and optionally `corepack enable pnpm`) without an explicit version argument so the active pnpm version is driven by the `packageManager` field in `package.json`, keeping Docker builds consistent with the rest of the toolchain.
+    - _reasoning:_ Project-specific Dockerfile convention tied to packageManager field in package.json.
+- **[API Misuse]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Use `fs.promises.mkdir(path, { recursive: true })` rather than `fs.promises.mkdir(path).catch(() => {})` when creating directories. The `recursive: true` option creates any missing intermediate directories and silently handles existing ones, making intent explicit without broadly suppressing unrelated errors.
+    - _reasoning:_ Preferring recursive mkdir over catch-all can be partially detected but semantic intent requires reasoning.
+- **[Semantic Deviation]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In TypeScript interfaces, do not mark a field optional (`?`) if it is unconditionally initialized on all construction paths. Optionality should accurately reflect whether the field can be absent. Do not use optional chaining (`?.`) or optional type markers (`?`) on values already guaranteed non-nullish by the surrounding logic or TypeScript types; unnecessary optionality obscures intent and can suppress real type errors.
+    - _reasoning:_ Determining whether optional markers accurately reflect nullability requires cross-path flow analysis.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Verify that hyperlinks in documentation resolve correctly. Spot-check external URLs (plugin docs, product pages, third-party tools) before approving. For internal cross-page links in `packages/mermaid/src/docs/`, use relative `.md` paths (e.g., `../config/icons.md`) — VitePress converts them to correct HTML at build time; `.html` breaks outside the rendered site. For same-page anchors use bare fragments (`#anchor`) rather than prefixing the current filename. When linking to another documentation page, include a fragment identifier pointing to the relevant subsection (e.g., `../config/icons.md#registering-icon-pack`) rather than just the page root, so readers land on the exact content. When fixing a broken or changed external URL, search both `packages/mermaid/src/docs/` (sources) and the generated `docs/` directory for every occurrence of the old URL and update them all consistently in the same MR.
+    - _reasoning:_ References project-specific docs paths and VitePress conventions requiring semantic link resolution.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - CDN and npm package URLs used in documentation code examples must pin a major version (e.g., `@iconify-json/logos@1` instead of `@iconify-json/logos`) to prevent future major releases from silently breaking documented examples.
+    - _reasoning:_ Unpinned CDN URLs can be detected by regex but distinguishing major-pinned vs unpinned requires pattern matching.
+- **[Logic Error]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - Do not append UTM or other tracking query parameters to `mermaid.live/edit` URLs. The live editor stores diagram state in the URL's hash/query string, so tracking parameters corrupt any diagram link shared by users. Use clean URLs (e.g., `https://mermaid.live/edit`).
+    - _reasoning:_ Project-specific mermaid.live URL; UTM parameter presence can be detected via regex.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - The `docs/` directory is auto-generated from `packages/mermaid/src/docs/` by the docs-build pipeline, and generated files carry a header warning against direct edits. All documentation edits must be made exclusively in the source tree; reject PRs that edit `docs/` directly, and when a PR edits both, verify the generated tree is fully in sync with the source. When modifying or removing special block wrappers (e.g., ```` ```note ```` blocks) in source docs, verify the transformer's generated output in `docs/` is correctly formatted and indented — content transitions out of special block types can introduce transformer indentation artifacts.
+    - _reasoning:_ Project-specific generated docs pipeline; verifying sync and transformer output requires cross-file reasoning.
+- **[Dead Code]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Verify that every call site matches the target function's parameter list exactly; remove extra arguments that have no corresponding parameter in the signature. When a diff introduces a new function or method, verify that it has at least one call site in the codebase; flag unreferenced new functions as dead code.
+    - _reasoning:_ Extra arguments and unreferenced functions can be partially caught by TypeScript/linters but cross-file calls need analysis.
+- **[Null Pointer]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Helper functions that search for a value and may come up empty should return `undefined` (not `''` or another falsy sentinel) when no match exists. Callers must guard against `undefined` before using the result as a lookup key into dependent structures (e.g., `commitPos`).
+    - _reasoning:_ Requires understanding search function semantics and downstream usage patterns.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Variables derived from a base value (e.g., `posWithOffset = pos + layoutOffset`) must be computed *after* all mutations to that base value within the same scope. Declaring derived variables before a block that modifies the base produces stale values.
+    - _reasoning:_ Detecting stale derived variables requires data-flow analysis across mutation sites.
+- **[Dead Code]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Do not initialize a reactive `ref` (or any variable) with a value outside a lifecycle hook if that value is unconditionally overwritten inside the hook before it is ever read; the initial assignment is dead code and should be removed.
+    - _reasoning:_ Detecting initial assignments overwritten before first read requires data-flow analysis.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `config.schema.yaml`, always include an explicit `type:` field AND an explicit `default:` value for every property; do not rely on inference from defaults, and keep schema defaults consistent with runtime behavior. For non-negative counts/dimensions use `type: integer` together with a `minimum` constraint. Diagram-specific configuration properties must be added exclusively to that diagram's own config section; do not add them to global config files, shared config types, or documentation files such as `theming.md`. When introducing a new optional color property, set its default to the existing/current rendered color (or an empty string to fall through to theme defaults) rather than an arbitrary new value, to preserve backward-compatible rendering.
+    - _reasoning:_ References project-specific config.schema.yaml conventions and diagram config architecture.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When registering a new diagram's config entry in `defaultConfig.ts`, explicitly set `useMaxWidth: true` to match all other diagrams (only `gitGraph` intentionally deviates). Conversely, in `config.schema.yaml` do not redeclare defaults such as `useMaxWidth` that are already inherited from `BaseDiagramConfig`.
+    - _reasoning:_ Project-specific defaultConfig.ts and config.schema.yaml conventions with named diagram exceptions.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Mermaid exposes font-family configuration through two distinct paths: the top-level `MermaidConfig['fontFamily']` (rendered at runtime as the CSS custom property `var(--mermaid-font-family)`) and `MermaidConfig['themeVariables']['fontFamily']` (passed as `options.fontFamily` into each diagram's `getStyles()`). When a PR modifies font-family handling, verify both paths still work and that users who configure font via either mechanism are not silently broken.
+    - _reasoning:_ Project-specific dual font-family config paths requiring semantic verification across both code paths.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - In Langium grammar files, define the `INT` terminal as `/0|[1-9][0-9]*/` to reject leading zeros (e.g., `00`), which are invalid JavaScript numeric literals.
+    - _reasoning:_ Specific regex pattern for INT terminal can be checked via pattern matching on grammar files.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In Langium diagram grammars where `NEWLINE` is semantically significant, do not use a hidden `\s+` rule — it silently swallows newlines. Define an `EOL` fragment (`NEWLINE+ | EOF`), require `NEWLINE+` after each block-level rule and between the diagram keyword and any content, and prefix all diagram rule names with the diagram identifier (e.g., `PacketBlock`, not `Block`) to prevent collisions with other diagram grammars and Langium built-in AST node types.
+    - _reasoning:_ Project-specific Langium grammar conventions requiring semantic grammar analysis.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In `runCustomConverter` for Langium `ValueConverter` classes, strip only the necessary wrapper characters (e.g., surrounding quotes on a label terminal) and trim the ends; never collapse or normalize internal whitespace in user-provided values.
+    - _reasoning:_ Detecting improper internal whitespace normalization requires understanding converter semantics.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - In the flowchart jison grammar (`flow.jison` and related files), handle both `\n` and `\r\n` when detecting line endings — checking for `\n` alone silently breaks Windows users.
+    - _reasoning:_ Missing \r\n handling in jison grammars can be partially detected via regex search for lone \n line-end checks.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In diagram renderers, call `configureSvgSize(svg, height, width, config.useMaxWidth)` before setting the SVG `viewBox` attribute, following the established pattern in `pieRenderer.ts`.
+    - _reasoning:_ Project-specific rendering pattern referencing pieRenderer.ts calling order.
+- **[Concurrency Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Do not use module-level mutable variables (e.g., `let minX = 0` at file top) in diagram rendering, layout, or DB modules — they leak state across parallel diagram renders. Wrap all mutable diagram-module and diagram DB state (collections, counters, transient builder objects, configuration) in `ImperativeState` (`packages/mermaid/src/utils/imperativeState.ts`) rather than storing them as bare class fields or module-level variables, and prefer the class-based DB architecture over functional-export patterns for new diagrams. Initialize state (including config-derived values such as `mainBranchName` and `mainBranchOrder`) inside the factory callback so values are re-read from `getConfig()` and reset correctly between diagrams. See `packages/mermaid/src/diagrams/packet/db.ts` as the canonical reference.
+    - _reasoning:_ Project-specific ImperativeState pattern for preventing state leakage across parallel diagram renders.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In a diagram DB class constructor that uses `ImperativeState` and calls `this.clear()`, place any state-initialization calls (e.g., `this.setWrap(getConfig().wrap)`) *after* `this.clear()`. `clear()` invokes `this.state.reset()` which resets all fields to defaults and silently overwrites any earlier initialization.
+    - _reasoning:_ Project-specific ImperativeState constructor ordering constraint requiring control flow analysis.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Internal rendering functions (e.g., in `packages/mermaid/src/rendering-util/` and `packages/mermaid/src/dagre-wrapper/`) must not call or import `getConfig` directly. Instead, accept an explicit `config: MermaidConfig` parameter and thread it down from callers that already hold it. Shape rendering functions specifically must accept a third parameter of type `ShapeRenderOptions` (imported from `../../types.js`) that carries `config`; do not call `getConfig()` inside shape functions, as this blocks parallel-rendering work.
+    - _reasoning:_ Project-specific rendering architecture requiring cross-file import/call analysis.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In diagram renderer functions, call `getConfig()` exactly once at the top of the function and store the result in a local variable; reuse that variable for all sub-property accesses (e.g., `.journey`, `.securityLevel`). Never use a module-level config variable (e.g., `const conf = getConfig().journey` at module scope) inside render/draw functions — it is only initialized at module-load time and will not reflect runtime configuration changes.
+    - _reasoning:_ Project-specific getConfig() usage pattern requiring understanding of module-load vs runtime timing.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In diagram DB classes, call `getConfig()` only inside `clear()` (the designated state-reset method), not inside per-operation methods such as `addVertex`, and not redundantly in the constructor if the constructor already calls `clear()`. Similarly, do not call state-setter methods (e.g., `setGen()`) in the constructor when `clear()` already initializes that same state; avoid double-initialization.
+    - _reasoning:_ Project-specific DB class getConfig() placement conventions requiring semantic analysis.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When propagating parent graph properties to a subgraph configuration in `dagre-wrapper` (e.g., when calling `node.graph.setGraph` before a `recursiveRender` call), explicitly destructure and copy only the specific properties you intend to override (e.g., `ranksep`, `nodesep`). Do not spread the full parent graph config object — this silently overwrites subgraph-specific layout values such as `marginy` and causes subtle visual regressions.
+    - _reasoning:_ Project-specific dagre-wrapper subgraph config propagation requiring semantic layout reasoning.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `gitGraphRenderer.js`, when adding or modifying a vertical graph orientation, always derive a commit's rendered position from its closest parent's stored position (`commitPos[closestParent]`) rather than from the current commit's own pre-computed `commitPos[key]`. Collapse orientations that share the same axis (e.g., `TB` and `BT`) into a single `dir === 'TB' || dir === 'BT'` branch to keep position-calculation logic consistent and avoid subtle divergence bugs.
+    - _reasoning:_ Project-specific gitGraphRenderer.js commit position logic requiring deep semantic analysis.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `sequenceRenderer.ts`, all coordinate and position adjustments (e.g., `startx`/`stopx` offsets per arrow type) must be computed inside `buildMessageModel`, which owns layout calculations. The `drawMessage` function must only render from the dimensions it receives; do not add position-offset or geometry-correction logic inside the drawing path.
+    - _reasoning:_ Project-specific sequenceRenderer.ts architectural separation of layout vs rendering concerns.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Do not wrap code in `try/catch` unless it can actually throw, and do not use `any` casts or `@ts-ignore` to suppress TypeScript errors caused by incorrect type annotations elsewhere — fix the underlying types instead. Never place a file-level `@ts-ignore` that suppresses all errors across an entire module; apply `@ts-ignore` only to specific lines with an inline comment explaining the reason.
+    - _reasoning:_ File-level ts-ignore can be partially detected; context-appropriate try/catch requires semantic reasoning.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - SVG/D3 attribute values can legally be strings or numbers; diagram node and shape property types should use `string | number` unions rather than narrowing to `number` only, to avoid incorrect type errors at call sites.
+    - _reasoning:_ Project-specific SVG/D3 attribute type conventions requiring knowledge of the shapes API.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In xychart auto-axis computation (`xychartDb.ts`) for multi-dataset bar charts with no explicit y range: the lower bound must include an appropriate baseline (typically 0), and the upper bound must be the largest *per-column sum* — sum all dataset values at each x-position, then take the max across positions. Do NOT use the global max of individual values or the total sum across all positions; both yield incorrect stacked-bar ceilings.
+    - _reasoning:_ Project-specific xychart stacked-bar axis computation logic requiring algorithmic semantic analysis.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When computing a ratio or percentage change using a numeric value read from external data (e.g., a file, test output, or API response), always guard against a zero denominator before performing the division. Handle the zero case explicitly — skip the entry with a log message or return a neutral sentinel — rather than relying on silent NaN/Infinity propagation.
+    - _reasoning:_ Zero-denominator guards require data-flow analysis to identify division sites with external data.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Avoid overly broad regex character classes such as `[A-z]`, which inadvertently include non-alphabetic ASCII characters (`[`, `\`, `]`, `^`, `_`, `` ` ``); use explicit, tightly scoped ranges like `[A-Za-z]` or separate `[A-Z]` and `[a-z]`. Additionally, review any regex applied to user-controlled strings — especially patterns matching HTML tags like `<img>` in `rendering-util/rendering-elements/shapes/util.js` — for catastrophic (polynomial) backtracking (ReDoS) risk before merging.
+    - _reasoning:_ [A-z] range can be detected via regex lint rules; ReDoS analysis requires specialized tooling.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - All user-supplied string values embedded into SVG/HTML output in rendering utilities (e.g., `rendering-util/rendering-elements/edges.js`) must be fully escaped; backslash characters in particular must be escaped to prevent incomplete string encoding. In `rendering-util/rendering-elements/createLabel.js` and similar label builders, never construct HTML by directly concatenating library input — all user-supplied label content must be sanitized or properly escaped before insertion to prevent XSS vulnerabilities. When building HTML attribute values from user input, apply `sanitizeText` (or an equivalent escaper) AND verify the result cannot contain the quote character used to delimit the attribute — a single-quote-delimited attribute may still be an XSS vector if the sanitizer does not strip or escape single quotes.
+    - _reasoning:_ XSS/escaping requirements reference project-specific rendering utilities and sanitization patterns.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When building a URL string for insertion into an unquoted CSS `url()` function (e.g., for SVG marker references), use `CSS.escape()` rather than manually replacing individual characters such as `\(`, `\)`, or `\\`. Manual replacement is incomplete: characters valid in URIs but invalid in CSS `<url-token>` values — including single quotes, double quotes, and whitespace — still cause breakage. Reuse the shared `getUrl()` helper in `packages/mermaid/src/diagrams/common/common.ts` rather than inlining the pattern.
+    - _reasoning:_ References project-specific getUrl() helper and CSS url() construction patterns.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Chained HTML-entity replacements such as `replace(/&equals;/g, '=')` followed by `replace(/&amp;/g, '&')` in `SequenceDB.addLinks`/`addALink` can double-decode input: `&amp;equals;` becomes `&equals;` then `=`. Prefer a single-pass HTML entity decoder, or verify that no ordering of chained replacements allows double-decoding before merging.
+    - _reasoning:_ Double-decode risk from chained replacements requires semantic analysis of replacement ordering.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When implementing an async replace that performs async work per regex match (e.g., `replaceIconSubstring`), use a two-pass approach: (1) walk the original text with `text.replace(regex, ...)` to collect a `Promise[]` of substitutions, (2) resolve them with `await Promise.all(...)`, then (3) call `text.replace(regex, () => resolved.shift())` on the **original text** to apply results. Running the second pass on already-substituted output risks re-matching patterns (e.g., `fa:xxx`) that appear inside inserted SVG strings.
+    - _reasoning:_ Async replace two-pass pattern correctness requires semantic understanding of substitution ordering.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When implementing text-wrapping logic for diagram labels, ensure the algorithm is fully recursive or iterative so that every segment produced after a split is re-checked against the maximum width constraint. A single-pass approach silently leaves over-limit lines whenever input text is pathologically long; keep subdividing (or hyphenating) any segment that still exceeds the limit before rendering.
+    - _reasoning:_ Detecting non-recursive text-wrapping requires understanding algorithm completeness semantically.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In the markdown-to-rendered-text processing pipeline (`handle-markdown-text.ts`), each token handler should emit only the content semantically required by that token type; do not silently inject extra whitespace characters (`' '` or `&nbsp;`) for tokens that do not produce whitespace, as this corrupts node label text.
+    - _reasoning:_ Project-specific markdown token handler pipeline behavior requiring semantic token analysis.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In V11+ error objects, omit placeholder `loc`, `line`, and `token` fields from error hashes rather than filling them with dummy values.
+    - _reasoning:_ Project-specific V11+ error object conventions requiring knowledge of error schema.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - In `switch` statements, the `default` case must always call `log.error(...)` or throw; never silently skip unhandled cases.
+    - _reasoning:_ Missing default case can be detected by linters; requiring log.error specifically needs custom config.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Verify that Mermaid diagram fixture strings used in unit and Cypress tests are syntactically valid (e.g., no unclosed string literals, proper token separation such as closing parentheses before `:N` width specifiers) to avoid false test failures.
+    - _reasoning:_ Validating diagram fixture syntax correctness requires semantic parsing of mermaid syntax.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When duplicating a demo, test, or documentation block, update ALL content-specific fields to match the new subject — including accessibility attributes (`accTitle`, `accDescr`), not just the visible `title`. Stale copy-pasted accessibility metadata is misleading and functionally incorrect.
+    - _reasoning:_ Detecting stale copy-pasted accessibility metadata requires semantic comparison across duplicated blocks.
+- **[Logic Error]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - In GitHub Actions workflows using `actions/setup-node`, specify `node-version-file:` pointing to the canonical version file (`.node-version`, or `package.json` if a `volta.node` field is present) rather than hardcoding a version string inline, to keep workflows in sync with the project's intended Node version.
+    - _reasoning:_ Can be partially checked via regex for hardcoded node-version but project-specific canonical file references.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Verify that developer scratch HTML/playground files (including per-user files like `cypress/platform/<username>.html`), backup files (e.g., `*-old.md`), generated temp files (e.g., Vite timestamp `.mjs` files), unused asset files, Cypress-generated artifacts under `cypress/downloads/` (e.g., `downloads.htm`), and WIP files from unrelated features have not been accidentally committed. Confirm `cypress/downloads/` is covered by `.gitignore`. Do not include changes to `pnpm-lock.yaml` unless the PR actually adds, removes, or upgrades package dependencies — spurious lockfile diffs significantly increase merge-conflict risk and should be reverted before review.
+    - _reasoning:_ Detecting accidentally committed scratch files and spurious lockfile diffs requires project-specific knowledge.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Do not silently 'fix' an apparent typo in a jison `%options` directive. A misspelled option name is effectively a no-op, while the correctly spelled name may enable a feature that is on-by-default in some jison implementations, changing parser behavior. Either delete the questionable option entirely, or suppress the spell-check warning with `// cspell: disable-line` and leave the text unchanged with a comment explaining why.
+    - _reasoning:_ Project-specific jison %options behavior requiring knowledge of jison implementation semantics.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Do not add apparent source-code typos (e.g., `egdes`, `affedcting`) to `.cspell/misc-terms.txt` as a workaround to silence spell-check errors — fix the typo in the source instead. Reserve `.cspell/misc-terms.txt` for legitimate project-specific terms (library names, domain vocabulary, config keys like `handdrawnSeed`).
+    - _reasoning:_ Distinguishing source typos from legitimate project terms requires semantic understanding of the codebase.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a new config option gates a behavior that occurs in multiple code paths (e.g., suppressing error rendering), audit the entire function/module for every site where that behavior is triggered and apply the gate consistently — not just the first occurrence. When wrapping pre-existing error-handling inside a new opt-in flag, preserve all side-effects (especially `throw` statements) in the default flag-off branch; introducing a flag must never silently change pre-existing default behavior.
+    - _reasoning:_ Auditing all flag-gated code paths and preserving default branch behavior requires cross-file semantic analysis.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When a shared theme variable default is modified in any theme file (`theme-base.js`, `theme-default.js`, `theme-dark.js`, `theme-forest.js`, `theme-neutral.js`), verify the rendered appearance across all five built-in themes before requesting review — one change can affect each theme differently.
+    - _reasoning:_ Project-specific five-theme impact analysis requiring visual rendering verification.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When a keyboard shortcut is advertised in the UI (e.g., 'Ctrl + Enter'), verify the Vue event handler actually fires on every advertised platform. `@keydown.meta.enter` triggers only for Meta (Cmd on macOS) and does NOT cover Ctrl on Windows/Linux — a separate `@keydown.ctrl.enter` binding is required. Manually test on at least one non-Mac platform.
+    - _reasoning:_ Missing ctrl.enter alongside meta.enter can be partially detected via AST search for keyboard event handlers.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In Cypress E2E tests that assert on collections of SVG elements via `.find('svg').should(($svg) => { ... })`, add per-element visibility checks (e.g., `$svg.each((_i, svg) => { expect(cy.$$(svg)).to.be.visible; })`) alongside length and content assertions, to prevent race conditions where elements exist in the DOM but are not yet fully rendered.
+    - _reasoning:_ Detecting missing per-element visibility checks in Cypress assertions requires semantic test analysis.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In Cypress HTML fixtures (e.g., `cypress/platform/e2e.html`), avoid top-level `svg { ... }` rules that inadvertently style nested SVGs (inline icon SVGs, sub-diagram SVGs). Scope decorative/debug styles to the root Mermaid SVG only, for example using `svg:not(svg svg)` or `div.mermaid svg:first-of-type`.
+    - _reasoning:_ Project-specific Cypress fixture CSS scoping requiring knowledge of nested SVG structure.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Do not load fonts, icon packs, or other test resources from remote CDN URLs in Cypress E2E tests. Use locally-installed package copies (as the docs site does) to prevent snapshot flakiness caused by network latency, CDN unavailability, or silent resource changes.
+    - _reasoning:_ Project-specific test resource loading conventions requiring knowledge of local package availability.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `cypress/platform/viewer.js` and similar Cypress test harnesses, explicitly await all web-font loads with `await Promise.all(Array.from(document.fonts, (font) => font.load()))` before triggering diagram rendering. Failing to do so causes layout-dependent snapshot tests to flake when fonts haven't finished downloading. In Cypress viewer helper functions (e.g., `loadFontAwesomeCSS`), do not silently catch and swallow resource-load errors — allow the returned Promise to reject so Cypress surfaces a clear, actionable error. When changes to shared Cypress infrastructure alter the rendering environment (font loading, viewport, layout), audit all dependent spec files for hard-coded dimension assertions (e.g., `within(N * 0.95, N * 1.05)`) and update them to reflect the new rendering baseline.
+    - _reasoning:_ Project-specific Cypress font-loading patterns and dimension assertion conventions.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When flattening a nested type field across the codebase (e.g., `from?: { actor: string }` → `from?: string`), apply the refactor uniformly at every call site. If any consumer still requires a double-dereference such as `param.actor.actor`, treat that as a signal that the upstream producer — typically a jison grammar rule — still emits the old nested shape and must be corrected at that source rather than patched around downstream.
+    - _reasoning:_ Detecting incomplete refactors of nested types requires cross-file semantic analysis of all consumers.
+- **[Null Pointer]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When accessing values from a `Map` via `.get()`, do not use the TypeScript `!` non-null assertion on the result. In production code, cache the result in a local variable and guard against `undefined` explicitly before use (e.g., `const node = map.get(id); if (node === undefined) { ... }`). In test assertions, prefer optional chaining (`?.`) for safe property access on `.get()` results. More generally, minimize non-null assertions (`!`) throughout the codebase — prefer optional chaining (`?.`), explicit `if`-guards, or early returns so unexpected `undefined` values surface as clear errors rather than runtime exceptions. Only use `!` when it is genuinely impossible for the value to be `null`/`undefined` at that point (e.g., immediately after creating a new D3 selection via `.insert()`), and add a brief inline comment if the justification is not obvious.
+    - _reasoning:_ Non-null assertion on Map.get() can be partially flagged by custom lint rules but context requires reasoning.
+- **[Null Pointer]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When accessing properties on an object that may be `undefined`, be consistent: either add an early-return guard (`if (!vertex) return`) and then use unconditional access, or apply `?.` uniformly to every access on that object. Mixing optional and non-optional access on the same nullable object creates false safety.
+    - _reasoning:_ Detecting mixed optional/non-optional access on the same nullable object requires data-flow analysis.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When validating user-provided style property names or values in diagram parsers, throw an explicit, named error (e.g., a custom `Error` subclass such as `InvalidStyleError`) rather than silently ignoring the value or logging a warning. Throw errors directly with `throw new Error(...)` rather than first assigning to a local variable.
+    - _reasoning:_ Distinguishing silent ignoring vs explicit error throwing for validation requires semantic analysis.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Shape names registered in the shapes module must not contain underscores (`_`); add validation in the shape-registration layer (e.g., `flowDb.ts`) to reject any shape name containing an underscore. Some legacy shapes carry them and must be preserved via internal alias lists, but new names must not.
+    - _reasoning:_ Project-specific shape registration validation with underscore constraint and legacy alias lists.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Before removing or replacing shape registrations in the shapes module, verify that no existing diagrams rely on the removed names by checking the full alias list (including legacy `internalAliases`) and running regression tests to confirm backward compatibility.
+    - _reasoning:_ Project-specific shape alias and backward-compatibility verification requiring cross-file analysis.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When embedding inline icon or SVG data in test fixtures (e.g., static icon packs in `cypress/platform/viewer.js`) or test/source files that include third-party asset data (e.g., FontAwesome SVG path data), verify the asset has a clearly permissive license, include the required license text directly in the file alongside the data (via inline comment or `@license`/`@copyright` JSDoc tags identifying license, copyright holder, and source URL), and check for independent trademark restrictions that exist separately from the copyright license.
+    - _reasoning:_ Verifying license compliance for embedded asset data requires reading and interpreting license texts.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When removing a `.trim()` call during a refactor, explicitly verify that no leading or trailing whitespace can reach downstream processing; add a test or an explanatory code comment documenting the assumption that the input is already clean.
+    - _reasoning:_ Verifying trim removal safety requires tracing all input paths to confirm whitespace-free inputs.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When implementing a DB class for a JISON-based diagram parser, every method invoked from the JISON grammar file must be accessible as an *own* (direct) property of the DB object — JISON copies only own properties when building the parser. The established pattern is to bind those prototype methods in the constructor (e.g., `this.addVertex = this.addVertex.bind(this);`), accompanied by a code comment explaining the JISON constraint so future maintainers do not remove the bindings. Only bind methods actually called from JISON; private helper methods called internally should not be added to that bindings section. Also verify any new syntax used (e.g., public class instance fields) does not break the project's minimum-supported browser targets.
+    - _reasoning:_ Project-specific JISON own-property binding pattern requiring knowledge of JISON parser construction.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When pushing a class method into a callback array or passing it to another function (e.g., `this.funs.push(...)`), always attach `.bind(this)` to preserve the correct `this` context at call time (e.g., `this.funs.push(this.setupToolTips.bind(this))`).
+    - _reasoning:_ Missing .bind(this) when pushing methods to arrays can be partially detected by custom lint rules.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Avoid identifying clickable elements inside global DOM event listeners by matching `target.textContent` — this coupling breaks silently whenever the displayed text changes. Use `data-*` attributes, a dedicated CSS class, or component-level `@click` handlers to mark and detect the intended target. When a global `click`/`mousedown` listener intercepts an anchor-tag click to show a UI overlay instead of navigating, always call `e.preventDefault()` (and `e.stopPropagation()` where appropriate) so the browser doesn't follow the link.
+    - _reasoning:_ Detecting textContent-based element identification and missing preventDefault requires semantic analysis.
+- **[Logic Error]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - Remove all `console.log`, `console.warn`, and other debug console statements from committed code (including parser validators, renderers, and diagram utilities). Use the project's structured logger (`log.debug`, `log.error`, etc.) for any logging that should persist into production.
+    - _reasoning:_ console.log removal is lintable; requiring project-specific log.debug instead needs custom config.
+
+### Maintainability and Readability
+
+- **[Documentation]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Document the behavior of all public API options, parameters, and return values with JSDoc/TSDoc directly on the TypeScript type definitions (e.g., in `mermaidAPI.ts`), not only in separate markdown files. When prose documentation describes API behavior, verify that all option and parameter names exactly match the TypeScript source before merging. Exported functions must carry a complete JSDoc block with a `@param` tag (name + description) for each parameter and a `@returns` tag describing the return value. Keep JSDoc `@param`, `@returns`, `@example`, and prose accurate and up-to-date — flag stale or copy-pasted doc blocks, and ensure the `@returns` type matches the actual runtime return type (a utility documented as returning `string` must always return a `string`, never an array or `undefined`). On `ShapeDefinition` (and similar interfaces) in `shapes.ts`, require JSDoc for any field whose purpose or usage contract isn't immediately obvious from its name (e.g., `internalAliases`).
+    - _reasoning:_ Missing JSDoc tags can be detected by eslint-plugin-jsdoc but accuracy of descriptions requires LLM.
+- **[Documentation]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When deprecating an API via JSDoc, reference the replacement inside the `@deprecated` tag using `{@link ReplacementFunction}` so IDEs and doc generators can resolve the link (e.g., `/** @deprecated Use {@link getBoundaries} instead */`). When describing features that are deprecated or superseded (e.g., directives replaced by frontmatter), accurately distinguish 'not recommended' from 'non-functional' — if a feature still works, say it is no longer the recommended approach rather than implying it is broken or removed.
+    - _reasoning:_ Missing {@link} in @deprecated tags can be partially detected but semantic accuracy requires LLM.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - Prefer `interface` over `type` aliases for TypeScript type definitions — the `@typescript-eslint/consistent-type-definitions` rule in `.eslintrc.cjs` enforces this project-wide. Compose new interfaces from existing ones using `extends` and `Pick<>` rather than redeclaring fields already present in a base type. Do not use the `I` prefix for interfaces/type aliases (use `GenerateId`, not `IGenerateId`). Derive complex types with `typeof`, indexed access (e.g., `LayoutData['nodes'][number]`), or mapped types where appropriate rather than writing parallel declarations — this keeps derived types automatically in sync with their source. For example, when a diagram DB class property holds a module-level `as const` object (e.g., `LINETYPE`, `ARROWTYPE`, `PLACEMENT`), declare the property type as `typeof LINETYPE` rather than duplicating the shape inline. In interface and type definitions, list required properties before optional (`?`) ones.
+    - _reasoning:_ interface vs type preference is lintable via @typescript-eslint/consistent-type-definitions; other sub-rules require LLM.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When properties must appear in multiple type files (e.g., `src/types.ts`, `src/rendering-util/types.ts`, `src/diagrams/flowchart/types.ts`), define the fields once in a single canonical location and share them via `extends` or re-exports; do not duplicate property declarations across files.
+    - _reasoning:_ Detecting duplicated property declarations across project-specific type files requires cross-file semantic analysis.
+- **[Naming Convention]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Use full explicit names rather than abbreviations when adding properties to public-facing TypeScript interfaces such as `NodeMetaData` and `Node` — e.g., `width`/`height` over `w`/`h`, `image` over `img`, `position: 'top' | 'bottom'` over `pos: 't' | 'b'`. Mermaid is consumed as a library, so abbreviated names hurt downstream readability.
+    - _reasoning:_ Project-specific public API naming conventions requiring knowledge of which interfaces are public-facing.
+- **[Naming Convention]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Do not name exported types with names that shadow browser-global DOM interfaces (`Node`, `Element`, `Event`, etc.); use a project-scoped name such as `DiagramNode` or `MermaidNode` to prevent ambiguity with Web API types.
+    - _reasoning:_ Shadowing DOM globals with exported names can be partially detected via custom TypeScript lint rules.
+- **[Naming Convention]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Before introducing a new type, interface, or utility type name, search the codebase for existing declarations to avoid duplicates or conflicts; prefer a more specific name (e.g., `ShapeRenderOptions` over `RenderOptions`) when a collision exists. Reusable generic utility types (e.g., `MaybePromise<T>`) that are not specific to a single module belong in `packages/mermaid/src/types.ts` so they can be imported from one canonical location.
+    - _reasoning:_ Project-specific canonical type locations like packages/mermaid/src/types.ts requiring cross-file awareness.
+- **[Variable Handling]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Avoid typing uncertain data structures as `any`; use `unknown` when the shape is genuinely opaque, or define a dedicated interface whose fields are verified against all actual usage sites.
+    - _reasoning:_ Use of `any` vs `unknown` can be partially flagged by @typescript-eslint/no-explicit-any.
+- **[Function Consistency]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a function's return type varies with an input flag (e.g., a `suppressErrors`-style option that changes `T` to `T | false`), express each variant via TypeScript function overloads so callers get accurate static inference without manual narrowing.
+    - _reasoning:_ Detecting when overloads should replace flag-based return type variance requires semantic reasoning.
+- **[Variable Handling]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Prefer TypeScript's implicit type inference over explicit annotations when the type is unambiguous from context. However, always provide an explicit annotation when (a) declaring a class field initialized with an empty object/array literal (`= {}`) so the intended shape is unambiguous, (b) typing a local dictionary with an explicit `Record<KeyType, ValueType>` annotation rather than inferred `{}` or `object`, (c) declaring a mutable `let` variable that will later be assigned a structured value (e.g., `let msgModel: MessageModel | null = null`) — without this annotation TypeScript infers `null` and silently resolves downstream property accesses to `never`, hiding real type errors, or (d) declaring private/protected class fields that may be absent, in which case type them explicitly as `T | undefined` (e.g., `private direction: string | undefined`) and initialize numeric counter fields inline with their default value (e.g., `private secCount = -1`) rather than leaving them implicit. Use a consistent Vue reactive-ref typing style within a single file: pick either `const x: Ref<T> = ref(value)` or `const x = ref<T>(value)` and don't mix them.
+    - _reasoning:_ Some cases (empty object literal annotations) can be detected but mixed ref typing style requires LLM.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Annotate function parameters with precise TypeScript types; mark optional parameters with the `?` modifier rather than including `| undefined` in a union type.
+    - _reasoning:_ `| undefined` in union vs `?` modifier can be partially detected by @typescript-eslint rules.
+- **[Class Design Guidelines]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When typing a property or parameter that is always a single-field wrapper object (e.g., `{ actor: string }`), question whether the primitive type (e.g., `string`) can be used directly instead; accept the wrapper form only when the shape genuinely needs to vary or when flattening it would require cascading changes to the parser/jison layer.
+    - _reasoning:_ Questioning whether wrapper objects should be primitives requires semantic intent analysis.
+- **[Function Consistency]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a function parameter is an object that callers may legitimately omit, model it as a default empty-object parameter with optional fields (e.g., `message: { text?: string; wrap?: boolean } = {}`) rather than marking the entire parameter optional (`message?:`); this removes the need to null-check the object reference throughout the function body. When calling DB functions from the parser/visitor layer with multiple optional arguments, pass a named-property object rather than a positional argument list for clarity and resilience to parameter reordering.
+    - _reasoning:_ Distinguishing optional parameter vs default empty object pattern requires semantic API design reasoning.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When constructing an object literal that must conform to an interface (e.g., `Commit`), use the `satisfies` keyword to get type-checking without widening the inferred type. Likewise, when a function's implementation always provides a concrete (non-undefined) value for a field that is optional in the broader interface it returns, prefer removing the explicit return-type annotation and using `satisfies InterfaceType` on the return expression — this lets TypeScript infer the narrower concrete return type while still validating interface conformance.
+    - _reasoning:_ When to use `satisfies` vs explicit annotation requires semantic return-type analysis.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - Define enum-like constant objects with `as const` so values are inferred as literal types; give the constant a name that clearly communicates it is a map of all variants, and define it in exactly one place (import it wherever needed — no duplicate definitions). When such an enum-like object is exposed as a class member (e.g., `lineType`, `relationType`, `LINETYPE`, `ARROWTYPE`, `PLACEMENT`), declare the property `readonly` to prevent accidental mutation. Configuration properties with a fixed set of valid values (such as `look` or edge pattern types) must be typed with explicit, exhaustive union types (e.g., `'classic' | 'handDrawn'`) rather than a generic `string`; audit all variants so none are omitted (e.g., `'dotted'` must be included alongside `'solid'` in edge pattern unions).
+    - _reasoning:_ as const and readonly can be partially enforced; exhaustive union completeness requires semantic reasoning.
+- **[Naming Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Mermaid-defined config option string literals should use camelCase (e.g., `'handDrawn'`, `'classic'`). Reserve UPPER_SNAKE_CASE for values that map directly to external library constants (e.g., ELK strategy names such as `'NETWORK_SIMPLEX'`, `'BRANDES_KOEPF'`).
+    - _reasoning:_ Project-specific camelCase vs UPPER_SNAKE_CASE rules based on whether values map to external library constants.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - All new configuration properties — including diagram rendering hints (such as `look`) and layout-engine options (such as ELK settings) — must be added to the `MermaidConfig` type as properly nested objects (e.g., `elk: { mergeEdges: true, nodePlacement: { strategy: 'SIMPLE' } }`) rather than as flat string-valued options or ad-hoc top-level properties on diagram DB objects.
+    - _reasoning:_ Project-specific MermaidConfig architecture requiring cross-file config structure analysis.
+- **[Code Duplication]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Before introducing a new utility type (e.g., a coordinate or point shape), search the codebase for an equivalent existing type and reuse it via import rather than creating a duplicate definition.
+    - _reasoning:_ Finding equivalent existing types before creating new ones requires semantic cross-file type comparison.
+- **[Class Design Guidelines]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Implement new stateful utility abstractions as ES6 classes (not factory functions or closures) to match the project's prevailing style. Use constructor parameter property shorthand (e.g., `constructor(private init: () => S)`) to declare and initialize fields in one place.
+    - _reasoning:_ Project-specific preference for ES6 classes over factory functions requires architectural pattern detection.
+- **[Class Design Guidelines]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When implementing a `reset()` method on a state-container class, prefer simple reassignment (`this.records = this.init()`) over in-place property deletion and reassignment. In-place mutation is only justified when external callers are known to hold direct references that must remain stable across resets.
+    - _reasoning:_ Choosing reassignment vs in-place mutation in reset() requires understanding external reference semantics.
+- **[Dead-Code Related Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Do not export utility or helper functions from production modules when they are only used in tests. Define such helpers in the test file itself or in a shared test-utility module to avoid dead code in the production bundle.
+    - _reasoning:_ Detecting production exports used only in tests requires cross-file import analysis.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Extract validation helper functions (hex color format, pixel-size format, integer checks, etc.) into a dedicated `utils.ts` module rather than inlining them in the DB or service layer; this keeps the DB layer focused and makes validators independently testable and reusable.
+    - _reasoning:_ Project-specific utils.ts extraction convention requiring architectural judgment.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Utility functions that may be needed by code outside `packages/mermaid/src/rendering-util/rendering-elements/` (e.g., diagram renderers under `packages/mermaid/src/diagrams/`) should live in `packages/mermaid/src/utils.ts` rather than in a subdirectory-local utility file. Before writing a new helper in a rendering-elements utility file, check whether `packages/mermaid/src/utils.ts` already provides equivalent functionality to avoid duplicate implementations.
+    - _reasoning:_ Project-specific canonical location for utilities requiring cross-package architectural awareness.
+- **[Code Duplication]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Shared rendering helpers that must work across multiple diagram types — font-icon substitution, math typesetting, other text-transformation utilities — belong in `packages/mermaid/src/diagrams/common/common.ts`, not in individual diagram renderer files, so the capability is uniformly available without duplication. Similarly, CSS rules that apply to icons or other shared UI elements across multiple diagram types must be defined once in `src/diagrams/globalStyles.ts` (exported as `getIconStyles()` or a similar helper) and imported into each diagram's `styles.ts`/`styles.js`; do not duplicate the same CSS block inline across individual diagram style modules.
+    - _reasoning:_ Project-specific canonical files for shared rendering helpers and CSS requiring cross-file duplication detection.
+- **[Redundancy Handling]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Avoid unnecessary intermediate variable aliases when renaming in callbacks or destructures (`forEach(_id => { let id = _id; ... })`, `const { nodeList } = uniq(...)` preferred over aliased reassignment). However, do NOT inline a named intermediate variable that holds the result of a non-trivial call or computation (e.g., `const direction = getDirection()`): a named binding is inspectable at a breakpoint, and that debuggability outweighs the cosmetic gain of inlining.
+    - _reasoning:_ Balancing unnecessary aliases vs debuggable named bindings requires semantic judgment.
+- **[Naming Convention]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Do not name a local variable identically to a property it exposes, as this produces confusing access patterns like `relation.relation`; choose a more specific name (e.g., `classRelation` instead of `relation`) that distinguishes the container from its contents.
+    - _reasoning:_ Detecting confusing local variable names that shadow property names requires semantic analysis.
+- **[Redundancy Handling]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Prefer flat array operations (e.g., `array.flatMap(s => s.split(','))`) over nested loops that split strings and push into a result array; this keeps logic flat and more readable.
+    - _reasoning:_ Preferring flatMap over nested loops requires semantic equivalence detection.
+- **[Redundancy Handling]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When extending an array with items from another array (e.g., `str.split(delim)`), use `array.push(...source.split(delim))` directly rather than wrapping in a conditional — `split` always returns an array, so the branch is redundant. Prefer in-place mutation via `push(...)` to match existing patterns in `classDb.ts`.
+    - _reasoning:_ Project-specific classDb.ts pattern preference requiring contextual codebase knowledge.
+- **[Naming Convention]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding tokens to a diagram-specific jison parser (e.g., `classDiagram.jison`), cross-reference `flow.jison` and reuse the same token names for equivalent concepts to keep naming consistent across diagram parsers. Keep jison grammars lean: accept style definitions as a single raw string token rather than parsing individual style properties in grammar rules, and delegate all style parsing/validation to the JavaScript DB layer (follow `packages/mermaid/src/diagrams/flowchart/parser/flow.jison` as the canonical reference).
+    - _reasoning:_ Project-specific cross-diagram token naming consistency and jison grammar architecture conventions.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - The flowchart jison grammar (`packages/mermaid/src/diagrams/flowchart/parser/flow.jison`) and its TypeScript wrapper (`flowParser.ts`) are acknowledged legacy infrastructure scheduled for replacement with Langium. Flag any new grammar rules, bug-fix patches, or preprocessing workarounds added to either file as technical debt, and prefer targeting substantive fixes at the Langium-based parser rewrite rather than extending the jison layer.
+    - _reasoning:_ Project-specific technical debt annotation for legacy jison parser replacement.
+- **[Dead-Code Related Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When migrating a diagram from a legacy parser (e.g., a `.jison` file) to a new Langium-based parser, delete the old parser file from the repository as part of the same PR.
+    - _reasoning:_ Project-specific migration pattern requiring detecting and deleting old jison parser files.
+- **[Code Indentation]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - In test files, write multi-line diagram strings as template literals (backticks with real newlines) rather than concatenating string literals with explicit `\n` characters. Match the indentation style and closing-backtick placement of surrounding tests in the same file for readability and consistency.
+    - _reasoning:_ Template literals vs \n concatenation can be partially flagged but consistent indentation style requires LLM.
+- **[Code Smelling]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In tests that assert values on specific items in an ordered collection (e.g., tasks, events, sections), access them by direct index (`getTasks()[0]`, `getTasks()[1]`) rather than iterating with a `for` loop and dispatching assertions via a `switch`/`case` statement.
+    - _reasoning:_ Preferring direct index access over switch-in-loop requires semantic test pattern analysis.
+- **[Redundancy Handling]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In Cypress tests, do not wrap assertions in a bare `cy.then(() => { … })` unless there is a genuine asynchronous ordering dependency (a value computed in a prior `.then()` step that must be captured before assertions can run). Prefer chaining `.should()` or `.and()` directly off the subject command, keeping style consistent with surrounding tests in the same file.
+    - _reasoning:_ Detecting unnecessary cy.then() wrappers vs genuine async dependencies requires semantic Cypress reasoning.
+- **[Naming Convention]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - In test snapshot assertions for HTML-rendering utilities (e.g., `handle-markdown-text.spec.ts`), represent non-breaking spaces as the explicit HTML entity `&nbsp;` rather than the invisible Unicode U+00A0 character. Using the entity keeps expected values human-readable, stays consistent with other assertions in the same file, and avoids needing `eslint-disable no-irregular-whitespace` suppressions.
+    - _reasoning:_ Project-specific test file convention; invisible U+00A0 vs &nbsp; could be detected by regex.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In test setup files such as `cypress/platform/viewer.js`, define static fixture data (e.g., inline icon packs) immediately before the code that first consumes it, rather than placing it elsewhere in the file.
+    - _reasoning:_ Placing fixture data adjacent to first usage requires understanding code organization intent.
+- **[Documentation]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In source documentation under `packages/mermaid/src/docs/`, write each diagram example as a single ```` ```mermaid-example ```` fenced block — the docs build generates both the interactive and rendered-preview blocks; do not manually duplicate with a ```` ```mermaid ```` block, and never use ```` ```md ```` or plain ```` ``` ```` for diagram code blocks (those prevent the docs pipeline from rendering the diagram). Every Mermaid diagram code block in documentation must include the diagram-type specifier (e.g., `flowchart TD`) as its first line; omitting it produces an invalid, non-renderable example. Use the project's custom ```` ```note ```` block for callouts rather than plain paragraphs or blockquotes. When the content of a documentation section is updated or expanded, review its heading to ensure it still accurately describes all topics now covered and rename overly narrow or misleading headings.
+    - _reasoning:_ Project-specific mermaid-example block conventions and VitePress docs pipeline requirements.
+- **[Documentation]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Code examples in Mermaid documentation that reference icon names or image URLs must use assets that render correctly on mermaid.js.org. For icons, use packs already registered in `packages/mermaid/src/docs/.vitepress/theme/Mermaid.vue` (e.g., `logos:zod`), or update that configuration so the example renders on the live site. For images, prefer assets hosted at `mermaid.js.org` (e.g., `https://mermaid.js.org/favicon.svg`). Do not use placeholder URLs like `https://example.com/...` that produce render errors.
+    - _reasoning:_ Project-specific VitePress icon registration and docs site rendering requirements.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Static assets (SVG icons, images) referenced in Vue components must be checked into the repository — place them under `docs/public/icons/` and `packages/mermaid/src/docs/public/icons/` so both the docs site and the source tree are in sync. Never reference icons or images via external third-party URLs.
+    - _reasoning:_ Project-specific dual docs/public/icons path requirements for Vue component asset references.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - In all mermaid diagram examples (demos, documentation, test fixtures, Cypress integration tests) and in documentation that shows configuration, use the frontmatter YAML block (`---\nconfig:\n  optionName: value\n---`) to set diagram config. The older `%%{init}%%` directive syntax is deprecated in this project and must not be introduced in new code. When documenting a config option, show only the frontmatter block; do not include a sample diagram body alongside the config snippet.
+    - _reasoning:_ %%{init}%% directive usage can be detected via regex; project-specific deprecation convention.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - When documenting a newly added feature in source docs, use the placeholder pattern `v<MERMAID_RELEASE_VERSION>` (and `(v<MERMAID_RELEASE_VERSION>+)` in headings) rather than hardcoded version strings — the docs build pipeline substitutes the actual release version automatically.
+    - _reasoning:_ Project-specific version placeholder pattern; hardcoded version strings can be detected via regex.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When documenting a feature that works only with certain diagram types or accepts only a specific set of values (e.g., FontAwesome icon prefixes `fa`, `fab`, `fas`, `far`, `fal`, `fad`), explicitly state which diagram types are supported and list all accepted values. Do not leave readers to infer scope or valid inputs from examples alone.
+    - _reasoning:_ Detecting incomplete feature scope documentation requires semantic reading of documentation content.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In shared documentation pages (e.g., `syntax-reference.md`), avoid broad behavioral generalizations — claims about string quoting style, case sensitivity, indentation requirements — that do not hold universally across all diagram types. Either scope each claim to the specific context where it applies (e.g., 'in YAML frontmatter…') or omit the generalization entirely. Documentation about cross-cutting configuration mechanisms (frontmatter syntax, directives, `initialize()` API) belongs in shared overview or configuration reference pages, not duplicated within individual diagram syntax pages; individual diagram pages should link to the shared reference.
+    - _reasoning:_ Detecting overly broad generalizations in docs requires semantic reading across diagram type behaviors.
+- **[Redundancy Handling]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When writing description text for entries in a documentation table that already lives inside a named section (e.g., the themeVariables table in `docs/config/theming.md`), do not add self-referential phrases like 'can be customized via `themeVariables`' — the surrounding section heading already provides that context, and restating it adds redundant noise.
+    - _reasoning:_ Detecting self-referential redundant phrases in table descriptions requires semantic reading.
+- **[Documentation]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In diagram documentation's 'Related Diagrams' or 'See Also' sections, every currently-supported Mermaid diagram type that is mentioned must include a relative hyperlink to its documentation page (e.g., `[Pie Charts](./pie.md)`). Diagram types that are not yet released may be mentioned in plain text without a link.
+    - _reasoning:_ Project-specific diagram type link requirements requiring knowledge of all supported diagram types.
+- **[Documentation]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When documentation pages link or redirect users to an external commercial product (e.g., Mermaid Chart), include a clear visual differentiator — a distinct logo, icon, or explanatory tooltip/popup — so users understand they are leaving the open-source project's documentation.
+    - _reasoning:_ Project-specific UX requirement for commercial product link differentiation.
+- **[Documentation]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Do not use generic phrases such as 'here', 'click here', or 'learn more' as hyperlink text in documentation. Per W3C guidelines, link text should describe the destination or purpose of the link (e.g., `["Registering icon packs" instructions](../config/icons.md)` rather than `[here](../config/icons.md)`).
+    - _reasoning:_ Generic link text like 'here' or 'click here' can be detected via regex in markdown files.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - Use `pnpm` (not `npm` or `yarn`) for all install and run commands shown in project documentation, matching the toolchain the repo actually uses.
+    - _reasoning:_ npm/yarn vs pnpm in docs can be detected via regex; project-specific toolchain convention.
+- **[Documentation]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When linking to third-party tools or services in documentation, prefer official canonical URLs over internal handbook or secondary pages (e.g., `https://docs.gitlab.com/ee/user/markdown.html#mermaid` rather than a GitLab handbook URL). Use the plugin's full official product name as the link display text (e.g., 'Mermaid Chart GPT for ChatGPT') rather than only the host platform name, so the entry unambiguously identifies the specific product. New community-integration entries must link directly to the integration's Mermaid- or diagram-specific documentation page (not just the product's root homepage), as the Obsidian and Observable entries already do.
+    - _reasoning:_ Project-specific third-party integration link quality standards requiring URL and context evaluation.
+- **[Code Duplication]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When existing documentation already covers a concept (e.g., `mermaid.registerIconPacks()` on the architecture page), reference that canonical page via a link rather than reproducing the same information in a new file. Documentation for features shared across multiple diagram types (e.g., icon registration) belongs in `packages/mermaid/src/docs/config/` rather than inside a diagram-specific syntax file; diagram syntax docs should link to the shared config page.
+    - _reasoning:_ Project-specific canonical doc locations requiring cross-file content duplication detection.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Consolidate closely related documentation content (e.g., a syntax code block and its parameter descriptions) into a single cohesive section rather than spreading it across separate, disconnected blocks.
+    - _reasoning:_ Detecting fragmented documentation sections requires semantic reading of content relationships.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Any new documentation file added under `packages/mermaid/src/docs/` must be reachable from the site: integrate it into the most relevant existing page, or add it to the VitePress sidebar config (`packages/mermaid/src/docs/.vitepress/config.ts`) and link to it from related pages. Orphaned files that are never linked will not appear on the website. When adding a sidebar entry, place it in the correct logical position and do not insert it between logically adjacent entries that should remain contiguous.
+    - _reasoning:_ Project-specific VitePress sidebar config and docs reachability requiring config file analysis.
+- **[Documentation]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When reviewing developer-workflow docs (e.g., `community/contributing.md`), verify prerequisites, commands, and described behaviors reflect current tooling. Remove superseded tools (e.g., `volta` is no longer needed now that pnpm manages Node via `pnpm env use --global <version>`), replace legacy workarounds (`npx pnpm install` → `pnpm install`) once the underlying constraint is gone, and correct prose such as manual-reload instructions if the dev server now supports hot reload.
+    - _reasoning:_ Project-specific developer workflow docs accuracy requiring knowledge of current toolchain state.
+- **[Naming Convention]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Proofread all prose — documentation, source file headers (e.g., `.jison` attribution blocks), inline comments — AND test-file identifiers, `describe`/`it` string literals, comments, and variable names for grammar, spelling, and copy-paste errors (e.g., `flwoDiagram1` instead of `flowDiagram1`, missing commas, incorrect conjunctions, misspellings like `radious`). When adapting tests from one diagram type or feature to another, verify every occurrence of the original subject name in descriptions, comments, and variable names has been updated to match the new subject.
+    - _reasoning:_ Spelling errors in test strings and variable names can be partially caught by cspell integration.
+- **[Comment Requirements]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Test names (`describe`/`it` strings) should be professional and descriptive; avoid informal or humorous wording. When a test targets a specific diagram type, include the diagram name in the test name or in a surrounding `describe` block (e.g., `describe('flowchart', () => { it('should not modify db when rendering different diagrams', ...) })`).
+    - _reasoning:_ Test name professionalism and diagram-name inclusion requirements need semantic judgment.
+- **[Code Smelling]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When testing that `getDiagramFromText()` produces independent DB instances for different diagram renderings, do not rely solely on object identity (`expect(db1).not.toBe(db2)`). Also assert that concrete DB state differs between the two instances (e.g., render diagrams with different directions and compare `getDirection()` on each DB) and use `instanceof` to confirm the correct DB class type. When writing isolation/independence tests for a diagram type that still uses a singleton or shared DB, mark the test with `it.fails`/`test.fails` and include an inline comment explaining the known limitation (e.g., `// SequenceDiagram currently uses a singleton DB, so this test will fail`).
+    - _reasoning:_ Project-specific DB isolation test patterns and singleton DB marking conventions.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In vitest tests, use `assert(value instanceof SomeClass)` (with `assert` imported from `'vitest'`) for instance-type assertions rather than relying solely on `expect` checks. This narrows the TypeScript type for subsequent lines and produces a clearer failure message.
+    - _reasoning:_ Recommending assert() over expect() for instance checks requires semantic test analysis.
+- **[Code Smelling]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In sequence diagram unit tests, prefer declaring `const diagram = await Diagram.fromText(...)` locally inside each `it` block rather than using a shared `let diagram` at `describe` scope initialized in `beforeEach`. Local declarations make each test self-contained, eliminate setup-order dependencies, and make the diagram source visible at the point of assertion. When migrating tests from `mermaidAPI.parse(str)` to `Diagram.fromText(str)`, remove any leftover `mermaidAPI.parse` calls that no longer affect the diagram under test — but preserve any that are still required as a side effect to populate config state that later `mermaidAPI.getConfig()` or renderer calls depend on.
+    - _reasoning:_ Project-specific Diagram.fromText migration patterns and shared vs local diagram declaration preferences.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Extract magic numeric literals used in layout, positioning, parser limits, config-derived math, or any renderer code where the meaning is not self-evident into named constants (e.g., `MAX_PACKET_SIZE = 10_000`, `const commitStep = 40`, `const layoutOffset = 10`) at the top of the relevant scope, and replace every existing hard-coded occurrence. For values that should be user-configurable, expose them as named properties in the diagram's default config object rather than as bare multipliers (e.g., avoid a bare `2` multiplying a padding value), following the pattern in `pieDb.ts`. Never hardcode layout geometry (e.g., `padding = 0`) in rendering utilities when a configurable value is available from `node.padding`, `config.nodePadding`, or the diagram config — read from the config property so user-defined settings take effect.
+    - _reasoning:_ Magic number extraction with project-specific config patterns requires semantic context analysis.
+- **[Naming Convention]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - New statement-type tokens and configuration string values used in DB files (e.g., `stmt === '...'` comparisons in `stateDb.js`) must be exported as named constants from a shared common module such as `stateCommon.ts`, following the established pattern of `STMT_STATE`, `STMT_RELATION`, `STMT_CLASSDEF`, `STMT_STYLEDEF`, and `DEFAULT_DIAGRAM_DIRECTION`. Import and use these constants everywhere rather than inline string literals.
+    - _reasoning:_ Project-specific stateCommon.ts constant export conventions requiring cross-file pattern awareness.
+- **[Redundancy Handling]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Do not re-declare or re-fetch a config object that is already available in scope. E.g., `gitGraphRenderer.js` sets `gitGraphConfig` at module level and helpers should reference it directly rather than redefining or shadowing it.
+    - _reasoning:_ Project-specific gitGraphRenderer.js module-level config variable usage patterns.
+- **[Code Smelling]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Prefer positive (non-negated) conditions in if/else blocks and early returns: put the affirmative/happy-path branch first, use guard clauses, and avoid `else`/`else if` after a branch that already `return`s or `throw`s (place fallback code directly after the `if` block). Prefer early `return`/`continue` over deeply nested if-else chains, and avoid double negation. Use idiomatic truthiness checks (`if (value) { ... }`) rather than verbose comparisons against `null`/`undefined`/`''` when a simple truthy test is sufficient — but do NOT use a truthy test specifically to detect whether an optional parameter was provided (see the strict-`=== undefined` rule for that case).
+    - _reasoning:_ Some patterns (else after return) can be detected by linters; nuanced truthy check guidance requires LLM.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding a new demo page under `demos/`, register it with a link in `demos/index.html` so it appears in the demo index. New files added to `demos/` must match the HTML boilerplate conventions (DOCTYPE format, attribute quoting, meta tags, script structure) of existing demo files in that directory — copy the structure of a nearby demo file when in doubt.
+    - _reasoning:_ Project-specific demos/index.html registration and boilerplate conventions.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Do not add individual sub-type exports to `packages/parser/src/index.ts` for every AST node sub-property. Export the `RecursiveAstOmit<T>` utility from the parser package and use it in consuming code (e.g., diagram `types.ts`) to derive clean, non-`AstNode` types from the top-level exported AST type.
+    - _reasoning:_ Project-specific parser package export architecture with RecursiveAstOmit utility.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Diagram module layout: put all type and interface definitions (data structures, domain types, style option interfaces) in `types.ts`; put AST-to-DB population logic (walking the parsed AST and calling DB mutators) in `parser.ts` — `db.ts` should expose only mutation and query methods. In `populate*Db` helpers, name the database parameter `db` to match the local import identifier. Types shared across multiple files within a diagram package (e.g., `Actor`, `Message`, `Note`, `Box` in the sequence diagram) must live in that diagram's dedicated `types.ts` file and be imported from there, not inlined or duplicated across modules. Within a file, order declarations as types/interfaces first, then `const` declarations, then `let` declarations.
+    - _reasoning:_ Project-specific diagram module layout conventions for types.ts, parser.ts, and db.ts.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - New helper, utility, and diagram implementation files must use the `.ts` extension with full typing, not `.js`. When renaming a file as part of the JS→TS migration, split the work into two separate commits: the first performs only the rename with no other changes, and the second applies code updates. This lets git detect the rename and preserves file history.
+    - _reasoning:_ .js extension in new files can be partially detected; two-commit rename convention requires process reasoning.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When writing a new diagram's `db.ts`, use `cleanAndMerge` to combine the default config with the user config (e.g., `cleanAndMerge({ ...DEFAULT_PACKET_CONFIG, ...commonGetConfig().packet })`) rather than plain object spread. Similarly in `styles.ts`, define a named default options constant (e.g., `defaultPacketStyleOptions`) and merge caller-supplied options with `cleanAndMerge` rather than hard-coding defaults inline.
+    - _reasoning:_ Project-specific cleanAndMerge usage convention requiring knowledge of mermaid config API.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Type diagram entry points using the canonical types from `diagram-api/types.ts`: annotate `draw` functions as `DrawDefinition` or renderers as `DiagramRenderer`; annotate styles functions as `DiagramStylesProvider`; type D3 `<g>` containers appended inside renderers as `Group` rather than `ContainerElement`, `SVG`, `D3Element`, `any`, or `unknown`.
+    - _reasoning:_ Project-specific diagram-api/types.ts canonical type annotations for renderers and containers.
+- **[Class Design Guidelines]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Diagram DB classes must explicitly declare `implements DiagramDB` in their class definition and follow the project naming convention of an all-uppercase `DB` suffix (e.g., `FlowDB`, not `FlowDb`). For a diagram-specific `*DB` interface that extends `DiagramDBBase`, explicitly re-declare any optional `DiagramDB` fields the diagram provides (e.g., `getDiagramTitle`, `setAccTitle`, `getAccDescription`) to make them required. Alternatively, define the DB module using the `const db = { ... } as const` export pattern and derive the type with `export type BlockDB = typeof db & DiagramDB` to eliminate manual parallel declarations.
+    - _reasoning:_ Project-specific DiagramDB interface conventions and DB naming requirements.
+- **[Class Design Guidelines]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When converting module-level functions in a diagram DB to methods on a class, define them as regular class methods rather than arrow-function class properties. If a method needs a stable `this` binding for external callers (e.g., JISON parser callbacks), add a `.bind(this)` call in the constructor — do not use the arrow-function property form as a substitute. Do NOT convert immutable constants (enum-like objects, lookup tables, data that never changes per instance) into instance properties: keep them as module-level `const` exports or declare them `static` so `clear()` cannot accidentally reset them. Do NOT pull pure private helper functions with no dependency on `this` into the class as instance methods — leave them as module-level functions, or mark them `static` if they must live in the class scope. Private class methods that never reference `this` (e.g., lookup/mapping utilities like `getArrowMarker`) should be extracted as module-level functions rather than kept as private methods.
+    - _reasoning:_ Project-specific JISON binding, arrow function property, and static vs instance distinction conventions.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When a diagram DB class is refactored to instance-based architecture but certain lifecycle methods (e.g., title/accessibility getters/setters) still delegate to the shared `commonDb`, document this explicitly in both the PR description and a code comment, linking to the discussion or issue explaining why those functions were not moved to per-instance state (e.g., parser integration constraints or `DiagramDB` interface requirements).
+    - _reasoning:_ Project-specific DB class refactoring documentation requirements for commonDb delegation.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Keep structural refactors (e.g., converting a module to class-based architecture) strictly non-behavioral: do not bundle default-parameter changes, logic changes, or any observable behavior differences in the same PR. Open a separate PR for each behavioral change so the refactor's diff remains reviewable in isolation. Similarly, do not include unrelated whitespace, indentation, or formatting changes in a feature PR.
+    - _reasoning:_ Detecting behavioral changes bundled with structural refactors requires semantic diff analysis.
+- **[Code Smelling]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When refactoring read/write methods in a DB class (e.g., `StateDB`), add unit tests that cover at least (a) the default/fallback behavior when no explicit value is present in the diagram, and (b) the correct value when the diagram syntax sets an explicit value. When the same internal lookup or transformation is needed by more than one method, extract it into a dedicated private helper method (annotated `@private` in JSDoc) rather than duplicating the logic inline.
+    - _reasoning:_ Project-specific StateDB refactoring test coverage conventions and private helper extraction.
+- **[Code Duplication]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When a type is already defined in the canonical `config.type.ts`, re-export it (e.g., `export type { BlockDiagramConfig as BlockConfig } from '../../config.type.js'`) rather than duplicating the definition in a diagram-local file.
+    - _reasoning:_ Project-specific config.type.ts canonical location requiring cross-file type duplication detection.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Diagram renderers and layout functions must read runtime settings (e.g., `padding`, `useMaxWidth`) from the diagram's own config section via `configApi.getConfig().<diagramName>` rather than hardcoding values. Access defaults consistently by importing `defaultConfig` from `defaultConfig.ts` (as `pieDb.ts` does) rather than scattering ad-hoc optional-chaining and nullish-coalescing; do not introduce helper types that claim to represent 'defaults' but actually return the current (possibly user-overridden) configuration.
+    - _reasoning:_ Project-specific defaultConfig.ts import pattern and config access conventions.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Diagram renderer modules should export their rendering functions (e.g., `draw`) as named exports rather than bundling them into a default export object. Consuming code (e.g., a diagram definition file) should import the renderer with `import * as renderer from '...'` so that the resulting namespace object satisfies the `DiagramRenderer` interface without requiring a separate default export.
+    - _reasoning:_ Project-specific DiagramRenderer interface satisfaction via import * pattern.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Shape rendering system conventions: avoid embedding roughjs calls directly inside individual shape rendering functions — keep roughjs interaction centralized or behind an abstraction layer to prevent tight coupling. Extract shared logic (roughjs wrapper creation, bounding-box setup, label insertion boilerplate) into reusable utilities rather than duplicating it across each shape file. Maintain `shapes.ts` as the single source of truth: when the hardcoded fallback `shapeMap` in `generateShapeMap` lists shapes under the rationale that they lack documentation, verify that claim; any shape that does have existing documentation must instead appear as a full `ShapeDefinition` entry in the `shapesDefs` array.
+    - _reasoning:_ Project-specific shapes.ts and roughjs abstraction layer conventions.
+- **[Code Smelling]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Diagram unit test files (`*.spec.ts`) must include explicit test cases for metadata fields (`getDiagramTitle`, `getAccTitle`, `getAccDescription`); do not delegate metadata coverage solely to Cypress. When adding a new diagram `styles.ts`, also add a corresponding test case in `packages/mermaid/src/styles.spec.ts`.
+    - _reasoning:_ Project-specific diagram test coverage requirements across specific test files.
+- **[Code Smelling]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - New gantt diagram features require test coverage at all three layers: DB-layer unit tests (`ganttDb.spec.ts`), parser-level unit tests (`packages/mermaid/src/diagrams/gantt/parser/gantt.spec.js`), and Cypress end-to-end rendering/visual snapshot tests (`cypress/integration/rendering/gantt.spec.js`). Isolated DB-only tests are insufficient. When adding a rendering fix or new rendering behavior in `demos/flowchart.html`, also add a corresponding `imgSnapshotTest` in `cypress/integration/rendering/flowchart-v2.spec.js`.
+    - _reasoning:_ Project-specific three-layer test coverage requirements for gantt and flowchart diagrams.
+- **[Code Smelling]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - New parsing or validation utility functions must have dedicated unit tests covering: valid input with all supported parameters, empty/missing input, unsupported property names, and each distinct category of invalid value format (e.g., bad hex code, non-numeric value, missing unit suffix). Parser tests should also include inputs with varying amounts of whitespace around delimiters (commas, colons, between tokens) to verify robust whitespace handling, not just the canonical single-space form.
+    - _reasoning:_ Completeness of test coverage across valid/invalid/edge inputs requires semantic test analysis.
+- **[Code Smelling]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Expected error message strings in unit tests must match the actual strings emitted by the source code's error constructors character-for-character; cross-check them to avoid false-passing tests.
+    - _reasoning:_ Verifying test error strings match source code error messages requires cross-file string comparison.
+- **[Code Smelling]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When adding tests for new functionality in an existing test file, add new standalone test cases rather than modifying existing ones. Existing cases may intentionally exercise edge cases (inconsistent whitespace, unusual formatting, deliberately invalid input); altering them silently drops that coverage. Never rename the title of an existing snapshot-based/image-comparison test (e.g., Cypress `imgSnapshotTest`) — test titles derive the snapshot filenames, so renaming orphans all prior baselines. Group new test cases covering a new variant of an existing feature in a new nested `describe` block rather than appending to or altering existing titles.
+    - _reasoning:_ Detecting modifications to existing tests vs additions requires semantic diff intent analysis.
+- **[Function Consistency]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Within a single test file, be consistent about whether `Map` keys are iterated in sorted order (e.g., `[...map.keys()].sort()`) or natural insertion order (`[...map.keys()]`); do not mix the two approaches across test cases without a clear documented reason.
+    - _reasoning:_ Detecting inconsistent Map key iteration order within a test file requires semantic pattern analysis.
+- **[Comment Requirements]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - In diagram rendering and utility code, use `log.debug()` or `log.trace()` for development debugging rather than `log.info()` / `log.warn()`; remove excessively chatty debug logging before merging.
+    - _reasoning:_ log.info vs log.debug usage can be partially detected via custom lint rules on project-specific logger.
+- **[Dead-Code Related Issues]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Remove all dead code before merging: delete unused imports, variables, function parameters, exported types/functions, constants, private instance fields, and comments that merely restate what the code expresses. Any newly introduced identifier that is never referenced must be deleted. When refactoring or reorganizing a module, audit all exported symbols for dead code and remove any no longer referenced anywhere in the codebase (search the full repo before keeping a legacy export). When a renderer or module is fully superseded by a new implementation, delete the old file entirely (e.g., `flowRenderer-v2.js`) rather than leaving it unreferenced; give any replacement the canonical module name rather than a suffix like `-unified`, `-v2`, or `-new`. When a component is removed from all usage sites (e.g., unregistered from VitePress layout slots in `packages/mermaid/src/docs/.vitepress/theme/index.ts`), delete its source file as well, or document the retention intent with an inline comment. Do not include jison grammar rules for syntax features that are not yet implemented — remove placeholder rules and track planned features in an issue or TODO. Two exceptions: (a) preserve commented-out blocks that document available configuration options or alternative implementations (curve/algorithm settings, style-override branches) as in-code reference for future development, and (b) in a focused cleanup/chore PR, do not remove code that is still under active investigation or planned for removal in a subsequent coordinated PR — defer it to the appropriate milestone.
+    - _reasoning:_ Unused imports/variables are lintable; cross-repo dead exports and superseded files require LLM.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a PR removes existing logic, data structures, or fallback behavior from a component, require an explanation — either in the PR description or as an inline code comment — of why the removal is safe or intentional. Do not accept silent deletions of non-trivial code without justification.
+    - _reasoning:_ Detecting non-trivial silent deletions requiring justification needs semantic diff analysis.
+- **[Naming Convention]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Ensure variable and parameter names are descriptive and accurately describe their purpose (e.g., `siblingWidth`/`siblingHeight` over `w`/`h`; `today`/`midnightDate` over `dt`; `latestEndingTask` over terse abbreviations; `count` over `cnt`, `index` over `idx`, `length` over `len`; `radius`, not `radious`). Function parameters that receive a delimited string representing multiple values (e.g., comma-separated CSS styles) should be named in the plural (e.g., `styles` not `style`). Avoid single-letter names in non-trivial scopes and avoid shadowing outer-scope names. Avoid prefixing variable names with a leading underscore (e.g., `_foo`) unless project or language convention explicitly requires it for private/internal members, and never use the underscore prefix on parameters that are actually read inside the function body. Apply consistent camelCase during TypeScript refactors: capitalize acronyms and initialisms fully (e.g., `getID` not `getId`) and rename any leftover `snake_case` or inconsistently-cased identifiers encountered in the same pass. Use camelCase for local variables and function parameters; reserve PascalCase exclusively for class names, constructor functions, and type/interface names. Flag abbreviated local variable names during review.
+    - _reasoning:_ Some naming rules (single-letter vars, snake_case) can be flagged by linters; semantic quality requires LLM.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Avoid patching third-party dependencies directly in the repo (e.g., via `pnpm patchedDependencies`). When a dependency lacks a necessary feature (such as a missing ESM `exports` field), raise an upstream PR first. If a temporary in-repo patch is unavoidable, document why native support is absent and link to the upstream issue/PR.
+    - _reasoning:_ Detecting patchedDependencies and requiring upstream issue links requires semantic reasoning.
+- **[Code Duplication]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In diagram renderers, use the existing `selectSvgElement` utility from `rendering-util/selectSvgElement.ts` to obtain the SVG element for a diagram ID. Do not reimplement the sandbox/`securityLevel` SVG-selection logic inline.
+    - _reasoning:_ Project-specific selectSvgElement utility requiring knowledge of security level SVG selection pattern.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Keep Mermaid diagram examples in documentation consistent with surrounding prose — if the text says 'block b spans two columns,' the example must demonstrate that behavior. Documentation for a new diagram type must cover all supported syntax features with usage examples, including non-obvious ones (e.g., `columns auto`, `space:N`, `%%` comments), and must not include duplicated sections covering the same material.
+    - _reasoning:_ Detecting prose/example inconsistencies and missing syntax feature coverage requires semantic doc reading.
+- **[Code Duplication]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When duplicating a function that already exists in another diagram module, add a `// TODO:` or `@privateRemarks TODO:` comment noting the duplication and intended consolidation point to prevent silent drift.
+    - _reasoning:_ Detecting cross-module function duplication requiring TODO annotation requires semantic cross-file analysis.
+- **[Documentation]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a community platform link (e.g., Slack, Discord) is replaced in documentation, audit and update all surrounding prose that still names the old platform — not just the anchor text and URL. Use the project's officially maintained canonical invite URLs rather than generating ad-hoc invites, so contributors have a stable entry point.
+    - _reasoning:_ Detecting stale platform references in surrounding prose requires semantic doc content analysis.
+- **[Redundancy Handling]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When iterating over a collection to call a DB method (e.g., adding sections in a `populate*Db` function), prefer a direct function reference over an arrow wrapper: `ast.sections.map(db.addSection)` rather than `ast.sections.map((s) => db.addSection(s))`.
+    - _reasoning:_ Unnecessary arrow wrapper can be partially detected but distinguishing this binding needs requires LLM.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding a Langium parser under `packages/parser/src/language/`, follow the established two-tier abstraction: create a `<Diagram>TokenBuilder` extending `AbstractMermaidTokenBuilder` (passing diagram keywords to `super()`) and a `<Diagram>ValueConverter` extending `AbstractMermaidValueConverter`. Never duplicate keyword-restriction logic across token builders. Use `CommonTokenBuilder` / `CommonValueConverter` only for parsers that need no specialization. Abstract bases carry an `Abstract` prefix; shared concrete implementations carry a `Common` prefix. In `.langium` grammar files, if you intentionally omit the import of the project's shared common grammar that other diagram grammars conventionally import, add an inline comment explaining the reason (e.g., that the common grammar introduces ambiguity or parser conflicts with this grammar's own token/rule definitions).
+    - _reasoning:_ Project-specific Langium two-tier abstraction conventions with Abstract/Common prefix rules.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - When importing the mermaid parser within `packages/mermaid/src/`, use the published package alias `mermaid-parser` (e.g., `import { parse } from 'mermaid-parser'`) rather than the scoped name `@mermaid-js/parser`.
+    - _reasoning:_ Project-specific import alias; @mermaid-js/parser usage can be detected via regex/lint rule.
+- **[Redundancy Handling]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a function normalizes a string parameter at the top (e.g., `str = str.trim()`), do not re-apply the same normalization on that variable later in the same function body — it's already normalized.
+    - _reasoning:_ Detecting redundant re-application of already-applied normalization requires data-flow analysis.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When extracting values from regex matches in diagram parsing code (e.g., `ganttDb.js`), use named capture groups (`(?<name>pattern)`) accessed via `match.groups.name` rather than positional numeric indices like `match[1]`.
+    - _reasoning:_ Numeric regex group index usage can be partially detected by custom lint rules favoring named groups.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In new entries for `packages/mermaid/src/docs/ecosystem/integrations-community.md`, insert items in alphabetical order within their category section. When adding a new `###` category heading, put list items directly under the heading without an introductory prose paragraph; add a short expansion only when the heading is an ambiguous abbreviation (e.g., 'CRM/ERP').
+    - _reasoning:_ Project-specific alphabetical ordering in community integrations doc requiring content comparison.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Split mixed PRs that combine a non-visual bug fix with a visual/theme-variable change: any change altering rendered output triggers visual-regression tests requiring mermaid-js admin approval, while non-visual fixes (e.g., DOM attribute bug, adding an identifier attribute) can merge without that gate. Keeping them separate unblocks the non-visual fix.
+    - _reasoning:_ Project-specific visual vs non-visual PR separation requirement based on rendering pipeline knowledge.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - A bugfix that changes rendered output for users who had previously configured specific settings — even one that corrects objectively incorrect behavior — must be released as a MINOR semver bump, not a PATCH, because it constitutes a visible behavior change for existing users. Changeset entries must use the correct semver level: `patch` for bug fixes, `minor` for new/additive features, `major` only for breaking changes. Do not accept `patch` for a net-new feature, `minor` for a pure bug fix, or `major` for a non-breaking fix. When a change alters externally-visible output (e.g., CSS class names on generated HTML elements, API return format), verify whether it is a breaking change and, if so, mark the changeset `major` or explicitly describe the breaking behavior in the changeset message and PR description.
+    - _reasoning:_ Determining correct semver level for a change requires semantic understanding of behavioral impact.
+- **[Documentation]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Changeset entries (`.changeset/*.md` files) should be a concise one-line description of the fix or feature, phrased from the perspective of observable public API behavior — name the affected `mermaidAPI.*` method or diagram type and describe the concrete behavioral change (e.g., `` fix: `mermaidAPI.getDiagramFromText()` now returns a new db for each flowchart ``). Messages should precisely identify the condition under which a bug manifests (e.g., which config option must be enabled) and describe what the fix actually resolves; avoid vague or security-adjacent language (e.g., 'unsafe') when the real impact is functional correctness. Detailed rationale, design decisions, and context belong in the PR description, not in the changeset. PRs that change only CI/infrastructure files (GitHub Actions workflows, configuration, tooling scripts) without touching any released package's source or public API must NOT include a changeset — in this project, changesets are reserved for changes that require a package release.
+    - _reasoning:_ Project-specific changeset content quality and CI-only PR exclusion requiring semantic diff analysis.
+- **[Redundancy Handling]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Do not ask PR authors to manually bump a newly added dependency to the latest version — this project uses Renovate Bot to keep dependency versions up to date automatically.
+    - _reasoning:_ Project-specific Renovate Bot policy requiring knowledge of project automation setup.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Mark up keyboard key names in user-facing UI text (hints, labels, tooltips) with the semantic `<kbd>` element rather than `<span>` or bare text (e.g., `<kbd>{{ ctrlSymbol }}</kbd> + <kbd>Enter</kbd>`). Add scoped CSS to tune sizing if default monospace styling clashes with the surrounding design.
+    - _reasoning:_ Detecting kbd vs span for keyboard key markup requires semantic UI text analysis.
+- **[Function Consistency]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When building rendered data objects from raw input points, apply the `point.property || themeDefault` fallback pattern consistently for all overridable style properties; do not apply it to some properties while hardcoding defaults for others.
+    - _reasoning:_ Project-specific point.property || themeDefault fallback pattern consistency across rendering.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In this project's Vue SFC components, use Tailwind utility classes exclusively for styling — do not mix Tailwind classes with inline `style=""` attributes or `<style>` scoped blocks on the same elements; resolve conflicts by finding the correct Tailwind utility rather than falling back to raw CSS. Prefer `flex` with `gap-*` utilities to space sibling elements rather than applying per-child `mr-*`/`ml-*`/`mt-*`/`mb-*` margin utilities. Keep invariant CSS utility classes in the static `class` attribute and place conditional or page-dependent classes exclusively in a `:class` binding; avoid embedding runtime-dependent classes in the static `class` string. Keep all component data, configuration objects, and hardcoded display strings inside `<script setup>` rather than scattered as inline literals in the `<template>` — the template should reference named variables, not be the authoritative source of data. Be explicit about whether `v-if` (element should not exist in the DOM while hidden) or `v-show` (frequently toggled, e.g., modals, to avoid mount/unmount cost) is the right directive, and add a comment when the choice is non-obvious. Do not use a `v-for` array index to derive semantic meaning (e.g., `index === 1` to highlight a card); add an explicit boolean or descriptive property to the data model and reference that property in the template.
+    - _reasoning:_ Project-specific Vue SFC Tailwind-only styling conventions with multiple sub-rules requiring semantic analysis.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In CI validation scripts/workflows, produce specific and actionable failure messages: each message must clearly identify the detected problem and include the exact remediation steps or commands needed to fix it. Prefer collecting all detected issues throughout execution and printing them as a consolidated summary at the end rather than failing immediately on the first occurrence. When reviewing GitHub Actions `on.pull_request.paths` triggers, verify that every path pattern directly corresponds to a file or file type the workflow actually validates; remove speculative or tangential selectors that would cause the workflow to run on unrelated PRs.
+    - _reasoning:_ CI failure message quality and path trigger relevance require semantic workflow analysis.
+- **[Whitespace Standards]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - In markdown tables, keep cell spacing and pipe alignment consistent across every row — extra trailing or internal spaces inside cells can misalign pipes and silently break table rendering. Verify spacing is uniform before approving.
+    - _reasoning:_ Markdown table alignment can be partially checked by markdownlint or prettier.
+
+### Performance Issue
+
+- **[Resource Efficiency]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - Prefer `{ ...obj }` (shallow) or `structuredClone(obj)` (deep) over `lodash.clone()` / `lodash.cloneDeep()` to avoid unnecessary bundle size. Exception: when merging or cloning Mermaid *config* objects, use `assignWithDepth` instead of `structuredClone` — `structuredClone` is not universally supported across all target browser environments this project must reach.
+    - _reasoning:_ lodash.clone usage can be detected via lint rules; project-specific assignWithDepth exception requires LLM.
+- **[Cache-related Efficiency]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Heavy optional dependencies should be dynamically imported (`await import(...)`) only when actually needed at runtime: gate the import on both the text containing the relevant syntax (e.g., a KaTeX `$$…$$` delimiter check) AND the environment supporting the feature (e.g., `isMathMLSupported() || config.legacyMathML`). Unconditional top-level imports inflate the bundle for all users.
+    - _reasoning:_ Detecting unconditional top-level heavy imports that should be dynamic requires semantic import analysis.
+- **[Computation Efficiency]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - Prefer `for...of` loops for array iteration over manual length checks combined with `forEach`; this reduces nesting, is idiomatic TypeScript, and is the preferred style in this codebase.
+    - _reasoning:_ for...of vs forEach preference is project-specific style; can be partially flagged by custom lint rules.
+- **[Data Structure]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Use `Map` instead of plain objects (`{}`) for all dictionary/lookup data structures in rendering utilities (e.g., `mermaid-graphlib.js`, `clusters.js`); this is an established project-wide convention.
+    - _reasoning:_ Project-specific Map vs plain object convention for rendering utilities requiring architectural knowledge.
+- **[Repeated Computations]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Call `getConfig()` at most once per function and reuse the returned reference; never call `getConfig()` (or any other global-config accessor) inside a loop — hoist the call outside the loop and reuse the returned value.
+    - _reasoning:_ getConfig() inside loops can be partially detected via custom lint rules but cross-function hoisting needs LLM.
+- **[Memory Efficiency]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Do not wrap static, never-changing data in `ref()` or `reactive()` in Vue components. Use a plain `const` for data that is set once and never mutated; reserve `ref`/`reactive` for values that actually change over the component's lifetime.
+    - _reasoning:_ Detecting static data unnecessarily wrapped in Vue reactivity requires semantic component analysis.
+
+### Code Style
+
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - In Markdown numbered lists, write correct sequential numbers (1, 2, 3, …) in the raw source rather than repeating `1.` for every item. Renderers may auto-correct output, but raw-source readers rely on the written numbers.
+    - _reasoning:_ Repeated 1. in markdown lists can be detected by markdownlint rules.
+- **[Whitespace Standards]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - In Markdown documentation, include a blank line both before the opening fence and after the closing fence of every code block (e.g., around ```html ... ```) for correct parsing across all environments.
+    - _reasoning:_ Missing blank lines around code fences can be detected by markdownlint MD031/MD032.
+- **[Trailing/Unused/Incorrect Formattings]** _(gen: `project_specific`, lint: `lintable`)_
+    - Documentation markdown files under `packages/mermaid/src/docs/` are linted by Prettier; run `npx prettier --write <file>` on any modified docs file before committing to avoid linter failures on indentation and formatting.
+    - _reasoning:_ Prettier formatting violations are fully lintable and auto-fixable.
+- **[Code Indentation]** _(gen: `project_specific`, lint: `lintable`)_
+    - Use two-space indentation throughout `.langium` grammar files, consistent with the project's Langium formatting convention.
+    - _reasoning:_ Two-space indentation in .langium files is enforceable by Prettier or EditorConfig.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `lintable`)_
+    - Use strict equality operators (`===` / `!==`) exclusively in JavaScript and TypeScript source files; never use loose equality (`==` / `!=`). This is a project-wide convention.
+    - _reasoning:_ eqeqeq ESLint rule enforces strict equality operators throughout JS/TS files.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Use the nullish-coalescing operator `??` rather than logical-OR `||` or a ternary when supplying fallback values for expressions that may be `null` or `undefined` (including default values for optional array/object parameters such as `tags ?? []`); `||` also coerces other falsy values such as `0` and `''`, which is rarely the intent.
+    - _reasoning:_ prefer-nullish-coalescing ESLint rule can catch || fallbacks but semantic context requires judgment.
+- **[Whitespace Standards]** _(gen: `generalizable`, lint: `lintable`)_
+    - Do not insert blank lines between import statements within an import block; blank lines can interfere with auto-sort tooling and create noisy diffs. Keep all imports from the same library or package in a single `import` statement rather than splitting them across multiple statements.
+    - _reasoning:_ Blank lines between imports and multiple import statements are enforceable by import/order ESLint rules.
+- **[Code Indentation]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - In xychart spec and parser test files, format multi-line diagram strings inside template literals with minimal, consistent indentation (flush left or single shallow indent) so the diagram syntax is human-readable. Prefer placing the opening backtick on the same line as the call argument rather than on the next line. In Cypress `imgSnapshotTest` calls that use template literals, ensure the closing backtick and closing parenthesis are each on their own correctly-indented line; misplaced closures cause subtle syntax or argument-passing bugs.
+    - _reasoning:_ Template literal indentation style can be partially flagged but project-specific test formatting needs LLM.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Prefer template literals over `+` string concatenation when constructing strings in JavaScript/TypeScript source; flag any use of `+` to join string fragments and convert to a template literal. When `@typescript-eslint/restrict-plus-operands` flags such a concatenation and the interpolated value is a non-primitive (e.g., a `[number, number]` array from a D3 centroid), use an explicit conversion such as `.join(', ')` or `.toString()` rather than relying on implicit coercion so the resulting format is intentional.
+    - _reasoning:_ prefer-template ESLint rule catches + concatenation; explicit conversion for non-primitives needs context.
+- **[Naming Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Use kebab-case exclusively for all shape names and aliases registered in the shapes module (e.g., `my-new-shape`, not `myNewShape`); do not register camelCase variants alongside kebab-case variants.
+    - _reasoning:_ Project-specific kebab-case shape name convention requiring knowledge of shape registration system.
+- **[Naming Standards]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - Use kebab-case for all documentation files and directories (e.g., `adding-new-shape.md`, not `adding_new_shape/Readme.md`), consistent with URL conventions used elsewhere in the project.
+    - _reasoning:_ Kebab-case file naming in docs can be partially detected via custom file-name lint rules.
+- **[Code Structure]** _(gen: `project_specific`, lint: `lintable`)_
+    - Configure CSpell's top-level `language` setting to accept both American and British English (`language: en-US,en-GB`) so both spellings are valid project-wide without per-file `cspell:locale` overrides.
+    - _reasoning:_ CSpell language setting is a simple config change detectable by inspecting cspell config file.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - In CSS `font-family` declarations in diagram style files (e.g., `getStyles()` functions), quote any font family name that contains whitespace or special characters — for example `'trebuchet ms'`, `'Courier New'` — per the W3C CSS Fonts Level 3 spec recommendation.
+    - _reasoning:_ Unquoted multi-word font-family names in CSS can be partially detected by stylelint rules.

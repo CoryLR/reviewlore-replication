@@ -1,0 +1,70 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/parser/sequenceDiagram.jison",
+      "line_number": 35,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The second original `<ID>` rule that was removed (`<ID>[^<\\->\\.->:\\n,;]+?...`) intentionally excluded `@` from its character class while the one removed here (line 36 in the original) did *not* exclude `@`. That second rule acted as the fallback for participant names containing an `@` sign that were *not* followed by `@{` (the JSON-config syntax). All three new replacement rules share `[^<>:\\n,;@]`, meaning `@` is now universally excluded in the `<ID>` state. A participant name like `participant user@domain` (no config block) would previously have been captured by the removed non-`@`-excluding rule; after this change it falls through all three new rules and hits the catch-all `INVALID` rule, silently failing. Please either add a dedicated rule for `@`-containing names or add a test explicitly asserting this is now intentionally unsupported.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/parser/sequenceDiagram.jison",
+      "line_number": 151,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `| INVALID { $$=[]; }` branch is added to the `line` production but not to `box_line` (line 159\u2013163). When invalid participant syntax (e.g. a `<` in the name) appears inside a `box` block, the lexer still correctly returns `INVALID` and pops state, but the grammar has no way to swallow it gracefully inside `box_line`. The result is a hard parse error for the entire diagram rather than a graceful skip \u2014 inconsistent with the `line` behaviour being introduced here.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/parser/sequenceDiagram.jison",
+      "line_number": 151,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The new `| INVALID { $$=[]; }` rule in `line` silently discards invalid tokens with no diagnostic output, yet the PR description states the goal is to \"throw a clear console error\". Consider at minimum adding a `console.error` or `yy.parseError` call in the semantic action so diagram authors can understand why their input was rejected, rather than seeing it silently ignored.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/parser/sequenceDiagram.jison",
+      "line_number": 421,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The trailing `%%` no longer has a newline after it (`\\ No newline at end of file`). Most editors and linters expect a final newline, and the original file had one. Please restore it.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+      "line_number": 2610,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test description says \"alias token causes conflicts\" but the actual bug is a `<` character in a participant name triggering catastrophic backtracking. A more accurate description would be something like `'should throw a parse error when a participant name contains a \"<\" character'`. Misleading test descriptions make future debugging harder.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+      "line_number": 2611,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test only verifies that *some* error is thrown (`expect(error).toBe(true)`). It does not assert the error type or message. This could mask future regressions where parsing happens to throw a completely different error for an unrelated reason. Consider asserting on a specific error type or message, e.g. `expect(e.message).toMatch(/parse error/i)` or at minimum catching only the expected error class.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+      "line_number": 2615,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "There is a typo in the fixture string: `\"service decription\"` should be `\"service description\"`. This has no functional impact but can cause confusion when reading test output.",
+      "index": 6
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "No regression test is added to confirm that previously-valid syntax continues to work after the regex simplification. The existing suite covers `participant Alice-in-Wonderland`, `participant Alice=Wonderland`, and `participant A as Alice`, but it would be valuable to add at least one targeted test per new lexer rule (alias path, no-alias path) so that future refactors of the jison file have a clear behavioural baseline and regressions are caught immediately.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.49052895,
+  "duration_seconds": 399.12515687942505
+}

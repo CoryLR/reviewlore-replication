@@ -1,0 +1,195 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 5002,
+  "title": "fix: getMessageAPI so it considers entity codes",
+  "body": "fixes https://github.com/mermaid-js/mermaid/issues/4983\r\n\r\n## :bookmark_tabs: Summary\r\n\r\nThis issue is reproducible when using the API `diagram.parser.yy.getMessages` or `diagram.db.getMessages` API directly eg in test since the entity codes are not handled in `getDiagramFromText` API.\r\n\r\nIn mermaid it was working fine since the entity codes were being handled before calling the API `getDiagramFromText` hence I have removed that and instead handling it inside the function `getDiagramFromText`. \r\nI hope this should be acceptable and I have added test as well for the same.\r\n\r\nResolves #4983\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nDescribe the way your implementation works or what design decisions you made if applicable.\r\nAlready explained above\r\n\r\n\r\n### :clipboard: Tasks\r\n\r\nAlready explained above\r\n\r\nAs per the lint rule failing for circular deps, I think we can move the util `encodeEntities` to `packages/mermaid/src/utils.ts` since now its a reusable common util. let me know If I should move the util.\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n- [ ] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/docs/community/development.md#3-update-documentation) is used for all new features.\r\n- [x] :bookmark: targeted `develop` branch\r\n\r\n",
+  "author": "ad1992",
+  "merged_at": "2023-11-07T05:10:24Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "eb4bd314b64d2f5d6c21b7307154f87b1f1a102b",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "7a3ce3e3378bd2761eb118f40a9e2f8a81c599a3",
+    "dff13439f635d9b46b97a259c1b418296b876809"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85SO6n0",
+          "author": "sidharthv96",
+          "body": "We cannot add this type to DiagramDB, as it's not a common function that each diagram shares. \r\nIt'll have to be added to the specific diagramDB which exposes the getMessages function. ",
+          "file_path": "packages/mermaid/src/diagram-api/types.ts",
+          "line_number": 48,
+          "start_line": null,
+          "commit_sha": "dff13439f635d9b46b97a259c1b418296b876809",
+          "created_at": "2023-11-02T06:19:54Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85SVAvi",
+          "author": "ad1992",
+          "body": "This looks like will take more time as there are no types for sequenceDb so I will do that in a separate PR",
+          "file_path": "packages/mermaid/src/diagram-api/types.ts",
+          "line_number": 48,
+          "start_line": null,
+          "commit_sha": "dff13439f635d9b46b97a259c1b418296b876809",
+          "created_at": "2023-11-03T07:39:40Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests a specific change: move the type from DiagramDB to the specific diagramDB that exposes getMessages."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85SO7l-",
+          "author": "sidharthv96",
+          "body": "> As per the lint rule failing for circular deps, I think we can move the util encodeEntities to packages/mermaid/src/utils.ts since now its a reusable common util. let me know If I should move the util.\r\n\r\nYes, this should be moved. \r\nMaybe you can move both encode and decode functions into it's own file. ",
+          "file_path": "packages/mermaid/src/Diagram.ts",
+          "line_number": 8,
+          "start_line": null,
+          "commit_sha": "dff13439f635d9b46b97a259c1b418296b876809",
+          "created_at": "2023-11-02T06:26:29Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Confirms and requests moving encode/decode functions, suggesting they be placed in their own file."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85SO7rn",
+          "author": "sidharthv96",
+          "body": "This should not be in the common types.ts, but in the sequenceDiagram folder. ",
+          "file_path": "packages/mermaid/src/diagram-api/types.ts",
+          "line_number": 29,
+          "start_line": null,
+          "commit_sha": "dff13439f635d9b46b97a259c1b418296b876809",
+          "created_at": "2023-11-02T06:27:05Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests moving something from common types.ts to the sequenceDiagram folder."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85SO8QT",
+          "author": "sidharthv96",
+          "body": "The right place for this would be inside the constructor of `mermaid/packages/mermaid/src/Diagram.ts`.",
+          "file_path": "packages/mermaid/src/Diagram.ts",
+          "line_number": 86,
+          "start_line": null,
+          "commit_sha": "dff13439f635d9b46b97a259c1b418296b876809",
+          "created_at": "2023-11-02T06:30:25Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85SVBQs",
+          "author": "ad1992",
+          "body": "Rethinking, I feel it should be in utils along with `decodeEntities` reason being these are pure JS functions and reusable as well so utils looks like a good place and these can be separately unit tested as well. Let me know if this sounds good.",
+          "file_path": "packages/mermaid/src/Diagram.ts",
+          "line_number": 86,
+          "start_line": null,
+          "commit_sha": "dff13439f635d9b46b97a259c1b418296b876809",
+          "created_at": "2023-11-03T07:41:55Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85SbAyq",
+          "author": "sidharthv96",
+          "body": "I meant where the function is to be called, not the implementation. ",
+          "file_path": "packages/mermaid/src/Diagram.ts",
+          "line_number": 86,
+          "start_line": null,
+          "commit_sha": "dff13439f635d9b46b97a259c1b418296b876809",
+          "created_at": "2023-11-06T05:56:57Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Specifies a concrete location where code should be placed instead."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85SO8zl",
+          "author": "sidharthv96",
+          "body": "Nothing technically wrong with the forEach, but this feels better for readability, as it's a test. \r\n\r\n```suggestion\r\n    expect(messages[0].message).toBe('I \ufb02\u00b0\u00b09829\u00b6\u00df you!');\r\n    expect(messages[1].message).toBe('I \ufb02\u00b0\u00b09829\u00b6\u00df you \ufb02\u00b0infin\u00b6\u00df times more!');\r\n```",
+          "file_path": "packages/mermaid/src/diagram.spec.ts",
+          "line_number": 84,
+          "start_line": null,
+          "commit_sha": "dff13439f635d9b46b97a259c1b418296b876809",
+          "created_at": "2023-11-02T06:33:54Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a specific code change for improved readability in the test, including a code suggestion."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85SVCom",
+          "author": "github-advanced-security",
+          "body": "## Polynomial regular expression used on uncontrolled data\n\nThis [regular expression](1) that depends on [library input](2) may run slow on strings starting with 'style' and with many repetitions of 'style'.\nThis [regular expression](3) that depends on [library input](2) may run slow on strings starting with 'style:' and with many repetitions of ':'.\nThis [regular expression](4) that depends on [library input](2) may run slow on strings starting with 'style:#' and with many repetitions of '#'.\n\n[Show more details](https://github.com/mermaid-js/mermaid/security/code-scanning/121)",
+          "file_path": "packages/mermaid/src/utils.ts",
+          "line_number": 901,
+          "start_line": 899,
+          "commit_sha": "dff13439f635d9b46b97a259c1b418296b876809",
+          "created_at": "2023-11-03T07:50:12Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential ReDoS vulnerability with polynomial regular expressions on uncontrolled input, implying the regex should be fixed."
+    }
+  ],
+  "review_thread_count": 6,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 6,
+    "stage1_kept": 6,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

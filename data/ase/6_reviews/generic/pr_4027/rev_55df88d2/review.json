@@ -1,0 +1,92 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "ase/calculators/plumed.py",
+      "line_number": 190,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Using `except Exception` is far too broad. It will silently catch any error raised by `get_stress()` \u2014 including `AttributeError`, `RuntimeError`, or bugs in the base calculator \u2014 and substitute zeros for the stress, producing silently incorrect results. Narrow this to `except PropertyNotImplementedError` (already imported in the test file; it lives in `ase.calculators.calculator`). If you also want to tolerate a `NotImplementedError` from older calculators, catch both explicitly:\n\n```python\nfrom ase.calculators.calculator import PropertyNotImplementedError\n...\nexcept (PropertyNotImplementedError, NotImplementedError):\n    unbiased_stress = np.zeros(6)\n```",
+      "index": 0
+    },
+    {
+      "file_path": "ase/calculators/plumed.py",
+      "line_number": 193,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The formula `virial / volume` (without a minus sign) is correct here, but the reasoning is non-obvious and contradicts the convention used elsewhere in ASE. `socketio.py` line 704 uses `-full_3x3_to_voigt_6_stress(virial) / vol` because i-PI defines its virial as `+\u03a3 r\u2297F`. PLUMED defines it with the opposite sign (`W_ij = -\u03a3 r_i F_j`), so the negation cancels and no minus sign is needed here. Without a comment, future maintainers comparing this line to `socketio.py` will likely conclude it is a bug and introduce a sign error. Please add a short comment:\n\n```python\n# PLUMED virial convention: W_ij = -sum_k r_{ki} F_{kj},\n# so stress = W / V (no extra minus sign, unlike the i-PI convention).\nbiased_stress_voigt = full_3x3_to_voigt_6_stress(virial_bias) / volume\n```",
+      "index": 1
+    },
+    {
+      "file_path": "ase/calculators/plumed.py",
+      "line_number": 51,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`'free_energy'` was added to `implemented_properties` (and stored in `results` at line 172) without any mention in the PR description, the changelog entry, or the docstring. This is a behaviorally visible change \u2014 any caller checking `implemented_properties` or calling `get_free_energy()` will now see different results. Please document this addition (at minimum in the changelog and docstring).",
+      "index": 2
+    },
+    {
+      "file_path": "ase/calculators/plumed.py",
+      "line_number": 163,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `properties` default argument still lists only `['energy', 'forces']` even though `'stress'` and `'free_energy'` are now in `implemented_properties`. Because Plumed computes all properties unconditionally this has no correctness impact, but the signature is misleading \u2014 a reader would expect the default to reflect what the calculator actually produces. Consider updating to `properties=['energy', 'free_energy', 'forces', 'stress']`.",
+      "index": 3
+    },
+    {
+      "file_path": "ase/calculators/plumed.py",
+      "line_number": 233,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`compute_bias` returns a `list`, while `compute_energy_and_forces` returns an unpacked tuple. For consistency (and to signal that the return value is a fixed-length, ordered collection), prefer returning a tuple here:\n\n```python\nreturn energy_bias, forces_bias, virial_bias\n```",
+      "index": 4
+    },
+    {
+      "file_path": "ase/calculators/plumed.py",
+      "line_number": 187,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`compute_energy_and_forces` uses `self.atoms.cell` to decide whether to compute stress and which cell volume to use. When called from `write_plumed_files`, `self.atoms` is whatever was last passed to `calculate()`, not the current `image`. If a trajectory's images have different cells (e.g., NPT trajectory), `self.atoms.cell.rank` and `self.atoms.get_volume()` will be stale, producing incorrect stress values. `write_plumed_files` should update `self.atoms` (or pass the image's cell explicitly) before calling this method for each image.",
+      "index": 5
+    },
+    {
+      "file_path": "ase/test/calculator/plumed/test_plumed.py",
+      "line_number": 290,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Trailing whitespace after the trailing comma on this line (and similarly on line 314). Most linters and editors flag trailing whitespace; remove it:\n\n```python\natoms = Atoms('H2', positions=[[0, 0, 0], [0, 0, 0.74]],\n              cell=10.0 * np.eye(3), pbc=True)\n```",
+      "index": 6
+    },
+    {
+      "file_path": "ase/test/calculator/plumed/test_plumed.py",
+      "line_number": 293,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`test_stress_shape`, `test_stress_nobox`, and `test_forces_and_stress` all use PLUMED input without a `UNITS` line. The `AT=0.06` and `KAPPA=1` values are therefore in PLUMED's default units (nm and kJ/mol/nm\u00b2), while `test_stress_unbiased` and `test_units` explicitly set units via `UNITS LENGTH=A ...`. The implicit unit choice makes the tests harder to understand and maintain. Either add a `UNITS` line or add a comment explaining the intentional use of default PLUMED units.",
+      "index": 7
+    },
+    {
+      "file_path": "changelog.d/20260321_005528_ppiaggi_plumed_stress.rst",
+      "line_number": 3,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The file is missing a trailing newline. Most POSIX tools and diff viewers expect text files to end with a newline; the diff shows `\\ No newline at end of file`. Please add one.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Neither `compute_energy_and_forces` nor `compute_bias` has a docstring. Both are public-ish methods (called directly in `test_units`) and their return-value signatures just changed. A short docstring on each \u2014 describing what is returned and what units are used \u2014 would help future contributors, especially given the non-trivial PLUMED unit conventions throughout the file.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The four new test functions (`test_stress_unbiased`, `test_stress_nobox`, `test_stress_shape`, `test_forces_and_stress`) each construct a Plumed calculator with different PLUMED inputs. Three of them create an H2 molecule with `positions=[[0,0,0],[0,0,0.74]]` and `UPPER_WALLS AT=0.06 KAPPA=1` (some with, some without a cell). Extracting a shared fixture or helper for the atoms + input setup would reduce duplication and make it easier to update all tests when parameters change.",
+      "index": 10
+    }
+  ],
+  "cost_usd": 0.7392883,
+  "duration_seconds": 532.265839099884
+}

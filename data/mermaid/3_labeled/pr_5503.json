@@ -1,0 +1,95 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 5503,
+  "title": "feat(state): add from, to ids for edge",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nThe ID of the from-to relationship was added to the diagram's edges. \r\nAnother denominator \"_\" was used to make the extraction of these respective IDs easier.\r\n\r\n<img width=\"962\" alt=\"Captura de Tela 2024-05-04 a\u0300s 06 26 26\" src=\"https://github.com/mermaid-js/mermaid/assets/54173994/63ccab98-b40f-4d35-ad08-df3bd37a135b\">\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nI am currently working on converting state diagram to Excalidraw, and I felt the need to have an easier way to find the edges.\r\n\r\nI tried some alternative paths but without success, for example:\r\n\r\n1. Manually tracking each edge, and using it as an index to search in `.edgePaths`, however, the index does not always reflect how we iterate through the parser.doc.\r\n2. Using the respective `graphCount` id to get the edge, but in cases where we have multiple relationships for the same state, it may not find the correct edge because we do not have access to the `graphCount` in the parser.doc, only to the node id.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://mermaid.js.org/community/contributing.html)\r\n- [ ] :computer: have added necessary unit/e2e tests.\r\n- [ ] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://mermaid.js.org/community/contributing.html#update-documentation) is used for all new features.\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "igorwessel",
+  "merged_at": "2024-05-08T06:02:48Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "4a12c463505483639412e51c0c3e93fa6f0cd4bf",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "9eb64cd6db0c18a9ac9ab0a0ee04e4aa562eb99e",
+    "da150e8767eab63ef9e95be73a6696f34ffca161"
+  ],
+  "review_threads": [],
+  "review_thread_count": 1,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85exSH0",
+            "author": "igorwessel",
+            "body": "<!-- Questions are appropriate if you have a potential concern but are not quite sure if it's relevant or not. Asking the author for clarification or investigation can lead to a quick resolution.  -->\r\n**question:** \u200fmaybe we could follow flowchart edge id standard?  \r\n<img width=\"519\" alt=\"Captura de Tela 2024-05-04 a\u0300s 09 28 41\" src=\"https://github.com/mermaid-js/mermaid/assets/54173994/3949726c-1fbd-41ab-ab0c-07c3a7be074f\">\r\n",
+            "file_path": "packages/mermaid/src/diagrams/state/stateRenderer-v2.js",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "da150e8767eab63ef9e95be73a6696f34ffca161",
+            "created_at": "2024-05-04T12:28:48Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85eyoqs",
+            "author": "sidharthv96",
+            "body": "That should be fine. \r\nLet's create a function to generate ID for edges, and use it everywhere, so it's consistent. \r\n\r\nAlso, string templates are preferred over concatenation. \r\n```suggestion\r\n            id: `edge_${graphItemCount}_${item.state1.id}_${item.state2.id}`,\r\n```",
+            "file_path": "packages/mermaid/src/diagrams/state/stateRenderer-v2.js",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "da150e8767eab63ef9e95be73a6696f34ffca161",
+            "created_at": "2024-05-05T14:43:00Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85eyt3-",
+            "author": "igorwessel",
+            "body": "@sidharthv96 If I understood correctly, are we going to create a function for the state diagram? Or will it be something global to be used in the other diagrams? ",
+            "file_path": "packages/mermaid/src/diagrams/state/stateRenderer-v2.js",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "da150e8767eab63ef9e95be73a6696f34ffca161",
+            "created_at": "2024-05-05T16:37:04Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85ez5eb",
+            "author": "sidharthv96",
+            "body": "Something in the common utils seems like the way to go, as the plan is to have a consistent pattern across diagram types. \r\n\r\nI'm not really sure if we need the prefix and suffix though. \r\n\r\n```ts\r\nexport const getEdgeID = (\r\n  from: string,\r\n  to: string,\r\n  {\r\n    counter = 0,\r\n    prefix = 'edge',\r\n    suffix\r\n  }: { counter?: number; prefix?: string; suffix?: string } = {}\r\n) => {\r\n  return `${prefix}_${from}_${to}_${counter}${suffix ? `_${suffix}` : ''}`;\r\n};\r\n```",
+            "file_path": "packages/mermaid/src/diagrams/state/stateRenderer-v2.js",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "da150e8767eab63ef9e95be73a6696f34ffca161",
+            "created_at": "2024-05-06T07:55:47Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85e0IGJ",
+            "author": "igorwessel",
+            "body": "@sidharthv96 I also think that the prefix/suffix is not necessary, but I'm not sure if there's any code today that depends on it.\r\n\r\nLooking at some diagrams:\r\n- Classchart = id_$FROM_$TO_$COUNTER\r\n- Flowchart = L-$FROM-$TO-$COUNTER\r\n\r\nThe other diagrams do not have IDs in their respective relationships, honestly looking at the codebase I don't think it's necessary but I don't know if people usually use it haha.\r\nBut we can keep it to avoid any breaking changes.",
+            "file_path": "packages/mermaid/src/diagrams/state/stateRenderer-v2.js",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "da150e8767eab63ef9e95be73a6696f34ffca161",
+            "created_at": "2024-05-06T08:55:06Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 0,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 1,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

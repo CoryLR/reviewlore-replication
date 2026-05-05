@@ -1,0 +1,46 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/Color.tsx",
+      "line_number": 337,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Non-integer positive floats (e.g., `maxPresetColors: 3.5`) fail `Number.isInteger` and silently fall back to `27` rather than using `3` (or `4`). A user who passes a float almost certainly wants 'approximately that many' colors, not the default of 27. Consider using `Math.floor(maxPresetColors)` for positive non-integers, e.g.:\n\n```ts\nconst limit =\n  maxPresetColors > 0 && Number.isFinite(maxPresetColors)\n    ? Math.floor(maxPresetColors)\n    : 27;\n```\nThis also makes the `=== Infinity` early-exit guard above redundant (since `Math.floor(Infinity)` remains `Infinity`), though that guard could be kept for clarity.",
+      "index": 0
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/types.ts",
+      "line_number": 27,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The JSDoc doesn't document the silent-fallback behavior for invalid inputs (negative numbers, non-integer floats, `NaN`). Callers who pass `maxPresetColors: 3.5` expecting `3` visible colors will be silently given 27 instead. Add a sentence such as:\n\n```\n * Non-integer values are floored; negative values and `NaN` fall back to the default of `27`.\n```\nDocumenting the runtime contract here prevents confusion without requiring callers to read the implementation.",
+      "index": 1
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/Color.stories.tsx",
+      "line_number": 100,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `WithInvalidMaxPresetColors` story claims to demonstrate that a negative value 'falls back to 27', but it only provides 5 `presetColors`. With fewer presets than any plausible limit, the behavior is visually indistinguishable from a limit of 5, 27, or 1 000 \u2014 all 5 colors show in every case. To actually validate the fallback, the story needs at least 30+ presets; if the limit truly falls back to 27, 27 swatches appear; if it were clamped to 5, only 5 would appear.",
+      "index": 2
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/controls/Color.stories.tsx",
+      "line_number": 68,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "All three new stories use `startOpen: true` to expose the open state for visual testing, but per project conventions interactive component stories should use a `play` function to programmatically trigger the interaction. This ensures the open/expanded state is captured in visual regression tests and makes the test intent explicit. For example:\n\n```tsx\nplay: async ({ canvasElement }) => {\n  const canvas = within(canvasElement);\n  await userEvent.click(canvas.getByRole('button', { name: /color/i }));\n},\n```",
+      "index": 3
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `svelte-vite/package.json` peer-dependency bump (`@sveltejs/vite-plugin-svelte: ^7.0.0`) is entirely unrelated to the `maxPresetColors` ColorControl feature. Per project conventions, PRs should be strictly scoped to their stated objective. This change should be extracted into its own focused PR with a description of why `^7.0.0` support is needed, so it can be reviewed and tested independently.",
+      "index": 4
+    }
+  ],
+  "cost_usd": 0.30692055,
+  "duration_seconds": 205.73788404464722
+}

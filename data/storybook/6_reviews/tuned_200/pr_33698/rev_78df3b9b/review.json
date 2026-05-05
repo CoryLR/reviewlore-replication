@@ -1,0 +1,44 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/bin/loader.ts",
+      "line_number": 55,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The new JS\u2192TS resolution logic interacts badly with the existing `addExtensionsToRelativeImports` test suite. The `beforeEach` in that describe block mocks `existsSync` to return `true` for any path ending in `.ts`. Now when `resolveWithExtension('./test.js', '/project/src/file.ts')` is called, the code reaches this loop, resolves `/project/src/test.ts`, calls `existsSync` (which returns `true` because the path ends in `.ts`), and returns `'./test.ts'`. This breaks the existing test case at line 106 in `loader.test.ts` that expects `import foo from './test.js'` to remain `'./test.js'` unchanged. The test mock needs to be updated to also return `false` for JS\u2192TS candidate paths, or the test expectations need to be revised to reflect the new resolution behavior.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/bin/loader.ts",
+      "line_number": 30,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "No new tests are added for the JS\u2192TS resolution logic introduced in this PR. The following cases all lack coverage: (1) `.js` resolves to `.ts` when a `.ts` file exists; (2) `.js` resolves to `.tsx` when `.tsx` exists but `.ts` does not; (3) `.mjs` \u2192 `.mts`; (4) `.cjs` \u2192 `.cts`; (5) `.jsx` \u2192 `.tsx`; (6) fallback to the original `.js` path when no TypeScript alternative is found. These should be added to the `resolveWithExtension` describe block in `loader.test.ts`, with `vi.mocked(existsSync)` configured to return `true` only for the expected candidate path in each scenario.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/bin/loader.ts",
+      "line_number": 48,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The inline comment cites the TypeScript Node16/NodeNext resolution order as `.ts \u2192 .tsx \u2192 .d.ts \u2192 .js`, but `.d.ts` is not handled anywhere in the implementation. Either remove `.d.ts` from the comment to avoid implying it is covered, or add a brief note explaining why declaration-only files are intentionally excluded (e.g., they have no runnable implementation).",
+      "index": 2
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The first test in the `resolveWithExtension` describe block (line 16 of `loader.test.ts`) is titled 'should return the path as-is if it already has an extension' and passes `'./test.js'`. With the new logic, this no longer describes the actual behavior \u2014 the function now attempts TS alternatives before falling back. The test still passes only because `existsSync` returns `undefined`/`false` in that context (no mock configured), but the description is now misleading. It should be updated to something like 'should fall back to original .js path when no TypeScript alternative file exists', and the mock should be configured to explicitly return `false` to make the test's intent clear.",
+      "index": 3
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The PR's testing checklist is entirely unchecked and the manual testing section is left blank. For a change that modifies how the esbuild loader resolves module paths at runtime \u2014 a critical path that affects every `.storybook/main.ts` and config file \u2014 at minimum a manual testing note (e.g., 'Ran sandbox with `moduleResolution: NodeNext` and confirmed `.js` imports to `.ts` files resolve correctly') should be provided. The lack of automated test coverage for the new code path (see inline comments) compounds this gap.",
+      "index": 4
+    }
+  ],
+  "cost_usd": 0.3845233,
+  "duration_seconds": 140.08276987075806
+}

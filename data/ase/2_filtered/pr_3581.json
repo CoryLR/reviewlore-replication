@@ -1,0 +1,187 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3581,
+  "title": "ENH: add calculation of 'stress' property to ase.calculators.eam.EAM",
+  "body": "This merge request implements calculation of stresses for the EAM potential according to the virial stress definition, just like the EMT potential.\nBoth `stress` and `stresses` are computed in the `calculate_forces` method.\nAlso, `free_energy` is now set to the same value as `energy` to perform numerical stress calculations.\n\nAdded force and stress test based on the numerical force and stress calculators similar to `test/calculators/test_morse.py`.\nUpdated EAM docstring to mention the calculation of stress.\n\n# Checklist\n\n- [x] I am familiar with [ASE's contribution guidelines](https://wiki.fysik.dtu.dk/ase/development/contribute.html).\n- [x] [**Doc strings**](https://wiki.fysik.dtu.dk/ase/development/python_codingstandard.html#writing-documentation-in-the-code) in code changed in this MR are up to date.\n- [x] [**Unit tests** have been added for new or changed code.](https://wiki.fysik.dtu.dk/ase/development/tests.html)",
+  "author": "UL-LIC-Floris",
+  "merged_at": "2025-03-17T16:44:58.107Z",
+  "base_ref": "master",
+  "merge_commit_sha": "c51cf04c88c5a630fcde77af1cf763b42ee7be19",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2378893869",
+          "author": "yuzie007",
+          "body": "1. Division by `volume` may not work ideally for non-3D systems. Could you maybe consider the treatment like done in [`emt.py`](https://gitlab.com/ase/ase/-/blob/158c80304b71823ca36173560e1974e5c305ce02/ase/calculators/emt.py#L241-244) or [`morse.py`](https://gitlab.com/ase/ase/-/blob/158c80304b71823ca36173560e1974e5c305ce02/ase/calculators/morse.py#L150-152)?\n2. According to the [docstring in `atoms.get_stresses`](https://gitlab.com/ase/ase/-/blob/158c80304b71823ca36173560e1974e5c305ce02/ase/atoms.py#L889-891), the definition of `stresses` in ASE is not well unified, and I am a bit hesitant to extend this feature without overviewing the present situation in ASE.\nTo ease the review for this MR, I would like to suggest to remove implementation of `stresses` here and focus on `stress`.\nIf we would like to have `stresses`, I would like to suggest to make another MR specifically for this, with summarizing the how other calculators implement this.",
+          "file_path": "ase/calculators/eam.py",
+          "line_number": 841,
+          "commit_sha": "e44630375d898530c80c0cafc1a99316abe74d6b",
+          "base_sha": "eea53a3195557cbc26a83f21409e7b8477ccf1c5",
+          "created_at": "2025-03-04T18:29:28.876Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2400129345",
+          "author": "UL-LIC-Floris",
+          "body": "Changed the volume division like in calculators you mentioned and removed the `stresses` property. I probably won't be putting in a new MR for this but just put the stresses in a local variable for now, so it can't easily be accessed again.",
+          "file_path": "ase/calculators/eam.py",
+          "line_number": 841,
+          "commit_sha": "e44630375d898530c80c0cafc1a99316abe74d6b",
+          "base_sha": "eea53a3195557cbc26a83f21409e7b8477ccf1c5",
+          "created_at": "2025-03-17T09:33:19.844Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests two concrete changes: (1) handle non-3D systems like emt.py/morse.py, and (2) remove the `stresses` implementation and focus only on `stress`, deferring stresses to a separate MR."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2378893880",
+          "author": "yuzie007",
+          "body": "pls see my comment above",
+          "file_path": "ase/calculators/eam.py",
+          "line_number": 855,
+          "commit_sha": "e44630375d898530c80c0cafc1a99316abe74d6b",
+          "base_sha": "eea53a3195557cbc26a83f21409e7b8477ccf1c5",
+          "created_at": "2025-03-04T18:29:29.253Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "References the actionable comment above, implying the same code changes apply here."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2378893886",
+          "author": "yuzie007",
+          "body": "For `stress` we should test not only `alloy` but also `eam`, `fs`, and `adp`.\nIn this sense, it would be more reasonable to, e.g., extend `test_eam_run.py::test_read_potential` rather than this `test_eam`, which tests if `EAM` can handle a user-defined potential.",
+          "file_path": "ase/test/calculator/test_eam.py",
+          "line_number": 91,
+          "commit_sha": "40a23298557ba09d3fb592f005eb6342e733b07b",
+          "base_sha": "eea53a3195557cbc26a83f21409e7b8477ccf1c5",
+          "created_at": "2025-03-04T18:29:29.498Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2400129357",
+          "author": "UL-LIC-Floris",
+          "body": "moved the tests to `test_eam_run.py::test_read_potential`.",
+          "file_path": "ase/test/calculator/test_eam.py",
+          "line_number": 91,
+          "commit_sha": "40a23298557ba09d3fb592f005eb6342e733b07b",
+          "base_sha": "eea53a3195557cbc26a83f21409e7b8477ccf1c5",
+          "created_at": "2025-03-17T09:33:20.165Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests extending test coverage to include eam, fs, and adp formats, and suggests using a different test file."
+    }
+  ],
+  "review_thread_count": 6,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2401200594",
+            "author": "askhl",
+            "body": "Looks good to me.  Thanks a lot @UL-LIC-Floris and @yuzie007!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-03-17T16:44:52.253Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_non_substantive"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2378893900",
+            "author": "yuzie007",
+            "body": "Thank you so much @UL-LIC-Floris for the MR implementing `stress` in `EAM`! Sorry that maintainers could not react earlier.\n\nThe implementation looks mostly reasonable, and after addressing a few concerns, I think we can merge it.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-03-04T18:29:29.983Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Acknowledgment and general status update; no specific code change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2401173141",
+            "author": "yuzie007",
+            "body": "Thank you so much @UL-LIC-Floris for addressing the suggestions!\nThe present MR looks to be mergable already.\nI will wait for ~1 day to see if someone else has further comments then would like to merge.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-03-17T16:33:31.731Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Status update about merging; no code change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 6,
+    "stage1_kept": 5,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 1,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 2,
+    "stage3_cost_usd": 0.0176335
+  }
+}

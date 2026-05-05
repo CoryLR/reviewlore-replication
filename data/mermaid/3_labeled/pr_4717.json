@@ -1,0 +1,148 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4717,
+  "title": "convert `assignWithDepth` to TS",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nBrief description about the content of your PR.\r\n\r\nResolves #<your issue id here>\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nDescribe the way your implementation works or what design decisions you made if applicable.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [ ] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [ ] :computer: have added necessary unit/e2e tests.\r\n- [ ] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/docs/community/development.md#3-update-documentation) is used for all new features.\r\n- [ ] :bookmark: targeted `develop` branch\r\n",
+  "author": "Yokozuna59",
+  "merged_at": "2023-08-11T17:37:55Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "591cb794eb55244309a2e129c3b2736cb97eaee6",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "da602add5db534ffdcd12354133b046b9773cbed",
+    "6170538c4797d76c7acc4cd40ac3be125854b7c4"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85M7opw",
+          "author": "sidharthv96",
+          "body": "The Object.assign cannot be removed. \r\n\r\nIf you call `assignWithDepth(..,.., { depth: 2 })`, clobber will be undefined now. \r\n\r\n\r\nThis is something else you can do. \r\n```suggestion\r\n  {depth = 2, clobber = false}: { depth: number; clobber: boolean } = {}\r\n): any => {\r\n  const config = { depth, clobber };\r\n```",
+          "file_path": "packages/mermaid/src/assignWithDepth.ts",
+          "line_number": 33,
+          "start_line": null,
+          "commit_sha": "6170538c4797d76c7acc4cd40ac3be125854b7c4",
+          "created_at": "2023-08-10T21:28:45Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The comment points out that removing Object.assign causes `clobber` to be undefined when calling with specific parameters, indicating a logic error where default values are not properly handled."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85M7uXN",
+          "author": "Yokozuna59",
+          "body": "I'm not sure I'm following; how would it be `undefined`? It has a default value, so even if we didn't pass any of them, it would use those values.\r\nCan't we just re-add `Object.assign`?",
+          "file_path": "packages/mermaid/src/assignWithDepth.ts",
+          "line_number": 33,
+          "start_line": null,
+          "commit_sha": "6170538c4797d76c7acc4cd40ac3be125854b7c4",
+          "created_at": "2023-08-10T22:03:01Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85M7x47",
+          "author": "sidharthv96",
+          "body": "> I'm not sure I'm following; how would it be undefined? It has a default value, so even if we didn't pass any of them, it would use those values.\r\n\r\nYes, it has a default value, `{ depth: 2, clobber: false }`. \r\nBut if you pass a partial value when calling, like `assignWithDepth(..,.., { depth: 2 })`, that default value will not be used, so, the config will have the value `{ depth: 2 }`. Which makes `clobber` undefined. \r\n\r\nIn short, the default value is not \"merged\" with the passed value, but it's used only if there is no passed value. \r\n\r\nWe have to use the format in my suggestion to put default values into individual properties, essentially imitating merge. \r\n",
+          "file_path": "packages/mermaid/src/assignWithDepth.ts",
+          "line_number": 33,
+          "start_line": null,
+          "commit_sha": "6170538c4797d76c7acc4cd40ac3be125854b7c4",
+          "created_at": "2023-08-10T22:28:07Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85M7yC6",
+          "author": "sidharthv96",
+          "body": "Yes, you can re-add the assign too. ",
+          "file_path": "packages/mermaid/src/assignWithDepth.ts",
+          "line_number": 33,
+          "start_line": null,
+          "commit_sha": "6170538c4797d76c7acc4cd40ac3be125854b7c4",
+          "created_at": "2023-08-10T22:29:06Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85M7zgj",
+          "author": "Yokozuna59",
+          "body": "I see, new to JS/TS world so I don't know much :)\r\n\r\nBut the suggested code isn't a valid code, I modified the `= {}` part. d8dd68cad29d762e6523dd53475584c12f010a94",
+          "file_path": "packages/mermaid/src/assignWithDepth.ts",
+          "line_number": 33,
+          "start_line": null,
+          "commit_sha": "6170538c4797d76c7acc4cd40ac3be125854b7c4",
+          "created_at": "2023-08-10T22:39:46Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85M8Ns_",
+          "author": "sidharthv96",
+          "body": "I'm sorry, but I forgot the `?` in the type. This should be valid. \r\nIt is not necessary to put the values in two places. \r\n\r\n```ts\r\n  {depth = 2, clobber = false}: { depth?: number; clobber?: boolean } = {}\r\n```",
+          "file_path": "packages/mermaid/src/assignWithDepth.ts",
+          "line_number": 33,
+          "start_line": null,
+          "commit_sha": "6170538c4797d76c7acc4cd40ac3be125854b7c4",
+          "created_at": "2023-08-11T03:09:11Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85M8W0R",
+          "author": "sidharthv96",
+          "body": "> I see, new to JS/TS world so I don't know much :)\r\n\r\nWell, I just found out about `structuredClone` and [`queueMicrotask`](https://developer.mozilla.org/en-US/docs/Web/API/queueMicrotask) last week, so we're all learning :)",
+          "file_path": "packages/mermaid/src/assignWithDepth.ts",
+          "line_number": 33,
+          "start_line": null,
+          "commit_sha": "6170538c4797d76c7acc4cd40ac3be125854b7c4",
+          "created_at": "2023-08-11T04:49:35Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a bug (clobber will be undefined) and provides a concrete code suggestion to fix it using default parameter destructuring."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85M8W8e",
+          "author": "sidharthv96",
+          "body": "Btw, you don't need both the initializer and object.assign. Either one is fine. ",
+          "file_path": "packages/mermaid/src/assignWithDepth.ts",
+          "line_number": 33,
+          "start_line": null,
+          "commit_sha": "6170538c4797d76c7acc4cd40ac3be125854b7c4",
+          "created_at": "2023-08-11T04:50:52Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Redundancy Handling",
+          "label_confidence": "high",
+          "label_reasoning": "The comment notes that having both an initializer and Object.assign is redundant \u2014 only one is needed, making this a redundant operation issue."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment flags a redundancy in the code (having both an initializer and Object.assign) and implies one should be removed."
+    }
+  ],
+  "review_thread_count": 2,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 2,
+    "stage1_kept": 2,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

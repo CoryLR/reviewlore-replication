@@ -1,0 +1,74 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 30,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The substring check `getAddonName(addon).includes('ondevice')` is case-sensitive and matches ANY addon whose name contains the string 'ondevice' \u2014 including custom third-party or in-house addons (e.g., `company/addon-ondevice-analytics`). The intent is to target only official `@storybook/addon-ondevice-*` packages. Consider tightening to `getAddonName(addon).toLowerCase().includes('@storybook/addon-ondevice')` to reduce false positives for user-defined addons.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 22,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `check` function receives `storybookVersion` in `CheckOptions` but never uses it. Without a version gate, this migration will run regardless of Storybook version whenever `@storybook/react-native` is installed with on-device addons in `addons`. If `deviceAddons` was only introduced in a specific version of `@storybook/react-native`, triggering this migration earlier could leave users with a broken config. Consider adding `if (semver.lt(storybookVersion, '9.0.0')) return null;` or documenting the minimum `@storybook/react-native` version that supports `deviceAddons`.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 41,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`['deviceAddons']` is a raw string path with no backing TypeScript type \u2014 `deviceAddons` is intentionally absent from `StorybookConfigRaw` (as noted in the PR description). Per project conventions on non-obvious implementation choices, add a brief inline comment here explaining the reason: e.g., `// deviceAddons is a React Native-specific field not in StorybookConfigRaw; write it via string-path API to avoid requiring a type declaration.` This prevents future maintainers from wondering why the typed API is bypassed.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 43,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "After all on-device addons are removed, the `addons` array may become empty (`addons: []`) rather than being omitted entirely. This leaves a redundant empty `addons: []` key in the generated config. Consider checking after the loop whether the resulting `addons` array is empty and, if so, calling the appropriate `ConfigFile` API to remove the key (e.g., `main.removeField(['addons'])`). This produces a cleaner post-migration config.",
+      "index": 3
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 153,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test title `'handles the case where @storybook/react-native is in dependencies (not devDependencies)'` implies a distinct scenario \u2014 e.g., that the detection differs based on which `package.json` field the package appears in. But `makePackageManager` passes all deps through `getAllDependencies()` without differentiating `dependencies` vs `devDependencies`. The code path exercised here is functionally identical to the previous string-addon test. Either rename the test to accurately describe what it covers (e.g., `'detects the migration when only a single ondevice addon is present'`), or update the mock to simulate a realistic split to validate the actual assumption.",
+      "index": 4
+    },
+    {
+      "file_path": "MIGRATION.md",
+      "line_number": 1323,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The section opens with \"In Storybook 9, on-device addons...must be listed under the `deviceAddons` key\" but this section lives in the **9.x \u2192 10.0.0** migration chapter, suggesting the requirement takes effect in Storybook 10, not 9. The phrasing \"In Storybook 9\" implies the change was already enforced during the Storybook 9 era, which may confuse readers upgrading from 8. Consider rephrasing to \"Starting in Storybook 10\" or \"As of Storybook 10\" to match the chapter's scope.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The diff includes several changes to existing test files that are unrelated to the new automigration: `generateEntrypoint.test.ts`, `generateScripts.test.ts`, `index.test.ts`, and `metroConfig.test.ts` all have `.ts` extensions added to local import paths. These are cleanup/standardization changes that have no connection to the `rn-ondevice-addons-to-device-addons` feature. Separating them into a dedicated commit or PR would produce cleaner git history and make bisect easier.",
+      "index": 6
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `run` tests configure `updateMainConfig` to always invoke its callback (via `mockImplementation`) even in the `dryRun: true` test, meaning `removeEntryFromArray` and `appendValueToArray` are still called during the dry-run path. The real `updateMainConfig` implementation skips the file write when `dryRun` is true but still runs the callback. The test for `dryRun` only asserts that `updateMainConfig` was called with `dryRun: true`, but does not assert that the config file operations were (correctly) still executed. Adding assertions that `configFile.removeEntryFromArray` and `configFile.appendValueToArray` are also called during dry-run would make the contract explicit and guard against a future regression where the callback is accidentally skipped.",
+      "index": 7
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `prompt()` method returns a static string that does not mention which specific addons will be moved. Other automigration prompts in this codebase typically include the concrete values at stake (e.g., listing the detected package names) so users can verify the migration is acting on the right entries before accepting. Consider interpolating `result.ondeviceAddons.map(getAddonName).join(', ')` into the prompt message \u2014 note that the `prompt()` function receives `{ result }` as its first argument and can access the detected addons.",
+      "index": 8
+    }
+  ],
+  "cost_usd": 0.54945715,
+  "duration_seconds": 411.25339794158936
+}

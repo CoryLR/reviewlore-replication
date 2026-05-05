@@ -1,0 +1,56 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33471,
+  "title": "CI: Skip nx workflow on forks due to missing secrets",
+  "body": "## What I did\n\nForks don't have access to repository secrets (NX_CLOUD_ACCESS_TOKEN), so the nx workflow would fail. This change ensures the workflow only runs on PRs from the main repository.\n\nIn the future, we plan to use `pull_request_target` to safely run on forks while still having access to secrets.\n\n## Checklist for Contributors\n\n### Testing\n\n#### The changes in this PR are covered in the following automated tests:\n\n- [ ] stories\n- [ ] unit tests\n- [ ] integration tests\n- [ ] end-to-end tests\n\n#### Manual testing\n\nThis is a CI workflow change. No manual testing is necessary - the workflow will simply be skipped for fork PRs.\n\n### Documentation\n\n- [ ] Add or update documentation reflecting your changes\n- [ ] If you are deprecating/removing a feature, make sure to update\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\n\n## Checklist for Maintainers\n\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\n- [ ] Make sure this PR contains **one** of the labels below:\n   <details>\n     <summary>Available labels</summary>\n  - `bug`: Internal changes that fixes incorrect behavior.\n  - `maintenance`: User-facing maintenance tasks.\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\n  - `feature request`: Introducing a new feature.\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\n  - `other`: Changes that don't fit in the above categories.\n\n   </details>\n",
+  "author": "kasperpeulen",
+  "merged_at": "2026-01-06T13:27:20Z",
+  "base_ref": "next",
+  "merge_commit_sha": "ae11f5dd47a41a71fc64d103ad836a83d1ab5068",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "0406ca83dfdb3a134b520ff8cee928be52ddf8b6",
+    "510bd7fdc1459ee28d2a338e44be3f79ae8ed026"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e0jBF",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The condition to check if a PR is from a fork is incorrect. The current condition `github.event.pull_request.head.repo.full_name == github.repository` will fail when the head repository is null (which happens when a fork is deleted). Additionally, there's a more reliable property specifically designed for this check.\n\nAccording to GitHub Actions documentation and the pattern used in `trigger-circle-ci-workflow.yml` (line 28), you should use `github.event.pull_request.head.repo.fork` instead. This property is a boolean that explicitly indicates whether the PR is from a fork.\n\nThe condition should be changed to check that the fork property is false (or the property doesn't exist for same-repo PRs). For example:\n`github.event.pull_request.head.repo.fork != true`\n\nThis approach is more robust and handles edge cases like deleted forks better.\n```suggestion\n        github.event.pull_request.head.repo.fork != true &&\n```",
+          "file_path": ".github/workflows/nx.yml",
+          "line_number": 25,
+          "start_line": null,
+          "commit_sha": "510bd7fdc1459ee28d2a338e44be3f79ae8ed026",
+          "created_at": "2026-01-06T11:11:41Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The comment identifies an incorrect condition for checking if a PR is from a fork, including a missing edge case where the head repository is null (deleted fork). This is a logic error with a more reliable alternative property suggested."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a bug in the fork-detection condition and suggests a specific code change with a concrete suggestion to use `github.event.pull_request.head.repo.fork != true` instead."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

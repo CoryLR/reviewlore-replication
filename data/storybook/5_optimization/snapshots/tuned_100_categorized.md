@@ -1,0 +1,786 @@
+# Categorized rules: storybook / tuned_100
+
+Each rule is annotated with its BitsAI-CR sub-category (within its existing dimension), generalizability (project_specific / generalizable), and lintability (lintable / partially_lintable / requires_llm). Generated via one Sonnet pass per project.
+
+## Summary
+
+- Total rules: 249
+- Generalizability:
+    - `project_specific`: 117
+    - `generalizable`: 132
+- Lintability:
+    - `lintable`: 7
+    - `partially_lintable`: 23
+    - `requires_llm`: 219
+- Top categories:
+    - Logic Error: 105
+    - Unclear Code Descriptions: 46
+    - API Misuse: 22
+    - Structural Issues: 22
+    - Naming Convention: 6
+    - Null Pointer: 5
+    - Dead-Code Related Issues: 5
+    - Language-Specific Standards: 5
+    - Redundancy Handling: 4
+    - Naming Standards: 4
+
+## Rules by dimension
+
+### Code Defect
+
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `render-components-manifest.ts`, when an item category can appear in multiple structural locations (attached to parent entries and as standalone top-level entries), aggregate counts and error counts from ALL locations before constructing filter-pill or badge HTML. Summing only one location produces misleading totals and broken pill counts.
+    - _reasoning:_ Project-specific file and logic about aggregating counts from multiple locations before rendering.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In the manifest debugger (`render-components-manifest.ts`), when introducing a filter pill for a new item type: (a) render the pill whenever items of that type exist, independent of error state; and (b) ensure the corresponding CSS `:target` selector reveals every instance — both nested inside other card types and standalone cards.
+    - _reasoning:_ Project-specific manifest debugger file with multi-location CSS selector requirements.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - For Commander `.option()` parser callbacks that should accept only positive integers and return `null` otherwise, avoid special-casing individual string values (e.g., `value === '0'`). Keep only an empty-string guard, then `Number.parseInt` and validate numerically: `return parsed > 0 ? parsed : null`. This uniformly handles zero, negatives, and edge cases.
+    - _reasoning:_ General Commander.js integer parsing pattern; requires understanding the validation logic semantics.
+- **[Semantic Deviation]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When test or test-infrastructure scripts read a required environment variable whose absence must be a hard failure, do not silence TypeScript with a non-null assertion (`!`). Read the raw value and add an explicit runtime guard that throws a descriptive `Error` naming the variable, explaining why it is required, and pointing to known defaults (e.g., sandboxes at `../storybook-sandboxes/`).
+    - _reasoning:_ General principle about replacing non-null assertions with explicit runtime guards for env vars.
+- **[API Misuse]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Commander.js CLI options carrying a string value must be declared with angle brackets `<argName>` (required argument), not square brackets `[argName]`. With `[...]`, passing the flag without a value sets the option to boolean `true`, silently bypassing `typeof options.x === 'string'` guards and corrupting downstream code.
+    - _reasoning:_ Commander.js-specific angle vs square bracket syntax; requires understanding option declaration intent.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `code/core/src/telemetry/detect-agent.ts`, every variant of the `KnownAgentName` union must have a corresponding live detection branch inside `detectExplicitAgent` in the same PR; a union entry with no backing implementation is a latent bug. Relatedly, type `DetectAgentOptions.stdoutIsTTY` as `boolean | undefined` to match Node.js `process.stdout.isTTY`, and at every consumer explicitly handle `undefined` (e.g., treat piped output as non-TTY / `false`) so heuristics aren't incorrectly triggered or skipped.
+    - _reasoning:_ Project-specific file paths and union type completeness checks requiring cross-file semantic analysis.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `VersionService.getCliIntegrationFromAncestry` (code/lib/create-storybook/src/services/VersionService.ts), each CLI-tool detection branch must use precise pattern matching — e.g. a regex anchored to known invocation forms (`create <tool>@<version>`, `<tool> new|init|create`) with word boundaries — rather than `.includes('<tool>')` substring checks on `ancestor.command`. Substring matches misclassify unrelated commands containing the tool name and corrupt telemetry attribution.
+    - _reasoning:_ Project-specific service file with regex anchoring requirements for CLI detection.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `config-to-csf-factory.ts`, when adding a catch-all `else if` branch for a specific `configType`, scope the condition precisely using all available state (e.g., `exportDecls.length === 0`) so the branch does not fire on files that already contain export declarations (e.g., re-exports). An over-broad branch can produce duplicate default exports or other incorrect output.
+    - _reasoning:_ Project-specific AST transform file; requires understanding configType state and branch conditions.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When modifying a `configType`-specific transformation branch in `config-to-csf-factory.ts`, explicitly consider whether the same change applies to other supported config types (e.g., if you change `'preview'`, evaluate `'main'`). Leave a comment or follow-up issue if unclear.
+    - _reasoning:_ Project-specific file requiring cross-configType consistency analysis.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `story-to-csf-factory.ts`, when adding AST visitors to rewrite cross-file story references, handle every combination of import style (`namespaceStoryImports` via `import * as X`, `namedStoryImports` via `import { X }`) and usage syntax (`X.prop` member access AND bare `...X` spreads). A `MemberExpression` visitor alone will miss spread identifiers — add a `SpreadElement` visitor that rewrites `...Primary` → `...Primary.input` when the identifier is in `namedStoryImports`. Add a test for each combination.
+    - _reasoning:_ Project-specific AST visitor completeness check across import styles and usage syntax.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When resolving named variable declarations from a Babel AST (`ast.program.body`), always check BOTH bare `VariableDeclaration` nodes and `VariableDeclaration` nodes wrapped inside `ExportNamedDeclaration` (i.e., `export const foo = ...`). The dual-check pattern is established in `findVarInitialization.ts` and `ConfigFile.ts` — replicate it wherever variable initialization is looked up, or exported variables will silently fall through.
+    - _reasoning:_ Project-specific Babel AST lookup pattern requiring dual-location variable declaration checks.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When choosing template variants based on the content of an existing config file (e.g., detecting whether a Vitest config uses `workspace` vs. `projects`), resolve the exported config value through the same AST export-resolution path used by the main config-update logic, not a raw text scan. Raw scans miss variable-exported or aliased shapes like `const test = { workspace: [...] }; export default defineConfig({ test })` and can false-positive on unrelated nested objects.
+    - _reasoning:_ Project-specific Vitest config detection requiring AST export-resolution path consistency.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When writing type guards or predicates that detect Vitest project-list array properties in an AST (e.g., `isProjectsArrayProp`), check for BOTH `projects` (Vitest 3.2+) and `workspace` (deprecated 3.0–3.1) key names. Matching only one causes the other shape to fall through to incorrect handling.
+    - _reasoning:_ Project-specific Vitest workspace/projects dual-key detection requiring semantic understanding.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `updateArgs` and similar functions that sync a Vue `reactive()` object to a new state (e.g., `code/renderers/vue3/src/render.ts`), never add an early return when the incoming state object is empty. The deletion loop that removes keys absent from the new state must always run; skipping it when `nextArgs` is `{}` leaves stale keys alive and makes resetting args/globals a no-op in Vue decorators.
+    - _reasoning:_ Project-specific Vue renderer file; early-return logic bug requires semantic understanding.
+- **[Null Pointer]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - In story `play` functions and other test utilities, never force-cast `querySelector` results to `HTMLElement`. Capture the result, assert non-null with a descriptive error (e.g., `if (!el) throw new Error('#storybook-panel-root not found')`), then pass it to `within()` or other DOM APIs. Direct `as HTMLElement` casts hide null and produce confusing downstream failures.
+    - _reasoning:_ General pattern of unsafe type casting querySelector results; partially detectable via type-checking rules.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In story `play` functions, assert both what should be present AND what should be absent in the rendered output (e.g., combine `.toHaveTextContent('X')` with `.not.toHaveTextContent('Y')`) to prevent false positives where an incorrect element happens to satisfy only the positive assertion.
+    - _reasoning:_ General testing practice of combining positive and negative assertions; requires understanding test intent.
+- **[API Misuse]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In story `play` functions, query controls by their actual rendered ARIA role. If a component renders with `role='switch'` (e.g., a toggle/press button), use `findByRole('switch', { name: '...' })` — not `findByRole('button', ...)`. Ensure the role string is consistent across all play functions that target the same control within a story file.
+    - _reasoning:_ General ARIA role correctness in testing queries; requires understanding rendered component semantics.
+- **[API Misuse]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - For simulating wheel/scroll events in Storybook play functions, use `fireEvent.wheel` imported from `storybook/test`. Do not use `Simulate.wheel` from the deprecated `react-dom/test-utils` API.
+    - _reasoning:_ Project-specific import source rule; partially enforceable via banned-import lint rules.
+- **[API Misuse]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When asserting the enabled/disabled state of native HTML form elements (`<button>`, `<input>`, `<select>`, etc.), use jest-dom's `toBeEnabled()` / `toBeDisabled()` — native elements use the `disabled` attribute, not `aria-disabled`. Reserve `toHaveAttribute('aria-disabled', 'true')` for custom interactive elements (like this project's `Button`) that deliberately use ARIA to convey disabled state while remaining keyboard-focusable.
+    - _reasoning:_ General jest-dom assertion selection requires understanding native vs custom element semantics.
+- **[Unchecked Return]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - In Playwright e2e tests, always `await` every async Playwright operation — both action methods (`.click()`, `.fill()`, `.check()`) and `expect()` assertions. Terminate every assertion with a semicolon, not a comma; a trailing comma turns the assertion into an unevaluated expression that silently never executes.
+    - _reasoning:_ Missing await on Playwright async calls; partially detectable via no-floating-promises lint rule.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a story's `beforeEach` hook patches any global or prototype value (e.g., `global.PREVIEW_URL`, `Storage.prototype.getItem`, `window.*`), capture the original in a module-level constant before mutation and unconditionally restore it in `afterEach`. Every mutated value must have a matching restore — omissions leak state across stories and test runs.
+    - _reasoning:_ General pattern of restoring all mutated globals in afterEach; requires cross-function semantic analysis.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a test mutates a `process.env` variable, always restore it in a `finally` block using the complete pattern — `if (original === undefined) { delete process.env.VAR; } else { process.env.VAR = original; }` — rather than the partial check `if (original !== undefined) { process.env.VAR = original; }`, which leaves the variable set when it was originally absent.
+    - _reasoning:_ General process.env restoration completeness; requires understanding delete vs assignment semantics.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In Storybook story decorators (and any render-function code), never execute side effects (e.g., `vi.spyOn`, `mockClear`, global mutations) directly in the decorator body. React Strict Mode invokes render-phase code twice, causing such side effects to stack or double-fire. Move setup logic into a `useEffect` inside a wrapper component defined at module scope so it runs exactly once after mount.
+    - _reasoning:_ React Strict Mode double-invocation side effects in decorators; requires semantic render-phase analysis.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Do not define React components inside a Storybook decorator body or any other render function. Inline component definitions create a new function reference on every invocation, causing React to unmount and remount the subtree and firing cleanup effects prematurely. Define wrapper components at module scope so their identity is stable across renders.
+    - _reasoning:_ General React anti-pattern of defining components inside render functions; requires structural analysis.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In Storybook story files, every key in the meta `args` object must exactly match an actual prop name on the component under test; a mismatched key (typo or stale name) is silently ignored and the corresponding control has no effect. Additionally, story `render` functions must accept and spread `args` (e.g., `(args: ComponentProps) => <Component {...args} />`) so controls wired through meta `args` actually reach the component; static render functions hardcoding all props will not reflect any control or global changes.
+    - _reasoning:_ Storybook-specific args/render function correctness requiring component prop matching analysis.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When writing or modifying MDX fixture files that reference story named exports via `<Story of={StoryModule.ExportName} />`, `<Canvas of={...} />`, `<Source of={...} />`, or `<DocsStory of={...} />`, cross-check every referenced export identifier against the actual named exports of the imported stories module; a mismatch is not caught at build time and causes a runtime error when the docs page renders.
+    - _reasoning:_ Storybook MDX cross-file export reference validation requires cross-file semantic analysis.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `withMdxComponentOverride` (code/addons/docs/src/blocks/blocks/with-mdx-component-override.tsx) or any HOC that resolves component overrides via React context at render time, scope the re-entry guard exactly: skip override resolution only when the current block name is already present in the `MdxWrappedBlockContext` set (preventing self-referential loops) or when the resolved override is literally the same wrapped export reference (`Override === WrappedBlock`). Any broader check — such as testing for a `[MDX_WRAPPED_BLOCK]` symbol on the candidate override — incorrectly rejects valid cross-block overrides like `docs.components.Title = Subtitle`.
+    - _reasoning:_ Project-specific HOC re-entry guard logic requiring understanding of override resolution semantics.
+- **[Dead Code]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Do not add a story covering a bug-fix or new-feature code path while simultaneously disabling all automated testing for it (e.g., setting both `chromatic: { disableSnapshot: true }` and `tags: ['!test', '!vitest']`). At minimum, keep one form of automated testing active (snapshot, story test, or unit/integration test) that exercises the same scenario.
+    - _reasoning:_ Storybook-specific story testing coverage policy requiring intent analysis across tag configurations.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When viewport dimension values are checked for URL-serializability (numeric+unit vs. complex expressions like `calc(...)`), compute a single shared lock flag (e.g., `isLocked = !nx || !ny`) instead of independent per-axis flags. Because resize combines both dimensions into one URL token, locking only one axis still allows the other to be edited, producing a non-serializable combined value.
+    - _reasoning:_ Project-specific viewport lock flag logic requiring understanding of URL serialization constraints.
+- **[API Misuse]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Before merging a PR that bumps a dependency to a new major version, verify the changelog/release notes for breaking changes (renamed packages or CLI flags, removed APIs, changed config schemas, updated peer deps). Confirm repo usage (scripts, config files, CI inputs) is updated and that a local build succeeds. When a PR imports a named export from a newly-added or upgraded dependency, also verify that the export actually exists at the declared version (check the package's published types, changelog, or source for the pinned version) — a mismatch between what the code imports and what the package exports causes runtime failures that mocked tests may not catch.
+    - _reasoning:_ General dependency upgrade verification; requires cross-file and external changelog analysis.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When writing a function that detects whether a configuration is already fully set up (e.g., to skip redundant postinstall steps), verify ALL required components of the intended setup, not just a subset. Partial checks (e.g., only that the plugin is imported, without verifying `setupFiles`) can skip setup and leave users in a broken state.
+    - _reasoning:_ General completeness of setup detection checks; requires understanding all required config components.
+- **[API Misuse]** _(gen: `generalizable`, lint: `lintable`)_
+    - Do not let `.forEach()` (or other iterable-method) callbacks implicitly return assignment expressions or other non-void values (e.g., `arr.forEach(([k, v]) => (x = x.replace(k, v)))` or `arr.forEach((item) => item.method())`). Use a block body `(item) => { item.method(); }` or a `for...of` loop. Biome's `lint/suspicious/useIterableCallbackReturn` enforces this.
+    - _reasoning:_ Biome lint/suspicious/useIterableCallbackReturn directly enforces this rule.
+- **[API Misuse]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In Vue 3 template strings (stories, decorators, docs snippets), use v-bind / colon shorthand (`:attr="expr"`) for dynamic HTML attribute bindings with a plain JS expression. Mustache `{{ }}` is text-content only; `:attr={{expr}}` is invalid Vue template syntax and renders incorrectly.
+    - _reasoning:_ Vue template binding syntax correctness; requires understanding template compilation semantics.
+- **[API Misuse]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In Storybook Vue decorator implementations, do not use `inject: [...]` to access values already available via decorator context parameters (e.g., `globals`, `args`). No corresponding `provide` is called, so injection triggers Vue 3 'injection not found' warnings. Use the context parameter directly in `setup()`.
+    - _reasoning:_ Vue inject without provide misuse; requires understanding decorator context availability.
+- **[API Misuse]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding inline Vite plugin objects to `finalConfig.plugins` in `builder-vite`, annotate each with `as PluginOption` or `satisfies PluginOption` (imported from `'vite'`) so TypeScript validates the shape. Because `builder-vite` supports Vite `^5 || ^6 || ^7`, any hook introduced in a later major (e.g., `configEnvironment` in Vite 6+) must be gated behind a runtime Vite-version check or omitted; unconditional use will break TypeScript compilation for consumers on Vite 5.
+    - _reasoning:_ Project-specific builder-vite Vite version compatibility analysis across multiple major versions.
+- **[Null Pointer]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When mutating nested optional properties on a Vite `UserConfig` object, guard every intermediate level with nullish coalescing assignment (`??=`) before accessing deeper properties. For example, `config.build` is typed `build?: BuildOptions`, so write `config.build ??= {}` before touching `config.build.rolldownOptions`, to avoid a runtime throw when the parent is unset.
+    - _reasoning:_ General nullish coalescing assignment pattern for optional nested object properties.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When placing a `<Separator />` between toolbar tools, gate its rendering on the same condition as the adjacent tool(s). If the following tools are hidden in certain view modes (e.g., `match: ({ viewMode }) => viewMode === 'story'`), apply the identical condition to the separator to prevent an orphaned divider when those tools are filtered out.
+    - _reasoning:_ Storybook toolbar separator visibility gating requires understanding adjacent tool visibility conditions.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When modifying URL normalization logic used for comparison (e.g., `getSourceType` in `code/core/src/manager-api/modules/refs.ts`), verify that both operands canonicalize to identical strings for all input variants — specifically that trailing-slash and no-trailing-slash variants produce the same normalized value before comparison. Add parity tests in `code/core/src/manager-api/tests/refs.test.ts` to prevent refs from being misclassified as external.
+    - _reasoning:_ Project-specific URL normalization trailing-slash parity check in refs module.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When computing a directory base path by stripping a filename from `location.pathname` (e.g., `managerBase`/`previewBase` in `code/core/src/manager-api/modules/url.ts`), verify the regex does not over-strip paths that end in a directory segment (e.g., `/storybook` should not collapse to `/`). Add unit tests in `code/core/src/manager-api/tests/url.test.js` covering pathnames without a file extension, and document any required-trailing-slash assumption.
+    - _reasoning:_ Project-specific regex path stripping correctness analysis in URL module.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When constructing URLs with optional query parameters via template literals, never interpolate a potentially-undefined value directly (`?param=${value}`) — it silently produces the literal string `'undefined'`. Use a conditional like `${value ? `?param=${value}` : ''}` or build the query with `URLSearchParams`.
+    - _reasoning:_ Undefined interpolation in template literals; partially detectable via no-undefined-in-template-literal custom rules.
+- **[API Misuse]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When loading template files as plain text at Node.js runtime (outside esbuild), use `fs.readFile()` with a `new URL(relativePath, import.meta.url)` locator rather than dynamic `import()`. Node cannot resolve non-JS file extensions (`.txt`, `.ts` templates) via `import()` and throws `ERR_UNKNOWN_FILE_EXTENSION`.
+    - _reasoning:_ Node.js runtime file loading method selection; requires understanding file extension and import semantics.
+- **[API Misuse]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When building arrays of resolved file paths that mix package specifiers (e.g., `'@storybook/addon-vitest/internal/setup-file'`) with values that may be absolute filesystem paths (e.g., from `loadPreviewOrConfigFile`), do not pass absolute paths directly to `import.meta.resolve()` — it only accepts module specifiers (bare, relative, or `file:` URLs) and will throw on a raw OS path. Branch on `path.isAbsolute()`: for absolute paths, use the path directly or convert via `fileURLToPath(pathToFileURL(p))`; for package/relative specifiers, use `fileURLToPath(import.meta.resolve(specifier))`.
+    - _reasoning:_ import.meta.resolve vs absolute path distinction requires understanding path type at each call site.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When filtering entries from a `Map` where `null` encodes success and a non-null value (e.g., an `Error`) encodes failure, use a null check (e.g., `map.get(key) !== null`) rather than property access on the stored value (e.g., `map.get(key)?.result === 'failed'`), which always evaluates to `undefined`.
+    - _reasoning:_ Null-encoded success Map filter logic; requires understanding encoding convention semantics.
+- **[Null Pointer]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When building an array by mapping user-provided IDs against a record/dictionary (e.g., `ids.map(id => index.entries[id])`), filter out `undefined` results for missing keys rather than using a type assertion to suppress the undefined type. Use `.filter((entry): entry is T => entry !== undefined)` or `flatMap` to produce a clean, type-safe array and avoid silent runtime errors downstream.
+    - _reasoning:_ Missing undefined filter after dictionary lookup; TypeScript strict mode can partially catch this.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When checking whether a key exists in a plain object (e.g., a tag lookup table or constants map), use `Object.hasOwn(obj, key)` or `Object.prototype.hasOwnProperty.call(obj, key)` rather than `key in obj`, to avoid false positives from prototype-chain keys such as `toString` or `__proto__`.
+    - _reasoning:_ Object.hasOwn vs 'in' operator; partially detectable via no-prototype-builtins lint rules.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When checking whether an optional string prop is absent, use explicit `!= null` or `=== undefined` rather than a truthiness check. Truthiness incorrectly treats falsy-but-valid values such as `href=""` as absent and silently changes rendered output for callers who pass them.
+    - _reasoning:_ Truthiness vs explicit null check for optional strings; requires understanding valid falsy value semantics.
+- **[API Misuse]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Side effects — emitting channel events, calling external APIs, triggering mutations — must live inside `useEffect`, never `useMemo`. `useMemo` is strictly for computing memoized derived values; React may invoke it at arbitrary times with no guarantee of a single execution per render.
+    - _reasoning:_ Side effects in useMemo vs useEffect; requires understanding whether the computation has side effects.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Do not initialize a prop-derived value with `useState(prop)` when the value must stay in sync with the prop over time; `useState` only captures the value at mount and ignores subsequent prop changes. Compute the value inline or with `useMemo` so it always reflects the latest prop.
+    - _reasoning:_ useState with prop that needs to stay in sync; requires understanding whether prop changes should be reflected.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In React `useState` updater callbacks, do not mutate objects referenced through a shallow copy of the previous state array — always create new objects (e.g., `{ ...item, field: newValue }`) so React can correctly detect changes during reconciliation.
+    - _reasoning:_ Mutation of state objects in useState updater; requires understanding object identity in reconciliation.
+- **[API Misuse]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - React class components — including story helpers and test wrappers — must initialize `this.state` in the constructor (e.g., `this.state = {}`) before any `setState` call can be made. Non-React-managed state that should not participate in the render cycle must be stored under a clearly different property name to avoid conflicting with React's state mechanism. Additionally, class components that set lifecycle flags in `componentDidMount` (e.g., `this.mounted = true`) must reset them in `componentWillUnmount` (e.g., `this.mounted = false`) so async callbacks or store subscriptions do not `setState` on an unmounted component.
+    - _reasoning:_ React class component state initialization and lifecycle correctness; requires semantic class structure analysis.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When refactoring a function signature (adding/removing parameters), audit every call site to confirm the argument list matches exactly. Extra or missing arguments will not always produce a type error, especially in lenient TS config or `.js` files.
+    - _reasoning:_ Call site argument count mismatch after refactor; TypeScript can catch some cases but not all in lenient configs.
+- **[Semantic Deviation]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When implementing mocks under `src/export-mocks/` for third-party framework components (e.g., Next.js `Link`), reproduce every prop-driven behavioral mode of the original. For the `Link` mock, when `legacyBehavior` is `true` the mock must forward navigation props to its child element (matching Next.js upstream) rather than always rendering its own `<a>`.
+    - _reasoning:_ Project-specific Next.js Link mock behavioral completeness requiring legacyBehavior prop analysis.
+- **[Unchecked Return]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When reading files that are optional or whose absence/unreadability must be a soft failure (e.g., `readFileSync` guarded only by `existsSync`, or scanning user-configured setup files for a content pattern), wrap the read in try/catch and return the safe fallback (`false`, skip the candidate, etc.). The file can be deleted, become unreadable (EACCES), or resolve to a directory (EISDIR) between the existence check and the read, and an uncaught exception should not abort initialization.
+    - _reasoning:_ Missing try/catch around file reads after existence check; requires understanding TOCTOU race conditions.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When reading numeric values from story parameters via `useParameter` or `getCurrentParameter`, validate the raw value before use — confirm it is a non-negative integer (`Number.isInteger(raw) && raw >= 0`) and fall back to the documented default for values that are `NaN`, negative, non-integer, or missing.
+    - _reasoning:_ Project-specific story parameter validation requiring numeric range and type checking analysis.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When trimming a chronological log or queue array to a maximum capacity, verify which end is discarded: `slice(0, limit)` retains the oldest entries while `slice(-limit)` retains the newest. For an action/event log where the most-recent entries are most relevant, prefer `slice(-limit)`.
+    - _reasoning:_ Slice direction for keeping newest vs oldest entries; requires understanding temporal ordering intent.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a try/catch block wraps a dynamic `import()` as a version-compatibility probe (try a new module path, fall back to an old one), narrow the catch to module-resolution errors only — check that the caught error is an `Error` with a `code` of `'MODULE_NOT_FOUND'` or `'ERR_MODULE_NOT_FOUND'` and that `error.message` includes the expected module path — and re-throw any other error. A broad catch silently swallows real runtime failures and routes them into the legacy fallback path.
+    - _reasoning:_ Narrow catch for module-resolution errors only; requires understanding error code semantics.
+- **[Unchecked Return]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - All async operations that can reject (clipboard writes, dynamic imports, fetch calls, etc.) must have explicit error handling via `.catch()` or `try/catch` to prevent silent, unhandled promise rejections.
+    - _reasoning:_ Unhandled promise rejections; partially detectable via no-floating-promises lint rule.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When porting or mirroring renderer public types (`Meta`, `StoryFn`, `StoryObj`) from the React renderer to another Storybook renderer, replicate ALL supporting utility types — including `AddMocks`, which preserves `Mock` types for args provided via `fn()` in `meta.args` instead of widening to plain functions — and wire them into `StoryObj`. Verify with `expectTypeOf` type-level tests that mock args retain their `Mock` type inside story `play` functions.
+    - _reasoning:_ Storybook renderer type utility completeness requiring cross-file type system analysis.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Pin all third-party GitHub Actions to an immutable reference — a specific release tag (e.g., `@v1.2.3`) or a full commit SHA — rather than a mutable branch name such as `@master` or `@main`. Mutable refs allow upstream changes to silently alter workflow behavior and are a supply-chain security risk.
+    - _reasoning:_ GitHub Actions mutable ref pinning; partially detectable via actionlint or zizmor.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Every workflow step that runs `yarn release:publish` (or any command that internally calls `yarn npm publish`) must explicitly declare `YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` (or the project's canonical npm auth secret) in its `env:` block. Do not rely on job-level `environment:` secret injection alone; omission causes the publish command to silently fail authentication.
+    - _reasoning:_ Project-specific workflow publish auth token env var requirement analysis.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Before merging any GitHub Actions workflow change, verify that every `steps.<id>.outputs.<name>` reference points to a step with that exact `id` defined earlier in the same job. Dangling references are not compile errors — they silently evaluate to empty strings, producing wrong flags, wrong environments, or wrong release tags. Prefer running `actionlint` in CI to catch these.
+    - _reasoning:_ Dangling step output references in GitHub Actions; actionlint can detect most cases.
+- **[API Misuse]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When building a `gh release create` invocation, pass boolean flags such as `--prerelease` or `--draft` directly on the command line. Do not expand an env variable holding the string `'false'` as a positional argument — the GitHub CLI treats positional arguments after the tag as asset file paths to upload, so the step will fail trying to open a nonexistent file.
+    - _reasoning:_ gh CLI boolean flag vs positional argument misuse; requires understanding CLI argument parsing semantics.
+- **[API Misuse]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When calling a local composite action from a GitHub Actions workflow, `uses:` must point to the directory containing `action.yml` (e.g., `./.github/actions/my-action`), not the YAML file itself. Including the filename is invalid syntax and will fail the workflow.
+    - _reasoning:_ GitHub Actions composite action path syntax; actionlint can partially detect filename in uses path.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In `workflow_dispatch` workflows that accept a PR number as input and check out that PR's code, add an explicit fail-fast step immediately after retrieving PR metadata that exits non-zero when the PR is from a fork (`isCrossRepository == true`). This step must precede any step that accesses secrets or publishes to a registry, because the admin-actor permission check only guards who triggers the workflow, not which code is executed.
+    - _reasoning:_ Fork security check ordering in workflow; requires understanding security boundary semantics.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a workflow job checks out code from an external PR or fork (using a dynamic `repository`/`ref` in `actions/checkout`), do not reference local composite actions (`./.github/actions/…`) from that checked-out tree — they will resolve to the fork's copy. Either inline the steps or perform an additional checkout of the base repository's actions before invoking them.
+    - _reasoning:_ Fork checkout resolving local actions from untrusted tree; requires understanding checkout scope.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When configuring the `branches:` filter on a `pull_request` trigger in a GitHub Actions workflow (e.g., `danger-js.yml`), ensure the filter is broad enough to cover every base branch the workflow's logic needs to handle. If the workflow contains checks that must run for PRs targeting any branch, use `"**"` rather than an enumerated list of patterns — a restrictive list will silently prevent the checks from firing on PRs targeting unlisted branches.
+    - _reasoning:_ GitHub Actions branch filter completeness; requires understanding workflow trigger coverage intent.
+- **[Dead Code]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Before merging changes to `.github/workflows/generate-sandboxes.yml` (or similar workflows), confirm that all temporary testing overrides have been reverted: any personal/feature branch added to `push.branches` and any hardcoded `ref:` values on `actions/checkout` steps must be removed before merge.
+    - _reasoning:_ Project-specific workflow testing override revert check requiring intent analysis.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When CI orchestration scripts (e.g., `scripts/ci/common-jobs.ts`) invoke a `package.json` script by name (e.g., `yarn lint:other`), verify that the script is actually defined in the corresponding `package.json` before merging; a missing script causes CI to fail with 'Unknown script'.
+    - _reasoning:_ Project-specific CI script to package.json script existence cross-validation.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When adding a formatter invocation (e.g., `oxfmt`) to a `lint` or other CI validation script, use the formatter's check/dry-run flag (e.g., `oxfmt --check`) rather than the default write mode, so the script reports formatting violations without mutating files.
+    - _reasoning:_ Formatter check mode vs write mode in CI scripts; requires understanding CI validation vs mutation intent.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When reviewing changes to `.gitattributes`, flag any broad glob (such as `* -text`) that disables Git line-ending normalization for all files. Require either (a) an inline comment explaining why global normalization disabling is necessary, or (b) replacement with targeted globs scoped only to file types that actually need it (e.g., `*.png -text`, `*.jar -text`, `generated/** -text`).
+    - _reasoning:_ Overly broad gitattributes glob requires understanding scope of line-ending normalization intent.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When conditionally pushing a versioned package spec (e.g., `extraAddons.push('pkg@^4')`) onto an array that may already contain user-supplied entries, first strip version suffixes and check whether the base package name is already present. Skipping this guard allows two conflicting specs for the same package to coexist and produces nondeterministic installs.
+    - _reasoning:_ Duplicate package spec detection requires understanding version suffix stripping and base name matching.
+- **[API Misuse]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When pinning a third-party CLI scaffolding tool to a specific version (e.g., `npx create-next-app@16.0.1`), verify every CLI flag is documented for that exact version. Treat negated boolean flags (`--no-<flag>`) as suspect and confirm they appear in `--help` for the pinned version — undocumented negations can silently fail or be rejected.
+    - _reasoning:_ Pinned CLI version flag validation requires checking external tool documentation.
+- **[Null Pointer]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When passing a security-sensitive value obtained via optional chaining (e.g., `core?.channelOptions?.wsToken`) into a function, propagate the resulting `string | undefined` type through the function signature rather than typing it as `string`. Validate at the boundary via `assert`, an explicit guarded `throw`, or `invariant`, and when the value is absent emit an explicit `logger.warn` so the missing security-critical value is surfaced rather than silently failing (e.g., every WebSocket upgrade returning 403).
+    - _reasoning:_ Optional chaining producing undefined for security-sensitive values requiring explicit validation.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Any `new URL(input)` call operating on user-supplied, request-derived, or externally provided strings must be wrapped in try/catch. Inside HTTP `upgrade` handlers specifically: (a) construct the request URL using a fixed dummy base (e.g., `new URL(request.url, 'http://localhost')`) or a validated fallback (`options.localAddress ?? 'http://localhost'`) — never use `request.headers.origin` as the base, since non-browser WebSocket clients omit it and relative paths will throw; (b) on parse failure, write `HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n` to the socket and call `socket.destroy()` before returning; and (c) validate the origin separately by passing `request.headers.origin` to the dedicated origin-validation helper after successful URL construction.
+    - _reasoning:_ URL construction safety in HTTP upgrade handlers requires understanding request origin semantics.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When a security token is deliberately scoped for one build target (e.g., the manager `CHANNEL_OPTIONS` exposes only `{ wsToken }`), verify all other builder entry points (webpack5, vite, etc.) apply the same scoping rather than injecting the full `channelOptions` object into iframe/preview HTML. Document any intentional difference in exposure.
+    - _reasoning:_ Project-specific security token scoping across builder entry points.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Host/origin validation helpers must accept standard loopback addresses (`localhost`, `127.0.0.1`, `::1`) as implicitly valid even when `localAddress`/`networkAddress` are not provided — add an explicit loopback fallback so caller regressions cannot accidentally block local access. When detecting a wildcard-bind host, check BOTH the IPv4 wildcard `'0.0.0.0'` AND the IPv6 wildcard `'::'`; checking only `'0.0.0.0'` leaves IPv6 wildcard-bound servers subject to host rejection. However, host/origin validation must not contain an implicit allow-all bypass based on bind address combined with an empty allowlist — validation should always run by default, and operators who genuinely want to permit all hosts must explicitly configure `allowedHosts: true`.
+    - _reasoning:_ Project-specific host/origin validation loopback and wildcard handling completeness.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When `allowedHosts: []` (an empty array) is semantically equivalent to 'no explicit restriction, fall back to permissive default', apply that semantic consistently across every site that branches on `allowedHosts`: vite-server config, build-dev warnings, host-validation middleware, and WebSocket origin validation. An empty array is truthy and will not be caught by a simple falsy check (`!allowedHosts`); use `Array.isArray(allowedHosts) && allowedHosts.length === 0` (or a shared helper) everywhere.
+    - _reasoning:_ Project-specific allowedHosts empty array semantic consistency across multiple code sites.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In Storybook's multi-pass preset pipeline (notably `build-dev.ts`), `presets.apply('core', {})` is called once early and then again after `loadAllPresets` rebuilds the full preset chain. Any config value used for security checks, enforcement, `logger.warn` messages, or startup output (e.g., `allowedHosts`) must be read from the SECOND (final) preset call — not captured in the first pass — so the values reflect the complete, merged configuration and cannot be silently overridden by builder/renderer/third-party addon presets.
+    - _reasoning:_ Project-specific preset pipeline second-pass value reading for security config.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Never commit developer-specific testing values — hardcoded ngrok/tunnel domains, personal service hostnames, etc. — into shared config files (e.g., `.storybook/main.ts`). Drive such values from environment variables or git-ignored local overrides.
+    - _reasoning:_ Hardcoded developer-specific hostnames in shared config files; requires understanding config value origins.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When asserting that a port number is present, use `invariant(port != null, ...)` rather than the truthy form `invariant(port, ...)`. Port `0` is a valid OS-assigned value and is falsy.
+    - _reasoning:_ Port 0 falsy value in invariant assertion; requires understanding valid zero port semantics.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When writing stub or placeholder callbacks (e.g., for a channel that is not yet ready), ensure the diagnostic code executes immediately: use `() => logger.error('...')`, not `() => () => logger.error('...')`. The double-arrow form returns a new function without invoking it.
+    - _reasoning:_ Double-arrow function returning function instead of executing; requires understanding invocation intent.
+- **[Logic Error]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Use nullish coalescing (`??`) rather than logical OR (`||`) when providing fallback defaults for configuration options and chained name/property fallbacks (e.g., `component.name ?? component.__name`; config option defaults throughout the codebase). `||` silently replaces explicitly set falsy values like `false` or `''` with the default and masks invalid config; if those values are truly invalid, fail explicitly with a clear error instead. Consistency across sibling files is itself a reviewable concern.
+    - _reasoning:_ Nullish coalescing vs logical OR for falsy-valid config values; partially detectable via prefer-nullish-coalescing lint rule.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When implementing keyboard navigation on a range-like or slider-like control, follow the WAI-ARIA separator/slider spec: Home collapses to minimum (0 when collapsible), End expands to maximum, ArrowLeft/ArrowRight or ArrowUp/ArrowDown adjust by a small step, Shift+Arrow applies a larger step (typically 5×), and the increase/decrease direction must match the physical side the handle is on (e.g., ArrowRight grows a left-side handle, ArrowUp grows a bottom-side handle). Keyboard resize handlers must apply the same snap-to-minimum and collapse thresholds used by the mouse-drag path — not merely clamp to `[0, maxSize]` — so keyboard users cannot get stuck below the minimum.
+    - _reasoning:_ Project-specific WAI-ARIA keyboard navigation implementation completeness for resize controls.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding or modifying interactive resize drag handles (e.g., the `Drag` component in `code/core/src/manager/components/layout/Drag.tsx`), verify full keyboard accessibility: include a `:focus-visible` style equivalent to the `:hover` reveal, add `tabindex={0}` so the element is reachable by keyboard, and implement arrow-key handlers (wired into the same resize logic used by pointer events in `useDragging.ts`) so users who cannot operate a mouse can still resize panels. In DOM order, place the content slot before the drag/resize handle so focusable elements inside the content appear before the handle in tab order.
+    - _reasoning:_ Project-specific drag handle keyboard accessibility completeness check.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - For resize handle `aria-valuemax`, compute the value from the actual available space after subtracting other layout regions (sibling panel width, minimum content area), not from raw `window.innerWidth`/`innerHeight`. A value larger than what CSS constraints allow causes keyboard users to press Arrow keys that appear to do nothing while the ARIA value catches up to the CSS-derived maximum.
+    - _reasoning:_ Project-specific aria-valuemax calculation requiring layout constraint understanding.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a focus indicator uses `box-shadow` (which browsers suppress in Windows High Contrast / Forced Colors mode), provide a `@media (forced-colors: active)` fallback that restores a visible `outline` using a system color such as `Highlight` or `CanvasText`. Do not rely on `box-shadow` alone for keyboard focus visibility.
+    - _reasoning:_ Forced Colors mode focus indicator fallback requires understanding CSS rendering context semantics.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When a parent component computes customized or post-processed versions of layout state (e.g., via an API customization hook), pass those customized values into all dependent hooks and helpers. Passing raw pre-customization values causes them to compute incorrect bounds or visibility, diverging from rendered state.
+    - _reasoning:_ Project-specific layout customization hook value propagation to dependent hooks.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Functions that compute maximum dimensions from viewport size minus other layout elements must guard their return values with `Math.max(0, ...)` to prevent negative results when a persisted or large sibling size exceeds newly available space. `Math.min(0, value)` is incorrect for this purpose.
+    - _reasoning:_ Math.max(0,...) guard for dimension calculations; requires understanding negative result prevention intent.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When implementing a bounded numeric-delta helper (e.g., a `zoomBy`-style callback), clamp the result to BOTH the minimum AND maximum bounds defined by the project's authoritative limits array (e.g., `ZOOM_LEVELS`): `Math.max(min, Math.min(max, value + delta))`.
+    - _reasoning:_ Bounded clamp to both min and max requires understanding project-specific limits array.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When hiding a UI control but keeping its layout space (to avoid width/height shifts), use `visibility: hidden` or `opacity: 0` via a styled component rather than rendering `null`/`undefined`. Pair with `aria-hidden={true}` so assistive technology correctly skips the invisible element.
+    - _reasoning:_ Hiding control while preserving layout space and ARIA requires understanding visibility vs rendering intent.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When hiding a button label visually at small sizes (e.g., to show only an icon), do not use `display: none`, `visibility: hidden`, or omit the text node — screen readers will fail to announce the button's purpose. Instead, apply `srOnlyStyles` (exported from `storybook/theming`) to the text `<span>`.
+    - _reasoning:_ Project-specific srOnlyStyles usage for screen-reader button label visibility.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a component conditionally renders a native `<button>` (e.g., via a polymorphic `as` prop switching from `'a'` to `'button'` when no `href` is given), always set `type="button"` explicitly. The HTML default `type="submit"` silently triggers form submissions when the element is nested inside a `<form>`; this codebase's other button-based components consistently set the explicit type.
+    - _reasoning:_ Missing explicit type=button on dynamic button elements; requires understanding polymorphic component patterns.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When adding custom props to a component that wraps an HTML input element (or any component inheriting `HTMLProps<HTMLInputElement>`/`ComponentProps<'input'>`) and forwards remaining props via `...props`, avoid naming custom props after native HTML attributes (`step`, `min`, `max`, `pattern`, etc.). A name collision silently swallows the native attribute. Use an intent-revealing prefix (e.g., `keyboardStep` instead of `step`) to disambiguate.
+    - _reasoning:_ Custom prop name collision with native HTML attributes requires understanding prop forwarding semantics.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding a scoping parameter to element ID-generation helpers (e.g., `getControlId`, `getControlSetterButtonId` in `helpers.ts`) to prevent collisions, verify the chosen scope token is unique per *rendered instance*, not just per story. Scoping by `storyId` alone still allows duplicate IDs when the same story is mounted in multiple `<Controls>` blocks on one page. If full uniqueness is required, thread an additional per-block token (e.g., an optional `controlsId`) through `ControlProps` and the ID helpers so each `<Controls>` block produces globally unique IDs.
+    - _reasoning:_ Project-specific ID generation scoping completeness for multiple rendered instances.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `manager-api` event handlers that call `getEventMetadata` to determine ref-locality (`const { ref } = getEventMetadata(...)`), verify that every side-effect call — `api.updateGlobals`, channel emissions, etc. — that runs after the `if (!ref) / else` block is also gated by `!ref`. Code placed after that block runs for all refs unconditionally; missing the guard lets non-local events (e.g. a `SET_GLOBALS` from a ref) silently trigger global-state updates and breaks the 'ignore non-local refs' contract.
+    - _reasoning:_ Project-specific manager-api ref locality guard placement analysis.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When modifying Vue's internal `__name` property usage, always pair it with a fallback to the public `name` option or statically-extracted `displayName`; `__name` is an undocumented SFC-compiler implementation detail that may be absent in production builds.
+    - _reasoning:_ Vue __name undocumented property fallback requires understanding SFC compiler internals.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When merging a runtime-inferred component `displayName` with statically-extracted docgen metadata in the vue3-vite plugins (`vue-component-meta.ts`, `vue-docgen.ts`), place the runtime fields as the **last** argument to `Object.assign` so they win: `Object.assign({}, meta, { displayName: component.name ?? component.__name ?? meta.displayName })`.
+    - _reasoning:_ Project-specific Object.assign argument ordering for displayName override in vue3-vite plugins.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When implementing mtime-based cache invalidation, compare timestamps with strict equality (`===`), not `<=`, so a file restored to an earlier state is not silently treated as unchanged. Prefer `stat.mtimeMs` over `stat.mtime.getTime()` for higher-precision sub-second resolution.
+    - _reasoning:_ Cache invalidation timestamp strict equality requires understanding mtime comparison semantics.
+- **[API Misuse]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When renaming an exported type or any other public symbol, check whether it has been exposed via `package.json` exports maps, re-exported from barrel files, or documented as public API before deleting the old name. If downstream consumers may depend on it, retain a `@deprecated` alias (`export type OldName = NewName;`) until a deliberate deprecation cycle completes.
+    - _reasoning:_ Deprecated alias preservation for public API symbols requires cross-file export and documentation analysis.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When modifying file content via `String.replace()` on a target pattern, do not chain multiple sequential `.replace()` calls against the same match point (common in `scripts/tasks/sandbox-parts.ts` and similar codegen/sandbox scripts). Each call re-scans the already-modified string and later passes silently overwrite earlier insertions. Combine all conditional insertions at the same match point into a single `.replace()` callback that builds the complete replacement string in one pass.
+    - _reasoning:_ Project-specific sequential String.replace overwrite issue in codegen scripts.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Module-level functions that execute external subprocesses should cache both successful and unsuccessful outcomes. A truthy-check guard (e.g., `if (cachedValue)`) is insufficient when the function can legitimately return `undefined` or another falsy value on the first call — use a separate boolean flag or a boxed sentinel so subsequent calls skip the subprocess regardless of the prior result. Follow the caching pattern established in `anonymous-id.ts`.
+    - _reasoning:_ Falsy-result caching gap requiring sentinel flag pattern; needs understanding of cached value domain.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When implementing a character-escape function using a regex + lookup-map pattern, ensure every character class matched by the regex has a corresponding entry in the map. Characters matched but absent from the map will silently pass through unescaped via a `|| char` fallback.
+    - _reasoning:_ Regex/lookup-map completeness for escape functions; requires cross-checking regex and map entries.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Apply string escaping and sanitization at the point of template interpolation (immediately before a value is inserted into a generated code string), not at an upstream call site where the raw value is still used as a filesystem path. Escaping upstream corrupts downstream Node.js path operations such as `basename`, `dirname`, and `extname`.
+    - _reasoning:_ Escaping placement at interpolation vs upstream path usage requires understanding data flow.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a function parses structured command output (e.g., extracting the first line of multi-line git output) and includes explicit guards against invalid or empty input, add test cases for both (a) multi-value input and (b) malformed/invalid input that exercises each explicit guard. Tests that depend on external system state (git, filesystem, network) must use deterministic mocked values rather than real subprocess output, so they pass in shallow-clone or restricted CI environments.
+    - _reasoning:_ Test coverage completeness for parsing functions with explicit guards requires semantic analysis.
+- **[API Misuse]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When reviewing React Native (including react-native-web) components, verify that text-only style properties — `color`, `fontWeight`, `lineHeight`, and other `TextStyle`-exclusive props — are not placed in `StyleSheet.create` entries applied to `<View>`, `<TouchableOpacity>`, or other non-`<Text>` components. These properties are silently ignored on View-based components.
+    - _reasoning:_ React Native text-only style props on View components; requires understanding component type hierarchy.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a resolution or lookup function can return three meaningfully distinct outcomes — (1) the property is absent, (2) the property exists but cannot be resolved/processed, and (3) the property exists and was successfully resolved — use a discriminated union return type (e.g., `{ kind: 'missing' } | { kind: 'resolved'; path: T } | { kind: 'unresolved' }`) rather than a nullable. Returning `null`/`undefined` for both 'absent' and 'unresolvable' conflates the two cases and causes callers to incorrectly fall back to lower-precedence defaults that should only apply when the property is truly absent.
+    - _reasoning:_ Discriminated union return type for three-state outcomes requires understanding semantic distinctions.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When adding width-responsive layout changes to a component (e.g., hiding a label or switching `flex-direction` at narrow widths), implement them primarily with a container query inside an `@supports (container-type: inline-size)` block and include the equivalent `@media` rule only as a fallback. Do not gate `flex-direction` changes exclusively on a viewport media query.
+    - _reasoning:_ Container query vs media query for width-responsive layout requires understanding responsive design intent.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When introducing a new wrapper element inside an existing styled component's JSX, audit any `& > element` (direct-child) CSS selectors in the parent's styled definition; a new intermediate wrapper silently breaks the selector. Move the affected rule to the new wrapper's styled definition or broaden the selector so the intended styles still apply.
+    - _reasoning:_ Direct-child CSS selector breakage from new wrapper element requires cross-file DOM structure analysis.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a styled component's visual appearance is driven by a prop (e.g., `isExpanded`, `withSource`), verify that the prop is explicitly forwarded with the current state or derived value at every render callsite.
+    - _reasoning:_ Styled component prop forwarding correctness requires understanding render callsite data flow.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding `textDecoration: 'underline'` as the base style to a shared Link/anchor component that also has button-like variants (e.g., the `isButton` variant in `code/core/src/components/components/typography/link/link.tsx`), audit every variant branch and explicitly set `textDecoration: 'none'` on any that are intended to look like buttons rather than inline text links, to prevent visual regression at call sites such as `RefBlocks.tsx` and `Description.tsx`.
+    - _reasoning:_ Project-specific link component textDecoration variant audit across named files.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In unit tests for classes that register event listeners in their constructor (e.g., `server.on('upgrade', ...)` inside `ServerChannelTransport`), instantiate the class before invoking `server.listeners('eventName')[0](...)`. Without construction the listener array is empty and the call throws `TypeError` on `undefined`.
+    - _reasoning:_ Class instantiation before listener access in unit tests; requires understanding constructor registration timing.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When reading configuration from `presets.apply('core')` in builder-manager or core-server code, remember the return value is a full `CoreConfig` object. Navigate to the correct nested path (e.g., `coreOptions.channelOptions.wsToken`) rather than reading the property as if it were at the top level.
+    - _reasoning:_ Project-specific CoreConfig nested path access pattern in builder-manager.
+- **[API Misuse]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Never wrap the generic parameter of `presets.apply<T>()` in `Promise<>`. The method already returns `Promise<T>`, so `presets.apply<Promise<SomeType>>('key')` produces a double-Promise; after a single `await` the variable is still a Promise, breaking every downstream consumer.
+    - _reasoning:_ Project-specific double-Promise wrapping in presets.apply generic parameter.
+- **[Null Pointer]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - After calling `options.presets.apply(...)` for a preset whose return value is immediately used, validate that the result is non-null/non-undefined before proceeding. If the preset is required, throw a descriptive error at the retrieval site.
+    - _reasoning:_ Missing null check after preset apply requires understanding which presets are required.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When a feature flag is opt-out (defaults to `true`), set that default explicitly in the common preset (`code/core/src/core-server/presets/common-preset.ts`) rather than scattering `!== false` guards across call sites. This ensures standard truthy guards (`if (features?.flag)`) remain correct even when a consumer has not explicitly set the flag.
+    - _reasoning:_ Project-specific opt-out feature flag default placement in common preset.
+- **[Import Redundancy]** _(gen: `project_specific`, lint: `lintable`)_
+    - When adding any `logger` call (e.g., `logger.warn(...)`) in a file that previously only imported other named exports from `@storybook/core/node-logger` (e.g., `deprecate`), explicitly add `logger` to the named import list.
+    - _reasoning:_ Missing named import for logger; standard no-undef or TypeScript checks would catch this.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `renderHTML` (`code/builders/builder-manager/src/utils/template.ts`), every value added to the `globals` map must be wrapped with `JSON.stringify(value, null, 2)` before assignment. The EJS template renders globals as bare JavaScript initializers via `<%- globals[varName] %>`, so raw objects serialize to `[object Object]` at runtime.
+    - _reasoning:_ Project-specific EJS template globals JSON serialization requirement.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When nesting content inside the project's `ScrollArea` / `Scroller` styled component, every intermediate wrapper (child `div`, `pre`, etc.) must set both `width: 'fit-content'` and `maxWidth: '100%'`. Missing these constraints at any level breaks scrolling and causes content to overflow the scroll region.
+    - _reasoning:_ Project-specific ScrollArea nesting CSS constraint requirements.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When generating unique variable-name suffixes from file paths in codegen utilities (e.g., `codegen-project-annotations.ts`), use a distribution-stable hash such as djb2 or FNV-1a. Summing character codes yields identical values for any permutation (`'abc' === 'cba'`), causing silent variable-name collisions.
+    - _reasoning:_ Character-code sum hash collision for codegen variable names; requires understanding hash distribution.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In a Vite plugin's `config` hook, any contribution to fields that aggregate values (`envPrefix`, `optimizeDeps.entries`, `resolve.alias`, etc.) must read the user's existing value, normalize it to an array/object, and merge-plus-deduplicate — never unconditionally replace. Replacing `envPrefix` drops user-configured prefixes; replacing `optimizeDeps.entries` disables Vite's default HTML-entry inference.
+    - _reasoning:_ Vite plugin config hook merge vs replace requires understanding aggregation semantics per field.
+- **[Dead Code]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a conditional branch computes a value (e.g., an `externals` map gated on a feature flag like `disableBlocks`), trace it end-to-end and verify the computed value is actually forwarded to every consumer that needs it. A computed-but-never-forwarded value is silent dead code that makes the feature flag a no-op.
+    - _reasoning:_ Computed value not forwarded to consumers; requires cross-function data flow analysis.
+- **[API Misuse]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In builder-vite's codegen utilities, import statements embedded in *generated source code* must use the public virtual module ID (e.g., `virtual:/@storybook/builder-vite/project-annotations.js`). The `\0`-prefixed resolved ID returned by `getResolvedVirtualModuleId` is an internal Vite plugin-system convention reserved for use inside `resolveId`/`load` hooks.
+    - _reasoning:_ Project-specific virtual module ID convention in builder-vite codegen.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In code-generation functions that produce JavaScript/TypeScript source code as a string (e.g., `generateModernIframeScriptCodeFromPreviews`, `generateProjectAnnotationsCodeFromPreviews`), every TypeScript constant reference such as `${STORY_HOT_UPDATED}` must sit inside the outer backtick template literal — never inside a nested single- or double-quoted string. A reference written as `'${SOME_CONSTANT}'` emits the literal text instead of the runtime value.
+    - _reasoning:_ Template literal constant interpolation in string vs backtick context in codegen functions.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When refactoring env-var injection or similar cross-cutting behavior from ad-hoc code into a shared Vite plugin added via `viteCorePlugins`, confirm the plugin is applied in *every* consumer — including `@storybook/addon-vitest`'s plugin stack — so the refactor does not silently drop `process.env.*` substitution in Vitest test runs.
+    - _reasoning:_ Project-specific Vite plugin stack completeness across addon-vitest consumers.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When extracting `getProjectAnnotations` logic into a new virtual module (e.g., `project-annotations.js`), the `import.meta.hot.accept(...)` handler that calls `window.__STORYBOOK_PREVIEW__.onGetProjectAnnotationsChanged` must be defined in that same virtual module, not left in the caller. Moving the logic without moving its HMR boundary breaks live-reload for project annotations.
+    - _reasoning:_ Project-specific HMR handler placement with virtual module extraction.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When implementing AST-based detection of whether a package is already imported in code parsed with `@babel/parser` (via `babelParse`), use `traverse` to walk the full AST and check BOTH static `ImportDeclaration` nodes (via `path.node.source.value`) AND dynamic `import()` expressions — which `@babel/parser` represents as `CallExpression` nodes with `t.isImport(path.node.callee)`, NOT as `ImportExpression` nodes. Tools like `eslint-flat-config-utils` commonly use dynamic imports; omitting the `CallExpression` check produces false negatives.
+    - _reasoning:_ Babel AST dynamic import representation as CallExpression requires understanding parser node types.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In E2E tests, string arguments passed to `sbPage` navigation helpers (`viewAddonPanel(name)`, `navigateTo(name)`, etc.) must exactly match the actual panel or component names rendered in the UI.
+    - _reasoning:_ Project-specific E2E test string argument matching against actual UI panel names.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Apply consistent error handling to the same async call regardless of code path. If a call (e.g., `storyIndexGenerator.getIndex()`) is try/catch-wrapped with a safe fallback in an `onInvalidated` callback, it must be equally guarded at every other site — including initial store setup.
+    - _reasoning:_ Consistent error handling across all call sites of the same async function.
+- **[Resource Leakage]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When implementing a request-response pattern that subscribes to terminal events (run-completed, fatal-error, cancel, etc.), always attach a timeout that calls `unsubscribe()` and sends an error/timeout response after a reasonable deadline. Without a timeout, stalled runs leak subscribers indefinitely.
+    - _reasoning:_ Missing timeout on request-response subscriber pattern causing indefinite subscriber leak.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When adding a new third-party library to a renderer's `package.json`, check whether it is consumed at build time by shared plugins (Vite plugin, webpack plugin, etc.) that execute in *consumer* projects. If so, list it under `dependencies` rather than `devDependencies`.
+    - _reasoning:_ Dependencies vs devDependencies classification for build-time consumed packages.
+- **[API Misuse]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding or modifying polling-based focus utilities in the manager API (e.g., `focusOnUIElement` in `code/core/src/manager-api/modules/layout.ts`), expose an optional `poll` flag that defaults to `true` for backward compatibility, and return `boolean | Promise<boolean>` to indicate whether focus succeeded. Never fail silently.
+    - _reasoning:_ Project-specific focus utility API design with poll flag and return type contract.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When writing a handler that moves focus in response to closing a panel or overlay, check whether `document.activeElement` is inside the closing element before redirecting focus. Only move focus if it was inside the panel at the moment of closing.
+    - _reasoning:_ Focus redirection should check active element location before moving focus.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When calling `focusOnUIElement` and falling back to `document.body.focus()` on failure, do not compare the raw return value against `false` without accounting for the `Promise<boolean>` case — a truthy Promise will silently skip the fallback. Either pass `{ poll: false }` to get a synchronous boolean, or `await` the result inside an `async` function.
+    - _reasoning:_ Project-specific focusOnUIElement Promise vs boolean return type handling.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When calling a helper that internally routes across multiple input categories (e.g., `addWorkaroundResolutions` in `scripts/utils/yarn.ts`), do not gate the call site with a narrow predicate covering only one category. Call the helper unconditionally and let its internal branching own routing.
+    - _reasoning:_ Project-specific helper call site gating vs internal routing responsibility.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When accumulating package resolutions or similar key-value overrides across sequential conditional branches (e.g., in `scripts/utils/yarn.ts`), merge via object spread into the existing accumulator (`additionalResolutions = { ...additionalResolutions, ... }`) rather than replacing with a plain assignment.
+    - _reasoning:_ Object spread accumulation vs replacement in sequential conditional branches.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `scripts/ci/utils/helpers.ts`, the shared `playwright.install` helper should not hardcode a specific browser name (e.g., `chromium`); omit the browser argument so Playwright installs its full default browser set. The `--with-deps` flag in the same helper is Linux-only — make it configurable (e.g., a `withDeps` boolean defaulting to `true`) because the helper is also invoked by Windows sandbox jobs in `scripts/ci/sandboxes.ts`; pass `{ withDeps: false }` from Windows callsites.
+    - _reasoning:_ Project-specific CI helper platform-specific flag and browser installation configuration.
+- **[Logic Error]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When writing `os.platform()` guards to decide whether to use an elevated or system-level command flag, include all officially supported platforms explicitly (e.g., both `'darwin'` and `'win32'`) rather than only the single platform where the issue was first observed.
+    - _reasoning:_ Platform guard completeness across all supported OS variants.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding a new `sb.mock(...)` entry to `code/.storybook/preview.tsx`, ensure the corresponding entry in `scripts/tasks/sandbox-parts.ts` uses identical mock options (e.g., `{ spy: true }`). These two files mirror each other for sandbox test environments; mismatches mean sandboxes exercise different mock behavior than the dev preview.
+    - _reasoning:_ Project-specific mirror parity between preview.tsx and sandbox-parts.ts mock configurations.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In the `Store` class (`manager-api/store.ts`), when persistence is disabled (`upstreamPersistence === false`), both writes to AND reads from localStorage/sessionStorage must be skipped. Disabling only writes while still merging persisted storage in `getInitialState` can leak prior browser state into stories and tests.
+    - _reasoning:_ Project-specific Store class persistence disable completeness for reads and writes.
+- **[Import Redundancy]** _(gen: `project_specific`, lint: `lintable`)_
+    - Always import `global` from `@storybook/global` before accessing any of its properties (e.g., `global.TAGS_OPTIONS`) in manager-side files. Never rely on an ambient or implicit reference to `global`.
+    - _reasoning:_ Missing import for global; standard no-undef or TypeScript checks would catch this.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When implementing a bulk 'select all' action in a filter panel, exclude entries that are hidden from the user (e.g., built-in filters with `count === 0`). Including hidden entries can produce unexpectedly empty results in projects where those filter categories have no members.
+    - _reasoning:_ Project-specific bulk select exclusion of zero-count hidden filter entries.
+- **[Logic Error]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - The `init` function exported by manager-API modules is for registering event listeners only; do not use it to immediately mutate or patch the store state. Ensure the initial `state` object returned from `init` is already correct so there are no race conditions or state corruption at startup.
+    - _reasoning:_ Project-specific manager-API init function responsibility boundary for state mutation.
+- **[API Misuse]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In Danger JS scripts (`scripts/dangerfile.js`), PR-author references must use `danger.github.pr.user` (e.g., `user.login`, `user.type`). The field `danger.github.pr.author` does not exist in the Danger JS GitHub PR DSL — reading it yields `undefined`, and any subsequent property access throws a TypeError that aborts the entire Danger run.
+    - _reasoning:_ Project-specific Danger JS DSL field name correctness (user vs author).
+
+### Maintainability and Readability
+
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - JSDoc on typed properties must add information beyond what the type already encodes. Comments restating a union variant or optional marker (e.g., noting that an `unknown` variant exists when it is already in the type) add noise — remove them or replace with genuinely additive documentation. Similarly, do not add `?? fallback` or other runtime nullish guards for values that TypeScript types already guarantee are non-nullable; redundant runtime guards create misleading impressions that the value could be absent.
+    - _reasoning:_ JSDoc comments should add information beyond types; requires understanding comment vs type content.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Keep JSDoc comments on exported config interfaces (e.g., `CoreConfig` in `code/core/src/types/modules/core-common.ts`) and preset functions (e.g., `viteCorePlugins`, `viteFinal`) accurate whenever scope or responsibilities change. JSDoc on preset functions must list only the plugins the function actually returns; field-level comments must reflect the full, current behavior whenever validation or enforcement scope expands.
+    - _reasoning:_ Project-specific JSDoc accuracy for config interfaces and preset functions.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Every boolean flag added to the `features` block of `StorybookConfigRaw` (in `code/core/src/types/modules/core-common.ts`) must include a JSDoc comment with a brief description and an `@default` tag that matches the actual default value. New boolean or optional configuration properties added to public TypeScript interfaces (e.g., `Upstream` in `manager-api/store.ts`) must likewise include a JSDoc comment that explains the property's purpose and the effect of each possible value.
+    - _reasoning:_ Project-specific feature flag JSDoc @default tag completeness requirement.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - JSDoc and inline comments on request-validation utilities must accurately describe HTTP/1.1 header semantics. Modern browsers always include a `Host` header for every HTTP/1.1+ request; do not claim that normal browser requests lack a `Host` header.
+    - _reasoning:_ Technically accurate HTTP header documentation requires understanding protocol semantics.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When documenting parameters in API reference pages, describe full behavioral consequences for each significant value: for boolean flags, explain side effects that occur even when the feature is 'off' (e.g., whether an empty container is still rendered to preserve layout); for union types (e.g., `string | null | ReactElement`), describe how each type variant renders or behaves differently. The introductory description on a doc block API page must include all significant visual and UI behaviors — primary function plus layout position, responsive visibility thresholds, and container/layout side effects.
+    - _reasoning:_ Project-specific API documentation completeness for behavioral consequences of parameter values.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Do not merge API reference documentation that contains placeholder text (e.g., `TK`, `TODO`, empty type blocks) or omits documented tools, options, or parameters. Every tool, config option, and API entry must have complete type signatures, parameter descriptions, default values, and examples before publishing.
+    - _reasoning:_ Placeholder text detection in API documentation requires reading content for completeness.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Verify that documented default values match the actual implementation. Do not document a 'recommended' option as if it is the default — for example, `reactDocgen` defaults to `react-docgen`, not `react-docgen-typescript`. Present the actual default first and any recommendation as an opt-in.
+    - _reasoning:_ Project-specific default value accuracy for reactDocgen option documentation.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In documentation, use the established name for every named concept consistently across pages (e.g., do not mix 'develop toolset' and 'development toolset' for the same feature). When documenting CLI commands, verify that every `--option <value-list>` enumerates all values supported by the implementation; flag documented option lists that omit valid values.
+    - _reasoning:_ Project-specific terminology consistency and CLI option value completeness in documentation.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Carefully check documentation code examples that were adapted from one another (different framework tab variants, prop examples built off each other) for copy-paste errors: wrong property descriptions, incorrect variable/prop names, or descriptions that belong to a different prop.
+    - _reasoning:_ Copy-paste errors in documentation code examples require semantic content comparison.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Use short, project-agnostic file paths in documentation code examples (e.g., `./src/components/Button.tsx`) rather than real absolute paths from the development environment.
+    - _reasoning:_ Absolute vs relative file path usage in documentation examples.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - If a documentation code example uses top-level `await`, either add a prerequisite note stating the project must be configured as ESM (e.g., `"type": "module"` in `package.json`), or refactor the example to work in both CommonJS and ESM by moving the `await` inside an async function.
+    - _reasoning:_ Top-level await ESM prerequisite documentation requires understanding module system semantics.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Apply `<If renderer={['react']}>` (or the equivalent conditional block) precisely to content that is only applicable to specific renderers. Do not gate framework-agnostic features inside a React-only guard, and do not make universal claims about features that are currently renderer-specific.
+    - _reasoning:_ Project-specific renderer-conditional documentation gating accuracy.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When a documentation page introduces a concept or feature that has its own dedicated reference page elsewhere, include an inline link or callout pointing to that page rather than duplicating or silently omitting the content. When adding or updating links (GitHub source, Vitest docs, etc.), verify the URL resolves on the target branch/page; Storybook v7+ framework code lives under `code/frameworks/<framework>/src/` and renderer code under `code/renderers/<renderer>/src/`; Vitest docs use anchor fragments on single canonical pages (e.g., `https://vitest.dev/config/#isolate`). When a link includes a line-range anchor (`#L255-L275`), verify those line numbers still identify the intended code. When reviewing documentation with repository-internal links, verify each referenced file actually exists.
+    - _reasoning:_ Project-specific documentation link verification across repository structure.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Guide component description documentation to use JSDoc comments placed directly above the component export, not via `parameters.docs.description` in the stories meta.
+    - _reasoning:_ Project-specific component description placement convention (JSDoc vs parameters.docs.description).
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Any documentation displaying or describing an internal data structure that is not yet a stable public API (e.g., a manifest JSON schema during a preview period) must include a prominent callout stating the schema is not a public API, is subject to change without notice, and should not be treated as a stable contract.
+    - _reasoning:_ Unstable API stability callout in documentation requires understanding API maturity status.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When documenting behavior that depends on a specific implementation value likely to change (e.g., a truncation character count), prefer vague language such as 'a truncated version of the description' over a hard-coded number.
+    - _reasoning:_ Avoiding hard-coded implementation values in documentation prose.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Do not include documentation statements committing to expanding support to specific renderers or frameworks unless the plan is confirmed internally. Omit the item or use highly qualified language to avoid overpromising.
+    - _reasoning:_ Unconfirmed future support commitments in documentation require intent verification.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Before publishing multi-step agent or tool workflow examples, verify each step with the feature's implementers to confirm the description accurately reflects actual tool behavior.
+    - _reasoning:_ Agent workflow documentation accuracy requires verification with feature implementers.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Set sidebar `order` values in increments of 10 or more (e.g., 10, 20, 30) rather than consecutive integers so new pages can be inserted between existing ones without renumbering.
+    - _reasoning:_ Sidebar order increment convention for insertability; requires understanding numeric spacing intent.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Verify that every JSON code block in documentation is syntactically valid (no trailing commas in arrays/objects) so readers can copy-paste without errors.
+    - _reasoning:_ JSON syntax validity in documentation code blocks; partially detectable via JSON linting tools.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Check that relative links in MDX files use the correct number of `../` parent-directory segments for the file's actual depth.
+    - _reasoning:_ MDX relative link path depth correctness; partially detectable via link-checking tools.
+- **[Naming Convention]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Test `it()` descriptions must match the actual return value and type being asserted. If the function returns `undefined`, say so rather than borrowing vocabulary from an unrelated type shape.
+    - _reasoning:_ Test description accuracy matching actual return value requires semantic understanding.
+- **[Naming Convention]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Ensure every test case within a `describe` block has a unique, descriptive name. Duplicate test names make failures ambiguous and suggest the scenario is being tested twice; remove duplicates or rename to reflect the distinct behavior actually covered.
+    - _reasoning:_ Duplicate test names detectable via custom lint rules checking describe block name uniqueness.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When writing a regression test for a bug that caused a spurious warning, assert that no warning is emitted during the operation in addition to asserting the expected return value (e.g., spy on `logger.warn` / `console.warn`, call the operation, then `expect(spy).not.toHaveBeenCalled()`).
+    - _reasoning:_ Regression test should assert no warning emission; requires understanding test intent.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In async timing tests, derive wait/sleep durations from the named constants that control the real behavior (e.g., `DEBOUNCE * 2`) rather than hard-coding an arbitrary millisecond value.
+    - _reasoning:_ Timing constants derivation from behavior constants requires understanding test/code relationship.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Test fixture objects shared across multiple test cases should be typed with the actual interface or `ConstructorParameters<typeof T>[N]` rather than cast with `as any`.
+    - _reasoning:_ Fixture typing precision over as any cast requires understanding available interfaces.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When adding or editing test fixture files whose prose or comments describe the fixture's structure (import order, file references, expected behavior), verify every factual claim in the prose matches the actual fixture content.
+    - _reasoning:_ Test fixture prose accuracy verification requires cross-checking comment claims against content.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - In `.test-d.ts` type-level test files, import `expectTypeOf` from `'vitest'` (not from `'expect-type'`), and use `toExtend` for subtype/assignability assertions instead of the deprecated `toMatchTypeOf`.
+    - _reasoning:_ Project-specific type test import source and method convention; partially enforceable via import rules.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When extending or modifying any async or polling-based focus utility, add unit tests covering every code path: no element ID provided, immediate focus success, each option variant (`select`, `forceFocus`, `poll: false`), polling success when the element appears after a delay, and polling timeout when the element never appears.
+    - _reasoning:_ Project-specific focus utility test coverage completeness across all code paths.
+- **[Naming Convention]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Always reference focusable UI element IDs through the `focusableUIElements` registry in `code/core/src/manager-api/modules/layout.ts` (e.g., `focusableUIElements.showAddonPanel`) rather than hardcoding string IDs at call sites.
+    - _reasoning:_ Project-specific focusableUIElements registry usage vs hardcoded string IDs.
+- **[Redundancy Handling]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Avoid extracting trivial single-expression predicate helpers (e.g., `function isFoo(v) { return v === SOME_CONSTANT; }`). Inline at the call site; a named wrapper for a one-line equality adds indirection without abstraction or reuse benefit. Similarly, avoid introducing intermediate variables solely to pass them to a single optional-chaining expression on the next line — use optional chaining inline instead.
+    - _reasoning:_ Trivial single-expression predicate extraction; requires understanding abstraction value.
+- **[Code Duplication]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Do not duplicate log or message strings across code paths that emit the same message. Extract to a named constant and reference it from every call site.
+    - _reasoning:_ Duplicate log/message strings across code paths; requires semantic string comparison.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In Vitest test files, follow the project's spy-mocking convention (`.cursor/rules/spy-mocking.mdc`): always declare `vi.mock('module-name', { spy: true })` at the top level, access mocks via `vi.mocked(importedModule.export)` for type safety, and configure mock behavior exclusively via `.mockImplementation(...)` / `.mockReturnValue(...)` inside `beforeEach` blocks — never at module scope (state persists across tests) and never inside individual `it()` bodies (inline setup bleeds between tests). Reserve the full factory-replacement form (`vi.mock('module', () => ({ … }))`) only for modules that cannot be imported at all or must be entirely replaced; never place inline `vi.fn()` / `mockImplementation()` calls inside factory bodies. Use nested `describe` blocks with their own `beforeEach` when different tests need different mock states, and rely on a top-level `vi.clearAllMocks()`/`vi.resetAllMocks()` in `beforeEach`. Before adding a mock for a utility (e.g., `formatFileContent`), verify the mock is actually necessary — if the real implementation can run without undesirable side effects, let it.
+    - _reasoning:_ Project-specific Vitest spy-mocking convention with detailed placement rules.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When writing unit tests for template-based config transforms, apply the same preprocessing steps that the production code performs on the template (e.g., stripping placeholder tokens, removing empty entries) before parsing. Using raw `loadTemplate()` output produces snapshots that don't match the real code path and can hide regressions in the preprocessing step.
+    - _reasoning:_ Project-specific test preprocessing matching production code path for templates.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When maintaining an allowlist of library config properties that must remain at the top level rather than being moved into project entries (e.g., Vitest `coverage`), prefer deriving the list from the library's exported TypeScript types rather than a hand-written list. This ensures new top-level-only properties added in future library versions are caught at compile time instead of causing silent mis-migration.
+    - _reasoning:_ Allowlist derivation from library types vs hand-written requires understanding type availability.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Developer workflow documentation and task-completion checklists must require running the full test suite with the project's canonical commands (`yarn test` or `yarn vitest run`) and explicitly state that all tests must pass before committing. Vague directives like 'run relevant tests' are not acceptable.
+    - _reasoning:_ Developer documentation completeness for test commands requires reading checklist content.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When one monorepo package needs a function from another, import via the public package export (e.g., `import fn from '@storybook/addon-vitest/postinstall'`), not a deep relative path. Deep paths are fragile under restructuring and bypass the package's intended API surface. Testing utilities — such as in-memory store factories, mock providers, or test-only wrappers — must live under a dedicated `test-utils/` directory rather than in production source modules.
+    - _reasoning:_ Project-specific monorepo import via public package exports vs deep relative paths.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When a sub-package in the monorepo needs to run its own slice of the root-level Vitest suite, write the sub-package's `test` script using package-manager workspace commands (e.g., `yarn workspace <root-package-name> test --project '<project-name>'`) rather than `cd`-ing to the repo root. This avoids fragile relative paths and works regardless of the caller's working directory.
+    - _reasoning:_ Project-specific monorepo test script using workspace commands vs cd pattern.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In the Vitest workspace config, place per-project Node.js process options (such as memory limits) in the project's `test.execArgv` array rather than embedding them via `NODE_OPTIONS=` in npm script strings. For example: `test: { name: 'my-project', execArgv: ['--max_old_space_size=4096'] }`.
+    - _reasoning:_ Vitest execArgv vs NODE_OPTIONS env var placement convention.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - In MDX documentation code blocks, always import `Meta` and other Doc Blocks from `@storybook/addon-docs/blocks`, not from `@storybook/addon-docs` directly.
+    - _reasoning:_ Project-specific MDX import source for Doc Blocks; partially enforceable via import source rules.
+- **[Function Consistency]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding a new option or behavioral flag to one `JsPackageManager` proxy implementation (e.g., `PNPMProxy.runPackageCommand`), apply the equivalent change to all other proxies (`NPMProxy`, `Yarn1Proxy`, `Yarn2Proxy`, `BunProxy`) so the abstraction stays consistent.
+    - _reasoning:_ Project-specific JsPackageManager proxy implementation parity requirement.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - Use the project's canonical logger for diagnostic output, never direct `console.*` calls: server-side Node.js code under `code/core/**` must use `logger` from `storybook/internal/node-logger`, and client-side (browser/manager) code must use `logger` from `storybook/internal/client-logger`. This applies equally to stub/placeholder transport callbacks in channel constructors.
+    - _reasoning:_ Project-specific logger module usage by context; partially enforceable via banned-import rules.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When security-sensitive configuration (such as `allowedHosts`) is loaded through the preset mechanism — which third-party addons can influence — log or display the fully resolved value at server startup so users can detect unexpected overrides.
+    - _reasoning:_ Security configuration logging at startup for transparency; requires understanding security-sensitive config.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a function or module uses an unusual implementation forced by a tooling constraint (e.g., enumerating template imports individually in a `switch/case` because esbuild does not support glob imports combined with the `?raw` query), add a JSDoc or inline comment explaining why the simpler approach does not work. Similarly, when implementing non-obvious re-entry or cycle-detection logic (e.g., a React context set used to track which block names are currently mid-resolution), add an inline comment for each guard condition explaining the specific scenario it prevents and why a simpler alternative would be too broad or too narrow.
+    - _reasoning:_ Non-obvious tooling constraints and re-entry guard logic require explanatory comments.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When adding a workaround for a missing or incorrect behavior in a third-party library, add an inline comment directly above the workaround explaining the reason and, when possible, linking the upstream limitation or tracking issue. Pair `__name`-style reads of undocumented compiler internals with an inline comment flagging that it is implementation detail, not public API.
+    - _reasoning:_ Third-party workaround comments with upstream issue links require intent understanding.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When suppressing a TypeScript error caused by overly strict third-party type definitions, prefer `@ts-expect-error` with an explanatory comment over a type assertion (`as SomeType`). The comment must identify why the suppression is needed and where the upstream type gap lives.
+    - _reasoning:_ ts-expect-error with explanatory comment vs type assertion preference.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Apply conditional or state-dependent CSS through Emotion `styled()` (imported from `storybook/theming`) rather than inline `style` props.
+    - _reasoning:_ Project-specific Emotion styled() vs inline style prop convention.
+- **[Naming Standards]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - When adding props to an Emotion `styled` component that are purely for styling (not intended as HTML attributes), prefix them with `$` (e.g., `$isActive`, `$isInitialValue`).
+    - _reasoning:_ Project-specific $ prefix convention for styling-only props; partially detectable via custom lint rules.
+- **[Naming Convention]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Name new component props to precisely describe what they control rather than what element they affect. For booleans that show/hide content, prefer a noun-phrase pattern like `showSelectedOptionTitle` over ambiguous label-centric names.
+    - _reasoning:_ Descriptive prop naming precision requires understanding what the prop semantically controls.
+- **[Naming Convention]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When defining a component with `React.memo`, keep the Props interface name, the internal function name passed to `React.memo`, and the exported variable name mutually consistent (e.g., `React.memo<PanelContainerProps>(function PanelContainer(...))`).
+    - _reasoning:_ React.memo component name consistency across Props interface, function, and export variable.
+- **[Naming Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In this project, `Button` and `ToggleButton` components whose visible text children already provide a clear accessible name must explicitly set `ariaLabel={false}`; this signals intentional reliance on children for the accessible name.
+    - _reasoning:_ Project-specific ariaLabel={false} convention for Button/ToggleButton with text children.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When a prop exists solely for backward compatibility or to expose a legacy behavior that contradicts an explicit UX decision, mark it in JSDoc with a 'Legacy option' prefix: state which consumer it exists for, explicitly say not to set it in new code, and briefly explain the UX rationale.
+    - _reasoning:_ Legacy compatibility prop JSDoc documentation convention requires understanding prop purpose.
+- **[Function Consistency]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When widening a callback or handler return type to support async callers, prefer the explicit union `void | Promise<void>` over `any`.
+    - _reasoning:_ void | Promise<void> over any for async handler return types.
+- **[Dead-Code Related Issues]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - When a refactor makes intermediate variables, derived values, utility functions, imports, hooks, or exported-function parameters unused, delete that dead code in the same PR. An exported-function parameter that is never referenced in the body misleads callers about the function's contract.
+    - _reasoning:_ Unused variables and parameters after refactor; partially detectable via no-unused-vars lint rules.
+- **[Dead-Code Related Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Do not remove existing comments when modifying a source file. Preserve inline comments, block comments, JSDoc, TODOs, attribution lines, and rationale notes explaining workarounds (e.g., the PrismJS race-condition block comment above `Code` in `syntaxhighlighter.tsx`). Flag any diff that drops such comments.
+    - _reasoning:_ Preserving intentional comments during modification requires understanding comment purpose.
+- **[Dead-Code Related Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Do not leave commented-out code blocks in the codebase without a clear, actionable explanation. Either delete the code entirely, or replace the commented block with a single `// TODO:` stating why it is temporarily disabled, the condition/timeline for re-enablement, and a reference to the relevant issue or PR.
+    - _reasoning:_ Commented-out code blocks require understanding whether removal or TODO replacement is appropriate.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Keep inline comments describing yarn `logFilters` entries in `scripts/utils/yarn.ts` in sync with the actual `level` values in the JSON config.
+    - _reasoning:_ Project-specific yarn logFilters comment sync with actual level values.
+- **[Code Smelling]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When a shared UI component is modified, audit every known consumer for regressions before approving the MR. For `SyntaxHighlighter`, the call sites to verify are: `code/addons/docs/src/blocks/blocks/SourceContainer.tsx`, `code/addons/docs/src/blocks/components/Source.tsx`, `code/addons/docs/src/blocks/components/ArgsTable/ArgValue.tsx`, `code/addons/a11y/src/components/Report/Details.tsx`, `code/addons/onboarding/src/Onboarding.tsx`, and `code/core/src/shared/checklist-store/checklistData.tsx`.
+    - _reasoning:_ Project-specific SyntaxHighlighter consumer audit requiring named file cross-reference.
+- **[Variable Handling]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Specify default values for destructured props at the destructuring site (e.g., `{ dynamicTitle = true }`) rather than deeper in the function body; this keeps defaults visible at the API boundary. If a prop has a runtime default (e.g., `position ?? 'bottom'`), compute the resolved value once with a `const` at the top of the render function and use it consistently everywhere rather than applying the fallback in some expressions and the raw prop in others.
+    - _reasoning:_ Default value placement at destructuring site vs function body requires understanding API clarity.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding a new boolean prop to a shared component, include stories for every meaningful combination of that prop with other relevant variants, each with a `play` function that validates the rendered output via DOM assertions. When multiple stories render the same component state with only trivial prop differences, consolidate them into a single story (e.g., a Playground or Default variant) and use a `play` function to trigger additional states (hover, focus, specific prop combinations) rather than creating a separate story per state.
+    - _reasoning:_ Project-specific story coverage and consolidation requirements for new boolean props.
+- **[Redundancy Handling]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In Storybook `play` functions, query elements directly on the `canvas` object rather than wrapping it in `within(canvas)`. Reserve `step()` for groups of logically related interactions; do not wrap a single `getBy*` query in a step just for labeling — `getBy*` already throws if the element is absent, so a bare `expect(...).toBeInTheDocument()` immediately after is redundant.
+    - _reasoning:_ Project-specific Storybook play function query conventions and redundant assertion elimination.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When changing the semantics or recommended usage of a configuration option, update all inline code comments in documentation snippet files to reflect the new guidance.
+    - _reasoning:_ Documentation snippet comments accuracy after semantic changes requires intent understanding.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding telemetry events for multiple variants of the same user action, prefer a single event constant with a discriminating payload field (e.g., `telemetry('share', { action: 'story-link-copied' })`) rather than a separate constant per variant. Reserve distinct event constants for conceptually independent event types. When renaming or changing string values that are recorded as telemetry fields (agent names, event names, dimension keys in `code/core/src/telemetry/`), flag that existing dashboards, queries, and data pipelines may depend on the old strings; require either a backward-compatible name-mapping layer or explicit team sign-off.
+    - _reasoning:_ Project-specific telemetry event naming conventions and backward compatibility analysis.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When documenting JSON telemetry event payloads or API response examples in docs, ensure each example value's JSON type matches the actual serialized runtime type. Values produced as numbers at runtime (e.g., `Date.prototype.getTime()`) must appear as JSON numbers, not quoted strings.
+    - _reasoning:_ JSON type accuracy in documentation examples requires understanding runtime serialization.
+- **[Dead-Code Related Issues]** _(gen: `project_specific`, lint: `partially_lintable`)_
+    - In files added under `src/export-mocks/`, check that all imports are actually used and that values are exported directly rather than wrapped in an intermediate object first.
+    - _reasoning:_ Unused imports and export wrapping in export-mocks; partially detectable via no-unused-vars rules.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When a regression test or code comment includes a GitHub issue URL referencing this project, verify the issue number is the real filed number and not a placeholder (such as `XXXX`) before the MR is merged.
+    - _reasoning:_ Project-specific GitHub issue number placeholder detection before merge.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When assembling a Vite plugin array in `pluginConfig` (builder-vite's `vite-config.ts`), explicitly verify the relative ordering of transform plugins is intentional. In particular, confirm whether `enforce: 'post'` plugins such as `injectExportOrderPlugin` should run before or after other transform plugins like `csfPlugin`.
+    - _reasoning:_ Project-specific builder-vite plugin ordering intentionality verification.
+- **[Dead-Code Related Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When reviewing changes to `code/lib/cli-storybook/src/sandbox-templates.ts`, confirm CI cadence arrays (`normal`, `daily`, etc.) have not had template entries bulk-commented-out for debugging. Every entry that is not permanently disabled should be active; any temporary reduction must be gated behind an explicit environment variable or accompanied by an explanatory comment.
+    - _reasoning:_ Project-specific sandbox template CI array debugging comment-out detection.
+- **[Naming Convention]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When writing `ariaLabel` values for `PopoverProvider` or any dialog-triggering component, use terminology consistent with how the project's product UI and docs already describe that feature. If a component is reused in multiple contexts, choose a generic label that remains accurate across all uses.
+    - _reasoning:_ Project-specific ariaLabel terminology consistency with product UI descriptions.
+- **[Naming Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding or modifying docgen-engine identifier fields on shared manifest types in `core-common.ts`, use framework-agnostic names (e.g., `docgen` rather than `reactDocgen`) and open-ended string-union types so the field can accommodate non-React engines (`'vue-component-meta'`, `'svelte2tsx'`, custom analyzers).
+    - _reasoning:_ Project-specific docgen field naming for framework-agnostic manifest types.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - MIGRATION.md is reserved for breaking changes and deprecations only. Do not add demonstrative code examples or general feature introductions for newly added optional props; document only behavior that is removed, renamed, or will become mandatory/breaking in a future major version. When a MIGRATION.md or changelog entry cites a specific Storybook version, verify the number against the project's release plan before merging. Renaming story directories or changing `titlePrefix` values in `.storybook/main.ts` alters story IDs and invalidates existing Chromatic baselines — flag this impact in the MR description.
+    - _reasoning:_ Project-specific MIGRATION.md scope, version accuracy, and Chromatic baseline impact.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - CHANGELOG entries for security or behavioral changes must be specific: name every affected component or mechanism (e.g., BOTH HTTP and WebSocket if both are affected), state exactly what validation was added, describe the behavioral impact (e.g., external hostnames such as ngrok URLs may now be blocked), name the configuration option users must set to restore access (e.g., `core.allowedHosts` in `main.ts`), avoid vague labels like 'Add request validation', and include a link to the PR.
+    - _reasoning:_ Project-specific CHANGELOG security entry specificity and configuration guidance requirements.
+- **[Redundancy Handling]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In `actions/cache@v4` configurations, do not include an entry in `restore-keys` identical to the primary `key`. Restore-keys are only consulted on a primary-key miss.
+    - _reasoning:_ Duplicate restore-keys matching primary key in GitHub Actions cache configuration.
+- **[Unclear Code Descriptions]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In GitHub Actions runbooks and companion docs, precisely distinguish between dispatching a workflow and triggering a job: a job cannot be independently dispatched via `workflow_dispatch` — only a workflow file can be targeted with `gh workflow run`. Verify dispatch instructions reference the actual workflow filename.
+    - _reasoning:_ Documentation distinguishing workflow dispatch vs job dispatch requires understanding GHA semantics.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Proofread workflow companion documentation and runbook markdown (e.g., `.github/workflows/*.md`) before merging: catch typos, placeholder templates like `v<next-patch-release-version>`, and verify every referenced job name matches the actual `jobs.<id>` key in the corresponding `.yml` file.
+    - _reasoning:_ Project-specific workflow runbook accuracy verification against actual YAML job names.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When reviewing a `*.lock.yml` generated by `gh aw compile` from its `*.md` source, verify that all `safe-outputs` configuration fields declared in the `.md` frontmatter (including `max`, `labels`, `title-prefix`, `expires`, `group`, and `assignees`) are accurately reflected in both the `GH_AW_SAFE_OUTPUTS_CONFIG_EOF` heredoc block and the `GH_AW_SAFE_OUTPUTS_HANDLER_CONFIG` environment variable within the lock file.
+    - _reasoning:_ Project-specific gh-aw lock file safe-outputs configuration parity verification.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When a `gh-aw` workflow uses Serena for semantic code analysis, check that the `serena:` tools list in the `.md` frontmatter covers every language or file type that the workflow's analysis steps actually scan.
+    - _reasoning:_ Project-specific gh-aw Serena tools list completeness for analyzed file types.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When reviewing issue labels in a `gh-aw` workflow's `safe-outputs` `create-issue` frontmatter configuration, verify every label is meaningful and relevant to the workflow's purpose. Flag any label that appears to be a copy-paste artifact from a different workflow.
+    - _reasoning:_ Project-specific gh-aw workflow label relevance verification.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In Danger JS scripts, avoid adding explicit bot-identity exemptions. Instead, rely solely on the `author_association` field (`OWNER` / `MEMBER`) to exempt both human team members and trusted automation accounts. This keeps exemption logic unified and avoids maintaining a separate list of bot names or account types.
+    - _reasoning:_ Project-specific Danger JS bot exemption pattern via author_association.
+- **[Structural Issues]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When migrating inline style objects to CSS class-based styling (e.g., replacing a `getStyle` prop with `styled`-component class names), explicitly account for every CSS property in the original style objects: either port each property to the new stylesheet rules or leave a brief comment confirming it is intentionally omitted.
+    - _reasoning:_ CSS property migration completeness from inline styles to class-based requires tracking all properties.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When adding an inline comment to justify a `textDecoration: 'underline'` rule for WCAG accessibility compliance, cite the specific failure technique in addition to the success criterion: `// Ensure WCAG Level A compliance (SC 1.4.1), see https://www.w3.org/WAI/WCAG22/Techniques/failures/F73`. Do NOT add such WCAG SC 1.4.1 justification comments to `textDecoration: 'none'` overrides on button-styled components or button-like Link variants.
+    - _reasoning:_ Project-specific WCAG comment placement rules for textDecoration values.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When security documentation or release notes reference CVSS severity levels or scores, hyperlink the term 'CVSS' to an authoritative reference such as the Wikipedia article (https://en.wikipedia.org/wiki/Common_Vulnerability_Scoring_System).
+    - _reasoning:_ Project-specific CVSS hyperlink requirement in security documentation.
+- **[Redundancy Handling]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When bumping a dependency version, update all version references consistently in every affected `package.json` — both the `resolutions` block and any `devDependencies` entries must match. Stale devDependency entries that differ from the resolutions pin cause confusion and can break builds.
+    - _reasoning:_ Version consistency across resolutions and devDependencies after bump requires cross-field comparison.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When migrating formatting tooling across the monorepo (e.g., prettier → oxfmt), update all relevant `package.json` files — including those under `scripts/` — not just the primary `code/` package, to keep the toolchain consistent.
+    - _reasoning:_ Project-specific formatter toolchain migration completeness across monorepo package.json files.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When transitioning to a new formatter but retaining the old formatter for programmatic use in codegen scripts or codemod utilities (e.g., `formatFile`, `formatFileContent`), preserve the old formatter's config file (e.g., `.prettierrc.json`) at the appropriate root so programmatic formatting produces expected output and does not cause cascading snapshot or quote-style changes.
+    - _reasoning:_ Project-specific formatter config file preservation for programmatic codegen use.
+- **[Unclear Code Descriptions]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - User-facing warning messages that recommend a CLI command must be platform-aware: show the full command including any required flags (e.g., `--with-deps`) for platforms where it is known to work (macOS, Windows), and show the base command with an explanatory note for other platforms (e.g., 'add --with-deps if you are on Debian or Ubuntu'); always name the supported platforms explicitly rather than using vague qualifiers like 'if needed'. After a potentially-incomplete automated install — one that omits system-dependency flags due to platform constraints — emit a formatted post-install warning that (1) explains the install may be missing system dependencies, (2) directs the user to the appropriate UI diagnostic tool, and (3) provides the exact manual command to complete the install on supported platforms.
+    - _reasoning:_ Project-specific platform-aware Playwright install warning message requirements.
+- **[Code Duplication]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - When multiple resize handles share the same keyboard interaction logic, extract a single handler function parameterized by the handle's position (`'left' | 'right' | 'top' | 'bottom'`) that derives which arrow key increases/decreases size, rather than duplicating the logic into separate per-handle handlers. When multiple call sites share the same ARIA boilerplate (`role='separator'`, `tabIndex={0}`, `aria-valuemin={0}`), extract a dedicated component (e.g., `Drag.tsx`) that sets these automatically.
+    - _reasoning:_ Project-specific resize handle keyboard logic and ARIA boilerplate extraction into shared component.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Wrap interactive ARIA separator handles with a tooltip that appears only on keyboard focus (`triggerOnFocusOnly`) to advertise the available resize keys. Advertise only the primary Arrow keys (e.g., '← → to resize' for vertical, '↑ ↓ to resize' for horizontal); omit Home/End and Shift combos to keep the hint minimal.
+    - _reasoning:_ Project-specific tooltip-on-focus keyboard hint convention for ARIA separator handles.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Manager UI components that display stateful data should receive that data through the Storybook `Consumer`/context pattern or through props drilled from a container component — not by calling API getter methods inside the component body. Calling getters directly makes the component dependent on accidental re-renders and will silently break when those re-renders are eliminated.
+    - _reasoning:_ Project-specific Consumer/context pattern vs API getter calls in manager UI components.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In this repo, `AGENTS.md` is the canonical instruction file for all coding agents. New agent guidance must go into `AGENTS.md`; `CLAUDE.md`, `.github/copilot-instructions.md`, and other agent entrypoints must remain thin references (e.g., `@AGENTS.md`), not duplicate content. `AGENTS.md` must contain an explicit self-maintenance directive instructing agents to update it whenever repository architecture, tooling, commands, or contributor guidance changes — flag any PR that removes or weakens this directive. Keep `AGENTS.md` focused on information agents actively need to make decisions or run commands: remove purely informational sections that do not guide agent behavior.
+    - _reasoning:_ Project-specific AGENTS.md canonical instruction file maintenance requirements.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `AGENTS.md`, command examples for routine agent tasks (compilation, type-checking, linting, testing) should default to the faster non-production variants; do not include `-c production` or `--no-link` as the default. Reserve those flags for explicitly labeled 'CI-parity' or 'sandbox-related' sections. Include a concise scenario-based command reference — ideally a table mapping common tasks to exact commands (e.g., 'Compile one package → `yarn nx compile <package-name>`'). When documenting commands that accept a file-path argument, are run from the repository root, but operate on files inside a subdirectory (e.g., `code/`), explicitly state what the path is relative to and prefer the `--cwd` form where available (e.g., `yarn --cwd code lint:js:cmd <file-relative-to-code-folder> --fix`).
+    - _reasoning:_ Project-specific AGENTS.md command variant and documentation structure requirements.
+- **[Structural Issues]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In `.agents/skills/*/SKILL.md` skill bodies: do not use `@<path>` file-inclusion syntax (that syntax is only valid in root-level agent entry files such as `CLAUDE.md`) — use a standard Markdown link or inline the content instead. When presenting a list of labels or options for agents to choose from, each option must include a specific, actionable condition explaining when to select it (e.g., 'use `ci:daily` when changes affect prerelease sandboxes or sandboxes pinned to a non-latest framework or React version'), not a short noun phrase. Skill files that describe workflows primarily useful outside the monorepo must include an explicit section explaining the skill's relevance and typical usage context for monorepo contributors.
+    - _reasoning:_ Project-specific SKILL.md syntax and content completeness requirements.
+
+### Performance Issue
+
+- **[Resource Efficiency]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - When logging progress or update counts inside a Webpack plugin or long-running service, suppress the log entirely when the count is zero, or emit it only on meaningful state transitions (first non-zero count, or a change from the previous count). Avoid emitting repetitive 'updated with 0 items' messages on every watch/HMR compilation cycle.
+    - _reasoning:_ Suppressing zero-count log messages in watch loops requires understanding log emission conditions.
+- **[Computation Efficiency]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Do not wrap inexpensive, non-object-creating expressions (e.g., a single ternary or boolean condition) in `useMemo`. The memoization overhead (closure allocation, dependency comparison) typically exceeds the cost of the computation, adding complexity without benefit.
+    - _reasoning:_ useMemo overhead exceeding computation cost for trivial expressions requires semantic cost analysis.
+
+### Code Style
+
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - In documentation headings and prose (`.mdx` files), hyphenate compound modifiers (e.g., 'Vue-specific tips', not 'Vue specific tips').
+    - _reasoning:_ Compound modifier hyphenation in documentation prose; requires grammar understanding.
+- **[Comment Requirements]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Do not request rationale or issue-link comments inside files under `.yarn/patches/`. Patch contents are shipped verbatim to end users and comments are not stripped. Record rationale in the commit message or PR description instead.
+    - _reasoning:_ Project-specific rationale comment exclusion from .yarn/patches/ files.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - In user-facing documentation, prefer the npm script form `build-storybook` over the direct CLI `storybook build` when referencing the Storybook build command.
+    - _reasoning:_ Project-specific documentation command form preference (build-storybook vs storybook build).
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - Proofread all prose — including user-facing documentation (`.mdx` pages, inline prose, callouts, step-by-step instructions, example captions), workflow companion markdown, `CHANGELOG.md` release notes, `MIGRATION.md`, Storybook `step()` descriptions, other test/story prose, inline code/catch-block comments, JSDoc comments, `it()`/`describe()` descriptions, `.agents/skills/*/SKILL.md` files, and general markdown — for spelling, grammar, subject-verb agreement, singular/plural noun forms (e.g., 'escape backslash characters' vs 'escape backslashes characters'), correct English article usage ('an HTML element', 'an API call', 'an unattached' — not 'a unnattached'), compound character names written as a single word (e.g., 'newline' not 'new line'), run-on sentences, comma splices, incomplete sentence fragments, and extraneous whitespace (double spaces, truncated words) before merging.
+    - _reasoning:_ Spelling and grammar errors in prose; partially detectable via cspell or vale linting tools.
+- **[Language-Specific Standards]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Do not include backtick characters inside Markdown/MDX link URLs (e.g., avoid `` [text](`#anchor`) ``). Backticks inside a link target can break MDX parsing.
+    - _reasoning:_ Backticks inside MDX link URLs breaking parser; requires understanding MDX parsing context.
+- **[Naming Standards]** _(gen: `project_specific`, lint: `requires_llm`)_
+    - Use `textUnderlineOffset: '0.2em'` (not `0.11em`) when setting the underline offset on link typography in this project's components (`DocumentWrapper.tsx`, `A.tsx`, `link.tsx`, `DocsPage.tsx`).
+    - _reasoning:_ Project-specific textUnderlineOffset value convention across named component files.
+- **[Trailing/Unused/Incorrect Formattings]** _(gen: `generalizable`, lint: `lintable`)_
+    - Flag any leftover `console.log` debug statements in test files and production code. Per project coding guidelines, `console.log` must not be committed; in tests, inspect intermediate values via assertions (e.g., `expect(handler.mock.calls[0][0]).toEqual(...)`) rather than logging to the console.
+    - _reasoning:_ console.log detection is directly enforced by no-console ESLint rule.
+- **[Trailing/Unused/Incorrect Formattings]** _(gen: `generalizable`, lint: `requires_llm`)_
+    - Remove duplicate inline code comments; each comment should appear exactly once, immediately above the statement it describes.
+    - _reasoning:_ Duplicate inline comments require semantic comparison to identify identical comment content.
+- **[Trailing/Unused/Incorrect Formattings]** _(gen: `generalizable`, lint: `lintable`)_
+    - Do not leave trailing whitespace on any line in source or test files.
+    - _reasoning:_ Trailing whitespace is directly enforced by most formatters and no-trailing-spaces rules.
+- **[Code Indentation]** _(gen: `generalizable`, lint: `partially_lintable`)_
+    - In TypeScript interface declarations, each property and its preceding JSDoc comment must appear on its own line; never merge multiple property declarations or a property and its JSDoc comment onto a single line.
+    - _reasoning:_ Multi-property on single line in interface declarations; partially detectable via formatting tools.
+- **[Language-Specific Standards]** _(gen: `project_specific`, lint: `lintable`)_
+    - Match the codebase's established import formatting conventions in new test files, including quote style (single vs. double) and spacing around destructured imports.
+    - _reasoning:_ Quote style and import spacing conventions; enforceable via project ESLint/formatter config.
+- **[Comment Requirements]** _(gen: `generalizable`, lint: `lintable`)_
+    - In all Markdown files in this repository, every fenced code block must include a language specifier (e.g., ` ```bash `, ` ```text `, ` ```typescript `). Flag any code block opened with a bare ` ``` ` — this violates the MD040 markdownlint rule enforced in this codebase.
+    - _reasoning:_ MD040 markdownlint rule directly enforces language specifiers on fenced code blocks.

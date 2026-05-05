@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": ".changeset/seven-papayas-film.md",
+      "line_number": 5,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The changeset body is missing the required conventional-commit type prefix. Per project convention, changeset messages must start with `fix:`, `feat:`, or `chore:`. Because this is a bug fix, the first line should read: `fix: Add validation for negative values in pie charts`. Without the prefix, changeset tooling may not process it correctly.",
+      "index": 0
+    },
+    {
+      "file_path": "cypress/platform/darshan.html",
+      "line_number": 1,
+      "dimension": "Code Style",
+      "importance": "major",
+      "comment": "This is a personal development scratch file named after the contributor and should not be committed. Per project guidelines, ephemeral dev demos belong in `demos/dev/`, not in `cypress/platform/`. The file also intentionally embeds a negative-value diagram (`\"dogs\" : -60.67`) to trigger the new validation error, making it a temporary test artifact rather than a durable example. Please remove this file from the PR.",
+      "index": 1
+    },
+    {
+      "file_path": "cypress/integration/rendering/pie.spec.ts",
+      "line_number": 83,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test description is misleading. It says \"should render pie slices only for non-zero values but shows all legends\", but none of the three data values (386, 85, 1) are zero. The behavior actually under test is that sections representing less than 1% of the total (Rats at ~0.2%) are excluded from rendered slices but still appear in the legend. A more accurate name would be something like `'should omit slices for sections below 1% of total but still show them in the legend'`.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/pie/pie.spec.ts",
+      "line_number": 145,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Typo in the test fixture string: `simple pie char demo` should be `simple pie chart demo`. The same typo is present on line 158 in the negative-value test case.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/pie/pie.spec.ts",
+      "line_number": 151,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The expected error message is missing the trailing period. The actual error thrown in `pieDb.ts` (line 39) ends with `> 0.` \u2014 with a period \u2014 but this assertion ends with `> 0` (no period). While `toThrowError(string)` performs a substring match so the tests still pass, the project rule requires that expected error strings exactly match the constructor argument character-for-character. The same discrepancy exists on line 164 for the negative-value test. Please add the trailing period to both assertions.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/pie/pieRenderer.ts",
+      "line_number": 13,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`sum` is computed here inside `createPieArcs` by reducing `sections.values()`. Because this variable is local to the function and not returned, `draw` must recompute the identical value at lines 85\u201388 using a separate `sections.forEach` loop over the same map. Consider either accepting a pre-computed `sum` as a parameter to `createPieArcs`, or having `createPieArcs` return a tuple of `[arcs, sum]`, to avoid iterating `sections` twice.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/pie/pieRenderer.ts",
+      "line_number": 91,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`filteredArcs` is a no-op filter that produces dead code. Every datum in `arcs` already passed the `(d.value / sum) * 100 >= 1` guard in `createPieArcs` (line 17), using the same `sum` denominator. Any value representing at least 1% of the total will produce `(1.0).toFixed(0) === '1'`, never `'0'`, so this second filter can never remove any element. The `filteredArcs` variable, its comment, and all downstream `.data(filteredArcs)` calls should be replaced with plain `.data(arcs)` to eliminate the confusion and dead branch.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/parser/src/language/pie/pie.langium",
+      "line_number": 20,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Two formatting issues on this line: (1) there is a double space between `|` and `INT_PIE` in `FLOAT_PIE |  INT_PIE` \u2014 it should be a single space to match the `FLOAT | INT` style in `common.langium`. (2) The file has no trailing newline (the diff confirms `\\ No newline at end of file`). Both should be corrected.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The new documentation note in both `packages/mermaid/src/docs/syntax/pie.md` and `docs/syntax/pie.md` correctly states that zero and negative values produce an error. However, the renderer now also silently drops slices that represent less than 1% of the total from the visible pie chart while still showing them in the legend \u2014 a visible behavior change for valid positive inputs that happen to be very small. A user who supplies `\"Trace\" : 0.001` will see a legend entry but no slice with no explanation. Consider adding a sentence to the documentation note describing this filtering behavior, e.g. *\"Sections that represent less than 1% of the total are shown in the legend but not rendered as a visible slice.\"*",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The new `FLOAT_PIE` and `INT_PIE` terminals in `pie.langium` intentionally include a `-?` prefix to accept negative numbers at the grammar level, while the actual validation (`value <= 0` \u2192 `throw`) is deferred to `pieDb.ts`. This split is explained in the PR description but is not captured anywhere in the code itself. A short inline comment on the terminal definitions (e.g. `// Negatives are accepted here; runtime validation in pieDb.ts enforces value > 0`) would help future contributors understand the intentional design and prevent someone from \"fixing\" the grammar to reject negatives (which would produce less informative parse errors instead of the friendly DB-level message).",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.8099175499999999,
+  "duration_seconds": 526.5858962535858
+}

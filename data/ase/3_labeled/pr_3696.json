@@ -1,0 +1,403 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3696,
+  "title": "Add lammpslib support for kokkos and mliap",
+  "body": "Add hooks in `LAMMPSlib` for extra `cmd_args` passed to `lammps.lammps()`, which makes it possible to enable kokkos, and for `LAMMPSlib` to call `activate_mliappy` or `activate_mliappy_kokkos` to support `mliap` `unified` lammps `pair_style`s.\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [X] [I am familiar with **ASE's contribution guidelines.**](https://wiki.fysik.dtu.dk/ase/development/contribute.html)\n- [X] [**Doc strings** in code changed in this MR are up to date.](https://wiki.fysik.dtu.dk/ase/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [X] [**Unit tests** have been added for new or changed code.](https://wiki.fysik.dtu.dk/ase/development/tests.html)\n- [X] [**Changes** have been added in `changelog.d` using `scriv`.](https://wiki.fysik.dtu.dk/ase/development/writing_changelog.html)\n- [X] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)\n\ncloses #1676",
+  "author": "noambern",
+  "merged_at": "2025-08-28T11:03:53.352Z",
+  "base_ref": "master",
+  "merge_commit_sha": "0b1249c5f17ab94fd9f154cb356d85a26efd1a79",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2675048793",
+          "author": "askhl",
+          "body": "let's use a tuple or None (something immutable) for default values",
+          "file_path": "ase/calculators/lammpslib.py",
+          "line_number": 294,
+          "commit_sha": "f25f540f1bb58104b75fdb2ebd991be32e2d79ec",
+          "base_sha": "11f82599179d73dba8b7221fd25ded3a24d773d6",
+          "created_at": "2025-08-07T12:30:14.622Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "high",
+          "label_reasoning": "Using mutable default values (e.g., lists or dicts) in Python function signatures is a known anti-pattern/bug; the reviewer recommends using immutable types like tuples or None instead."
+        },
+        {
+          "id": "2693260567",
+          "author": "noambern",
+          "body": "done",
+          "file_path": "ase/calculators/lammpslib.py",
+          "line_number": 294,
+          "commit_sha": "f25f540f1bb58104b75fdb2ebd991be32e2d79ec",
+          "base_sha": "11f82599179d73dba8b7221fd25ded3a24d773d6",
+          "created_at": "2025-08-18T17:26:56.294Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests a concrete code change: use a tuple or None instead of a mutable default value."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2675048860",
+          "author": "askhl",
+          "body": "Please enable formatting on new files.  We'd like to gradually have all files autoformatted using ruff.",
+          "file_path": "ase/test/calculator/lammpslib/test_lammpslib_kokkos_mliap.py",
+          "line_number": 1,
+          "commit_sha": "f25f540f1bb58104b75fdb2ebd991be32e2d79ec",
+          "base_sha": "11f82599179d73dba8b7221fd25ded3a24d773d6",
+          "created_at": "2025-08-07T12:30:15.404Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Trailing/Unused/Incorrect Formattings",
+          "label_confidence": "high",
+          "label_reasoning": "The reviewer is asking for autoformatting (via ruff) to be enabled on the new file, which is a formatting/style standard concern."
+        },
+        {
+          "id": "2693260684",
+          "author": "noambern",
+          "body": "done",
+          "file_path": "ase/test/calculator/lammpslib/test_lammpslib_kokkos_mliap.py",
+          "line_number": 1,
+          "commit_sha": "f25f540f1bb58104b75fdb2ebd991be32e2d79ec",
+          "base_sha": "11f82599179d73dba8b7221fd25ded3a24d773d6",
+          "created_at": "2025-08-18T17:26:59.086Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests enabling ruff autoformatting on the new test file."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2675048878",
+          "author": "askhl",
+          "body": "As far as I can see, these functions link some libraries dynamically.  I think it would be wise to avoid calling the code that performs dynamic linking more than once, which means the user should probably call it in the beginning of main() (like MPI_Init() and similar).",
+          "file_path": "ase/calculators/lammpslib.py",
+          "line_number": 685,
+          "commit_sha": "63929883a4ca5a5def666c47f8d53bfc4bb2ecde",
+          "base_sha": "11f82599179d73dba8b7221fd25ded3a24d773d6",
+          "created_at": "2025-08-07T12:30:15.623Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "medium",
+          "label_reasoning": "The reviewer notes that dynamic linking functions are being called potentially more than once, which deviates from the intended usage pattern (analogous to MPI_Init), suggesting the code behavior does not match the correct intent/specification."
+        },
+        {
+          "id": "2693260789",
+          "author": "noambern",
+          "body": "I'm not sure what you're suggesting as the alternative here.  These functions require as an argument the object returned by `lammps()`.  That is only called from `start_lammps()` here, and `start_lammps()` is only called from `propagate()` and `restart_lammps()`.\n\nWe could add a flag (similar to `self.started`) so they're only called once, if you think that's better.",
+          "file_path": "ase/calculators/lammpslib.py",
+          "line_number": 685,
+          "commit_sha": "63929883a4ca5a5def666c47f8d53bfc4bb2ecde",
+          "base_sha": "11f82599179d73dba8b7221fd25ded3a24d773d6",
+          "created_at": "2025-08-18T17:27:02.298Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2695400530",
+          "author": "noambern",
+          "body": "now refactored into a callback, as per the discussion below",
+          "file_path": "ase/calculators/lammpslib.py",
+          "line_number": 685,
+          "commit_sha": "63929883a4ca5a5def666c47f8d53bfc4bb2ecde",
+          "base_sha": "11f82599179d73dba8b7221fd25ded3a24d773d6",
+          "created_at": "2025-08-19T13:27:53.204Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential issue with dynamic linking being called multiple times and suggests the user call it once at the start of main(), implying a code change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2675048900",
+          "author": "askhl",
+          "body": "The most significant change is the ability to add options to the command (`extra_command_args`), whereas the initialization functions can always be called in the way intended by lammps itself, and is hence already \"supported\".",
+          "file_path": "changelog.d/20250606_092521_noam.bernstein_lammpslib_kokkos.rst",
+          "line_number": 14,
+          "commit_sha": "63929883a4ca5a5def666c47f8d53bfc4bb2ecde",
+          "base_sha": "11f82599179d73dba8b7221fd25ded3a24d773d6",
+          "created_at": "2025-08-07T12:30:15.880Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "The reviewer is clarifying what the most significant change actually is, implying the changelog description is misleading or unclear about the key feature being introduced."
+        },
+        {
+          "id": "2693277698",
+          "author": "noambern",
+          "body": "I would argue that they are not, in fact, because the needed functions cannot be called until the object returned by `lammps()` exists, which doesn't happen (in the current overall architecture) until `LAMMPSlib.propagate()` is called, and that  happens inside `LAMMPSlib.calculate()`, by which point it's too late for the user to do anything manually.",
+          "file_path": "changelog.d/20250606_092521_noam.bernstein_lammpslib_kokkos.rst",
+          "line_number": 14,
+          "commit_sha": "63929883a4ca5a5def666c47f8d53bfc4bb2ecde",
+          "base_sha": "11f82599179d73dba8b7221fd25ded3a24d773d6",
+          "created_at": "2025-08-18T17:32:53.843Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2693636971",
+          "author": "askhl",
+          "body": "OK, that makes sense: The object isn't visible enough to call custom code on.\n\nHowever the implementation in lammps looks kind of sketchy (doing the imports in a way that triggers the same library load via custom importlib magic for each lmp object).\n\nIn order to solve the problem without getting possibly platform-dependent linking trouble, and without needing to add anything heavy to the test infrastructure, maybe we could allow the user to inject an arbitrary initializer this way:\n\n```\ndef initialize(lmp):\n   lammps.initialize_kokkos(lmp)  # or similar\n\ncalc = Lammps(initialize=initialize)\n```\n\nThis also has the advantage that we don't need to change the code again when lammps adds more initializers.",
+          "file_path": "changelog.d/20250606_092521_noam.bernstein_lammpslib_kokkos.rst",
+          "line_number": 14,
+          "commit_sha": "63929883a4ca5a5def666c47f8d53bfc4bb2ecde",
+          "base_sha": "11f82599179d73dba8b7221fd25ded3a24d773d6",
+          "created_at": "2025-08-18T20:39:07.485Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2693670276",
+          "author": "noambern",
+          "body": "I'm still not following, sorry.  What is `Lammps`?  Do you mean `LAMMPSlib`, the constructor for the ASE calculator?  Just want to make sure I'm not confusing it with the `lammps` class, which is provided by LAMMPS, not ASE.\n\nAssuming that's what you mean, this action can't happen during `LAMMPSlib.__init__()`. The object that needs to be passed to the _lammps_ (not ASE) functions doesn't exist until the first call to `calculate`. Without a serious refactor of `LAMMPSlib` this can't be avoided. If you really want to register an arbitrary initializer in `LAMMPSlib.__init__` we can, but it still can't actually be called until the first `calculate`, because `calculate` calls `propagate` which calls `self.start_lammps()` which calls `lammps.lammps()`, which creates the relevant object.\n\nFrankly, if you think calling these functions more than once is bad, the only solution is to have a global (python package or class attribute) flag: it wouldn't be impossible for script to create multiple LAMMPSlib calculators during its run, so having it happen once per calculator construction is already too many times.",
+          "file_path": "changelog.d/20250606_092521_noam.bernstein_lammpslib_kokkos.rst",
+          "line_number": 14,
+          "commit_sha": "63929883a4ca5a5def666c47f8d53bfc4bb2ecde",
+          "base_sha": "11f82599179d73dba8b7221fd25ded3a24d773d6",
+          "created_at": "2025-08-18T21:04:47.720Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2693798518",
+          "author": "askhl",
+          "body": "The example is not literal because I the maintainer cannot spend infinite time investigating it, hence ` # or similar`.  The goal is for the user to define a callback and pass the callback, and the Lammps object then calls it at the right time.\n\nI didn't say it should be *called* from inside the constructor.  It is *passed* to the constructor, and called when *necessary*, once the required objects exist and can be passed to the callback function.  Standard callback pattern.",
+          "file_path": "changelog.d/20250606_092521_noam.bernstein_lammpslib_kokkos.rst",
+          "line_number": 14,
+          "commit_sha": "63929883a4ca5a5def666c47f8d53bfc4bb2ecde",
+          "base_sha": "11f82599179d73dba8b7221fd25ded3a24d773d6",
+          "created_at": "2025-08-18T23:03:02.675Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2695348722",
+          "author": "noambern",
+          "body": "While of course you cannot spend \"infinite time\" investigating it, you can at least try to use the actual ASE class names if you're referring to the ASE class, so the people you're communicating with can understand, unambiguously, what you're referring to.  `Lammps` is not defined anywhere I can see. The ASE calculator class is `LAMMPSlib` and the lammps-API class is `lammps`.\n\nAnyway, I'll do this callback pattern because you asked, but I don't understand why you think this design solves the problem you are worried about, which from what I can tell is mainly having these linking functions be called multiple times.",
+          "file_path": "changelog.d/20250606_092521_noam.bernstein_lammpslib_kokkos.rst",
+          "line_number": 14,
+          "commit_sha": "63929883a4ca5a5def666c47f8d53bfc4bb2ecde",
+          "base_sha": "11f82599179d73dba8b7221fd25ded3a24d773d6",
+          "created_at": "2025-08-19T13:08:31.042Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2695399439",
+          "author": "noambern",
+          "body": "done now",
+          "file_path": "changelog.d/20250606_092521_noam.bernstein_lammpslib_kokkos.rst",
+          "line_number": 14,
+          "commit_sha": "63929883a4ca5a5def666c47f8d53bfc4bb2ecde",
+          "base_sha": "11f82599179d73dba8b7221fd25ded3a24d773d6",
+          "created_at": "2025-08-19T13:27:34.223Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests the changelog description is inaccurate/misleading and implies it should be rewritten to better reflect the most significant change."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2705631105",
+          "author": "askhl",
+          "body": "Thanks for changing so it uses a callback.\n\nWe don't need to test the *actual* initializers in lammps, since ASE now doesn't contain code specific to those.  Removing those tests should make the tests pass.  This also means we won't have to update the dockers now or for further features that require initializers.\n\nOr to fully fix the tests, you probably need to merge from master or rebase, too.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-25T06:39:40.093Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Dead-Code Related Issues",
+          "label_confidence": "medium",
+          "label_reasoning": "The reviewer suggests removing tests for actual initializers that are no longer needed since ASE no longer contains code specific to those, pointing to unnecessary/dead test code."
+        },
+        {
+          "id": "2712715225",
+          "author": "noambern",
+          "body": "Would you prefer that I remove the new tests entirely, or replace them with a simple one that just uses the callback mechanism, but without actually doing anything substantive (like calling the mliapy routines) so it'll work with the lammps libraries in the CI images?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-27T13:15:41.275Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2712949190",
+          "author": "noambern",
+          "body": "I modified the tests.  Let me know if you prefer that I remove them.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-27T14:01:13.566Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests removing certain tests and rebasing/merging from master to fix failing tests \u2014 concrete code/process changes."
+    }
+  ],
+  "review_thread_count": 10,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2548909595",
+            "author": "noambern",
+            "body": "Looks like the tests fail on the gitlab CI because neither kokkos not mliap are enabled in the image's lammps python packge, but they pass on my machine, where both are enabled (CPU only, no GPU required) when I compile lammps. Let me know how you want to deal with that.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-06-06T13:48:00.589Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2646276204",
+            "author": "noambern",
+            "body": "@askhl any chance anyone can look at this?  It'd be very useful for me, and working around the inability to modify `cmd_args` (to enable kokkos) requires a very ugly monkeypatch.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-07-23T13:54:03.321Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2713131908",
+            "author": "noambern",
+            "body": "Looks like the pipeline is passing with the new non-kokkos/mliapy-specific tests (also, I'm almost all out of runner minutes), so let me know if you think it needs anything else.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-08-27T14:38:35.641Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2675048942",
+            "author": "askhl",
+            "body": "Thank you @noambern.  (Thanks for your patience.  I was away on vacation until recently, and the summer has just been very busy altogether)",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-08-07T12:30:16.330Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure social/meta comment \u2014 acknowledgment and explanation of reviewer's absence. No code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2715164682",
+            "author": "askhl",
+            "body": "Looks very good, thanks a lot!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-08-28T11:03:42.659Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure positive acknowledgment with no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 10,
+    "stage1_kept": 7,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 3,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 2,
+    "stage3_cost_usd": 0.018377
+  }
+}

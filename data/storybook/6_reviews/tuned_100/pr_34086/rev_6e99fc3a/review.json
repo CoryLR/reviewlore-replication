@@ -1,0 +1,52 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/docs/src/blocks/blocks/Canvas.tsx",
+      "line_number": 87,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The dual mechanism here \u2014 emitting `RESET_STORY_ARGS` via the channel AND incrementing `resetKey` \u2014 creates two independent, potentially conflicting remount paths. For stories where `usesMount` is `true`, `RESET_STORY_ARGS` causes preview-api's `onResetArgs` handler to call `StoryRender.remount()` in the preview. Simultaneously, the `resetKey` increment triggers the `useEffect` in `InlineStory` to re-run and call `renderStoryToElement` again. These two concurrent re-mount operations can race against each other. A simpler and correct approach is to emit only `FORCE_REMOUNT` \u2014 no `resetKey` state is needed at all, and no changes to `Story.tsx` (blocks or components) are required.",
+      "index": 0
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/blocks/Canvas.tsx",
+      "line_number": 88,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Even setting aside the choice of event, the ordering of `RESET_STORY_ARGS` and `setResetKey` introduces a timing hazard. If the channel transports the event asynchronously (e.g., via `postMessage` across iframe boundaries), the `resetKey` increment will cause `renderStoryToElement` to re-run and mount the story before the preview has had a chance to process `RESET_STORY_ARGS` and reset the args in the store. The story would therefore remount with stale (pre-reset) args, defeating the reset. The remount triggered by `FORCE_REMOUNT` alone (without `resetKey`) does not have this ordering problem.",
+      "index": 1
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/blocks/Story.tsx",
+      "line_number": 58,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`resetKey` does not follow the `__` prefix naming convention established by the other internal coordination props in this same type: `__forceInitialArgs` and `__primary` both use the double-underscore prefix to signal they are internal implementation details not intended for direct use by callers of the `<Story>` block. `resetKey` serves the same role but is inconsistently named. It should either be `__resetKey` for consistency, or carry a JSDoc note explaining why it intentionally breaks the convention.",
+      "index": 2
+    },
+    {
+      "file_path": "code/addons/docs/src/blocks/components/Preview.tsx",
+      "line_number": 229,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `ActionBar` was previously only rendered when there was source content or additional action items. Adding `onResetStory` as a third independent condition means the bar now appears for all inline stories \u2014 even those with no source panel and no extra actions \u2014 solely to host the reset button. This introduces an action bar that may surprise users who previously saw no bar below the canvas. Consider whether the reset button belongs in the existing `Toolbar` (above the canvas, gated on `withToolbar`) rather than creating a standalone action bar. This placement concern is compounded by the fact that `onResetStory` is currently always truthy for inline stories, meaning the ActionBar will always render for inline stories.",
+      "index": 3
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `resetKey` state and all the plumbing threaded through `StoryParameters`, `getStoryProps`, `CommonProps` in `Story.tsx` (components), and the `useEffect` dependency array are entirely unnecessary. If `FORCE_REMOUNT` is used (as the PR description intends), the preview-api handles the full remount cycle through its own `onForceRemount` \u2192 `StoryRender.remount()` path without any React-side `key`-trick needed. The scope of this PR's changes to `Story.tsx` (both blocks and components) should be zero \u2014 the fix belongs entirely in `Canvas.tsx` (emit correct event) and `Preview.tsx` (add button). Removing the `resetKey` threading eliminates the dual-mechanism race and keeps the change minimal.",
+      "index": 4
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "All automated test checkboxes in the checklist are unchecked. There are no new stories exercising the `onResetStory` prop, no unit tests verifying `handleResetStory` emits the right event, and no integration or end-to-end tests confirming the remount behavior. At minimum, a `Preview.stories.tsx` story with `onResetStory` and a unit test asserting the correct channel event is emitted should be added before merging.",
+      "index": 5
+    }
+  ],
+  "cost_usd": 0.72086715,
+  "duration_seconds": 478.35292077064514
+}

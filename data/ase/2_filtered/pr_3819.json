@@ -1,0 +1,197 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3819,
+  "title": "Docs: sphinx-gallery",
+  "body": " * Make sure `doc` job uses pip cache correctly (which it didn't.  Something funny with CI variables)\n * Install sphinx-gallery in docker\n * Move doc job to full-monty docker so it has many calculators available\n * Add basic configuration of sphinx-gallery\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [ ] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [ ] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [ ] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [ ] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [ ] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "askhl",
+  "merged_at": "2025-09-17T07:04:46.703Z",
+  "base_ref": "master",
+  "merge_commit_sha": "a596a98dc2416024b5adce0a5620bd8483c71ce8",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2755499068",
+          "author": "HannaTuerk",
+          "body": "Hey Ask, I could not reproduce the gui problem, in my terminal it seems to run fine. I think your doc fail is due to the fact that you do not have a proper 'title' in the docstring of the hello_world.py, which is something sphinx gallery needs (compare the .py files in [!3820](https://gitlab.com/ase/ase/-/merge_requests/3820)). I can try to fix it when I get home. \nWe should either way only except one of the MRs, as they are doing the same and have a different naming format",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-09-16T18:59:26.729Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a doc failure cause (missing title in docstring) and implies a fix is needed. Also flags that only one of two overlapping MRs should be merged."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2755915455",
+          "author": "HannaTuerk",
+          "body": "Ok, this now seemed to have passed. The biggest and most relevant change I did is: the 'examples' file for the sphinx-gallery needed to be moved outside the 'doc' directory, otherwise sphinx complains about .rst files in the examples folder that are not in the toctree. We keep it this way for now for the sprint, I did not easily find a solution to keep the examples in the doc folder. We can move it back afterwards when we found out how to solve this, I'll ask around.\n\n!!!Just be aware that the examples are now located somewhere else (= in ase directory)!!!",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-09-16T22:21:29.170Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2755987911",
+          "author": "yuzie007",
+          "body": "> !!!Just be aware that the examples are now located somewhere else (= in ase directory)!!!\n\nFor me this is fully OK, as [this is the way `sphinx-gallery` suggests by default.](https://sphinx-gallery.github.io/stable/getting_started.html#overview-your-project-files-and-folders)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-09-16T23:34:25.322Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Documents a structural change made (examples directory moved outside doc/) and flags it as a known issue to revisit, implying future action is needed."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2755984080",
+          "author": "yuzie007",
+          "body": "[`GALLERY_HEADER.rst` becomes the default (rather than `README.rst`) after `sphinx-gallery>=0.17.0`](https://sphinx-gallery.github.io/stable/changes.html#v0-17-0\n), which was released on [2024-07-21](https://github.com/sphinx-gallery/sphinx-gallery/releases/tag/v0.17.0).\nFor safety, it may make sense to specify the minimum version as e.g. `sphinx-gallery>=0.17.0`.",
+          "file_path": "pyproject.toml",
+          "line_number": 45,
+          "commit_sha": "71d33dfdb77b97c443a753ee62129319787132f8",
+          "base_sha": "7c8be6f9bcfe1d204f0b579ef9418308721ba1a1",
+          "created_at": "2025-09-16T23:30:11.166Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests specifying a minimum version constraint (sphinx-gallery>=0.17.0) in pyproject.toml to avoid compatibility issues."
+    }
+  ],
+  "review_thread_count": 7,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2755337052",
+            "author": "askhl",
+            "body": "Current problems:\n * When enabling sphinx-gallery, something starts the GUI and I get errors due to some tkinter-related `__del__` call which complains about running in the wrong thread (maybe this doesn't happen in CI where there is only a virtual display).  There's a hack in conf.py or thereabouts which is supposed to disable the GUI and other blocking things when building, but this appears not to be active when the sphinx-gallery extension runs.\n * Some warnings I don't understand how to fix\n * Also, the output should be moved into the place where the docs are actually built, instead of somewhere under the source.  Or how should it be?  If it builds into the source, we'll need to add it to `.gitignore` but that might also be okay.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-09-16T17:47:02.577Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2755737486",
+            "author": "askhl",
+            "body": "@HannaTuerk I merged the branch from !3820 into this branch now.\n\nI also added you to the project as 'developer' which means you can push to branches under the ASE namespace.  This means you can also run CI, provided you push to branches under the ASE namespace.  Feel free to push further changes to this branch.\n\nNow we get these warnings (promoted to failures):\n\n```\nlooking for now-outdated files... /builds/ase/ase/doc/gettingstarted/surface.rst:4: WARNING: duplicate label surface, other instance in /builds/ase/ase/doc/examples_generated/gettingstarted/00-n2cu.rst\nnone found\npickling environment... done\nchecking consistency... /builds/ase/ase/doc/examples/README.rst: WARNING: document isn't included in any toctree [toc.not_included]\n/builds/ase/ase/doc/examples/gettingstarted/README.rst: WARNING: document isn't included in any toctree [toc.not_included]\n```\n\nTo fix the first warning, the tutorial needs to be un-duplicated (or at least the *label* inside it, but hopefully by the end of the sprint there will be exactly one of each tutorial).\n\nThere is a number of linter complaints about the new Python file.  Since autoformatters are all the rage nowadays, I suppose there's a well-defined way to apply the linter (ruff) to the examples.\n\nI suggest to ensure that this MR's pipeline passes, and that we try to merge this branch after the sprint.  Other participants can branch *from* this MR and create merge requests into it.  That way we accumulate all the changes in this branch, and eventually merge something worthwhile to master.\n\nAre you (or Philip) able to fix the remaining (mostly toctree-related) warnings?",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-09-16T20:39:02.003Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2755746040",
+            "author": "HannaTuerk",
+            "body": "Hey Ask, thanks for adding me as a developer. Yes I should be able to resolve the issues today so we can use this branch tomorrow for the sprint! Thank you for putting so much effort into setting this up :)",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-09-16T20:43:45.421Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure social/status update with no code change suggestion."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2755984095",
+            "author": "yuzie007",
+            "body": "Thank you @HannaTuerk and @askhl for updating tutorials with sphinx-gallery!\n\nI particularly like the [`reference_url`](https://sphinx-gallery.github.io/stable/configuration.html#add-intersphinx-links-to-your-examples)  feature as it gives the links from the codes to the ASE documentation.\n\nI just had one minor suggestion, and otherwise all looks OK to me:)",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-09-16T23:30:11.626Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment and praise with no concrete code change suggested (mentions 'one minor suggestion' but that suggestion is in comment index 3, not here)."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 7,
+    "stage1_kept": 5,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 2,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 2,
+    "stage3_cost_usd": 0.017757
+  }
+}

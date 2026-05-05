@@ -1,0 +1,219 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 6225,
+  "title": "feat: Add support for styling Journey Diagram title (color, font-family, and font-size)",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nThis PR introduces additional customization options for the title in Journey Diagrams. Users can now define `titleColor`, `titleFontFamily`, and `titleFontSize` in the journey configuration to style the title's color, font family, and font size. The feature includes corresponding updates in the rendering logic and documentation.\r\n\r\nResolves #3508 \r\n\r\n## :straight_ruler: Design Decisions\r\n\r\n1. **New Journey Config Variables in the `config.schema.yaml`**:\r\n   - **`titleColor`**: Sets the color of the Journey Diagram title.\r\n   - **`titleFontFamily`**: Sets the font family for the title. Defaults to `\"trebuchet ms, verdana, arial, sans-serif\"`.\r\n   - **`titleFontSize`**: Sets the font size for the title. Defaults to `4ex`.\r\n\r\n2. **Renderer Updates**:\r\n   - The Journey Diagram renderer now fetches these new properties using `getConfig()` and applies them during rendering.\r\n   - Relevant code changes:\r\n     ```javascript\r\n      const configObject = getConfig();\r\n      const titleColor = configObject.journey.titleColor;\r\n      const titleFontSize = configObject.journey.titleFontSize;\r\n      const titleFontFamily = configObject.journey.titleFontFamily;\r\n\r\n     if (title) {\r\n       diagram\r\n         .append('text')\r\n         .text(title)\r\n         .attr('x', LEFT_MARGIN)\r\n         .attr('font-size', titleFontSize)\r\n         .attr('font-weight', 'bold')\r\n         .attr('y', 25)\r\n         .attr('fill', titleColor)\r\n         .attr('font-family', titleFontFamily);\r\n     }\r\n     ```\r\n\r\n---\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [ x ] :book: have read the [contribution guidelines](https://mermaid.js.org/community/contributing.html)\r\n- [ x ] :computer: have added necessary unit/e2e tests.\r\n- [ x ] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://mermaid.js.org/community/contributing.html#update-documentation) is used for all new features.\r\n- [ x ] :butterfly: If your PR makes a change that should be noted in one or more packages' changelogs, generate a changeset by running `pnpm changeset` and following the prompts. Changesets that add features should be `minor` and those that fix bugs should be `patch`. Please prefix changeset messages with `feat:`, `fix:`, or `chore:`.\r\n\r\n\r\n### Example Configuration\r\n\r\nUsers can customize the Journey Diagram title using the following configuration:\r\n\r\n```yaml\r\n---\r\nconfig:\r\n  journey:\r\n    titleColor: \"#ff0\"\r\n    titleFontFamily: \"Arial, sans-serif\"\r\n    titleFontSize: \"20px\"\r\n---\r\n\r\njourney\r\n    title User Journey Example\r\n    section Onboarding\r\n        Sign Up: 5: John, Sam\r\n        Complete Profile: 4: John\r\n    section Engagement\r\n        Browse Features: 3: John\r\n        Use Core Functionality: 4: John\r\n    section Retention\r\n        Revisit Application: 5: John\r\n        Invite Friends: 3: John\r\n```\r\n\r\nWith this configuration, the title \"User Journey Example\" will have a yellow color, `Arial` font, and `20px` font size.",
+  "author": "Shahir-47",
+  "merged_at": "2025-04-15T03:23:04Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "bcaa40f1d5478c59d197f59b7622178bd55ab643",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "4467fd43639182bc11ca1ebd2a8b7ea2fdc83a6c",
+    "0107494b59774854f20a0a436811053daa70656f"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85zBDu7",
+          "author": "sidharthv96",
+          "body": "Do not call getConfig() every time, call it once, and then use the value in other places. ",
+          "file_path": "packages/mermaid/src/diagrams/user-journey/journeyRenderer.ts",
+          "line_number": 54,
+          "start_line": null,
+          "commit_sha": "0107494b59774854f20a0a436811053daa70656f",
+          "created_at": "2025-01-26T04:39:25Z",
+          "is_outdated": true,
+          "dimension": "Performance Issue",
+          "category": "Repeated Computations",
+          "label_confidence": "high",
+          "label_reasoning": "The comment explicitly calls out that getConfig() is being called multiple times when it should be called once and reused, which is a repeated computation concern."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85zB4dF",
+          "author": "pranavm2109",
+          "body": "@sidharthv96 Understood; we (@Shahir-47 and I) will make sure to update this by calling getConfig() once and then using the value in the other places within the draw() function. As for visual/unit testing, could you please direct us to resources that clarify what kinds of visual/unit tests are expected?",
+          "file_path": "packages/mermaid/src/diagrams/user-journey/journeyRenderer.ts",
+          "line_number": 54,
+          "start_line": null,
+          "commit_sha": "0107494b59774854f20a0a436811053daa70656f",
+          "created_at": "2025-01-26T21:09:51Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests a specific refactor: call getConfig() once and reuse the value instead of calling it repeatedly."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J850d6NR",
+          "author": "sidharthv96",
+          "body": "We can't have diagram specific variables in the main config. \r\n\r\nPlease add them to the diagram's config, which you can find in packages/mermaid/src/schemas/config.schema.yaml",
+          "file_path": "packages/mermaid/src/docs/config/theming.md",
+          "line_number": 140,
+          "start_line": null,
+          "commit_sha": "0107494b59774854f20a0a436811053daa70656f",
+          "created_at": "2025-02-13T07:59:40Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Modularity and Architecture",
+          "label_confidence": "high",
+          "label_reasoning": "The comment points out that diagram-specific config variables are incorrectly placed in the main config instead of the diagram's own config schema \u2014 a separation of concerns/architecture violation."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J850p95v",
+          "author": "sidharthv96",
+          "body": "Remove from this file, you removed it from the auto generated file in the previous commit. :)",
+          "file_path": "packages/mermaid/src/docs/config/theming.md",
+          "line_number": 140,
+          "start_line": null,
+          "commit_sha": "0107494b59774854f20a0a436811053daa70656f",
+          "created_at": "2025-02-15T17:07:56Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests moving diagram-specific variables out of the main config and into the diagram's config in config.schema.yaml."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J850p92x",
+          "author": "sidharthv96",
+          "body": "Using the conf object will cause issues, as it's only initialized during the initial load. \r\nPlease use the configObject as before. ",
+          "file_path": "packages/mermaid/src/diagrams/user-journey/journeyRenderer.ts",
+          "line_number": 55,
+          "start_line": null,
+          "commit_sha": "0107494b59774854f20a0a436811053daa70656f",
+          "created_at": "2025-02-15T17:06:43Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "Using the `conf` object that is only initialized at initial load will cause stale/incorrect behavior at runtime. The code doesn't behave as intended across the lifecycle."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a bug with using the conf object and requests using configObject instead."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J850p94T",
+          "author": "sidharthv96",
+          "body": "Need to update",
+          "file_path": "cypress/integration/rendering/journey.spec.js",
+          "line_number": 77,
+          "start_line": null,
+          "commit_sha": "0107494b59774854f20a0a436811053daa70656f",
+          "created_at": "2025-02-15T17:07:23Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "low",
+          "label_reasoning": "The comment 'Need to update' is vague but indicates the test file is out of date and needs to be updated to reflect new functionality \u2014 a maintainability/completeness concern."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests an update to the cypress test file."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J850p97M",
+          "author": "sidharthv96",
+          "body": "Using the conf object will cause issues, as it's only initialized during the initial load.\r\nPlease use the configObject as before, and remove the getConfig() call for securityLevel ",
+          "file_path": "packages/mermaid/src/diagrams/user-journey/journeyRenderer.ts",
+          "line_number": 55,
+          "start_line": null,
+          "commit_sha": "0107494b59774854f20a0a436811053daa70656f",
+          "created_at": "2025-02-15T17:08:22Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "Same issue as index 2 \u2014 using the `conf` object that is only initialized during initial load leads to incorrect runtime behavior; additionally flagging an erroneous getConfig() call for securityLevel."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a bug with the conf object and requests using configObject and removing the getConfig() call for securityLevel."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J851EjTM",
+          "author": "sidharthv96",
+          "body": "The default color should not be green, it should be whatever the current color is. ",
+          "file_path": "packages/mermaid/src/schemas/config.schema.yaml",
+          "line_number": 1582,
+          "start_line": null,
+          "commit_sha": "0107494b59774854f20a0a436811053daa70656f",
+          "created_at": "2025-02-20T18:19:13Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Setting a hardcoded default color of green is incorrect; the default should inherit from the current theme color, representing a wrong default value / logic error in configuration."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J851cwQn",
+          "author": "pranavm2109",
+          "body": "@sidharthv96 @Shahir-47 and I have made the requested changes. Let us know if there are any other changes needed; if not, then we believe this PR is good to go!",
+          "file_path": "packages/mermaid/src/schemas/config.schema.yaml",
+          "line_number": 1582,
+          "start_line": null,
+          "commit_sha": "0107494b59774854f20a0a436811053daa70656f",
+          "created_at": "2025-02-25T20:05:36Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests changing the default color from green to the current/existing color value."
+    }
+  ],
+  "review_thread_count": 6,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 6,
+    "stage1_kept": 6,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

@@ -1,0 +1,155 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4281,
+  "title": "Add UMD build Back",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nAdds back the UMD build\r\n\r\nResolves #4279\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nDescribe the way your implementation works or what design decisions you made if applicable.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [ ] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [ ] :computer: have added unit/e2e tests (if appropriate)\r\n- [ ] :notebook: have added documentation (if appropriate)\r\n- [ ] :bookmark: targeted `develop` branch\r\n",
+  "author": "sidharthv96",
+  "merged_at": "2023-04-23T17:10:02Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "04305bdddcda6970301dd7961b1d0c31997132f1",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "f018ca34da58c3b9f82e918c67cc48a8aa045b06",
+    "562514964efd2df1fedf891030358328de918eb9"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85FJ8tP",
+          "author": "aloisklink",
+          "body": "```suggestion\r\n  \"module\": \"./dist/mermaid.core.mjs\",\r\n  \"types\": \"./dist/mermaid.d.ts\",\r\n  \"exports\": {\r\n    \".\": {\r\n      \"types\": \"./dist/mermaid.d.ts\",\r\n      \"import\": \"./dist/mermaid.core.mjs\",\r\n```\r\n\r\nDo we need the `  \"main\": \"./dist/mermaid.min.js\",` and `      \"require\": \"./dist/mermaid.js\",` lines?\r\n\r\nFrom what I've seen in issue https://github.com/mermaid-js/mermaid/issues/4203 and https://github.com/mermaid-js/mermaid/issues/4279, there seem to be two reasons for wanting a `mermaid.min.js` file back:\r\n\r\n- So that CDN imports from `<script src=\"https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js\"></script>` work again.\r\n- Having a single file that users can copy over, so that people can do `<script src=\"my_local_file/mermaid.min.js\"></script>`.\r\n\r\nHowever, adding these lines back to the `package.json` file should only be for `require(\"mermaid\")` users, but I don't think I see anybody having issues with `require(\"mermaid\");` (although some downstream projects like https://github.com/facebook/docusaurus are still stuck on CJS).\r\n\r\nI'm mainly worried about all of the TypeScript issues that might occur from supporting both `require(\"mermaid\")` and `import mermaid from \"mermaid\";`.",
+          "file_path": "packages/mermaid/package.json",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "562514964efd2df1fedf891030358328de918eb9",
+          "created_at": "2023-04-06T20:34:09Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "high",
+          "label_reasoning": "The comment questions whether certain fields in package.json are necessary, discussing module resolution configuration and potential TypeScript compatibility issues from supporting both CJS and ESM \u2014 a structural/architecture concern about package configuration."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85FMJTD",
+          "author": "remcohaszing",
+          "body": "I would like to load the UMD bundle in a Playwright instance. Setting `[\"exports\"][\".\"][\"require\"]` allows using `require.resolve('mermaid')`. `main` is the same, but for older versions of Node.js. It should point to the same file.\r\n\r\nThis package has `\"type\": \"module\"`. That means `.js` and `.ts` files are treated as ESM. In other words:\r\n\r\n- As far as TypeScript is concerned, there is no CJS export.\r\n- As far as Node.js is concerned, `require` resolves to `./dist/mermaid.js`.\r\n- As far as Node.js is concerned, `./dist/mermaid.js` is ESM and can\u2019t be `require`d.\r\n\r\nThere are several ways to fix it, but it\u2019s not elegant. CJS and ESM are not interoperable. If you dual publish, you need type definitions for both CJS and ESM. It is possible to only publish CJS type definitions, but this is hard to combine with default exports.\r\n\r\nFor my use case I don\u2019t need correct type definitions though. I see why you would choose not expose these exports.\r\n\r\nYou can test type exports correctness via https://arethetypeswrong.github.io.",
+          "file_path": "packages/mermaid/package.json",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "562514964efd2df1fedf891030358328de918eb9",
+          "created_at": "2023-04-07T16:19:47Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85FNgsQ",
+          "author": "aloisklink",
+          "body": "> If you dual publish, you need type definitions for both CJS and ESM.\r\n\r\nThanks for the feedback! I'm not super experienced in TypeScript, so it's great to have the additional info!\r\n\r\nMy gut feeling is that people using CJS-style `require(\"\")` are using bundlers, and they've either already moved to ESM, or (like docusuarus) are planning on moving to ESM in the near future.\r\n\r\nI haven't yet seen people asking for the CJS-style `require(\"\")` back, and so I'm reluctant to add back support for it unless there's a good reason, as it will probably causes CJS/ESM typescript bugs like https://github.com/mermaid-js/mermaid/issues/3799 to be re-opened.\r\n\r\n> You can test type exports correctness via https://arethetypeswrong.github.io/.\r\n\r\nThat's a great site! It looks like the https://github.com/mermaid-js/mermaid-cli package doesn't have correct types for `node16`, so I'll need to look into that!",
+          "file_path": "packages/mermaid/package.json",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "562514964efd2df1fedf891030358328de918eb9",
+          "created_at": "2023-04-08T23:29:37Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85F4Ukm",
+          "author": "remcohaszing",
+          "body": "I think something like this should work:\r\n\r\nOutput the following files:\r\n\r\n- `dist/cjs/mermaid.js`\r\n- `dist/cjs/mermaid.min.js`\r\n- `dist/cjs/package.json` indicates `.js` / `.ts` files in this directory are CJS\r\n  ```jsonc\r\n  {\r\n    \"type\": \"commonjs\"\r\n  }\r\n  ```\r\n- `dist/cjs/mermaid.d.ts`\r\n  ```ts\r\n  declare const mermaid: typeof import('../mermaid.js').default\r\n  export as namespace mermaid\r\n  export = mermaid\r\n  ```\r\n- `package.json`:\r\n  ```jsonc\r\n  {\r\n    \"types\": \"./dist/mermaid.d.ts\",\r\n    \"exports\": {\r\n      \".\": {\r\n        // The `types` export is not necessary if the `.d.ts` filename matches the `.js` one.\r\n        \"require\": \"./dist/cjs/mermaid.d.ts\",\r\n        // \"import\" should be redundant. \"default\" is sufficient if \"type\": \"module\" is set.\r\n        \"default\": {\r\n          // The types export is needed, because the `dist/mermaid.d.ts` filename doesn\u2019t match the `dist/mermaid.core.mjs` base name and extension.\r\n          \"types\": \"./dist/mermaid.d.ts\",\r\n          \"default\": \"./dist/mermaid.core.mjs\",\r\n        }\r\n      }\r\n    }\r\n  }\r\n  ```",
+          "file_path": "packages/mermaid/package.json",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "562514964efd2df1fedf891030358328de918eb9",
+          "created_at": "2023-04-20T10:25:09Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85F6XSf",
+          "author": "aloisklink",
+          "body": "Ouch, that's a lot of jank!\r\n\r\nI think another potential issue is that I'm not sure if `\"moduleResolution\": \"node\"` (i.e. the old TypeScript mode before TypeScript v4.7) even looks at the `\"exports\"` field.\r\n\r\nMaybe we could instead add something like `dist/cjs/mermaid.min.cjs` and `dist/cjs/mermaid.d.cts`? The `dist/cjs/mermaid.cjs` file could just be a symlink to the `dist/mermaid.min.js` UMD-file to save on space (assuming that symlinks work properly).\r\n\r\nI'm halfway convinced it might just be easier to make a new `mermaid-cjs` package if we really do want to support CJS (it also means that we'd save millions of people from having to download CJS if they just want to use the ESM version (it kinda sucks that they need to download the UMD bundle too, but we kind of need that for backwards compatibility with CDNs)).\r\n\r\n---\r\n\r\n@sidharthv96, @remcohaszing, is it worth splitting up this CJS discussion into a separate issue or PR?\r\n\r\nPersonally, I think:\r\n  - Readding an IIFE/UMD single-file bundle at `dist/mermaid.min.js` makes a lot of sense (i.e. for CDN backwards-compatibility and for easy usage for non-bundler usage) and is easy to do! (it's just the changes in https://github.com/mermaid-js/mermaid/blob/24c9506935d353eaea8f234c9f8ab910b284bbfe/.vite/build.ts#L65-L70 **without** the `package.json` changes) \r\n  - Readding CJS would be a technically pretty difficult, due to TypeScript issues. Plus, I think much less people care about Mermaid's CJS support (i.e. [Docusaurus](https://github.com/facebook/docusaurus) is still stuck on CJS, but are trying to move to ESM), so it's probably worth having a separate discussion whether it's worth the technical effort to readd CJS support.",
+          "file_path": "packages/mermaid/package.json",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "562514964efd2df1fedf891030358328de918eb9",
+          "created_at": "2023-04-20T18:01:00Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85F6wIO",
+          "author": "remcohaszing",
+          "body": "`\"moduleResolution\": \"node\"` looks at the top-level `\"types\"` field and should match the `\"main\"` property, which should also match the `default` export. So since `\"type\": \"module\"` is specified, it should point to the ESM type definitions. This is already done correctly. :)\r\n\r\nThe problem with adding CJS files to the `dist` directory, is `dist/*.js` is considered ESM, because `package.json` has `\"type\": \"module\"`. This directory already contains `.js` files which use actual ESM, so I you want to add `package.json` with `{ \"type\": \"commonjs\" }` in there.\r\n\r\nBasically you need to use one of these structures, or a variant:\r\n\r\n- `dist/mermaid.cjs`\r\n- `dist/mermaid.min.cjs`\r\n- `dist/mermaid.d.cts`\r\n\r\nor\r\n\r\n- `cjs/mermaid.js`\r\n- `cjs/mermaid.min.js`\r\n- `cjs/mermaid.d.ts`\r\n- `cjs/package.json`\r\n\r\nor\r\n\r\n- `dist/cjs/mermaid.js`\r\n- `dist/cjs/mermaid.min.js`\r\n- `dist/cjs/mermaid.d.ts`\r\n- `dist/cjs/package.json`\r\n\r\nI also personally don\u2019t really see a reason to ship both a minified and unminified version of the UMD bundle. I\u2019m just trying to go with your ideas and try to make sure it\u2019s being published correctly. :)\r\n\r\nI don\u2019t think it\u2019s a good idea to use symlinks. I haven\u2019t seen that used in packages before, and have my doubt it even works, especially on Windows. But if it works, Node.js uses the original filename to determine whether it\u2019s CJS or ESM.\r\n\r\n---\r\n\r\n> @sidharthv96, @remcohaszing, is it worth splitting up this CJS discussion into a separate issue or PR?\r\n\r\nI think there has been some miscommunication. The UMD bundle **is** what adds CJS support. I am strongly opposed to adding unbundled CJS support, because that means you can\u2019t use ESM dependencies such as `dagre-d3-es` or `lodash-es`.",
+          "file_path": "packages/mermaid/package.json",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "562514964efd2df1fedf891030358328de918eb9",
+          "created_at": "2023-04-20T19:55:01Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85F7dWp",
+          "author": "aloisklink",
+          "body": "> I also personally don\u2019t really see a reason to ship both a minified and unminified version of the UMD bundle.\r\n\r\nI think it's mainly for backwards compatibility for people using a CDN. Although most people used the `dist/mermaid.min.js` file (i.e. jsdelivr.com shows 8k monthly downloads for `dist/mermaid.js`, compared to 420k monthly downloads for `dist/mermaid.min.js`), some people had links to https://www.unpkg.com/browse/mermaid@latest/dist/mermaid.js, which now doesn't work.\r\n\r\n> I don\u2019t think it\u2019s a good idea to use symlinks.\r\n\r\nI think you're right. Even if we do get it working on 99% of platforms, there's always a chance it might fail on a more esoteric platform.\r\n\r\n> The UMD bundle is what adds CJS support.\r\n\r\nYes, the UMD bundle file can be imported both as CJS or IIFE. But I believe most people want the `mermaid.min.js` single-file bundle back so that they can use it as an IIFE, i.e.:\r\n  - They want to copy `dist/mermaid.min.js` to their project and do `<script src=\"file:///my-local/path/mermaid.min.js\">` [^1]\r\n  - They're using Mermaid from a CDN `<script src=\"https://cdn.example/npm/mermaid@latest/dist/mermaid.min.js\"/>` URL that's now broken, since `dist/mermaid.min.js` no longer exists.\r\n\r\n[^1]: I believe this is how [`mermaid-isomorphic`](https://github.com/remcohaszing/mermaid-isomorphic/blob/6a85a8c9e00e183f1ef6d2bbc363ce333ce258fc/index.ts#L135) loads the file in Playwright (using a `<script>` tag). You do use CommonJS to find the file, but you should just be able to replace this with `require.resolve(\"mermaid/dist/mermaid.min.js\")` if/when the UMD bundle is added back.\r\n\r\nAdding support for this is really easy to do, we just need to create a `dist/mermaid.js` and `dist/mermaid.min.js` file, (i.e. the changes in this PR, without the `package.json` changes).\r\n\r\n---\r\n\r\nAdding support for importing mermaid using CommonJS (like `require(\"mermaid\");`) is a bit more complicated, since to get it working with TypeScript, we'd have to do what you mentioned above. All of what you've said makes sense, though, and I think what you've proposed will work, it would just take a bit of work :)\r\n\r\nThis is up to @sidharthv96, but I think since it's quite a bit more complicated (and I don't want to give @sidharthv96 more work to do :smile:), **I think this PR should be limited to creating the UMD `dist/mermaid{.min}.js` files, and figuring out CommonJS should be a separate PR/issue** (I'm also unsure if anybody actually wants CommonJS support, but again, so it might also be worth having a separate discussion if it's worth adding).",
+          "file_path": "packages/mermaid/package.json",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "562514964efd2df1fedf891030358328de918eb9",
+          "created_at": "2023-04-21T01:12:54Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85F8k1-",
+          "author": "remcohaszing",
+          "body": "Ok, so if I understand correctly the goal is basically to make sure the hosted UMD bundle via CDNs work, through the old URL: https://www.unpkg.com/browse/mermaid@latest/dist/mermaid.min.js.\r\n\r\nIn that case I also see no other option but to publish as `dist/mermaid.js` / `dist/mermaid.min.js`. In that case I see no way to support both `dist/mermaid.js` as CJS (via UMD) and ESM using the `.js` extension in the same directory. This can be ok, but then I think we should drop the idea of supporting CJS altogether and, as you point out, revert the changes in `package.json`.\r\n\r\nAs you pointed out, I personally also just need the UMD bundle. So it doesn\u2019t matter how Node.js would interpret it or how TypeScript handles it.",
+          "file_path": "packages/mermaid/package.json",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "562514964efd2df1fedf891030358328de918eb9",
+          "created_at": "2023-04-21T08:46:39Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85F9Ybo",
+          "author": "aloisklink",
+          "body": "> Ok, so if I understand correctly the goal is basically to make sure the hosted UMD bundle via CDNs work, through the old URL: https://www.unpkg.com/browse/mermaid@latest/dist/mermaid.min.js\r\n\r\nExactly, that's goal number 1! jsdelivr.com will automatically use an older version if the file doesn't exist in the latest Mermaid release, but unpkg.com will just return a 404. Unfortunately, it means we're probably stuck with keeping a `dist/mermaid.js` and `dist/mermaid.min.js` file forever unless we want to break existing websites :(\r\n\r\nGoal number 2 is to have an easy to copy single-file bundle for projects like `mermaid-isomorphic` (or the projects by other commenters in this PR), which this PR should also cover :)\r\n\r\n> I think we should drop the idea of supporting CJS altogether\r\n\r\nThat's my hope too! Some bundlers (e.g. esbuild) no longer support building UMD bundles, so it would be nice to have the option to generate the `dist/mermaid.min.js` file as an IIFE, if people are only ever importing it via `<script>` tags anyway.",
+          "file_path": "packages/mermaid/package.json",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "562514964efd2df1fedf891030358328de918eb9",
+          "created_at": "2023-04-21T12:37:53Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85F-QgX",
+          "author": "sidharthv96",
+          "body": "Folks, I'm beginning to get an idea why JS ecosystem gets a lot of flak. Anytime I've worked on CJS/ESM/IIFE, feels like juggling 10 chainsaws on fire.\r\n\r\n@remcohaszing @aloisklink let me just read your discussion few times and distill what approach we can take. :)",
+          "file_path": "packages/mermaid/package.json",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "562514964efd2df1fedf891030358328de918eb9",
+          "created_at": "2023-04-21T16:10:13Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "The comment includes a code suggestion and questions whether specific lines (`main` and `require` fields) should be removed from package.json, implying they may be unnecessary. It also flags potential TypeScript issues from supporting both CJS and ESM, suggesting the code should be changed or reconsidered."
+    }
+  ],
+  "review_thread_count": 1,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 1,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

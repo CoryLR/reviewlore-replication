@@ -1,0 +1,765 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34500,
+  "title": "ReactNative: Migrate ondevice addons from `addons`",
+  "body": "Closes https://github.com/storybookjs/react-native/issues/873\r\n\r\n## What I did\r\n\r\nOn-device addons listed in `addons` cause `extract` (story indexing / manifest generation) to fail in `@storybook/react-native` projects because Storybook Core attempts to evaluate them as presets in a Node.js context. The on-device addons contain React Native code that cannot be loaded server-side, resulting in a `CriticalPresetLoadError`.\r\n\r\nThe fix moves on-device addons to a separate `deviceAddons` field that is only consumed at runtime (by `scripts/generate.js`), not by Core.\r\n\r\n### Changes\r\n\r\n- **New automigration** (`rn-ondevice-addons-to-device-addons`) \u2014 detects `@storybook/react-native` projects and moves any addon whose name contains `\"ondevice\"` from `addons` \u2192 `deviceAddons`; preserves both string and object (`{ name, options }`) forms\r\n- **Registered** in `allFixes` immediately after `rnstorybookConfig`\r\n- **9 tests** covering: guard conditions (no RN, no ondevice addons), string/object addon detection, deps vs devDeps, and run-phase behavior (removal, object preservation, dryRun passthrough)\r\n- **MIGRATION.md** \u2014 added `React Native: on-device addons moved to deviceAddons` section (with TOC entry and before/after example) in the 9.x \u2192 10.0.0 chapter\r\n\r\nNote: `deviceAddons` is intentionally not added to the shared `StorybookConfigRaw` core type since it is React Native-specific. The automigration uses `ConfigFile`'s string-path APIs to write the field without requiring a type declaration.\r\n\r\n**Before / After:**\r\n\r\n```ts\r\n// Before (.rnstorybook/main.ts)\r\nexport default {\r\n  addons: [\r\n    '@storybook/addon-ondevice-controls',\r\n    '@storybook/addon-ondevice-actions',\r\n    '@storybook/addon-docs',\r\n  ],\r\n};\r\n\r\n// After (automigrated)\r\nexport default {\r\n  addons: ['@storybook/addon-docs'],\r\n  deviceAddons: [\r\n    '@storybook/addon-ondevice-controls',\r\n    '@storybook/addon-ondevice-actions',\r\n  ],\r\n};\r\n```\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n1. Clone https://github.com/chromaui/pets-in-pajamas (repro repo)\r\n2. With on-device addons in `.rnstorybook/main.ts > addons`, confirm extract fails\r\n3. Run the automigration \u2014 confirm addons are moved to `deviceAddons`\r\n4. Confirm extract now succeeds\r\n\r\n### Documentation\r\n\r\n- [x] Add or update documentation reflecting your changes\r\n- [x] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Documentation**\n  * Added a migration guide for upgrading React Native Storybook 10.3.0 \u2192 10.4.0, nested in the migrations TOC. Documents moving on-device addons from the shared addons array to the new deviceAddons key in .rnstorybook/main.ts, includes before/after examples, references an automigration, and warns that leaving them in addons breaks story extraction.\n\n* **Tests**\n  * Added tests validating the automigration that detects and moves on-device addons to deviceAddons, including handling of string and object addon formats and dry-run behavior.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "copilot-swe-agent",
+  "merged_at": "2026-04-09T12:33:05Z",
+  "base_ref": "norbert/rn-init-overhaul",
+  "merge_commit_sha": "a64d0aa3e014ac37493e0901d5225a803dba37a3",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "dda4bb18c080fa9389f781efc39f88f08eac93a7",
+    "f2e8e4ad526511ada42f8fd64802db7c78ed1400"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc617p0L",
+          "author": "ndelangen",
+          "body": "@copilot This is only valid for ReactNative projects, so this should not be in the core.\r\n\r\nI'm okay with a ts-expect-error (if needed) somewhere in the automigration because the property is missing.",
+          "file_path": "code/core/src/types/modules/core-common.ts",
+          "line_number": 433,
+          "start_line": null,
+          "commit_sha": "f7f35f556fa6989150b337a48acf90760cc07f32",
+          "created_at": "2026-04-08T15:11:28Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "high",
+          "label_reasoning": "Comment points out that a type definition should not be in core because it's only valid for ReactNative projects \u2014 a structural/architectural concern."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc617xQP",
+          "author": "copilot-swe-agent",
+          "body": "Removed `deviceAddons` from `StorybookConfigRaw` in 8a6eabb. The automigration fix uses `ConfigFile`'s string-path APIs (`removeEntryFromArray(['addons'], ...)` / `appendValueToArray(['deviceAddons'], ...)`) which work independently of the type, so no `@ts-expect-error` was needed.",
+          "file_path": "code/core/src/types/modules/core-common.ts",
+          "line_number": 433,
+          "start_line": null,
+          "commit_sha": "f7f35f556fa6989150b337a48acf90760cc07f32",
+          "created_at": "2026-04-08T15:16:29Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests that the type change be moved out of core (not valid for non-RN projects) and suggests using ts-expect-error as an alternative."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6171fd",
+          "author": "ndelangen",
+          "body": "@copilot  If you're referring to it, you should create it, add this section in the correct place in this PR",
+          "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+          "line_number": 18,
+          "start_line": null,
+          "commit_sha": "f2e8e4ad526511ada42f8fd64802db7c78ed1400",
+          "created_at": "2026-04-08T15:19:16Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "Comment notes that a referenced section/file should be created and placed correctly in the PR \u2014 concerns missing/incomplete implementation."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6178f1",
+          "author": "copilot-swe-agent",
+          "body": "Added the MIGRATION.md section in d73a6e4 \u2014 TOC entry at line 79 and the `#### React Native: on-device addons moved to \\`deviceAddons\\`` section (with before/after example) placed immediately after the existing \"React-Native config dir renamed\" section in the 9.x \u2192 10.0.0 chapter.",
+          "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+          "line_number": 18,
+          "start_line": null,
+          "commit_sha": "f2e8e4ad526511ada42f8fd64802db7c78ed1400",
+          "created_at": "2026-04-08T15:24:03Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests that a referenced section be created and added in the correct place in the PR."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62OPfk",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The PR title/description focus on React Native on-device addons migration, but this diff also includes large, unrelated changes (repo-wide explicit `.ts/.tsx` import specifiers, Builder-Vite module graph change detection, a11y live announcements, etc.). Please either (mandatory) update the PR title/description to reflect the full scope, or (preferred) split the unrelated refactors/feature work into separate PRs to keep review history and release notes targeted.",
+          "file_path": "MIGRATION.md",
+          "line_number": 1325,
+          "start_line": null,
+          "commit_sha": "418f5623f348fdae79f1691157c9f788f3a6c498",
+          "created_at": "2026-04-09T10:40:47Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Structural Issues",
+          "label_confidence": "high",
+          "label_reasoning": "Comment raises concern about unrelated changes being bundled in a single PR, recommending splitting into separate PRs \u2014 a structural/organizational concern."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests either updating the PR title/description or splitting the PR into separate PRs."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62OPgY",
+          "author": "copilot-pull-request-reviewer",
+          "body": "Casting `status.value as TestStatusValue` can cause a runtime crash if `status.value` is not one of the five allowed keys (e.g., if additional `StatusValue` variants exist for other status systems). In that case `statusValueToStoryIdsMap[status.value]` is `undefined`, and `.push(...)` will throw. Fix by guarding before pushing (e.g., check key existence), or by widening the map to include all possible `StatusValue` keys that can appear for these status types.",
+          "file_path": "code/addons/vitest/src/use-test-provider-state.ts",
+          "line_number": 28,
+          "start_line": 23,
+          "commit_sha": "696302ad2d3def34dad700644f82f204092963b1",
+          "created_at": "2026-04-09T10:40:48Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Unsafe cast `status.value as TestStatusValue` can cause a runtime crash when the value is not a valid key, leading to undefined.push() error \u2014 a missing edge case guard."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential runtime crash and suggests adding a guard before pushing."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62OPgl",
+          "author": "copilot-pull-request-reviewer",
+          "body": "Casting `status.value as TestStatusValue` can cause a runtime crash if `status.value` is not one of the five allowed keys (e.g., if additional `StatusValue` variants exist for other status systems). In that case `statusValueToStoryIdsMap[status.value]` is `undefined`, and `.push(...)` will throw. Fix by guarding before pushing (e.g., check key existence), or by widening the map to include all possible `StatusValue` keys that can appear for these status types.",
+          "file_path": "code/addons/vitest/src/use-test-provider-state.ts",
+          "line_number": 51,
+          "start_line": null,
+          "commit_sha": "696302ad2d3def34dad700644f82f204092963b1",
+          "created_at": "2026-04-09T10:40:48Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Same issue as index 3 \u2014 unsafe cast that can lead to runtime crash on unexpected status values."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Same as index 3 \u2014 flags a potential runtime crash and suggests a fix."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62OPhA",
+          "author": "copilot-pull-request-reviewer",
+          "body": "`getModuleFileFromMap()` performs a full scan of `fileToModulesMap` and is called from inside the nested traversal of importers/importedModules. This can become O(N\u00b2) on large projects and will run on every change event. Consider precomputing a reverse lookup (e.g., `WeakMap<ViteModuleNode, string>`) once per build of the module graph, then do O(1) lookups during traversal.\n```suggestion\n  const moduleFileMap = new WeakMap<object, string>();\n\n  fileToModulesMap.forEach((viteModuleSet, filePath) => {\n    viteModuleSet.forEach((viteModuleNode) => {\n      moduleFileMap.set(viteModuleNode, filePath);\n    });\n  });\n\n  const getModuleFileFromMap = (viteModuleNode: {\n    file: string | null;\n    type: ViteModuleNode['type'];\n    importers: Set<ViteModuleNode>;\n    importedModules: Set<ViteModuleNode>;\n  }): string | undefined => moduleFileMap.get(viteModuleNode);\n```",
+          "file_path": "code/builders/builder-vite/src/utils/build-module-graph.ts",
+          "line_number": 21,
+          "start_line": 10,
+          "commit_sha": "696302ad2d3def34dad700644f82f204092963b1",
+          "created_at": "2026-04-09T10:40:48Z",
+          "is_outdated": true,
+          "dimension": "Performance Issue",
+          "category": "Computation Efficiency",
+          "label_confidence": "high",
+          "label_reasoning": "O(N\u00b2) performance issue from calling a full scan function inside nested traversal; suggests precomputing a reverse lookup map for O(1) access."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags O(N\u00b2) performance issue and suggests precomputing a reverse lookup with code suggestion."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62OPhl",
+          "author": "copilot-pull-request-reviewer",
+          "body": "`Promise.all()` over all story import paths can create very high concurrency (and memory / CPU pressure) on large storybooks, potentially delaying startup or causing timeouts. Consider batching or limiting concurrency (e.g., chunk the paths or use a concurrency limiter) so change detection startup remains stable for large repos.",
+          "file_path": "code/builders/builder-vite/src/index.ts",
+          "line_number": 134,
+          "start_line": 131,
+          "commit_sha": "696302ad2d3def34dad700644f82f204092963b1",
+          "created_at": "2026-04-09T10:40:49Z",
+          "is_outdated": true,
+          "dimension": "Performance Issue",
+          "category": "Resource Efficiency",
+          "label_confidence": "high",
+          "label_reasoning": "Unbounded Promise.all() over all story import paths can cause high concurrency, memory and CPU pressure \u2014 recommends batching or limiting concurrency."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags high concurrency issue with Promise.all and suggests batching or limiting concurrency."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62OPh2",
+          "author": "copilot-pull-request-reviewer",
+          "body": "This `setInterval` schedules an async IIFE every second; if the async body takes longer than the interval (e.g., due to `waitForRequestsIdle()`), overlapping executions are possible until `clearModuleGraphPolling()` happens. To avoid re-entrancy, consider switching to a `setTimeout` loop (schedule the next poll at the end of the current run) or add an `inFlight` guard.\n```suggestion\n  const pollForModuleGraph = async () => {\n    try {\n      if (!watcherChangeHandler) {\n        clearModuleGraphPolling();\n        return;\n      }\n\n      if (process.hrtime(startTime)[0] > 30) {\n        clearModuleGraphPolling();\n        const error = new Error(\n          'Timed out while waiting for the Vite module graph to initialize'\n        );\n        logger.error('Failed to complete Vite change detection startup');\n        logger.error(error);\n        notifyListenersOfStartupFailure({\n          type: 'unavailable',\n          reason: error.message,\n          error,\n        });\n        return;\n      }\n\n      if (server.moduleGraph.fileToModulesMap.size > 0) {\n        clearModuleGraphPolling();\n        await server.waitForRequestsIdle();\n        if (!watcherChangeHandler) {\n          return;\n        }\n\n        server.watcher.on('all', watcherChangeHandler);\n        watcherChangeHandler();\n        return;\n      }\n\n      waitForModuleGraph = setTimeout(() => {\n        void pollForModuleGraph();\n      }, 1000);\n    } catch (error) {\n      clearModuleGraphPolling();\n      logger.error('Failed to complete Vite change detection startup');\n      logger.error(error instanceof Error ? error : String(error));\n      notifyListenersOfStartupFailure({\n        type: 'error',\n        error: error instanceof Error ? error : new Error(String(error)),\n      });\n    }\n  };\n\n  waitForModuleGraph = setTimeout(() => {\n    void pollForModuleGraph();\n```",
+          "file_path": "code/builders/builder-vite/src/index.ts",
+          "line_number": 179,
+          "start_line": 137,
+          "commit_sha": "696302ad2d3def34dad700644f82f204092963b1",
+          "created_at": "2026-04-09T10:40:49Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Concurrency Issues",
+          "label_confidence": "high",
+          "label_reasoning": "setInterval with async body can cause overlapping executions if the async body takes longer than the interval \u2014 a classic re-entrancy/concurrency issue."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags re-entrancy issue with setInterval and suggests switching to setTimeout loop with code suggestion."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62OPiZ",
+          "author": "copilot-pull-request-reviewer",
+          "body": "If `externals` is empty, `new RegExp(globalsList.map(...).join('|'))` becomes `new RegExp('')`, which matches all code and can cause the transform to run far more often than intended. Consider guarding for `globalsList.length === 0` (e.g., skip registering the transform hook or use a non-matching regex) to avoid unnecessary work.\n```suggestion\n  const globalsCodeFilter =\n    globalsList.length > 0 ? new RegExp(globalsList.map(escapeKeys).join('|')) : /$^/;\n```",
+          "file_path": "code/builders/builder-vite/src/plugins/storybook-external-globals-plugin.ts",
+          "line_number": 59,
+          "start_line": null,
+          "commit_sha": "696302ad2d3def34dad700644f82f204092963b1",
+          "created_at": "2026-04-09T10:40:49Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "When externals is empty, the regex becomes empty string which matches everything \u2014 a logic error in regex construction that causes unintended broad matching."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a bug where empty externals produces a regex that matches everything, with a code suggestion fix."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62OepG",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Clarify preview filename wording to avoid ambiguity.**\n\nThe line currently hardcodes `.storybook/preview.ts` but also mentions TSX. Consider using `.storybook/preview.ts(x)` to avoid conflicting guidance for React-based frameworks.  \n  \nBased on learnings: Applies to AGENTS.md : Keep `AGENTS.md` up to date when Storybook's architecture, tooling, workflows, or contributor guidance changes.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@AGENTS.md` at line 79, Update the ambiguous preview filename reference by\nreplacing the hardcoded string `.storybook/preview.ts` with a form that covers\nboth TS and TSX variants (e.g., `.storybook/preview.ts(x)`) in AGENTS.md so it\nclearly indicates support for React-based frameworks; locate the occurrence of\nthe literal `.storybook/preview.ts` and change it to the parenthesized variant\nand ensure surrounding wording still reads naturally.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:triton:hawk:40b9c44b-9fdb-4c82-b4b1-a10961dbf9ac -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "AGENTS.md",
+          "line_number": 79,
+          "start_line": null,
+          "commit_sha": "d73a6e49719087cdf54e830024c2f963a2a19ee4",
+          "created_at": "2026-04-09T10:51:48Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "medium",
+          "label_reasoning": "Suggests updating documentation text to be more accurate/complete (covering TSX variants) \u2014 a documentation clarity issue."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests updating ambiguous preview filename reference to cover both .ts and .tsx variants."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62OepL",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Fix truncated changelog title text.**\n\nLine 26 appears cut off (`...across framewo\u2026`), which makes the release note ambiguous. Please use the full PR title text.\n\n\n<details>\n<summary>\u270f\ufe0f Suggested edit</summary>\n\n```diff\n-- Maintenance: Extract getBuilderOptions helper across framewo\u2026 - [`#34260`](https://github.com/storybookjs/storybook/pull/34260), thanks `@alex-js-ltd`!\n+- Maintenance: Extract getBuilderOptions helper across frameworks - [`#34260`](https://github.com/storybookjs/storybook/pull/34260), thanks `@alex-js-ltd`!\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n- Maintenance: Extract getBuilderOptions helper across frameworks - [`#34260`](https://github.com/storybookjs/storybook/pull/34260), thanks `@alex-js-ltd`!\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@CHANGELOG.prerelease.md` at line 26, Replace the truncated changelog entry\nthat reads \"Maintenance: Extract getBuilderOptions helper across framewo\u2026 -\n[`#34260`]\" with the full PR title text; locate the line containing\n\"getBuilderOptions\" and PR \"#34260\" and update it to the complete, non-truncated\nmessage so the release note displays the entire title.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:triton:hawk:62b76171-99b3-4ae6-a9d2-b7a76efc278d -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "CHANGELOG.prerelease.md",
+          "line_number": 26,
+          "start_line": null,
+          "commit_sha": "d73a6e49719087cdf54e830024c2f963a2a19ee4",
+          "created_at": "2026-04-09T10:51:48Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "Changelog entry is truncated/incomplete \u2014 a documentation correctness issue."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests fixing truncated changelog entry with full PR title text."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62Oepl",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/addons/a11y/src/preview.test.tsx | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3854\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat code/.cursor/rules/spy-mocking.mdc\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 131\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nfind . -name \"spy-mocking.mdc\" -o -name \"*spy*mocking*\" 2>/dev/null\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 96\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat .cursor/rules/spy-mocking.mdc\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1585\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for other test files using vi.mock with custom factories to understand the pattern\nrg 'vi\\.mock.*async.*importOriginal' --type ts --type tsx -A 5 -B 2 | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg 'vi\\.mock.*async.*importOriginal' -A 5 -B 2 | head -150\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 12324\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg 'vi\\.mock.*spy.*true' | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 5570\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nrg 'vi\\.mock.*spy.*true.*async' | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if any test files use spy: true with a factory function (both combined)\nrg \"spy:\\s*true.*async\\s*\\(\" | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check for vi.mock with both spy: true and custom factory implementations\nrg -A 10 \"vi\\.mock.*spy:\\s*true\" | grep -A 10 \"async\\|importOriginal\" | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4394\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the Vitest documentation pattern in comments or look for any examples mixing spy: true with factory\nrg \"spy.*true.*\\(\" -B 5 -A 10 | grep -A 15 \"factory\\|importOriginal\" | head -40\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the actual content around the preview.test.tsx file more thoroughly to understand the context\ncat -n code/addons/a11y/src/preview.test.tsx | head -150\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 5492\n\n---\n\n\n\n</details>\n\n**Use `spy: true` for these Vitest mocks.**\n\nLines 17-18 don't include `{ spy: true }`, which conflicts with the repository's Vitest mock policy. Per the coding guidelines, all package and file mocks must use `{ spy: true }` with mock behaviors implemented in `beforeEach` blocks.\n\nFor line 17, add `{ spy: true }`. For lines 18-25, replace the custom factory with `{ spy: true }` and move the mock overrides to `beforeEach` using `vi.mocked()`:\n\n<details>\n<summary>Suggested adjustment</summary>\n\n```diff\n-vi.mock(import('./a11yRunner.ts'));\n+vi.mock(import('./a11yRunner.ts'), { spy: true });\n\n-vi.mock(import('./utils.ts'), async (importOriginal) => {\n-  const mod = await importOriginal(); // type is inferred\n-  return {\n-    ...mod,\n-    getIsVitestRunning: mocks.getIsVitestRunning,\n-    getIsVitestStandaloneRun: mocks.getIsVitestStandaloneRun,\n-  };\n-});\n+vi.mock(import('./utils.ts'), { spy: true });\n```\n\nThen in the `beforeEach` block, configure the mocks:\n```diff\n beforeEach(() => {\n   vi.mocked(getIsVitestRunning).mockReturnValue(false);\n   vi.mocked(getIsVitestStandaloneRun).mockReturnValue(true);\n });\n```\n\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nvi.mock(import('./a11yRunner.ts'), { spy: true });\nvi.mock(import('./utils.ts'), { spy: true });\n\nbeforeEach(() => {\n  vi.mocked(getIsVitestRunning).mockReturnValue(false);\n  vi.mocked(getIsVitestStandaloneRun).mockReturnValue(true);\n});\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/a11y/src/preview.test.tsx` around lines 17 - 18, The Vitest mocks\nin preview.test.tsx use custom factories and lack spy: true, violating the repo\npolicy; change vi.mock(import('./a11yRunner.ts')) to use\nvi.mock(import('./a11yRunner.ts'), { spy: true }) and replace the factory-style\nvi.mock(import('./utils.ts'), async (importOriginal) => { ... }) with\nvi.mock(import('./utils.ts'), { spy: true }); then move any mock implementations\ninto the test file's beforeEach using vi.mocked() to set return\nvalues/implementations for the a11yRunner and utils mocks (e.g., configure the\nmocked functions there).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:triton:hawk:807f8be3-ddb6-4859-9a2e-6bdd24c07e04 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/a11y/src/preview.test.tsx",
+          "line_number": 18,
+          "start_line": 17,
+          "commit_sha": "d73a6e49719087cdf54e830024c2f963a2a19ee4",
+          "created_at": "2026-04-09T10:51:48Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "high",
+          "label_reasoning": "Vitest mocks don't follow the repository's spy-mocking policy requiring { spy: true } with mock behaviors in beforeEach \u2014 a project-specific testing convention violation."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding { spy: true } to vi.mock calls and restructuring mocks per repo policy."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62OeqR",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Replace trailing comma with a period in this sentence.**\n\nLine 93 ends with a comma, which reads as an incomplete sentence in user-facing docs.\n\n<details>\n<summary>\u270d\ufe0f Proposed fix</summary>\n\n```diff\n-You can customize what's shown in the props table by [customizing the `ArgTypes` data](`#customizing-argtypes`). This is currently available for `DocsPage` and `<ArgsTable story=\"xxx\">` construct, but not for the `<ArgsTable of={component} />` construct,\n+You can customize what's shown in the props table by [customizing the `ArgTypes` data](`#customizing-argtypes`). This is currently available for `DocsPage` and `<ArgsTable story=\"xxx\">` construct, but not for the `<ArgsTable of={component} />` construct.\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nYou can customize what's shown in the props table by [customizing the `ArgTypes` data](`#customizing-argtypes`). This is currently available for `DocsPage` and `<ArgsTable story=\"xxx\">` construct, but not for the `<ArgsTable of={component} />` construct.\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/docs/docs/props-tables.md` at line 93, The sentence ending in the\ndocs line referencing customizing ArgTypes for DocsPage and <ArgsTable\nstory=\"xxx\"> currently ends with a trailing comma; change that comma to a period\nso the sentence reads as a complete statement (ensure the text mentioning\n\"DocsPage and <ArgsTable story=\\\"xxx\\\"> construct, but not for the <ArgsTable\nof={component} /> construct\" ends with a period).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:triton:hawk:f7151b00-2bbc-43b9-a340-f5428bbcf58a -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/docs/docs/props-tables.md",
+          "line_number": 93,
+          "start_line": null,
+          "commit_sha": "d73a6e49719087cdf54e830024c2f963a2a19ee4",
+          "created_at": "2026-04-09T10:51:49Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Documentation",
+          "label_confidence": "high",
+          "label_reasoning": "Trailing comma instead of period in documentation sentence \u2014 a documentation formatting issue."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests replacing a trailing comma with a period in documentation."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62Oeqf",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Add explicit extension for the relative type import.**\n\nLine 3 is missing the `.ts` suffix, which makes this file inconsistent with the repo\u2019s TypeScript import-extension rule.\n\n\n\n<details>\n<summary>\u267b\ufe0f Proposed fix</summary>\n\n```diff\n-import type { LiveRegionMatcherOptions } from '../../../core/src/shared/utils/toHaveLiveRegion';\n+import type { LiveRegionMatcherOptions } from '../../../core/src/shared/utils/toHaveLiveRegion.ts';\n```\n</details>\n\nAs per coding guidelines `**/*.{ts,tsx,js,jsx}`: Prefer explicit file extensions for relative code imports and exports in TypeScript source (e.g., `./foo.ts` or `./bar.tsx`) when the target is another TS/JS module in the repository.\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nimport type { LiveRegionMatcherOptions } from '../../../core/src/shared/utils/toHaveLiveRegion.ts';\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/vitest/src/custom-matchers.d.ts` at line 3, Update the relative\ntype import on the top of custom-matchers.d.ts to include the explicit .ts\nextension: change the import of LiveRegionMatcherOptions from\n'../../../core/src/shared/utils/toHaveLiveRegion' to the same path with a .ts\nsuffix so the TypeScript import-extension rule is satisfied and the type\nresolves consistently.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk:15932861-eb7d-4c4f-8eb0-a3be19326e0d -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/vitest/src/custom-matchers.d.ts",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "d73a6e49719087cdf54e830024c2f963a2a19ee4",
+          "created_at": "2026-04-09T10:51:49Z",
+          "is_outdated": true,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "high",
+          "label_reasoning": "Missing explicit `.ts` extension on relative import, violating the repo's TypeScript import-extension convention."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding explicit .ts extension to a relative import per coding guidelines."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62Oeqm",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nrg -n -C2 \"import \\\\{ log \\\\} from '../logger\\\\.ts'|vi\\\\.mock\\\\('\\\\.\\\\./logger'\" code/addons/vitest/src/node/boot-test-runner.test.ts\nrg -n \"import .* from '\\\\.\\\\./.*\\\\.(ts|tsx|js|jsx)';|vi\\\\.mock\\\\('\\\\.\\\\./\" code/addons/vitest/src/node/*.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1197\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Find the logger module\nfind code/addons/vitest/src -name \"logger.*\" -type f\n\n# Check the full context around the mock and import\nsed -n '8,60p' code/addons/vitest/src/node/boot-test-runner.test.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1511\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for how vi.mock() is used with extensions in the codebase\nrg \"vi\\.mock\\(['\\\"][^'\\\"]*\\.(ts|tsx|js|jsx)['\\\"]\" code/addons/vitest/src --type ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\n\n</details>\n\n**Update `vi.mock()` target to match the import specifier with explicit `.ts` extension.**\n\nThe import at line 10 uses `../logger.ts` (with extension), but the mock at line 56 targets `../logger` (without extension). Vitest may not recognize these as the same module, causing the mock to not apply and tests to run against the real logger.\n\n<details>\n<summary>\ud83d\udd27 Fix</summary>\n\n```diff\n-vi.mock('../logger', () => ({\n+vi.mock('../logger.ts', () => ({\n   log: vi.fn(),\n }));\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/vitest/src/node/boot-test-runner.test.ts` at line 10, The test\nimports the logger using \"../logger.ts\" but the vi.mock call targets\n\"../logger\", so Vitest may not match and the mock won't apply; update the\nvi.mock target to \"../logger.ts\" (the same specifier used in the import) so the\nmock for the module referenced by the import is applied (look for the vi.mock\ncall around line 56 and change its module specifier to \"../logger.ts\" to match\nthe import { log } from '../logger.ts').\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk:60ba9f97-e91a-492b-9216-2a2b9ed39c2e -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/vitest/src/node/boot-test-runner.test.ts",
+          "line_number": 10,
+          "start_line": null,
+          "commit_sha": "d73a6e49719087cdf54e830024c2f963a2a19ee4",
+          "created_at": "2026-04-09T10:51:49Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "high",
+          "label_reasoning": "vi.mock() specifier doesn't match the import specifier (missing .ts extension), which may cause the mock to not apply \u2014 incorrect use of Vitest API."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that vi.mock specifier doesn't match import specifier (missing .ts extension), potentially causing mock to not apply."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62Oeqq",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Add a runtime guard before pushing by `status.value`.**\n\n`status.value as TestStatusValue` can bypass safety and throw if a new/unexpected status value appears. Guard the lookup before `.push(...)` to prevent runtime crashes.\n\n\n<details>\n<summary>\ud83d\udca1 Suggested hardening</summary>\n\n```diff\n-    statusValueToStoryIdsMap[status.value as TestStatusValue].push(status.storyId);\n+    const bucket = statusValueToStoryIdsMap[status.value as TestStatusValue];\n+    if (bucket) {\n+      bucket.push(status.storyId);\n+    }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    const bucket = statusValueToStoryIdsMap[status.value as TestStatusValue];\n    if (bucket) {\n      bucket.push(status.storyId);\n    }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/vitest/src/use-test-provider-state.ts` at line 51, The code\nunguardedly indexes statusValueToStoryIdsMap with status.value as\nTestStatusValue which can throw if status.value is unexpected; before pushing\nstatus.storyId, add a runtime guard that checks whether status.value is a valid\nkey (e.g., typeof status.value === 'string' and status.value in\nstatusValueToStoryIdsMap or using\nObject.prototype.hasOwnProperty.call(statusValueToStoryIdsMap, status.value))\nand only then call statusValueToStoryIdsMap[status.value].push(status.storyId);\notherwise handle the unknown status safely (e.g., ignore, log, or add to a\nfallback bucket) to prevent runtime crashes.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/vitest/src/use-test-provider-state.ts",
+          "line_number": 51,
+          "start_line": null,
+          "commit_sha": "d73a6e49719087cdf54e830024c2f963a2a19ee4",
+          "created_at": "2026-04-09T10:51:49Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Same as index 3/4 \u2014 missing guard before array push on potentially undefined bucket."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding a runtime guard before pushing to prevent potential crashes."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62Oeq5",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udf10 Web query:\n\n`In Vitest, if a test imports a module from `./vite-server.ts` but calls `vi.mock('./vite-server', { spy: true })`, is the mock guaranteed to apply to that import, or should the `vi.mock()` specifier exactly match `./vite-server.ts`?`\n\n\ud83d\udca1 Result:\n\nNot guaranteed.\n\nVitest registers mocks against the *module specifier it resolves/handles*, and its transform wraps the *same specifier string* in the generated dynamic import (e.g. `import('./answer.js')` stays `import('./answer.js')` under the hood) [1]. If your SUT imports `./vite-server.ts` but you mock `./vite-server`, the mock will only apply **if** Vitest/Vite resolve `./vite-server` to the same module (which depends on resolver/extension behavior such as `resolve.extensions`) [2]. To be safe/portable, make the specifier match exactly\u2014e.g. `vi.mock(import('./vite-server.ts'), { spy: true })` (or use the exact string your code imports) [1].\n\n**Sources:** [1] [2]\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/builders/builder-vite/src/index.test.ts | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2012\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/builders/builder-vite/src/index.test.ts | sed -n '310,380p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3092\n\n---\n\n\n\n</details>\n\n**Ensure the mock specifier matches the import specifier.**\n\nLine 8 imports from `./vite-server.ts`, but Line 11 mocks `./vite-server` without the `.ts` extension. Vitest resolves mocks against the exact module specifier; if the resolver does not automatically align `./vite-server` to `./vite-server.ts`, the `createViteServer` mock will not apply, leaving the import unmocked. Match the specifier exactly to ensure the mock applies reliably.\n\n<details>\n<summary>Fix</summary>\n\n```diff\n-vi.mock('./vite-server', { spy: true });\n+vi.mock('./vite-server.ts', { spy: true });\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nvi.mock('storybook/internal/node-logger', { spy: true });\nvi.mock('./vite-server.ts', { spy: true });\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/builders/builder-vite/src/index.test.ts` around lines 10 - 11, The test\nmock specifier doesn't match the import: update the vitest mock call for the\nvite server so it uses the exact module specifier used by the import (change\nvi.mock('./vite-server', { spy: true }) to the exact './vite-server.ts'\nspecifier) so the createViteServer import in index.test.ts is properly mocked;\nkeep the { spy: true } option and ensure any other mocks follow the same\nexact-specifier rule.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:grasshopper:12b61339-ba15-42bd-a8e4-3a60dd6cd5e3 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/builders/builder-vite/src/index.test.ts",
+          "line_number": 11,
+          "start_line": 10,
+          "commit_sha": "d73a6e49719087cdf54e830024c2f963a2a19ee4",
+          "created_at": "2026-04-09T10:51:49Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "high",
+          "label_reasoning": "vi.mock() specifier mismatch (missing .ts extension) may cause mock to not apply \u2014 incorrect use of Vitest API."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests updating vi.mock specifier to include .ts extension to match the import specifier."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62OerQ",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udf10 Web query:\n\n`For the Vite version range currently used by Storybook builder-vite in this repository, is the following plugin hook shape officially supported?\n\nresolveId: {\n  filter: { id: /\\/vite-inject-mocker-entry\\.js/ },\n  handler(source) { ... }\n}\n\nPlease provide official Vite docs/changelog references that explicitly cover object-form resolveId hooks with filter support.`\n\n\ud83d\udca1 Result:\n\n### Vite range used by Storybook `@storybook/builder-vite`\nIn current Storybook `@storybook/builder-vite` releases, the published peer dependency range for Vite is:\n\n- `vite: \"^5.0.0 || ^6.0.0 || ^7.0.0\"` ([app.unpkg.com](https://app.unpkg.com/%40storybook/builder-vite%4010.1.1/files/package.json?utm_source=openai))\n\n### Is this object-form `resolveId` hook with `filter` officially supported in that range?\nYour hook shape:\n\n```js\nresolveId: {\n  filter: { id: /\\/vite-inject-mocker-entry\\.js/ },\n  handler(source) { /* ... */ }\n}\n```\n\nis **officially supported by Vite only starting in Vite 6.3.0+** (and not in Vite 5.x, and not in Vite 6.0\u20136.2.x), per Vite\u2019s own docs:\n\n- Vite docs show `resolveId: { filter: { id: ... }, handler() { ... } }` as the supported shape. ([vite.dev](https://vite.dev/guide/api-plugin.html))  \n- Vite docs explicitly state that \u201cHook Filters\u201d (the `filter`+`handler` object form for hooks like `resolveId`) are supported in **Vite 6.3.0+** (and Rollup 4.38.0+). ([vite.dev](https://vite.dev/guide/api-plugin.html))\n\nSo, **within Storybook\u2019s allowed Vite peer range (`^5 || ^6 || ^7`) this hook shape is only \u201cofficially supported\u201d for the subset `vite >= 6.3.0` (and in Vite 7.x), but not for Vite 5.x.**\n\n### Official references explicitly covering \u201cobject-form hooks with filter support\u201d\n- **Vite Plugin API docs** (example using object-form `resolveId` with `filter` + `handler`). ([vite.dev](https://vite.dev/guide/api-plugin.html))  \n- **Vite Plugin API docs \u2192 \u201cHook Filters\u201d section** (states support is **Vite 6.3.0+**). ([vite.dev](https://vite.dev/guide/api-plugin.html))  \n- **Rolldown \u201cPlugin Hook Filters\u201d docs** (cross-reference stating hook filters are supported in **Vite 6.3.0+** and describing `resolveId` filter semantics). ([rolldown.rs](https://rolldown.rs/apis/plugin-api/hook-filters?utm_source=openai))\n\nCitations:\n\n- 1: https://app.unpkg.com/%40storybook/builder-vite%4010.1.1/files/package.json?utm_source=openai\n- 2: https://vite.dev/guide/api-plugin.html\n- 3: https://vite.dev/guide/api-plugin.html\n- 4: https://vite.dev/guide/api-plugin.html\n- 5: https://vite.dev/guide/api-plugin.html\n- 6: https://rolldown.rs/apis/plugin-api/hook-filters?utm_source=openai\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the declared Vite version range in builder-vite\ncat code/builders/builder-vite/package.json | jq '.peerDependencies, .dependencies' | grep -i vite\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 113\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Read the full plugin file to check for version checks or fallback logic\ncat -n code/builders/builder-vite/src/plugins/vite-inject-mocker/plugin.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2778\n\n---\n\n\n\n</details>\n\n**Use function-based `resolveId` hook for compatibility with Vite 5.x and 6.0\u20136.2.x.**\n\nThe object-form `resolveId: { filter, handler }` is only supported in Vite 6.3.0+, but the peer dependency range (`^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0`) includes Vite 5.x and 6.0\u20136.2.x. In unsupported versions, the hook silently fails to resolve the entry path, breaking module resolution.\n\nConvert to the function form that works across all versions:\n\n```js\nresolveId(source) {\n  if (source === ENTRY_PATH) {\n    return mockerRuntimePath;\n  }\n}\n```\n\nAlternatively, enforce a minimum Vite version of 6.3.0 in `peerDependencies` if object-form hooks are required.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/builders/builder-vite/src/plugins/vite-inject-mocker/plugin.ts` around\nlines 44 - 52, The current object-form resolveId hook (resolveId: { filter,\nhandler }) is incompatible with Vite <6.3 and must be replaced with the function\nform so ENTRY_PATH is resolved across supported Vite versions; update the\nresolveId export in plugin.ts to a function-style hook named resolveId(source)\nthat checks if source === ENTRY_PATH and returns mockerRuntimePath when matched\n(otherwise returns undefined), ensuring the module resolution logic using\nENTRY_PATH and mockerRuntimePath continues to work in Vite 5.x and 6.0\u20136.2.x.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk:9f3e78f9-f40f-4b45-a44c-670b5317b173 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/builders/builder-vite/src/plugins/vite-inject-mocker/plugin.ts",
+          "line_number": 52,
+          "start_line": 44,
+          "commit_sha": "d73a6e49719087cdf54e830024c2f963a2a19ee4",
+          "created_at": "2026-04-09T10:51:50Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "high",
+          "label_reasoning": "Object-form resolveId hook with filter is only supported in Vite 6.3+, but the peer dependency range includes Vite 5.x \u2014 incorrect API usage that silently breaks on unsupported versions."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a critical compatibility issue \u2014 object-form resolveId hook only works in Vite 6.3+, but peer dep range includes Vite 5.x; suggests switching to function form."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62OerX",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Precompute node\u2192file lookup to avoid repeated full scans.**\n\n`getModuleFileFromMap` does an O(N) scan and is invoked inside nested importer/imported traversals, which can become very expensive on large graphs. Build a reverse `WeakMap<ViteModuleNode, string>` once, then do O(1) lookups.\n\n\n<details>\n<summary>\u26a1 Suggested optimization sketch</summary>\n\n```diff\n export function buildModuleGraph(\n   fileToModulesMap: ViteDevServer['moduleGraph']['fileToModulesMap']\n ): ModuleGraph {\n   const moduleGraph: ModuleGraph = new Map();\n   const moduleNodeMap = new WeakMap<object, ModuleNode>();\n+  const fileByViteNode = new WeakMap<ViteModuleNode, string>();\n+\n+  for (const [filePath, viteModuleSet] of fileToModulesMap.entries()) {\n+    for (const viteModuleNode of viteModuleSet) {\n+      fileByViteNode.set(viteModuleNode, filePath);\n+    }\n+  }\n \n-  const getModuleFileFromMap = (viteModuleNode: { ... }): string | undefined => {\n-    for (const [filePath, viteModuleSet] of fileToModulesMap.entries()) {\n-      if (viteModuleSet.has(viteModuleNode as ViteModuleNode)) {\n-        return filePath;\n-      }\n-    }\n-  };\n+  const getModuleFileFromMap = (viteModuleNode: ViteModuleNode): string | undefined =>\n+    fileByViteNode.get(viteModuleNode);\n```\n</details>\n\n\nAlso applies to: 61-73\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/builders/builder-vite/src/utils/build-module-graph.ts` around lines 10 -\n21, getModuleFileFromMap currently scans fileToModulesMap entries O(N) for each\nlookup; precompute a reverse lookup by creating a WeakMap<ViteModuleNode,string>\n(e.g., moduleNodeToFile) when fileToModulesMap is built/updated and populate it\nby iterating fileToModulesMap once, then replace the loop inside\ngetModuleFileFromMap with a constant-time moduleNodeToFile.get(viteModuleNode)\nlookup; also update the other similar lookup site (the function/usage around the\nother occurrence noted) to use the same WeakMap and ensure the WeakMap stays in\nscope and is updated whenever fileToModulesMap changes.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/builders/builder-vite/src/utils/build-module-graph.ts",
+          "line_number": 21,
+          "start_line": 10,
+          "commit_sha": "d73a6e49719087cdf54e830024c2f963a2a19ee4",
+          "created_at": "2026-04-09T10:51:50Z",
+          "is_outdated": true,
+          "dimension": "Performance Issue",
+          "category": "Computation Efficiency",
+          "label_confidence": "high",
+          "label_reasoning": "Same as index 5 \u2014 O(N) scan inside nested traversal, recommends precomputing reverse WeakMap for O(1) lookups."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags O(N\u00b2) performance issue and suggests precomputing a WeakMap reverse lookup."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62Oerf",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Fix the relative import path and add explicit `.ts` extension.**\n\nThe import path `'../../../core/src/shared/utils/toHaveLiveRegion'` appears incorrect for a file located at `code/core/custom-matchers.d.ts`. It should be a direct relative path within the same package. Additionally, per coding guidelines, use explicit `.ts` extensions for relative imports.\n\n\n<details>\n<summary>Proposed fix</summary>\n\n```diff\n-import type { LiveRegionMatcherOptions } from '../../../core/src/shared/utils/toHaveLiveRegion';\n+import type { LiveRegionMatcherOptions } from './src/shared/utils/toHaveLiveRegion.ts';\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nimport type { LiveRegionMatcherOptions } from './src/shared/utils/toHaveLiveRegion.ts';\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/custom-matchers.d.ts` at line 3, The import for\nLiveRegionMatcherOptions in custom-matchers.d.ts uses an incorrect cross-package\npath; update the import to point to the package-local shared utils module with\nan explicit .ts extension (i.e., import LiveRegionMatcherOptions from the local\nshared/utils/toHaveLiveRegion.ts) so the type resolves within the same package\nand conforms to the explicit-extension guideline.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot:26701711-110e-4b33-9d99-ecc4f85096c5 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/custom-matchers.d.ts",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "d73a6e49719087cdf54e830024c2f963a2a19ee4",
+          "created_at": "2026-04-09T10:51:50Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "medium",
+          "label_reasoning": "Incorrect relative import path for the module \u2014 path appears to be wrong for the file's location, which would break module resolution."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests fixing the relative import path and adding explicit .ts extension."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62Oert",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nset -euo pipefail\n\nrg -n \"export\\\\s+(const|let|var|type)\\\\s+PARAM_KEY\" code/core/src/backgrounds/constants.ts\nrg -n \"import\\\\s+type\\\\s+\\\\{\\\\s*PARAM_KEY\\\\s*\\\\}\\\\s+from\\\\s+'\\\\./constants\\\\.ts'\" code/core/src/backgrounds/types.ts\nrg -n \"\\\\[PARAM_KEY\\\\]\" code/core/src/backgrounds/types.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 212\n\n---\n\n\n\n</details>\n\n**Change `import type` to value import for `PARAM_KEY`.**\n\n`PARAM_KEY` is exported as a `const` value in constants.ts but imported as type-only in types.ts. Line 53 uses it as a computed property key `[PARAM_KEY]`, which requires the symbol in the value space. A type-only import will fail here.\n\n<details>\n<summary>\ud83d\udd27 Proposed fix</summary>\n\n```diff\n-import type { PARAM_KEY } from './constants.ts';\n+import { PARAM_KEY } from './constants.ts';\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nimport { PARAM_KEY } from './constants.ts';\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/backgrounds/types.ts` at line 1, The import of PARAM_KEY is\ncurrently type-only but it's used at runtime as a computed property key (e.g.\n[PARAM_KEY]) so change the import from a type-only import to a normal value\nimport; replace \"import type { PARAM_KEY }\" with a value import for PARAM_KEY in\ntypes.ts so the symbol is available at runtime where it's referenced (see usages\nof PARAM_KEY around the computed property access).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk:d00af9b6-c490-409f-b5a6-b83b910c2791 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/backgrounds/types.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "d73a6e49719087cdf54e830024c2f963a2a19ee4",
+          "created_at": "2026-04-09T10:51:50Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "`import type` is used for a value (`const`) that is needed at runtime as a computed property key \u2014 type-only import strips the value at compile time, causing runtime failure."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags critical bug where import type is used for a value needed at runtime as a computed property key."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62Oer9",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nset -euo pipefail\n\nFILE=\"code/core/src/common/js-package-manager/Yarn2Proxy.test.ts\"\n\npython - <<'PY'\nimport re\nfrom pathlib import Path\n\np = Path(\"code/core/src/common/js-package-manager/Yarn2Proxy.test.ts\")\nt = p.read_text()\n\nimports = re.findall(r\"import\\s+\\{\\s*executeCommand\\s*\\}\\s+from\\s+'([^']+)'\", t)\nmocks = re.findall(r\"vi\\.mock\\('([^']+)'\", t)\n\nprint(\"executeCommand import specifier(s):\", imports)\nprint(\"vi.mock specifier(s):\", mocks)\nprint(\"MATCH\" if imports and imports[0] in mocks else \"MISMATCH\")\nPY\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 210\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check for Vitest configuration files that might affect module resolution\nfind . -type f \\( -name \"vitest.config.*\" -o -name \"vite.config.*\" \\) | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 961\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Read the full test file to understand context and mock placement\ncat -n code/core/src/common/js-package-manager/Yarn2Proxy.test.ts | head -60\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2283\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Read the vitest config for code/core to check for any extension resolution/alias settings\ncat -n code/core/vitest.config.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 467\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the actual utils/command file to understand the module structure\ncat -n code/core/src/common/utils/command.ts | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 661\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the shared vitest config\ncat -n code/vitest.shared.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 608\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Verify if the command.ts file actually exists at the expected path\nls -la code/core/src/common/utils/command.ts 2>&1 || echo \"File not found\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 151\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's any extension resolution or alias configuration in vite-related configs\ngrep -r \"extensions\\|alias\" code/vite.config.ts code/vitest.shared.ts 2>/dev/null || echo \"No alias/extension config found in shared vitest config\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 120\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Verify the exact mock behavior by checking if there are similar patterns in other test files\nrg \"vi\\.mock\\(['\\\"]\\.\\./\" code/core/src/common/js-package-manager/ -A 1 | head -30\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 725\n\n---\n\n\n\n</details>\n\n**Align the mocked module specifier with the new `.ts` import.**\n\nLine 5 imports `../utils/command.ts`, but the mock at Line 21 still targets `../utils/command` without the extension. Per the coding guidelines requiring explicit file extensions for imports, the mock specifier must match for consistency and to ensure spy mocking works reliably.\n\n<details>\n<summary>\ud83d\udd27 Proposed fix</summary>\n\n```diff\n-vi.mock('../utils/command', { spy: true });\n+vi.mock('../utils/command.ts', { spy: true });\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/common/js-package-manager/Yarn2Proxy.test.ts` around lines 5 -\n7, The test imports executeCommand from '../utils/command.ts' but the module\nmock still targets '../utils/command' so the mock doesn't match; update the mock\nspecifier in Yarn2Proxy.test.ts to use the explicit extension (change any\nmock/spy import of '../utils/command' to '../utils/command.ts') so that the\nmocked executeCommand used by the Yarn2Proxy tests resolves correctly.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk:d00af9b6-c490-409f-b5a6-b83b910c2791 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/common/js-package-manager/Yarn2Proxy.test.ts",
+          "line_number": 7,
+          "start_line": 5,
+          "commit_sha": "d73a6e49719087cdf54e830024c2f963a2a19ee4",
+          "created_at": "2026-04-09T10:51:50Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "high",
+          "label_reasoning": "vi.mock() specifier mismatch (missing .ts extension) causes mock to not intercept the imported module \u2014 incorrect use of Vitest API."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests aligning mock target to include .ts extension to match the import specifier."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62OesE",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Verify import-vs-mock specifier consistency in this test file.\nfile=\"code/core/src/common/presets.test.ts\"\n\necho \"== imports ==\"\nrg -n \"from '../shared/utils/module(\\\\.ts)?'\" \"$file\"\n\necho\necho \"== vi.mock target ==\"\nrg -n \"vi\\\\.mock\\\\('../shared/utils/module(\\\\.ts)?'\" \"$file\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 207\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ngrep -n \"mockedResolveUtils\\|mockRe\\|resolveUtils\" code/core/src/common/presets.test.ts | head -30\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1115\n\n---\n\n\n\n</details>\n\n**Mock target must include `.ts` extension to match the import.**\n\nThe import statement uses `../shared/utils/module.ts` (with extension), but the mock target at Line 26 uses `../shared/utils/module` (without extension). Vitest's module matching is string-based, so this mismatch prevents the mock from intercepting the imported module. The test extensively uses `mockedResolveUtils.importModule.mockImplementation()` in 11+ test cases, which will fail silently if the module is not properly mocked.\n\n<details>\n<summary>\ud83d\udd27 Fix</summary>\n\n```diff\n-vi.mock('../shared/utils/module', () => ({\n+vi.mock('../shared/utils/module.ts', () => ({\n   importModule: vi.fn(),\n   safeResolveModule: vi.fn(({ specifier }) => {\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/common/presets.test.ts` around lines 8 - 9, The mock target\nstring used in the vitest.mock call doesn't include the `.ts` extension so it\ndoesn't match the actual import and the mock of resolveUtils is not applied;\nupdate the module string in the mock to include the `.ts` extension to match the\nimport (so tests that call\nmockedResolveUtils.importModule.mockImplementation(...) will be intercepted),\nthen run the tests to confirm the mocked implementations are used.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:triton:hawk:4ac157aa-a698-47dc-b078-5b4ba0dcd4ea -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/common/presets.test.ts",
+          "line_number": 9,
+          "start_line": 8,
+          "commit_sha": "d73a6e49719087cdf54e830024c2f963a2a19ee4",
+          "created_at": "2026-04-09T10:51:50Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "high",
+          "label_reasoning": "vi.mock() specifier mismatch (missing .ts extension) prevents mock from applying \u2014 incorrect use of Vitest API."
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding .ts extension to vi.mock target to match the import specifier."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62PnvV",
+          "author": "copilot-pull-request-reviewer",
+          "body": "`rnstorybookConfig` renames the config directory from `.storybook` to `.rnstorybook` during the same automigrate run, but `runFixes()` keeps passing the original `mainConfigPath` to subsequent fixes. With `rnOndeviceAddonsToDeviceAddons` placed after `rnstorybookConfig`, the fix can end up calling `updateMainConfig()` on a path that no longer exists, and `updateMainConfig()` swallows errors (logs + returns), so the migration may be reported as succeeded while not modifying the new `.rnstorybook/main.*`.\n\nConsider moving `rnOndeviceAddonsToDeviceAddons` before `rnstorybookConfig`, or make the fix resilient by resolving the post-rename main config path before calling `updateMainConfig` (e.g. detect `.rnstorybook/main.*` when `.storybook/main.*` is missing).\n```suggestion\n  rnOndeviceAddonsToDeviceAddons,\n  rnstorybookConfig,\n```",
+          "file_path": "code/lib/cli-storybook/src/automigrate/fixes/index.ts",
+          "line_number": 38,
+          "start_line": null,
+          "commit_sha": "c06f6b3a4bca4699ddac809df83b30afc4387ed1",
+          "created_at": "2026-04-09T11:44:40Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Migration ordering issue: rnOndeviceAddonsToDeviceAddons runs after rnstorybookConfig which renames the config dir, causing the fix to operate on a stale path that no longer exists."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a bug where migration ordering causes updateMainConfig to be called on a non-existent path after rename, with a suggested fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62PnwI",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The migration is not idempotent if the user already has one of these addons listed under `deviceAddons` (e.g. a partially migrated config): it will remove from `addons` and unconditionally append to `deviceAddons`, potentially creating duplicates. Consider checking existing `deviceAddons` entries (e.g. via `ConfigFile.getNamesFromPath(['deviceAddons'])`) and only appending when the addon isn\u2019t already present.\n```suggestion\n      const existingDeviceAddonNames = new Set(main.getNamesFromPath(['deviceAddons']));\n\n      for (const addon of ondeviceAddons) {\n        const name = getAddonName(addon);\n        main.removeEntryFromArray(['addons'], name);\n\n        if (!existingDeviceAddonNames.has(name)) {\n          main.appendValueToArray(['deviceAddons'], addon);\n          existingDeviceAddonNames.add(name);\n        }\n```",
+          "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+          "line_number": 48,
+          "start_line": 45,
+          "commit_sha": "f2e8e4ad526511ada42f8fd64802db7c78ed1400",
+          "created_at": "2026-04-09T11:44:40Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Non-idempotent migration logic can create duplicates in deviceAddons if partially migrated \u2014 missing check for existing entries before appending."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc62P1BF",
+          "author": "ndelangen",
+          "body": "That means they had it twice to begin with, in both arrays... I think if that's what the user had, we should keep it.",
+          "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+          "line_number": 48,
+          "start_line": 45,
+          "commit_sha": "f2e8e4ad526511ada42f8fd64802db7c78ed1400",
+          "created_at": "2026-04-09T11:53:19Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags non-idempotent behavior that could create duplicates and suggests checking existing deviceAddons entries."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62Pt76",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, check if the file exists and read the relevant sections\ncat -n code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4023\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the spy-mocking rules file\ncat .cursor/rules/spy-mocking.mdc 2>/dev/null || echo \"File not found at .cursor/rules/spy-mocking.mdc\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1585\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the .cursorrules file for references\ncat .cursorrules 2>/dev/null || echo \"File not found\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1827\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for other test files with similar vi.mock patterns to understand the convention\nrg \"vi\\.mock\\(\" --type typescript --max-count 20 -B 2 -A 2 code/lib/cli-storybook/src\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 99\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for other vi.mock patterns in test files to understand the convention\nrg \"vi\\.mock\\(\" --type ts --max-count 30 -B 2 -A 3 code/lib/cli-storybook/src --glob \"*.test.ts\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 36806\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check what pattern is used in other cli-storybook test files\nfind code/lib/cli-storybook/src -name \"*.test.ts\" | head -5 | xargs -I {} sh -c 'echo \"=== {} ===\" && head -40 {}'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 5469\n\n---\n\n\n\n</details>\n\n**Align Vitest mocks with repo spy-mocking rules and explicit file extensions.**\n\nThree issues require fixing to comply with the Vitest spy-mocking standards:\n\n1. Missing `{ spy: true }` option in `vi.mock()`\n2. Missing `.ts` extension in the mock import path\n3. Direct access to mocked function without `vi.mocked()` wrapper at lines 33-40 and 266-269\n\n<details>\n<summary>Suggested patch</summary>\n\n```diff\n import { beforeEach, describe, expect, it, vi } from 'vitest';\n\n import type { JsPackageManager } from 'storybook/internal/common';\n import type { StorybookConfigRaw } from 'storybook/internal/types';\n\n+import { updateMainConfig } from '../helpers/mainConfigFile.ts';\n import { rnOndeviceAddonsToDeviceAddons } from './rn-ondevice-addons-to-device-addons.ts';\n\n // vi.hoisted ensures these are available when vi.mock factories run (before module imports)\n const mocks = vi.hoisted(() => {\n   const configFile = {\n     removeEntryFromArray: vi.fn(),\n     appendValueToArray: vi.fn(),\n   };\n-  const updateMainConfig = vi.fn();\n-  return { configFile, updateMainConfig };\n+  return { configFile };\n });\n\n // Mock the updateMainConfig helper so we can assert on the AST manipulations.\n-vi.mock('../helpers/mainConfigFile', () => ({\n-  updateMainConfig: mocks.updateMainConfig,\n-}));\n+vi.mock('../helpers/mainConfigFile.ts', { spy: true });\n\n   beforeEach(() => {\n     vi.clearAllMocks();\n     // Restore the implementation that invokes the callback with our mock ConfigFile\n-    mocks.updateMainConfig.mockImplementation(\n+    vi.mocked(updateMainConfig).mockImplementation(\n       async (\n         _opts: { mainConfigPath: string; dryRun: boolean },\n         callback: (cfg: unknown) => Promise<void>\n       ) => {\n         await callback(mocks.configFile);\n       }\n     );\n   });\n\n-      expect(mocks.updateMainConfig).toHaveBeenCalledWith(\n+      expect(vi.mocked(updateMainConfig)).toHaveBeenCalledWith(\n         { mainConfigPath: '.rnstorybook/main.ts', dryRun: true },\n         expect.any(Function)\n       );\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn\n`@code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts`\naround lines 19 - 21, The vitest mocks must include the { spy: true } option,\nuse explicit .ts extensions, and use vi.mocked() when accessing mocked\nfunctions: change vi.mock('../helpers/mainConfigFile', () => ({\nupdateMainConfig: mocks.updateMainConfig })) to\nvi.mock('../helpers/mainConfigFile.ts', () => ({ updateMainConfig:\nmocks.updateMainConfig }), { spy: true }), and replace any direct uses of\nupdateMainConfig in tests with vi.mocked(updateMainConfig) before\ncalling/inspecting it (e.g., wrap accesses in\nvi.mocked(updateMainConfig).mockImplementation / .mock.calls etc.) so the mock\nfollows spy-mocking rules.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk:470448d8-9270-4d10-8dd2-a5ed62109d85 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+          "line_number": 21,
+          "start_line": 19,
+          "commit_sha": "f2e8e4ad526511ada42f8fd64802db7c78ed1400",
+          "created_at": "2026-04-09T11:48:21Z",
+          "is_outdated": false,
+          "dimension": "Code Style",
+          "category": "Language-Specific Standards",
+          "label_confidence": "high",
+          "label_reasoning": "Multiple violations of repo's Vitest spy-mocking standards: missing { spy: true }, missing .ts extension, and not using vi.mocked() wrapper."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests multiple fixes to Vitest mocks: adding spy: true, explicit .ts extension, and using vi.mocked() wrapper."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc62P1GQ",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Fix ordering in `allFixes` for RN migrations.**\n\n`rnOndeviceAddonsToDeviceAddons` is currently placed *before* `rnstorybookConfig` (Line 37 vs Line 38), but this migration is intended to run immediately **after** `rnstorybookConfig`. Please swap them to preserve intended execution order.\n\n\n<details>\n<summary>Proposed patch</summary>\n\n```diff\n-  rnOndeviceAddonsToDeviceAddons,\n-  rnstorybookConfig,\n+  rnstorybookConfig,\n+  rnOndeviceAddonsToDeviceAddons,\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  rnstorybookConfig,\n  rnOndeviceAddonsToDeviceAddons,\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/lib/cli-storybook/src/automigrate/fixes/index.ts` around lines 37 - 38,\nThe RN migration ordering in the allFixes list is wrong: move rnstorybookConfig\nto appear immediately before rnOndeviceAddonsToDeviceAddons so\nrnOndeviceAddonsToDeviceAddons runs right after rnstorybookConfig; update the\narray in index.ts by swapping the two entries (rnstorybookConfig and\nrnOndeviceAddonsToDeviceAddons) within the allFixes export to preserve the\nintended execution order.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk:68865f22-8fc4-4c66-91d2-4a28e1ece25d -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit f2e8e4a",
+          "file_path": "code/lib/cli-storybook/src/automigrate/fixes/index.ts",
+          "line_number": 38,
+          "start_line": null,
+          "commit_sha": "095c2a9862714e6948ebb542c80ab64dc43b52b3",
+          "created_at": "2026-04-09T11:53:23Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Incorrect ordering of migrations in allFixes array \u2014 rnOndeviceAddonsToDeviceAddons is placed before rnstorybookConfig but should run after it."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests swapping ordering of rnstorybookConfig and rnOndeviceAddonsToDeviceAddons in allFixes (though marked as already addressed)."
+    }
+  ],
+  "review_thread_count": 27,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 27,
+    "stage1_kept": 27,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

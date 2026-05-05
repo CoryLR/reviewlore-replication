@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 123,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This empty `catch {}` block silently swallows all errors thrown by `getGitDir()`, `watchFile()`, or `configureBranchWatcher()`. The project rule is clear: even for best-effort, non-fatal code paths, the caught error must be logged at minimum at `logger.debug` level before continuing. The comment explains the *intent* but the implementation discards the error object entirely, making it impossible to diagnose why watching stopped working for a user.\n\nFix:\n```typescript\n} catch (error) {\n  logger.debug(\n    `Change detection git watcher setup failed: ${\n      error instanceof Error ? error.message : String(error)\n    }. Scanning will continue from module graph updates.`\n  );\n}\n```",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 115,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Both `headWatcher` and `packedRefsWatcher` are installed on the same path: `gitDir` (the `.git` directory). Because `node:fs.watch` on a directory fires for any file change directly inside it, a single OS event \u2014 such as git writing `.git/COMMIT_EDITMSG` or updating `.git/index` \u2014 triggers both listeners in the same tick, calling `emitGitStateChange()` twice. The downstream debounce in `ChangeDetectionService` absorbs the duplicates, but the double-fire is architecturally surprising and means two debounce timers are reset instead of one.\n\nThe two watchers are distinguishable by their `onChange` callback (the `head` watcher also calls `reconfigureBranchWatcher`). Consider using a single directory watcher that checks `filename` (available on most platforms) or consolidate the callbacks into one watcher with branching logic.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 201,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `.catch()` callback doesn't capture the thrown error, so the `logger.warn` message contains no diagnostic information. Per the project rule, captured errors must be logged, but even without a named binding the actual failure reason is lost here. Change to:\n```typescript\nvoid this.configureBranchWatcher(gitDir).catch((error) => {\n  logger.warn(\n    `Change detection failed to reconfigure git branch watcher: ${\n      error instanceof Error ? error.message : String(error)\n    }`\n  );\n  this.stopWatching();\n});\n```",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 78,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The command `diff --name-only --diff-filter=A` (without `--cached`) as a means of detecting `git add -N` (intent-to-add) files is non-obvious. `git add -N` registers a path in the index as an empty blob; the unstaged `--diff-filter=A` diff then shows it as an \"added\" working-tree file. Without a comment this reads like a mistake or duplicate of the `--cached` line above it. Add a brief inline explanation:\n```typescript\n// Detects intent-to-add files (git add -N): staged as empty blobs, so the\n// unstaged diff reports them as Added in the working tree.\nrunGitCommand(['diff', '--name-only', '--diff-filter=A']),\n```",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.test.ts",
+      "line_number": 1,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Lines 1 and 3 both import from `node:fs` as separate statements. Merge them into a single import:\n```typescript\nimport type { FSWatcher, watch } from 'node:fs';\nimport type { readFile, stat } from 'node:fs/promises';\n```",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.test.ts",
+      "line_number": 28,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`GitDiffProviderTestContext` declares a `mockReadFile` field and `setupGitWatchProvider` returns it, but none of the new test cases in this diff destructure or use it. This is dead API surface on the context object. Either remove the field and return value, or add a test that exercises it (e.g., verifying HEAD-read failures are handled gracefully).",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.ts",
+      "line_number": 252,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`(node) => void existingNodes.add(node)` uses a concise arrow body where `void` discards the `Set.add()` return value. Biome's `lint/suspicious/useIterableCallbackReturn` rule requires `forEach` callbacks to use block bodies when the expression's value must be suppressed. Use:\n```typescript\nnodes.forEach((node) => { existingNodes.add(node); });\n```",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.test.ts",
+      "line_number": 106,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`void callback;` is a no-op expression statement \u2014 it evaluates `callback` and discards the result, but doesn't suppress any TypeScript or lint diagnostic (TypeScript does not warn about unused parameters). It will confuse future readers who may wonder what it is supposed to do. Simply remove it; the mock's default implementation is already correct without it.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `gitDiffProvider` option in `ChangeDetectionService` has been narrowed from `Pick<GitDiffProvider, 'getChangedFiles' | 'getRepoRoot'>` (a duck-typed structural type that allowed plain object mocks) to the concrete `GitDiffProvider` class. This is required because `onGitStateChange` must now be part of the contract, but the concrete-class requirement forces every caller \u2014 including future external consumers \u2014 to subclass `GitDiffProvider` rather than providing a simple adapter object. Consider extracting an `IGitDiffProvider` interface that captures the full three-method contract (`getChangedFiles`, `getRepoRoot`, `onGitStateChange`), and type the option and field against the interface instead. The `MockGitDiffProvider` would still satisfy it via class extension, but plain object mocks would also be possible.",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The new `getStoryIdsByAbsolutePath` implementation stores both the original absolute path and the `normalizePath`-ed version as separate keys in `storyIdsByFile`, which is the correct approach for Windows cross-platform compatibility. However, on non-Windows systems where the two values are identical, `addStoryId` is called twice with the same key and story ID \u2014 the second call is a no-op but adds unnecessary churn. A short inline comment noting that the dual-key strategy is intentional for Windows path compatibility would help future readers understand why the same story ID appears to be registered twice.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.95480095,
+  "duration_seconds": 795.4702429771423
+}

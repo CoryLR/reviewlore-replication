@@ -1,0 +1,82 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.tsx",
+      "line_number": 199,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The assertiveness level only checks `errorCount` (component test errors), but the PR description explicitly states the announcement should be `assertive` when component test errors **or** accessibility errors are present. When `hasA11yAddon` is `true` and `a11yErrorCount > 0` but `errorCount === 0`, the call `announce(message, errorCount > 0 ? 'assertive' : 'polite')` will incorrectly use `polite`, potentially causing screen readers to defer reading a failure summary.\n\nFix by computing a shared flag before the `announce` call:\n```tsx\nconst a11yErrorCount = hasA11yAddon ? a11yStatusValueToStoryIds['status-value:error'].length : 0;\nannounce(message, (errorCount > 0 || a11yErrorCount > 0) ? 'assertive' : 'polite');\n```\nNote: `a11yErrorCount` is currently scoped inside the `if (hasA11yAddon)` block, so it is not accessible at the `announce` call site without this refactor. There is also no story covering the \"a11y-errors-only\" scenario that would catch this bug through automated testing.",
+      "index": 0
+    },
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.stories.tsx",
+      "line_number": 348,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`await expect(document.body).toHaveLiveRegion(...)` is synchronous \u2014 `toHaveLiveRegion` returns a plain `{ pass, message }` object, not a Promise, so `await` here does not add retry behavior. The real problem is that `@react-aria/live-announcer` schedules its DOM update (setting `textContent` on the hidden live-region element) via an internal `setTimeout`. Even though `await userEvent.click(btn)` flushes React effects, the announcer's timer fires asynchronously afterward. The assertion can therefore run before the live-region text is populated, making these tests flaky.\n\nUse `waitFor` so the assertion is retried until the DOM update lands:\n```tsx\nawait waitFor(() =>\n  expect(document.body).toHaveLiveRegion({ text: 'Test run started.', level: 'polite' })\n);\n```\nThe same fix applies to the `AnnouncesTestRunFinished` and `AnnouncesTestRunCrashed` play functions.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/toHaveLiveRegion.ts",
+      "line_number": 58,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "When a `RegExp` with a global (`/g`) or sticky (`/y`) flag is passed as `text`, calling `text.test(content)` mutates `text.lastIndex`. Because the function iterates over multiple candidate elements and calls `text.test(content)` for each one, the `lastIndex` advances after the first match, causing subsequent calls to start mid-string and potentially return false negatives \u2014 i.e., the same regex that matched the first element will fail on a second identical element.\n\nReset `lastIndex` before each test call:\n```ts\nif (text instanceof RegExp) text.lastIndex = 0;\nconst textMatches = typeof text === 'string' ? content.includes(text) : text.test(content);\n```\nThis is a well-known footgun when reusing stateful `RegExp` objects across iterations.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager/globals/exports.ts",
+      "line_number": 575,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "`toHaveLiveRegion` is a test-only Vitest custom matcher; adding it to the `'storybook/internal/components'` global exports array means it is bundled into the **production Storybook manager JavaScript** that every user downloads. Test utilities must not ship in production bundles \u2014 per project rules they should live under a dedicated `test-utils/` directory and be imported only in test contexts.\n\nRemove `'toHaveLiveRegion'` from this list. The matcher can still be consumed in story files and test setup files by importing directly: `import { toHaveLiveRegion } from 'storybook/internal/components'` if you keep it in the source tree, but it must not be included in the globalized manager bundle. Consider moving it to a `test-utils` export path instead.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/toHaveLiveRegion.ts",
+      "line_number": 23,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "There is no TypeScript module augmentation for the custom matcher. Without a declaration like:\n```ts\ndeclare module 'vitest' {\n  interface Assertion<R = any> {\n    toHaveLiveRegion(options: LiveRegionMatcherOptions): R;\n  }\n}\n```\n(and a parallel one for `@storybook/test` if needed), callers writing `expect(el).toHaveLiveRegion(...)` will get a TypeScript error such as `Property 'toHaveLiveRegion' does not exist on type 'Assertion'`. The runtime call works after `expect.extend`, but TypeScript will flag every usage site as a type error in strict projects.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/components/components/LiveRegion/LiveRegion.tsx",
+      "line_number": 12,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The file contains only re-exports and a type alias \u2014 there is no JSX anywhere. The `.tsx` extension is unnecessary and mildly misleading; `.ts` is the correct extension for files that contain no JSX.",
+      "index": 5
+    },
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.tsx",
+      "line_number": 145,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Because `componentTestStatusValueToStoryIds` is in the `useEffect` dependency array, the effect will re-run whenever that object reference changes \u2014 even if `testProviderState` remains `succeeded`. The `prevState === testProviderState` guard prevents a duplicate announcement in that case, which is correct. However, the converse risk is real in production: if Vitest updates `testProviderState` to `succeeded` in one render and `componentTestStatusValueToStoryIds` settles in a later render (the two don't always update atomically), the announcement fires with whatever counts happened to be present at the first render. Depending on how the store batches these updates, users could hear \"0 components passed\" immediately followed by silence even though three components passed. Worth confirming with a store-level test that both pieces of state update in the same React render batch.",
+      "index": 6
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "`toHaveLiveRegion` is exported from `storybook/internal/components` \u2014 the main production components barrel \u2014 alongside runtime UI components like `Button`, `Loader`, and `ProgressSpinner`. Test-only utilities (custom matchers, test helpers, mock factories) should not live in production source modules. Per project conventions, they belong in a dedicated `test-utils/` directory with a separate export path. This makes the boundary between production and test code explicit and prevents test infrastructure from being accidentally imported by consumers of the public components API.",
+      "index": 7
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description states that `extend-to-be-announced` is added as a devDependency and registered in `code/.storybook/storybook.setup.ts`, and that stories use `toBeAnnounced` from that library. None of this appears in the actual diff: the library is absent from `package.json`, `storybook.setup.ts` is not modified, and the stories use the custom `toHaveLiveRegion` matcher instead. The PR description appears to document an earlier design iteration. It should be updated to accurately reflect the implementation as merged, to avoid confusion for future contributors.",
+      "index": 8
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "None of the three new announcement stories assert the negative side \u2014 e.g., that `AnnouncesTestRunStart` does NOT produce an `assertive` announcement, or that `AnnouncesTestRunFinished` (with only passed stories) does NOT produce an `assertive` announcement. Per project rules, play functions should assert both what should be present AND what should be absent. A false positive could occur if the component happens to produce an `assertive` region for an unrelated reason. Adding `.not.toHaveLiveRegion({ level: 'assertive' })` (or similar) for the `polite` stories would make the intent explicit and the tests more robust.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 1.0643588499999999,
+  "duration_seconds": 602.5494830608368
+}

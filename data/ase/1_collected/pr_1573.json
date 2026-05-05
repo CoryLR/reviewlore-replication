@@ -1,0 +1,261 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 1573,
+  "title": "MAINT: NEB / NEBTools cleanup",
+  "body": "An attempt to clean up some of ase/neb.py and related functions. Things of note:\r\n\r\n1. Moved functions like `fit0` and `plot_band_from_fit` into `NEBTools`; put in deprecation warnings. (I doubt people used these directly, though.)\r\n\r\n2. `NEBTools` now can plot all bands in a trajectory; this is nice for seeing how a NEB converges. There is also an associated CLI tool: 'ase nebplot'. This also automatically figures out how many images are in each band. That last feature may be useful for the GUI someday.\r\n\r\n3. The `NEB` class previously had two different methods to call an IDPP interpolation. I just kept the method that uses the same syntax as the standard linear interpolation (i.e., `neb.interpolate('idpp')`) and moved the other to a stand-alone function. This is the same approach used by the linear interpolation. (The standalone function has more features for advanced users, and is useful for more than just NEB calculations.)\r\n\r\n4. To get `NEBTools.plot_bands` to work with varied input formats, I created a local class called `Images` which intelligently handles things like lists of images, trajectories, filenames, and lists of trajectories. This `Images` class might be a step towards what @askhl was suggesting (several months ago) for a general class to treat lots of different formats; for now, I left it in `ase.neb` since I don't think it's universal enough to pop into `ase.io`, but perhaps it can serve as a stub for that project, if that's the way we go. To also get CLI syntax like `ase nebplot neb1.traj@:7 neb2.traj@-7:` to work, I added the `parse_filename` method into the `TrajectoryReader` class, which enables it to return a `SlicedTrajectory`; this bit is really a follow-up to the trajectory-slicing merge of a few months ago. (The difference from calling `ase.io.read` is the images are not loaded into memory until needed.) Ultimately moving the @ syntax to the CLI will probably be the best solution, but until that happens this seems to be the logical approach.  \r\n\r\n5. In the GUI, renamed \"Tools > NEB\" to \"Tools > NEB plot\".\r\n\r\n6. Lots of general code clean up, including in the documentation and tests. (However, `NEB.get_forces` could still use some serious work as it is full of nested for loops and if clauses...)",
+  "author": "andrew_peterson",
+  "merged_at": "2019-12-21T22:53:21.766Z",
+  "base_ref": "master",
+  "merge_commit_sha": "7897f29f9c55f516b8afae5aaa606df8ac9c4fe7",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "262059117",
+          "author": "askhl",
+          "body": "Hmm, we need a unit test which detects missing CLI completion options, so we remember to do these things.  Maybe we should open an issue...",
+          "file_path": "ase/cli/complete.py",
+          "line_number": 83,
+          "commit_sha": "09f7c315b2a9b7c0cbad9e81b8398e630bf1524f",
+          "base_sha": "ea0fc75307b4fe833fbc0dfa7f132265ae792529",
+          "created_at": "2019-12-18T01:01:02.783Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "262059118",
+          "author": "askhl",
+          "body": "I can never remember the short option names.  I would prefer that we *always* write long, more memorable option names like `--nimages` and never write the short ones until we get actively bored typing the long ones.  Then we also know that we *like* that option enough to have a shortcut for it.  One wouldn't *normally* need `-i`.  If we frequently need it anyway, we should think of a better format which makes `-i` unnecessary.  That could be a JSON dump of NEBImages objects rather than a simple trajectory.  After all trajectories are by design 1D-indexable whereas a NEB run is a 2D thing.  Only problem is that JSON is not a 'sequential' format (it's not possible to concatenate two JSONs and get a valid JSON), so they cannot be generated on the fly ....\n\nI'd also use something like `--share-x` and `--share-y` below.",
+          "file_path": "ase/cli/nebplot.py",
+          "line_number": 29,
+          "commit_sha": "09f7c315b2a9b7c0cbad9e81b8398e630bf1524f",
+          "base_sha": "ea0fc75307b4fe833fbc0dfa7f132265ae792529",
+          "created_at": "2019-12-18T01:01:02.953Z",
+          "is_outdated": false
+        },
+        {
+          "id": "262716533",
+          "author": "andrew_peterson",
+          "body": "Fair enough -- and with tab-complete it's not even painful to use the longer names. (Fixed in my next commit.)",
+          "file_path": "ase/cli/nebplot.py",
+          "line_number": 29,
+          "commit_sha": "09f7c315b2a9b7c0cbad9e81b8398e630bf1524f",
+          "base_sha": "ea0fc75307b4fe833fbc0dfa7f132265ae792529",
+          "created_at": "2019-12-18T21:30:24.697Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "262059119",
+          "author": "askhl",
+          "body": "I think the `index=` keyword is better than the `@` syntax for the programmatic interface, to the extent that we should try to get rid of `@`.\n\nI also think the ability to slice trajectories (thanks to you) is so much better than the `index=` keyword that we should get rid of the `index=` keyword to the extent we can.\n\nSo does anything stop us from just doing `Trajectory(...)[:5]`?",
+          "file_path": "ase/io/trajectory.py",
+          "line_number": 27,
+          "commit_sha": "36fef2087db3090c0b7dbb607eeba3d33b02f9dd",
+          "base_sha": "de2da61b14fdad507edc45c7bd93b744451a1efe",
+          "created_at": "2019-12-18T01:01:03.100Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "262059120",
+          "author": "askhl",
+          "body": "Any reason not to use print() if it's stdout?\n\n(stdout is linebuffered in ttys, so normally it's not necessary to flush.)\n\nI think the construct `len(self.images) // nimages` is worthy of a variable, possibly `nebsteps`.",
+          "file_path": "ase/neb.py",
+          "line_number": 675,
+          "commit_sha": "09f7c315b2a9b7c0cbad9e81b8398e630bf1524f",
+          "base_sha": "ea0fc75307b4fe833fbc0dfa7f132265ae792529",
+          "created_at": "2019-12-18T01:01:03.272Z",
+          "is_outdated": false
+        },
+        {
+          "id": "262726040",
+          "author": "andrew_peterson",
+          "body": "Yep, note the lack of a `\\n` in that call to `sys.stdout.write`. This way it over-writes the single output line. (I.e., to the user's eye, only the image number is changing in the terminal text, and the terminal isn't getting flooded with new lines.)\n\nAdded a `nebsteps` variable in next commit (92de8921f).",
+          "file_path": "ase/neb.py",
+          "line_number": 675,
+          "commit_sha": "09f7c315b2a9b7c0cbad9e81b8398e630bf1524f",
+          "base_sha": "ea0fc75307b4fe833fbc0dfa7f132265ae792529",
+          "created_at": "2019-12-18T22:03:35.241Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "262059121",
+          "author": "askhl",
+          "body": "The braces `{f}` are unnecessary, but those in `E_{\\mathrm f}` are necessary in normal latex.\n\n(It'll be easier to write these with raw strings.)",
+          "file_path": "ase/neb.py",
+          "line_number": 704,
+          "commit_sha": "90da11b01b4a3252095127c286aca481b75d6811",
+          "base_sha": "de2da61b14fdad507edc45c7bd93b744451a1efe",
+          "created_at": "2019-12-18T01:01:03.427Z",
+          "is_outdated": false
+        },
+        {
+          "id": "262733675",
+          "author": "andrew_peterson",
+          "body": "Switched to raw strings and the `format` command in 297c748c6.",
+          "file_path": "ase/neb.py",
+          "line_number": 704,
+          "commit_sha": "90da11b01b4a3252095127c286aca481b75d6811",
+          "base_sha": "de2da61b14fdad507edc45c7bd93b744451a1efe",
+          "created_at": "2019-12-18T22:12:17.980Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "262059122",
+          "author": "askhl",
+          "body": "This function plots energies with forces/displacements as gradients.  This feature is useful outside of NEB, and therefore exists in `ase.utils.forcecurve`, a module specifically for doing this sort of plot.  I can see that the lines coincide.  I may have forgotten to remove the old copy when moving the code at some point -- my apologies if that's the case.\n\nInstead of the relatively long tuple, the function in forcecurve returns a ForceFit object which is more appropriate for representing complex information.  This is probably the only difference between the two implementations.  Would you be okay with unifying these two?\n\n(The forcecurve module actually contains one implementation with 'nice fitting' for NEB, and another for serious work (e.g. debugging gradients) without any fitting.  I've never quite understood why we would do high-order fits.  Normally in scientific work you want the simplest representation of the data rather than something which looks 'shiny')",
+          "file_path": "ase/neb.py",
+          "line_number": 719,
+          "commit_sha": "297c748c6ca8735b8e24ac9e68a89c2541ef3a8e",
+          "base_sha": "de2da61b14fdad507edc45c7bd93b744451a1efe",
+          "created_at": "2019-12-18T01:01:03.598Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "262059124",
+          "author": "askhl",
+          "body": "(As I may have hinted in a different comment, while it's sort of nice to have a heuristic to extract an NEB from a trajectory which may happen to describe an NEB run, it would be *even better* to have a data structure which is designed specifically to represent that.  Then there won't be any guessing.)",
+          "file_path": "ase/neb.py",
+          "line_number": 718,
+          "commit_sha": "09f7c315b2a9b7c0cbad9e81b8398e630bf1524f",
+          "base_sha": "ea0fc75307b4fe833fbc0dfa7f132265ae792529",
+          "created_at": "2019-12-18T01:01:03.742Z",
+          "is_outdated": false
+        },
+        {
+          "id": "262773848",
+          "author": "andrew_peterson",
+          "body": "I think that's too heavy a lift for this merge request. ;)\n\nAn easier solution might be storing some metadata in the regular-old-trajectory format that states that it's a NEB and stores the number of images per band...\n\nAlso, I think the \"guess\" function above should actually be pretty robust.",
+          "file_path": "ase/neb.py",
+          "line_number": 718,
+          "commit_sha": "09f7c315b2a9b7c0cbad9e81b8398e630bf1524f",
+          "base_sha": "ea0fc75307b4fe833fbc0dfa7f132265ae792529",
+          "created_at": "2019-12-19T02:03:34.549Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "262059125",
+          "author": "askhl",
+          "body": "It'll be great to have an object *like* this, but I am not sure about having a single class implementing so many distinctions.  It seems to me that it would change depending on many things.  It's best if it only changes depending on one thing.\n\n\nTo be more specific:\n\n * The constructor shouldn't provide many luxuries (offer many options).  It should just save stuff or provide catch-all conversions at most.  Otherwise it will grow indefinitely.  Rather, the caller is responsible for providing data in the single preferred form, *or* use factory functions for vastly different call signatures.\n\n * It seems to me that images and list-of-images are in practice so different that the user would always care whether they have one or the other in front of them.  That means they should probably be different classes altogether, produced by different functions.\n\n * Taking strings as arguments ties it to the trajectory format (or our format readers if generalized).  It would be better that the trajectory, or the format readers, *produced* this class, whereas the class does not need to know about *them*.  As for how IO formats should produce collections of atoms, this is sort of an open question.  Most likely each individual parser should simply *yield* them one by one, whereas another layer over the parser would provide indexable access to that in some way (and lazy reading/evaluation).\n\n * Although the Trajectory-vs-list-of-images distinction is handled smoothly (i.e. they are equivalent once stored), if something is already a trajectory, or already a list-of-images, then that thing didn't truly need to be converted into an Images object at all.  After all, both types already fulfill the contracts that we are providing from this class.  It may be that this class *really wants to be an abstract class*, and some things implement that class (e.g. Trajectory and SlicedTrajectory).\n\n * The GUI_Images is too specific to be a properly reusable component.  Nobody gets a GUI_Images object by accident.  They only get it if they are using the GUI, by which time they have noticed.  Therefore, they don't need polymorphic support for it -- they can make a list out of it themselves if/when they want.\n\nMy apologies for not providing a clear conclusion.  Please discuss, or ping, or something.  I'm sure there exists some coherent conclusion, I just don't know right now what it is.",
+          "file_path": "ase/neb.py",
+          "line_number": 773,
+          "commit_sha": "bde048fa6a69da34020bd36211c1141cd05ff938",
+          "base_sha": "ea0fc75307b4fe833fbc0dfa7f132265ae792529",
+          "created_at": "2019-12-18T01:01:03.923Z",
+          "is_outdated": false
+        },
+        {
+          "id": "262059749",
+          "author": "askhl",
+          "body": "So the reason why I comment so much about the Images object is that it'll be almost as important as Atoms.  So lots of thinking then.",
+          "file_path": "ase/neb.py",
+          "line_number": 773,
+          "commit_sha": "bde048fa6a69da34020bd36211c1141cd05ff938",
+          "base_sha": "ea0fc75307b4fe833fbc0dfa7f132265ae792529",
+          "created_at": "2019-12-18T01:05:15.435Z",
+          "is_outdated": false
+        },
+        {
+          "id": "263825513",
+          "author": "andrew_peterson",
+          "body": "Yes, this feature probably needs deeper thought in what we want it to do, and probably makes more sense in a future MR more focused on this and related IO tasks. For now, I realized I only need something to parse CLI inputs like `neb1.traj@:7 neb2.traj@-7:` into an iterable images object, and the GUI `Images` class already does this. So I deleted this `Images` stub and used the one from the GUI.",
+          "file_path": "ase/neb.py",
+          "line_number": 773,
+          "commit_sha": "bde048fa6a69da34020bd36211c1141cd05ff938",
+          "base_sha": "ea0fc75307b4fe833fbc0dfa7f132265ae792529",
+          "created_at": "2019-12-20T19:21:09.307Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "263826504",
+          "author": "andrew_peterson",
+          "body": "This should now be ready to go.\n\nJust note that in addition to the threads above I updated the `flakes.py` test to give an even better error message than before. See issue #498.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2019-12-20T19:25:24.682Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "263985222",
+          "author": "askhl",
+          "body": "Users might expect this to work with svg and png, too, but the auto filename recognition is only for pdf.\n\nWould it make sense that we show an interactive plot by default, but require `-o,--output` to specify a file?  I think this is closer to other ASE plotting tools.  It would be a good idea to move towards something uniform.  I don't want to bikeshed this MR so I'll just merge it now, but it might be something to think about.\n\nAlso please add an entry in releasenotes -- that's often easier in a separate MR because they can generate annoying conflicts.\n\nThank you very much!",
+          "file_path": "ase/cli/nebplot.py",
+          "line_number": 42,
+          "commit_sha": "09f7c315b2a9b7c0cbad9e81b8398e630bf1524f",
+          "base_sha": "ea0fc75307b4fe833fbc0dfa7f132265ae792529",
+          "created_at": "2019-12-21T22:52:54.550Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 10
+}

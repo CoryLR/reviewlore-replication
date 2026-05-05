@@ -1,0 +1,800 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4839,
+  "title": "feat: Add packet diagram",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nAdds packet diagram\r\nResolves #948\r\n\r\nTODO:\r\n- [x] Add title support\r\n- [x] Add accessibility support\r\n- [x] Fix theming\r\n- [x] Add docs\r\n\r\n<img width=\"944\" alt=\"image\" src=\"https://github.com/mermaid-js/mermaid/assets/10703445/1d955878-dc26-4553-86e0-677c0b8d9d35\">\r\n\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nThe syntax was adapted from the existing one at http://blockdiag.com/en/nwdiag/packetdiag-examples.html#structure-of-tcp-header\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n- [x] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/docs/community/development.md#3-update-documentation) is used for all new features.\r\n- [x] :bookmark: targeted `next` branch\r\n",
+  "author": "sidharthv96",
+  "merged_at": "2024-01-23T19:35:08Z",
+  "base_ref": "next",
+  "merge_commit_sha": "b7c72cb38ab953cad4f405345a2be1db3bdfe41b",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "ce9a9db33aa5081f8358366f6cf02767678fbb87",
+    "5cc20b5e4446329d39e1189e16b95e059f1f0dd0"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PJoZD",
+          "author": "Yokozuna59",
+          "body": "Please add link to this file in [`demos/index.html`](https://github.com/mermaid-js/mermaid/blob/4201e4775d9206a5fc44006a2e26747cfc10ef78/demos/index.html).",
+          "file_path": "demos/packet.html",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "136f1c50e725b6303c1f0bebec828be0e604ed97",
+          "created_at": "2023-09-16T08:13:15Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85PKU0h",
+          "author": "sidharthv96",
+          "body": "Done.",
+          "file_path": "demos/packet.html",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "136f1c50e725b6303c1f0bebec828be0e604ed97",
+          "created_at": "2023-09-17T15:19:18Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests a specific change: add a link to the file in demos/index.html."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PJoet",
+          "author": "Yokozuna59",
+          "body": "Shouldn't we also export `Block` from `Packet`? You're already using it here:\r\nhttps://github.com/mermaid-js/mermaid/blob/136f1c50e725b6303c1f0bebec828be0e604ed97/packages/mermaid/src/diagrams/packet/types.ts#L6\r\n\r\nIf you want to exclude `AstNode` attributes then you should this type:\r\n\r\n```typescript\r\n// inside packages/parser/src/index.ts\r\n/**\r\n * Exclude/omit all `AstNode` attributes recursively.\r\n */\r\nexport type RecursiveAstOmit<T> = T extends object\r\n  ? { [P in keyof T as Exclude<P, keyof AstNode>]: RecursiveAstOmit<T[P]> }\r\n  : T;\r\n```\r\n\r\n```typescript\r\n// inside packages/mermaid/src/diagrams/packet/types.ts\r\nimport type { PacketBlock, RecursiveAstOmit } from 'mermaid-parser';\r\n\r\n// the name doesn't matter here since it's for the diagram\r\nexport type Block = RecursiveAstOmit<PacketBlock>;\r\n```",
+          "file_path": "packages/parser/src/index.ts",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-16T08:16:45Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TELut",
+          "author": "sidharthv96",
+          "body": "I'd prefer to export the main AST types from parser and extract the necessary types downstream. \r\nI've added `RecursiveAstOmit` and have used that. ",
+          "file_path": "packages/parser/src/index.ts",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-11-15T03:56:51Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TFi76",
+          "author": "Yokozuna59",
+          "body": "I think in some point we would need to export more attributes from the parser packages. I'm currently working on language server in a separate repository, and all the attributes below are necessary there:\r\n\r\n<https://github.com/mermaid-js/mermaid/blob/e86f09aaedce59af5c4edc890fcd1a11dc04432f/packages/parser/src/language/index.ts#L1-L15>\r\n\r\nAnd that's what I've exported in #4751, but in term of parser it would fine to not export them.",
+          "file_path": "packages/parser/src/index.ts",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-11-15T10:06:01Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests exporting Block from Packet and provides a concrete alternative implementation using RecursiveAstOmit."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PJolU",
+          "author": "Yokozuna59",
+          "body": "In this rule, `00` would be valid, but it's not a valid number in typescript:\r\n\r\n![image](https://github.com/mermaid-js/mermaid/assets/87622592/0e10cb62-175f-4e39-8411-2d7506aed55c)\r\n\r\n```suggestion\r\nterminal INT returns number: /0|[1-9][0-9]*/;\r\n```\r\n",
+          "file_path": "packages/parser/src/language/packet/packet.langium",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-16T08:20:45Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug with '00' being valid and provides a code suggestion to fix the regex rule."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PJopA",
+          "author": "Yokozuna59",
+          "body": "Using `\\s+` as hidden rule would make `NEWLINE` rule useless, see https://github.com/mermaid-js/mermaid/pull/4751#discussion_r1326219022.\r\n\r\nSo it won't tokenize `TitleAndAccessibilities` or `NEWLINE+`.",
+          "file_path": "packages/parser/src/language/packet/packet.langium",
+          "line_number": 12,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-16T08:23:23Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that using \\s+ as a hidden rule makes NEWLINE rule useless, implying the grammar needs to be fixed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PJo1T",
+          "author": "Yokozuna59",
+          "body": "Please add the `Diagram` prefix (which is here `Packet`) for specific diagram rules; using them without that prefix may interfere with other diagram rules or even AST (there is a diagram called `Block` :) )\r\n\r\nAnd the Semicolon in a newline is a convention I'm just using following :)\r\n\r\n```suggestion\r\n  blocks+=PacketBlock*\r\n;\r\n\r\nPacketBlock:\r\n```",
+          "file_path": "packages/parser/src/language/packet/packet.langium",
+          "line_number": 9,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-16T08:30:22Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding the Packet prefix to diagram rules and provides a code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PJqRh",
+          "author": "Yokozuna59",
+          "body": "The `NEWLINE+` is to prohibited users from adding multiple blocks in the same line, e.g.:\r\n\r\n```\r\npacket-beta\r\n1: \"string\" 2: \"string\"\r\n```\r\n\r\nAnd the Semicolon in a newline is a convention I'm just using following :)\r\n\r\n```suggestion\r\n    start=INT ('-' end=INT)? ':' label=STRING NEWLINE+\r\n;\r\n```\r\n",
+          "file_path": "packages/parser/src/language/packet/packet.langium",
+          "line_number": 10,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-16T08:35:01Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explains why NEWLINE+ is needed and provides a code suggestion to enforce it."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PJqzc",
+          "author": "Yokozuna59",
+          "body": "Shouldn't we use the `DiagramStylesProvider` type for the function?\r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/136f1c50e725b6303c1f0bebec828be0e604ed97/packages/mermaid/src/diagram-api/types.ts#L117\r\n",
+          "file_path": "packages/mermaid/src/diagrams/packet/styles.ts",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-16T08:56:47Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests using DiagramStylesProvider type for the function, implying a type annotation change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PJq13",
+          "author": "Yokozuna59",
+          "body": "```suggestion\r\nimport { imgSnapshotTest } from '../../helpers/util';\r\n```\r\n",
+          "file_path": "cypress/integration/rendering/packet.spec.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-16T08:58:23Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Provides a direct code suggestion to change the import."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PJrMK",
+          "author": "Yokozuna59",
+          "body": "You're already using it as `true` :)\r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/136f1c50e725b6303c1f0bebec828be0e604ed97/packages/mermaid/src/diagrams/packet/renderer.ts#L18",
+          "file_path": "packages/mermaid/src/defaultConfig.ts",
+          "line_number": 261,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-16T09:11:42Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85PKW5b",
+          "author": "aloisklink",
+          "body": "I'd recommend defaulting `useMaxWidth` to `true` too, to keep things consistent with every other diagram (other than `gitGraph`). That way we can delete this line.",
+          "file_path": "packages/mermaid/src/defaultConfig.ts",
+          "line_number": 261,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-17T16:37:30Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Points out a redundant default config value that is already hardcoded as true, implying it should be removed or reconciled."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PJrbn",
+          "author": "Yokozuna59",
+          "body": "I assume you took this from `info.langium`, it would be fine for `info` diagram, but other diagram it's not.\r\n\r\nIf we used this approach then the following code would be valid:\r\n\r\n```\r\npacket-beta 1: \"block\"\r\n```\r\n\r\nAnd you messed the `NEWLINE` at the beginning.\r\n\r\n```\r\n  NEWLINE*\r\n  \"packet-beta\"\r\n  (\r\n    NEWLINE* TitleAndAccessibilities blocks+=PacketBlock*\r\n    | NEWLINE+ blocks+=PacketBlock+\r\n    | NEWLINE*\r\n  )\r\n```\r\n",
+          "file_path": "packages/parser/src/language/packet/packet.langium",
+          "line_number": 6,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-16T09:20:26Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies that the approach allows invalid syntax and provides a concrete grammar fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PJri2",
+          "author": "Yokozuna59",
+          "body": "Why did you implement `populate` inside `db.ts`?",
+          "file_path": "packages/mermaid/src/diagrams/packet/parser.ts",
+          "line_number": 6,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-16T09:25:28Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85S-PTw",
+          "author": "sidharthv96",
+          "body": "Moved",
+          "file_path": "packages/mermaid/src/diagrams/packet/parser.ts",
+          "line_number": 6,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-11-14T06:30:20Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions why populate is implemented inside db.ts, implying it should be moved elsewhere."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PJrmJ",
+          "author": "Yokozuna59",
+          "body": "Shouldn't we use `DiagramRenderer` type?\r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/136f1c50e725b6303c1f0bebec828be0e604ed97/packages/mermaid/src/diagram-api/types.ts#L51-L57",
+          "file_path": "packages/mermaid/src/diagrams/packet/renderer.ts",
+          "line_number": 84,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-16T09:27:22Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85PN-vI",
+          "author": "sidharthv96",
+          "body": "Yes. Added. ",
+          "file_path": "packages/mermaid/src/diagrams/packet/renderer.ts",
+          "line_number": 84,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-18T17:26:07Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TBiH8",
+          "author": "Yokozuna59",
+          "body": "I'm not sure if it has been added.\r\n",
+          "file_path": "packages/mermaid/src/diagrams/packet/renderer.ts",
+          "line_number": 84,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-11-14T16:47:02Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TCgK-",
+          "author": "sidharthv96",
+          "body": "Added for real now. That old stash was lost.",
+          "file_path": "packages/mermaid/src/diagrams/packet/renderer.ts",
+          "line_number": 84,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-11-14T19:33:03Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests using the DiagramRenderer type, implying a type annotation change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PJrn2",
+          "author": "Yokozuna59",
+          "body": "Shouldn't we override optional fields from `DiagramDB`?\r\n",
+          "file_path": "packages/mermaid/src/diagrams/packet/types.ts",
+          "line_number": 12,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-16T09:28:30Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests overriding optional fields from DiagramDB, implying a code change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PJro6",
+          "author": "Yokozuna59",
+          "body": "Maybe we should also add this to grammar similar to `pie`? It doesn't need other configs similar to `showValues` in `sankey`?\r\n",
+          "file_path": "packages/mermaid/src/schemas/config.schema.yaml",
+          "line_number": 1877,
+          "start_line": 1875,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-16T09:29:28Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TEMDv",
+          "author": "sidharthv96",
+          "body": "From an ease of use perspective, you're right. But I think it's better to keep the config separate. \r\nAs this is default true, we'd have to add a `hideBits` to the grammar instead, which might be confusing. \r\nPacket diagrams need bits by default. ",
+          "file_path": "packages/mermaid/src/schemas/config.schema.yaml",
+          "line_number": 1877,
+          "start_line": 1875,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-11-15T04:00:00Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding packet config to grammar similar to pie, implying a missing feature/change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PJrpH",
+          "author": "Yokozuna59",
+          "body": "I'm not fimilar `config.schemal.yaml`, but do they need `type` attribute or not?\r\n\r\n```yaml\r\n      rowHeight:\r\n        description: The height of each row in the packet diagram.\r\n        type: number\r\n        default: 32\r\n```",
+          "file_path": "packages/mermaid/src/schemas/config.schema.yaml",
+          "line_number": 1883,
+          "start_line": 1866,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-16T09:29:46Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85PJweO",
+          "author": "sidharthv96",
+          "body": "Yeah, I'm also a bit confused here. I initially had the type, but it generated the correct type from the default value for one field that didn't have type. So I tried removing type from everything, and it still worked fine. \r\n\r\n@aloisklink are types inferred from defaults or should we explicitly state them anyway?",
+          "file_path": "packages/mermaid/src/schemas/config.schema.yaml",
+          "line_number": 1883,
+          "start_line": 1866,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-16T12:55:57Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85PKW2X",
+          "author": "aloisklink",
+          "body": "> @aloisklink are types inferred from defaults or should we explicitly state them anyway?\r\n\r\nOfficially, if there is no `type` field, any type should be allowed (if the `json-schema-to-typescript` converter is using `typeof` the `default` value instead of `any`, I believe this is technically wrong).\r\n\r\nFor documentation/TypeScript purposes, I would definitely recommend putting in an explicit type, so people know not to put in strings/arrays/objects into these types.\r\n\r\nBtw, if you want to limit a value to just positive integers, you can write:\r\n\r\n```yaml\r\ntype: integer\r\nminimum: 0\r\n```",
+          "file_path": "packages/mermaid/src/schemas/config.schema.yaml",
+          "line_number": 1883,
+          "start_line": 1866,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-17T16:35:22Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Asks whether type attributes are needed in the YAML and provides an example, implying a possible missing field."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PJryw",
+          "author": "Yokozuna59",
+          "body": "Shouldn't this be in `type.ts`?",
+          "file_path": "packages/mermaid/src/diagrams/packet/db.ts",
+          "line_number": 10,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-16T09:36:00Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85PKW36",
+          "author": "sidharthv96",
+          "body": "Moved",
+          "file_path": "packages/mermaid/src/diagrams/packet/db.ts",
+          "line_number": 10,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-17T16:36:28Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests moving code to types.ts, implying a refactoring change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PJr2V",
+          "author": "Yokozuna59",
+          "body": "Maybe we should create `PacketStylesOptions` similar to `pie`?\r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/136f1c50e725b6303c1f0bebec828be0e604ed97/packages/mermaid/src/diagrams/pie/pieTypes.ts#L10-L35",
+          "file_path": "packages/mermaid/src/diagrams/packet/styles.ts",
+          "line_number": 3,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-16T09:38:33Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests creating a PacketStylesOptions type similar to pie, implying a structural code change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PJykZ",
+          "author": "Yokozuna59",
+          "body": "Should we allow empty string?\r\n",
+          "file_path": "packages/parser/src/language/packet/packet.langium",
+          "line_number": 19,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-16T14:14:48Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TCe8A",
+          "author": "sidharthv96",
+          "body": "I think we should.",
+          "file_path": "packages/parser/src/language/packet/packet.langium",
+          "line_number": 19,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-11-14T19:28:01Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TFfwx",
+          "author": "Yokozuna59",
+          "body": "I'm not sure why but okay. I just want to highlight that pie diagram doesn't allow that.",
+          "file_path": "packages/parser/src/language/packet/packet.langium",
+          "line_number": 19,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-11-15T09:56:49Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions whether empty strings should be allowed, implying a possible grammar validation change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PKXHh",
+          "author": "aloisklink",
+          "body": "By the way, we only have this line in other diagrams' default config for backwards compatibility, just in case there is a difference between `{useWidth: undefined}` and `{}`.\r\n\r\nIf you're okay with `Object.keys()` not including `useWidth`, we can remove this line. After all, either way, `config.packet.useWidth` will still be `undefined`.",
+          "file_path": "packages/mermaid/src/defaultConfig.ts",
+          "line_number": 258,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-17T16:45:00Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests removing the useWidth line if backwards compatibility is not a concern, implying a possible deletion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85PlQsf",
+          "author": "Yokozuna59",
+          "body": "Shouldn't we use `cleanAndMerge` here?\r\n",
+          "file_path": "packages/mermaid/src/diagrams/packet/db.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-09-24T11:52:55Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests using cleanAndMerge, implying a code change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TBbUT",
+          "author": "Yokozuna59",
+          "body": "Suggestion: use two spaces indent.\r\n\r\nLangium formatter doesn't deeply force style, but it's a style we're following in all Langium files.\r\n\r\n```suggestion\r\n  \"packet-beta\"\r\n```\r\n\r\nSame goes here: \r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/659db9f04b50dd216c6da8e99b402247870f7389/packages/parser/src/language/packet/packet.langium#L15\r\n",
+          "file_path": "packages/parser/src/language/packet/packet.langium",
+          "line_number": 6,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-11-14T16:27:08Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests a style change to use two-space indentation and provides a code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TBdnf",
+          "author": "Yokozuna59",
+          "body": "I think it would be better if we have a separate object that contains all default values for style options, then use `cleanAndMerge` on the passed parameter.\r\n",
+          "file_path": "packages/mermaid/src/diagrams/packet/styles.ts",
+          "line_number": 25,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-11-14T16:33:18Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests refactoring to use a separate default values object with cleanAndMerge."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TBjVE",
+          "author": "Yokozuna59",
+          "body": "Is `!=` intended? Or you meant `!==`?\r\n",
+          "file_path": "packages/mermaid/src/diagrams/packet/parser.ts",
+          "line_number": 18,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-11-14T16:50:15Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a potential bug: != vs !== operator, implying it should be fixed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TBjw7",
+          "author": "Yokozuna59",
+          "body": "Would we consider `10_000` as a magic number?\r\n",
+          "file_path": "packages/mermaid/src/diagrams/packet/parser.ts",
+          "line_number": 28,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-11-14T16:51:33Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions whether 10_000 is a magic number, implying it should possibly be extracted to a named constant."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TFlRP",
+          "author": "Yokozuna59",
+          "body": "Maybe do a similar approach to `pie`?\r\n\r\n<https://github.com/mermaid-js/mermaid/blob/e8ee5f548fdda51f246802473992e479c4cd82ee/packages/mermaid/src/diagrams/pie/pieRenderer.ts#L52-L53>\r\n\r\nSomething like this?\r\n\r\n```suggestion\r\n  configureSvgSize(svg, svgHeight, svgWidth, config.useMaxWidth);\r\n  svg.attr('viewbox', `0 0 ${svgWidth} ${svgHeight}`);\r\n```\r\n",
+          "file_path": "packages/mermaid/src/diagrams/packet/renderer.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-11-15T10:13:08Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TKGcM",
+          "author": "sidharthv96",
+          "body": "This was why I added `width: 100%` directly. \r\nhttps://github.com/mermaid-js/mermaid/issues/5038\r\n\r\nBut for now, I'll use the existing convention, and we can fix everything together as part of #5038.",
+          "file_path": "packages/mermaid/src/diagrams/packet/renderer.ts",
+          "line_number": 20,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-11-16T05:10:22Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests using configureSvgSize similar to pie and provides a concrete code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TFlxU",
+          "author": "Yokozuna59",
+          "body": "Maybe rename `row` to `word` since it has been renamed everywhere to `word`?\r\n\r\n```suggestion\r\n  for (const [word, packet] of words.entries()) {\r\n    drawWord(svg, packet, word, config);\r\n  }\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/packet/renderer.ts",
+          "line_number": 24,
+          "start_line": null,
+          "commit_sha": "5cc20b5e4446329d39e1189e16b95e059f1f0dd0",
+          "created_at": "2023-11-15T10:14:55Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests renaming row to word for consistency and provides a code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TFms2",
+          "author": "Yokozuna59",
+          "body": "Maybe add a test case for `title`?",
+          "file_path": "packages/mermaid/src/diagrams/packet/packet.spec.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "480645d22f7e8cdbb3a399636d3cc5537fd4d804",
+          "created_at": "2023-11-15T10:17:54Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TKIzh",
+          "author": "sidharthv96",
+          "body": "Added.\r\nSkipped earlier as it was being tested in cypress.",
+          "file_path": "packages/mermaid/src/diagrams/packet/packet.spec.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "480645d22f7e8cdbb3a399636d3cc5537fd4d804",
+          "created_at": "2023-11-16T05:28:54Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding a missing test case for the title feature."
+    }
+  ],
+  "review_thread_count": 27,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 27,
+    "stage1_kept": 27,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

@@ -1,0 +1,712 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4534,
+  "title": "Update class member handling",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nThe intent of this PR is to streamline the logic for parsing member statements for classes, and to make it then easier to fix other issues. This PR includes:\r\n\r\n- fixes around comments\r\n- properly handling different scenarios around generics\r\n- initial work to not show members box if there are no attributes or methods\r\n- handle leading newlines\r\n- changed name from \"member\" to \"attribute\" to be explicit and distinct from members as a whole\r\n\r\n- resolves #3287 \r\n- resolves #1645\r\n- resolves #3189\r\n- resolves #3243 \r\n- partial #2185 \r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nAdded a new class for members specifically, and all parsing of that member is handled within the class itself. Created a more thorough regex specific for methods to capture any of the expected values - or have an empty result if that value was not matched.  There has been talk about whether or not the type or name of an attribute or method parameter should go first - so handling is set to take however the value is typed for that section \r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added unit/e2e tests (if appropriate)\r\n- [x] :notebook: have added documentation (if appropriate)\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "jgreywolf",
+  "merged_at": "2023-09-03T06:56:40Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "69b4b48f62c753cde2e4b759dc137325ab1fc356",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "6e51f8fd9840a788bcca1f2cd2aabd78bcf3b74a",
+    "05c2a11e3d265d99c21a1a190be75048c1c0e985"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85KC4SC",
+          "author": "sidharthv96",
+          "body": "This should be DB itself no? Parser is usually the jison file as per our conventions. \r\n",
+          "file_path": "packages/mermaid/src/diagrams/class/classParser.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "b32da2b1b197d74c5fb200e32b52ea29420ecef5",
+          "created_at": "2023-06-26T14:11:17Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KIrZG",
+          "author": "jgreywolf",
+          "body": "I guess.   And yes.  I was just struggling with the terminology of DB because it really doesnt seem rightl",
+          "file_path": "packages/mermaid/src/diagrams/class/classParser.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "b32da2b1b197d74c5fb200e32b52ea29420ecef5",
+          "created_at": "2023-06-27T13:53:37Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KJA1T",
+          "author": "Yokozuna59",
+          "body": "We thought of the same thing while working on langium. https://github.com/mermaid-js/mermaid/pull/4450#issuecomment-1578667480\r\n\r\n",
+          "file_path": "packages/mermaid/src/diagrams/class/classParser.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "b32da2b1b197d74c5fb200e32b52ea29420ecef5",
+          "created_at": "2023-06-27T14:45:27Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KJcD6",
+          "author": "sidharthv96",
+          "body": "Let's not break convention in this PR, we can do it for everything at once as part of a bigger refactor.\r\n\r\n```\r\nFile that has data -> DB\r\nFile that has grammar, jison -> Parser\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/class/classParser.ts",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "b32da2b1b197d74c5fb200e32b52ea29420ecef5",
+          "created_at": "2023-06-27T15:56:38Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests renaming the file from classParser.ts to classDB.ts to follow project conventions."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85KUg65",
+          "author": "jakraft",
+          "body": "This recursive call should be removed. If there is a bug in the regex that fails to remove all the tildes, you will recurse infinitely and never reach the base-case (hence the \"Maximum call Stack size exceeded\" errors reported in #4431)",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 195,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-06-29T16:47:05Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NQwJQ",
+          "author": "aloisklink",
+          "body": "The unit tests for this PR are failing in CI due to this:\r\n\r\n```\r\nRangeError: Maximum call stack size exceeded\r\n \u276f parseGenericTypes packages/mermaid/src/diagrams/common/common.ts:193:36\r\n    191|     do {\r\n    192|       cleanedText = newCleanedText;\r\n    193|       newCleanedText = cleanedText.replace(/~([^\\s:;]+)~/, '<$1>');\r\n       |                                    ^\r\n    194|     } while (newCleanedText != cleanedText);\r\n  Snapshots  1 failed\r\n```\r\n\r\nSee https://github.com/mermaid-js/mermaid/actions/runs/5870194330/job/15916763487.",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 195,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-16T17:38:13Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NqTjZ",
+          "author": "jgreywolf",
+          "body": "Yep - Im still trying to find a better way to do this to get rid of those failures",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 195,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-23T12:23:05Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NyBnx",
+          "author": "jgreywolf",
+          "body": "@jakraft @sidharthv96 @aloisklink  The more and more I think on this, and try different approaches, the more I think that we should make the \"breaking\" change to ensure there is a clear distinction between 'start' and 'end' tokens.\r\n\r\nI have tried doing this multiple ways, and still get hit by the max call stack size error",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 195,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-24T23:18:37Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NyKhV",
+          "author": "jakraft",
+          "body": "@jgreywolf I don't think it necessarily requires a breaking change. Backward compatibility with the existing \"~\" format can be retained, but a new syntax is required to add support for multiple generics. The easiest approach I can see is to add support for angle brackets directly (\"<>\"). This would be fairly trivial to do, it would just require replacing any instances of `<` and `>` with `&lt;` and `&gt;` respectively. This can be done at the top of the parseGenericTypes function before handling the ~ logic.\r\n\r\nIs there any reason the recursive call can't be removed regardless? I can't really see a reason to keep it in there.",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 195,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-25T00:31:32Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85N1ijj",
+          "author": "jgreywolf",
+          "body": "I think I have a solution",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 195,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-25T16:22:58Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85N4I-u",
+          "author": "jgreywolf",
+          "body": "Please see updated code and resolve if acceptable ;)  It does get rid of the max call size issue, and accounts for a couple of edge cases - if more \"edge\" cases develop this entire solution will have to be revisited.",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 195,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-26T20:30:45Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly requests removal of the recursive call to fix infinite recursion / stack overflow bugs."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85KUjPG",
+          "author": "jakraft",
+          "body": "This regex will fail if you have more than 1 method parameter using generics. For example:\r\n\r\n`Dictionary~Foo, Bar~, Wiz~Bang~` becomes `Dictionary<Foo, Bar<, Wiz>Bang>` when it should instead result in `Dictionary<Foo, Bar>, Wiz<Bang>`\r\n\r\nThat's the main reason I mentioned there's too much ambiguity using tildes as the syntax since there's not enough information to resolve whether this is 1 parameter or 2. (see #4555)",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 192,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-06-29T16:55:43Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KgRNR",
+          "author": "jgreywolf",
+          "body": "I see that now. Added a test for that specific scenario.\r\n\r\nThe problem I see now is - we have been using ~~ to indicate a generic for a couple of years, and to change that would be breaking. Though I am willing to look at doing that, if we go into it with that understanding :)\r\n\r\nI was thinking of having the code go through and keep track of where it is in the \"parsing\".  So that it would know if it had already processed a beginning or end bracket - but you need to be able to account for nested generics\r\n\r\nIm open to other suggestions",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 192,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-07-03T01:08:34Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KlO0d",
+          "author": "jakraft",
+          "body": "Yeah I thought about that, but the issue, like you mentioned, is that even if you scan from left to right, it's impossible to correctly pair up the matching ~~ without guessing. That's why using asymmetric tokens (e.g. <>, [], (), or {}) would be best.\r\n\r\nThe easiest way to facilitate that would be to replace any instance of <> with HTML-escaped angle brackets (`&lt;` and `&gt;`). This could be added as an alternative syntax without needing to remove support for the legacy tilde syntax and would unblock users wanting to take advantage of more complex generics.",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 192,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-07-03T20:51:45Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KljVc",
+          "author": "jgreywolf",
+          "body": "What I was working on today was going right to left.\r\nCount how many tokens (~) there are, divide that by two (rounded down) to determine how many \"sets\" there are - assuming that if there is an odd number of tokens it would be the first one, and we will skip it.\r\n\r\nKeeping track of which \"set\" we are in, and how many tokens are left, we can figure out if we want > or <.\r\n\r\nThis has not been nearly as clean as I thought - and I am going to scrap it, I think",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 192,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-07-04T00:30:06Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85N4I_T",
+          "author": "jgreywolf",
+          "body": "Resolving since this is a dupe of another comment above",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 192,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-26T20:31:06Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a concrete bug in the regex for multi-parameter generics with tildes, implying the regex needs to be fixed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85KU1Hn",
+          "author": "aloisklink",
+          "body": "I feel like this should instead be:\r\n\r\n```suggestion\r\n  it('17c: should handle the direction statement with LR', () => {\r\n```\r\n\r\nsince it's more similar to the `17a: should handle the direction statement with BT` tests rather than the `18: ...` tests.\r\n\r\nBut, IMO, I'm not a big fan of manually numbering tests (do we know why we manually number tests?). Would something like the following be better?\r\n\r\n```js\r\ndescribe(\"should handle direction statement with\", () => {\r\n  for (const direction of [\"BT\", \"RL\", \"LR\"]) {\r\n    it(direction, () => {\r\n      imgSnapshotTest(`\r\n        classDiagram\r\n          direction ${direction}\r\n          class Student {\r\n            -idCard : IdCard\r\n          }\r\n          class IdCard{\r\n            -id : int\r\n            -name : string\r\n          }\r\n          class Bike{\r\n            -id : int\r\n            -name : string\r\n          }\r\n          Student \"1\" --o \"1\" IdCard : carries\r\n          Student \"1\" --o \"1\" Bike : rides\r\n        `,\r\n        { logLevel: 1, flowchart: { htmlLabels: false } }\r\n      );\r\n    });\r\n  }\r\n});\r\n```",
+          "file_path": "cypress/integration/rendering/classDiagram-v2.spec.js",
+          "line_number": 436,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-06-29T18:35:33Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KgRVj",
+          "author": "jgreywolf",
+          "body": "I have no idea why those tests are numbered either. ",
+          "file_path": "cypress/integration/rendering/classDiagram-v2.spec.js",
+          "line_number": 436,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-07-03T01:09:16Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KgUtf",
+          "author": "aloisklink",
+          "body": "> I have no idea why those tests are numbered either.\r\n\r\nMaybe it's to make the image snapshot filenames sortable in alphabetical order?\r\n\r\nBut if it is, it's currently broken, since the files will be ordered: 1, 11, 12, 13, 2, 3, 4, ... Oh well, maybe it's something to fix in a future PR :shrug:.",
+          "file_path": "cypress/integration/rendering/classDiagram-v2.spec.js",
+          "line_number": 436,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-07-03T01:24:10Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85K0Zlx",
+          "author": "sidharthv96",
+          "body": "Let's remove numbers from new tests. \r\nRemoving numbers from Old tests might mess up applitools, so we can do that as a separate PR. ",
+          "file_path": "cypress/integration/rendering/classDiagram-v2.spec.js",
+          "line_number": 436,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-07-07T05:07:48Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NL0B3",
+          "author": "jgreywolf",
+          "body": "Please confirm this is resolved, as we will remove numbered tests later",
+          "file_path": "cypress/integration/rendering/classDiagram-v2.spec.js",
+          "line_number": 436,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-15T18:05:28Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests renaming the test and proposes an alternative refactored implementation using a loop."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85KU2QW",
+          "author": "aloisklink",
+          "body": "Any reason for removing the comments in this file? Are they inaccurate?",
+          "file_path": "packages/mermaid/src/diagrams/class/classRenderer-v2.ts",
+          "line_number": 95,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-06-29T18:40:38Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KgL2z",
+          "author": "jgreywolf",
+          "body": "A coworker once told me, a comment is an apology, or a lie.  \r\n\r\nI tend to remove any comments that are redundant. Such as \r\n// call do this thing\r\nthis.doThisThing()\r\n\r\n",
+          "file_path": "packages/mermaid/src/diagrams/class/classRenderer-v2.ts",
+          "line_number": 95,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-07-03T00:41:20Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KgRq7",
+          "author": "aloisklink",
+          "body": "> a comment is an apology, or a lie.\r\n\r\nI know what you mean, I swear most of my code comments are `// needed for backwards compatibility` or `// work-around for bug in external library`.\r\n\r\n---\r\n\r\nYep! I agree, all of these comments do seem redundant.\r\n\r\nThe `// Use vertex id as text in the box if no text is provided by the graph definition` comment actually seems incorrect, so it's good to remove.\r\n\r\nIf you can, sticking changes like this in a separate git commit like `Remove redundant comments` does make reviewing code slightly easier :)\r\n\r\n\r\n",
+          "file_path": "packages/mermaid/src/diagrams/class/classRenderer-v2.ts",
+          "line_number": 95,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-07-03T01:11:10Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions the removal of comments, implying they should be restored if there is no good reason for removing them."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85KU3LB",
+          "author": "aloisklink",
+          "body": "Can you add some [TSDoc](https://tsdoc.org/) comments for this new `ClassMember` type? They can be pretty basic, e.g. something like:\r\n\r\n```ts\r\n/**\r\n * Stores class diagram member variables/methods.\r\n */\r\nexport class ClassMember {\r\n  /** ???? */ // is this a DOM ID, or global/class-unique ID?\r\n  id!: string;\r\n\r\n  /** visibility, `+` for public, `-` for private, etc. */\r\n  visibility!: string;\r\n```\r\n\r\nIdeally, if I'm (or someone else) is browsing the `classRenderer-v2.ts` file, our code-editor should show these TSDoc comments, so we don't need to jump to this file to figure out what each param/method does.",
+          "file_path": "packages/mermaid/src/diagrams/class/classTypes.ts",
+          "line_number": 27,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-06-29T18:44:46Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NL0DU",
+          "author": "jgreywolf",
+          "body": "Added",
+          "file_path": "packages/mermaid/src/diagrams/class/classTypes.ts",
+          "line_number": 27,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-15T18:05:35Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly requests adding TSDoc comments to the new ClassMember type with examples of what they should look like."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85KU5qs",
+          "author": "aloisklink",
+          "body": "It might be cleaner to use a [template strings](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals) here.\r\n\r\n```suggestion\r\n      displayText += `(${parseGenericTypes(this.parameters.trim())})`;\r\n```\r\n\r\nThis is probably a discussion for another time, but there's also an eslint rule called [`prefer-template`](https://eslint.org/docs/latest/rules/prefer-template) that we could enable, then we could use `eslint --fix` to automatically update them, if everybody prefers template strings over string concatenation. ",
+          "file_path": "packages/mermaid/src/diagrams/class/classTypes.ts",
+          "line_number": 38,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-06-29T18:54:03Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests replacing string concatenation with a template literal and provides a concrete code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85KU7GU",
+          "author": "aloisklink",
+          "body": "What's the point of removing this comment?",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 188,
+          "start_line": 187,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-06-29T19:00:46Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KgRiL",
+          "author": "jgreywolf",
+          "body": "I believed it was an old comment that had already been changed..",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 188,
+          "start_line": 187,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-07-03T01:10:19Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85KgTbv",
+          "author": "aloisklink",
+          "body": "Hmmmmm, it might be worth keeping this comment in.\r\n\r\nI could see why somebody would see a [`String.prototype.replace()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace) in a loop, and try to replace it with a [`String.prototype.replaceAll()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replaceAll), especially since `.replaceAll()` was only recently added to JavaScript.",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 188,
+          "start_line": 187,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-07-03T01:17:52Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NL0a8",
+          "author": "jgreywolf",
+          "body": "restored",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 188,
+          "start_line": 187,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-15T18:07:26Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NQwiy",
+          "author": "aloisklink",
+          "body": "> restored\r\n\r\nI think the comment is still missing. Maybe it was re-removed by one of Git's auto-merge commits? It's pretty minor though, so although I'd like to see the comment kept, it's not anything that would block this PR.",
+          "file_path": "packages/mermaid/src/diagrams/common/common.ts",
+          "line_number": 188,
+          "start_line": 187,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-16T17:39:58Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Questions the removal of a comment, implying it should be restored unless there's justification, which flags a potential unintended change."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85KU9zM",
+          "author": "aloisklink",
+          "body": "If we only ever use this function internally, we might want to make it [`private`](https://www.typescriptlang.org/docs/handbook/2/classes.html#private).",
+          "file_path": "packages/mermaid/src/diagrams/class/classTypes.ts",
+          "line_number": 74,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-06-29T19:13:47Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NQych",
+          "author": "aloisklink",
+          "body": "I'm marking this as resolved, since it's not a big deal if we don't add `private`.\r\n\r\nBut you're welcome to add it if you want:\r\n\r\n```suggestion\r\n  private parseMember(input: string) {\r\n```\r\n\r\n(`private` is a TypeScript only thing, it won't affect the generated JavaScript. Using [`#parseMember()` is how to make private methods in JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Private_class_fields), but it's only supported by newer versions of JavaScript, so it's probably not worth using in Mermaid)",
+          "file_path": "packages/mermaid/src/diagrams/class/classTypes.ts",
+          "line_number": 74,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-16T17:47:55Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests marking the function as private if it is only used internally."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85KVAch",
+          "author": "aloisklink",
+          "body": "Should we limit this type so it can only be two different values?\r\n\r\n```suggestion\r\n  memberType!: 'method' | 'attribute';\r\n  visibility!: string;\r\n  classifier!: string;\r\n  parameters!: string;\r\n  returnType!: string;\r\n\r\n  constructor(input: string, memberType: 'method' | 'attribute') {\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/class/classTypes.ts",
+          "line_number": 28,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-06-29T19:25:40Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests narrowing the TypeScript type of memberType to a union of two string literals, with a concrete code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85KVBnf",
+          "author": "aloisklink",
+          "body": "Again, is it worth limiting the TypeScript type to just one of these five values?\r\n\r\n```suggestion\r\n  visibility!: '#' | '+' | '~' | '-' | '';\r\n```\r\n",
+          "file_path": "packages/mermaid/src/diagrams/class/classTypes.ts",
+          "line_number": 23,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-06-29T19:31:20Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NL0dt",
+          "author": "jgreywolf",
+          "body": "added",
+          "file_path": "packages/mermaid/src/diagrams/class/classTypes.ts",
+          "line_number": 23,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-15T18:07:39Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests narrowing the TypeScript type of visibility to a union of specific string literals, with a concrete code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NcHlJ",
+          "author": "sidharthv96",
+          "body": "nit: This deviates from the convention. `parser`, `styles`, `renderer`, don't have `class` prefix. Which is not really required in this file, as it's specific for classDiagram. ",
+          "file_path": "packages/mermaid/src/diagrams/class/classDiagram.ts",
+          "line_number": 18,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-19T16:16:04Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a naming convention deviation, implying the 'class' prefix should be removed to match other files."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NcHsA",
+          "author": "sidharthv96",
+          "body": "Shouldn't we sanitize the input? It was done before. \r\n\r\n<img width=\"527\" alt=\"image\" src=\"https://github.com/mermaid-js/mermaid/assets/10703445/c767c722-695b-4eee-a5ab-0c03f630f06c\">\r\n",
+          "file_path": "packages/mermaid/src/diagrams/class/classTypes.ts",
+          "line_number": 74,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-19T16:20:10Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85N4JUV",
+          "author": "jgreywolf",
+          "body": "Good catch.  I meant to move the handling of that to the ClassMember constructor, but obviously forgot.  Added",
+          "file_path": "packages/mermaid/src/diagrams/class/classTypes.ts",
+          "line_number": 74,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-26T20:45:26Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Flags that input sanitization was previously done but is now missing, implying it should be added back."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NcHtI",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n  const { displayText, cssStyle } = member.getDisplayDetails();\r\n```\r\n\r\nAvoids calling `getDisplayDetails` twice. ",
+          "file_path": "packages/mermaid/src/diagrams/class/svgDraw.js",
+          "line_number": 385,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-19T16:21:13Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests caching the result of getDisplayDetails() to avoid calling it twice, with a concrete code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85NcHuz",
+          "author": "sidharthv96",
+          "body": "Should this be `cssStyle` or `member.cssStyle`?\r\n\r\n```suggestion\r\n  if (cssStyle !== '') {\r\n    tSpan.attr('style', cssStyle);\r\n  }\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/class/svgDraw.js",
+          "line_number": 389,
+          "start_line": 387,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-19T16:22:09Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85NcHyb",
+          "author": "sidharthv96",
+          "body": "Converting this file to TS might reveal some other bugs too. ",
+          "file_path": "packages/mermaid/src/diagrams/class/svgDraw.js",
+          "line_number": 389,
+          "start_line": 387,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-19T16:24:05Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85N4JF3",
+          "author": "jgreywolf",
+          "body": "It should be member.cssStyle, which is what it is in my local...\r\n\r\nI will leave converting to TS as a separate PR",
+          "file_path": "packages/mermaid/src/diagrams/class/svgDraw.js",
+          "line_number": 389,
+          "start_line": 387,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-08-26T20:35:34Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions whether the variable used is correct (cssStyle vs member.cssStyle) and provides a code suggestion to fix it."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85OVD5R",
+          "author": "sidharthv96",
+          "body": "`~test Array~string~` renders as `~test Array<string>` currently. \r\n\r\nRemoving that is a breaking change in the behaviour of diagrams, which we cannot have. \r\n\r\nAdded support back in https://github.com/mermaid-js/mermaid/pull/4805",
+          "file_path": "packages/mermaid/src/diagrams/common/common.spec.ts",
+          "line_number": 72,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-09-03T06:28:40Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85OVEEO",
+          "author": "sidharthv96",
+          "body": "Actually, this PR has been open for a long time. No need to delay is further. \r\nI'll merge this and point #4805 to develop ",
+          "file_path": "packages/mermaid/src/diagrams/common/common.spec.ts",
+          "line_number": 72,
+          "start_line": null,
+          "commit_sha": "05c2a11e3d265d99c21a1a190be75048c1c0e985",
+          "created_at": "2023-09-03T06:32:23Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that removing a test case constitutes a breaking change in behavior and notes that support was added back, implying the removed test/behavior should be restored."
+    }
+  ],
+  "review_thread_count": 16,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 16,
+    "stage1_kept": 16,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

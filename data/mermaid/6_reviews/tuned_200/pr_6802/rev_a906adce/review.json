@@ -1,0 +1,162 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/render.ts",
+      "line_number": 54,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This uses `Promise.all` to insert nodes in parallel. Per the project's documented architectural constraint (issue #3577), diagram database modules rely on module-level mutable state, so concurrent `insertNode` calls corrupt each other's output. Each node must be inserted sequentially with `await` in a `for...of` loop. The same issue applies to the `Promise.all` for edge insertion further below (~line 128).",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/cose-bilkent/render.ts",
+      "line_number": 63,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`Promise.all` is used to insert all nodes concurrently. This violates the project architectural rule: `insertNode` calls must be sequential because diagram DB modules use shared module-level mutable state. Replace with a `for...of` loop and sequential `await` calls. This same pattern is repeated for edge insertion later in the function.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/createGraph.ts",
+      "line_number": 52,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Same `Promise.all` violation for parallel node insertion. All three new renderer modules in this PR introduce this pattern \u2014 this will cause non-deterministic output corruption when multiple nodes are inserted concurrently. Must be changed to a sequential `for...of` loop.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/createGraph.ts",
+      "line_number": 128,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Logic bug: the edge is first removed from `data4Layout.edges` via `.filter()` on this line. Then on lines 129-132, `findIndex` is called on the already-filtered array looking for the same edge by `edge.id`. Since the edge was just removed, `findIndex` will always return `-1`, making the `splice` unreachable. The second removal block is dead code that indicates a misunderstood data flow. Audit what state `data4Layout.edges` is expected to be in at each step.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/preprocess.ts",
+      "line_number": 29,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This silently changes the default layout for every mindmap diagram from `cose-bilkent` to `tidy-tree`. `tidy-tree` is an external opt-in package (`@mermaid-js/layout-tidy-tree`) that must be separately installed and registered via `mermaid.registerLayoutLoaders()`. Users of the core `mermaid` package who have not installed this external package will have tidy-tree requested, then fall back \u2014 with a warning \u2014 to the registered fallback. Worse, the fallback in `mindmapRenderer.ts` is `cose-bilkent`, which is itself only registered when `includeLargeFeatures` is true. In lightweight builds where neither is registered, mindmap rendering will throw. This is a breaking behavioral change that should be opt-in, not a silent default. The PR description also contradicts this by listing `cose-bilkent` as the default.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 13,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`_drawNodes` is defined here but is never called anywhere in this file. The `draw` function delegates entirely to the unified `render()` call. This function, along with `_updateNodeDimensions` (~line 33) and the `drawNode` import it depends on, is all dead code. Per project rules, dead code must be removed before merging.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 33,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`_updateNodeDimensions` is defined but never invoked \u2014 dead code. The unified `render()` pipeline handles dimension calculation internally. Remove this function and the `_drawNodes` function above it. The `drawNode` import from `./svgDraw.js` also becomes unused once these are removed.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/layout-algorithms/cose-bilkent/layout.ts",
+      "line_number": 48,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`validateLayoutData` requires `data.rootNode`, but `rootNode` is not part of the `LayoutData` interface (`rendering-util/types.ts`). It is only present as a non-standard property set by `mindmapDb.getData()`. This tightly couples the generic `cose-bilkent` layout algorithm to mindmap-specific data. Any non-mindmap diagram that tries to use cose-bilkent will throw `'Root node is required'` immediately, making this algorithm unusable as a general-purpose layout. Either remove the `rootNode` check from the layout algorithm and put mindmap-specific logic in the renderer, or add `rootNode` as an optional field to the `LayoutData` interface.",
+      "index": 7
+    },
+    {
+      "file_path": "instructions.md",
+      "line_number": 1,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This file is a development scratch document (a copy of the `non-layered-tidy-tree-layout` README used to prompt an AI assistant) committed to the repository root. It should not be checked in. Per project rules, work-in-progress files and development artifacts must not be committed. Delete this file before merging.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/package.json",
+      "line_number": 39,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`peerDependencies` declares `\"mermaid\": \"^11.0.2\"` as a hardcoded semver range. Per project conventions for packages in this monorepo, peer dependencies on `mermaid` must use the `workspace:^` protocol (e.g., `\"mermaid\": \"workspace:^\"`). The `workspace:^` protocol is automatically resolved by `pnpm publish` to the correct released version, whereas a hardcoded version will drift out of sync as `mermaid` releases new versions.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/package.json",
+      "line_number": 7,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "There is a redundant top-level `\"types\": \"dist/layouts.d.ts\"` field here, while `\"types\"` is already declared inside the `\"exports\"` field (line 12). Per project rules, do not add a top-level `\"types\"` field when types are already specified in `\"exports\"` \u2014 the top-level field creates conflicting type resolution and unnecessarily locks the `dist/` directory structure into the public API surface.",
+      "index": 10
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layouts.ts",
+      "line_number": 3,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The dynamic import uses a template literal: `` await import(`./render.js`) ``. Since the path is entirely static, a plain string literal `await import('./render.js')` should be used. Template literals prevent bundlers from statically analysing the import and may inhibit tree-shaking and code-splitting optimisations.",
+      "index": 11
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layout.ts",
+      "line_number": 26,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`intersectionShift` is initialised to `50` here but then unconditionally reassigned to `30` at line 42 (`intersectionShift = 30`), so the initial value `50` is never observed. Either remove the initialiser and only set it at line 42, or explain via a comment why two different values exist. As written this is confusing dead initialisation.",
+      "index": 12
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layout.ts",
+      "line_number": 164,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`Math.random()` is used to generate a virtual root node ID. This is non-deterministic and can theoretically produce collisions. It also makes the layout non-reproducible, which complicates debugging and snapshot-based testing. Use a stable, deterministic ID such as `'virtual-root-left'` / `'virtual-root-right'` (or incorporate the first child ID) so that the same input always produces the same intermediate node IDs.",
+      "index": 13
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.ts",
+      "line_number": 370,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`diagramId: 'mindmap-' + Date.now()` generates a different ID every time `getData()` is called. This is non-deterministic, makes snapshot tests flaky, and means that repeated calls for the same diagram produce different layout data objects. The diagram ID should be derived from the diagram's stable identity (e.g., passed in from the renderer, which already receives `id` in the `draw` function) rather than from wall-clock time.",
+      "index": 14
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/question.ts",
+      "line_number": 67,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`// @ts-ignore TODO fix this (KNSV)` suppresses all TypeScript errors on the next line with no specific reason. Per project rules, use `// @ts-expect-error: <descriptive reason>` with a concrete explanation of the specific error being suppressed. A blanket `@ts-ignore` with a vague TODO hides what the actual type problem is.",
+      "index": 15
+    },
+    {
+      "file_path": "packages/mermaid-layout-elk/src/render.ts",
+      "line_number": 597,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Multiple `log.debug('APA01 ...')` calls were added throughout this function (edge processing, validation loops, layout result). These are development-phase debugging traces that should be removed before merging. Per project rules, excessively chatty or developer-specific debug logs must not be committed. The `APA01` prefix pattern and the verbose ELK graph structure dumps (`JSON.stringify(elkGraph, null, 2)`) are particularly noisy.",
+      "index": 16
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "**`Promise.all` for node/edge insertion is introduced in three separate new modules** (`mermaid-layout-tidy-tree/src/render.ts`, `layout-algorithms/cose-bilkent/render.ts`, and `rendering-util/createGraph.ts`). This pattern violates a documented architectural constraint in this project (tracked in issue #3577): diagram database modules use module-level mutable state, so concurrent `insertNode`/`insertEdge` calls issued via `Promise.all` will corrupt each other's output non-deterministically. All three files must be changed to sequential `for...of` + `await` loops. This is a systemic pattern introduced across the PR, not an isolated oversight.",
+      "index": 17
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "**The `cose-bilkent` layout is conditionally registered (only when `includeLargeFeatures` is true) yet is hardcoded as the fallback for mindmap rendering.** `preprocess.ts` now defaults all mindmaps to `tidy-tree`, and `mindmapRenderer.ts` specifies `fallback: 'cose-bilkent'`. In a build where `includeLargeFeatures` is false, neither `tidy-tree` nor `cose-bilkent` will be registered, causing mindmap rendering to throw `Unknown layout algorithm`. Previously, cose-bilkent was always available to mindmaps because it was imported directly in the old renderer. This PR removes that guarantee. The fallback must be `'dagre'` (which is unconditionally registered), or cose-bilkent must be unconditionally registered for the mindmap diagram type.",
+      "index": 18
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**The changeset description is too generic given the scope of behavioral changes.** `preprocess.ts` now silently changes the default layout algorithm for every mindmap diagram. This is a user-visible behavior change that affects rendered output and should be called out explicitly in the changeset as a potential breaking change (or at minimum a notable behavioral change), not bundled into a single-sentence `feat:` description covering three packages. Users relying on the existing cose-bilkent appearance of their mindmaps will see different output without changing any configuration.",
+      "index": 19
+    }
+  ],
+  "cost_usd": 2.25008175,
+  "duration_seconds": 388.3325891494751
+}

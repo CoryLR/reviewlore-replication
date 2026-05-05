@@ -1,0 +1,96 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 3574,
+  "title": "fix(tests): E2E",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nFixes failing E2E tests\r\n\r\nResolves #<your issue id here>\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nDescribe the way your implementation works or what design decisions you made if applicable.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [ ] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [ ] :computer: have added unit/e2e tests (if appropriate)\r\n- [ ] :bookmark: targeted `develop` branch\r\n",
+  "author": "sidharthv96",
+  "merged_at": "2022-10-07T08:25:55Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "931120f73c338d0035ea3d0b8e6c1b05c590c793",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "883d0d50398f0c63ecb2aaf13f3557f4af83b95a",
+    "1fb671c561fd6390cd1eead0efa6e034fd058992"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J846-9Ys",
+          "author": "dwhelan",
+          "body": "FWIW, I believe that this will change existing behaviour where currently multiple diagrams load async with each other  because `render` is async.\r\n\r\nThis change will cause initThrowsError to wait on each diagram to be rendered before the next one. So we could see a performance loss when there are multiple diagrams. It is possible that there is latent race condition in the original code when loading multiple diagrams because there is nothing explicitly waiting for the `render` promise to resolve AFAIK. Your change fixes that but possibly at the loss of parallel execution.\r\n\r\nI think the idiomatic way to handle this would be to change the for loop to map each diagram to its corresponding Promise as returned from `render` and then use Promise.all to treat them collectively. Something like:\r\n\r\n```ts\r\nconst rendered = nodesToProcess.map( (element) =>  {\r\n    log.info('Rendering diagram: ' + element.id);\r\n    ...      \r\n    return mermaidAPI.render(...);\r\n }\r\n\r\nreturn Promise.all(rendered);\r\n```",
+          "file_path": "packages/mermaid/src/mermaid.ts",
+          "line_number": 139,
+          "start_line": null,
+          "commit_sha": "1fb671c561fd6390cd1eead0efa6e034fd058992",
+          "created_at": "2022-10-07T00:45:30Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J846_LLq",
+          "author": "sidharthv96",
+          "body": "I don't think render is async, even though it \u201cfeels\u201d like it is. \r\nhttps://github.com/mermaid-js/mermaid/blob/9f286b46ff4b43cdb7debf52784d56c6ae43540b/packages/mermaid/src/diagrams/flowchart/flowDb.js#L16-L33\r\n\r\nAll diagrams use db's with module level state, so you can't render in parallel. (Well, you _can_, but your diagrams will be rendered wrong). \r\n\r\nThis is a drawback which should be fixed, but it'll be another MAJOR rewrite. ",
+          "file_path": "packages/mermaid/src/mermaid.ts",
+          "line_number": 139,
+          "start_line": null,
+          "commit_sha": "1fb671c561fd6390cd1eead0efa6e034fd058992",
+          "created_at": "2022-10-07T02:52:12Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J846_LWV",
+          "author": "sidharthv96",
+          "body": "Related: https://github.com/mermaid-js/mermaid/issues/3577",
+          "file_path": "packages/mermaid/src/mermaid.ts",
+          "line_number": 139,
+          "start_line": null,
+          "commit_sha": "1fb671c561fd6390cd1eead0efa6e034fd058992",
+          "created_at": "2022-10-07T02:54:26Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a performance concern and potential race condition, and explicitly suggests a concrete alternative implementation using Promise.all with a code example."
+    }
+  ],
+  "review_thread_count": 2,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_collapsed": false,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J8468Fn_",
+            "author": "sidharthv96",
+            "body": "@knsv making render async has issues like this to handle externally. ",
+            "file_path": "cypress/platform/render-after-error.html",
+            "line_number": 26,
+            "start_line": 17,
+            "commit_sha": "1fb671c561fd6390cd1eead0efa6e034fd058992",
+            "created_at": "2022-10-06T09:51:27Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 2,
+    "stage1_kept": 1,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 1,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

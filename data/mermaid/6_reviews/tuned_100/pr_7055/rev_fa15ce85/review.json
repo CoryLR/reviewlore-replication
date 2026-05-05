@@ -1,0 +1,60 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/parser/sequenceDiagram.jison",
+      "line_number": 35,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The simplified character class `[^<>:\\n,;@]` no longer excludes `-` (hyphen), which was excluded in the original patterns (the original `[^\\<->\\->:\\n,;@]` character class covered the range `<` through `>` and also included a bare `-`). Actor names containing hyphens in the `<ID>` lexer state \u2014 e.g. `participant My-Actor` \u2014 may now be accepted where they previously weren't, or the changed tokenization may affect how message arrows involving participants with hyphens are parsed. Confirm this broadening is intentional and that it does not regress any existing diagrams.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/parser/sequenceDiagram.jison",
+      "line_number": 37,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The INVALID token returned here only produces a graceful silent-recovery when it arrives as the *first* token on a `line` (handled by the new `| INVALID { $$=[]; }` production). However, every keyword that enters the `<ID>` state \u2014 `participant`, `destroy`, `activate`, `deactivate`, and `participant_actor` \u2014 is consumed *before* the lexer reaches this rule. Once that keyword is on the parser stack, the parser is inside a `statement \u2192 participant_statement` (or similar) production that unconditionally requires the `actor` non-terminal, and `actor` only accepts an `ACTOR` token (grammar line ~375: `actor: ACTOR { \u2026 }`). Receiving INVALID here instead causes a hard parse error, not silent recovery. The fix successfully eliminates the infinite recursion / browser freeze (the critical bug), but the error handling is inconsistent: a bare invalid character on its own line is silently ignored, while `participant ValidName<br>` throws. Consider also adding `| 'participant' INVALID` / `| 'destroy' INVALID` etc. alternatives within `participant_statement`, or an `error` token production, if silent recovery is desired in those paths.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/parser/sequenceDiagram.jison",
+      "line_number": 150,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "A brief inline comment here would help future maintainers understand the limited scope of this recovery: this rule only fires when INVALID is the very first token on a line (e.g. a stray unrecognised character). It does *not* recover from INVALID appearing after a keyword like `participant` or `destroy` has already been consumed \u2014 those cases still throw a hard parse error. Without this note, the recovery looks more complete than it is.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+      "line_number": 2612,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test description \"should handle fail parsing when alias token causes conflicts in participant definition\" is inaccurate. The root cause is not an alias-token conflict \u2014 it is `<` / `>` characters (HTML tags like `<br>`) appearing in a participant name, which previously caused the jison lexer to loop infinitely and freeze the browser. A clearer description would be something like: \"should throw a parse error instead of hanging when participant name contains angle brackets\".",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+      "line_number": 2617,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The try/catch + boolean flag pattern is verbose and swallows the rejection reason on failure. For async tests that expect a rejection, prefer the idiomatic vitest form:\n```js\nawait expect(\n  Diagram.fromText(`\n    sequenceDiagram\n    participant SAS MyServiceWithMoreThan20Chars <br> service decription\n  `)\n).rejects.toThrow();\n```\nThis produces a clearer failure message if the promise unexpectedly resolves.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `activate` and `deactivate` keywords also call `this.begin('ID')` and therefore share the same gap as `participant`/`destroy`: if a user writes `activate SomeActor<br>`, the new INVALID rule fires in the `<ID>` state after the `activate` keyword has already been consumed, and the grammar (which expects `activate` \u2192 `actor` \u2192 `NEWLINE`) has no INVALID alternative. The result is still a hard parse error \u2014 no longer a browser freeze \u2014 but the inconsistency between keyword contexts and standalone-line recovery applies here too. At minimum, add a test case for `activate`/`deactivate` with an angle-bracket actor name to document the expected behavior.",
+      "index": 5
+    },
+    {
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The diff removes the trailing newline from the end of `sequenceDiagram.jison`. POSIX and most project style guides require text files to end with a newline; restoring it avoids noisy `\\ No newline at end of file` warnings in future diffs and keeps the file consistent with the rest of the codebase.",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.4199595,
+  "duration_seconds": 350.1711733341217
+}

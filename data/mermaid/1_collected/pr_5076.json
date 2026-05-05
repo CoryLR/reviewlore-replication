@@ -1,0 +1,124 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 5076,
+  "title": "fix: clean comments in text in getDiagramFromText API so flowchart works well",
+  "body": "Resolves #5075 \r\n\r\n## :bookmark_tabs: Summary\r\n\r\nThis bug was introduced in v10.5.0 in https://github.com/mermaid-js/mermaid/pull/4759 and since the comments are not being cleaned when using the `getDiagramFromText` API, hence the flowchart with comments breaks.\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nI am calling the API `cleanupComments` in Diagram constructor to make sure the comments are always removed before creation and this works fine.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n- [ ] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/docs/community/development.md#3-update-documentation) is used for all new features.\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "ad1992",
+  "merged_at": "2023-11-28T12:16:33Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "449992645355a1affc8d202612f86601e4202fcb",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "252a8a73b13647bec92c0ae1e32e5ee932be1b54",
+    "4ed7b2be0263333d46ec8bcedef065f3977fde4a"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Tyrps",
+          "author": "sidharthv96",
+          "body": "Having this demo here is not really useful. You can remove it. \r\nIf you were using this for development, use the `demos/dev` folder. ",
+          "file_path": "demos/flowchart.html",
+          "line_number": 1546,
+          "start_line": null,
+          "commit_sha": "4ed7b2be0263333d46ec8bcedef065f3977fde4a",
+          "created_at": "2023-11-27T08:23:23Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Tyszm",
+          "author": "sidharthv96",
+          "body": "Instead of adding this here, where there will be duplicate calls, you can modify `/mermaid/packages/mermaid/src/mermaidAPI.ts` to add the `preprocessDiagram` call before `getDiagramFromText`.\r\n\r\n",
+          "file_path": "packages/mermaid/src/Diagram.ts",
+          "line_number": 28,
+          "start_line": null,
+          "commit_sha": "4ed7b2be0263333d46ec8bcedef065f3977fde4a",
+          "created_at": "2023-11-27T08:27:36Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TzUk5",
+          "author": "ad1992",
+          "body": "How will that help ? Since the issue is when using `getDiagramFromText` API, the comments break for flowchart  so it needs to happen inside the `getDiagramFromText` ",
+          "file_path": "packages/mermaid/src/Diagram.ts",
+          "line_number": 28,
+          "start_line": null,
+          "commit_sha": "4ed7b2be0263333d46ec8bcedef065f3977fde4a",
+          "created_at": "2023-11-27T10:38:47Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85T1HfM",
+          "author": "sidharthv96",
+          "body": "```diff\r\ndiff --git a/packages/mermaid/src/mermaidAPI.ts b/packages/mermaid/src/mermaidAPI.ts\r\nindex 09d007780..d96b996b9 100644\r\n--- a/packages/mermaid/src/mermaidAPI.ts\r\n+++ b/packages/mermaid/src/mermaidAPI.ts\r\n@@ -17,7 +17,7 @@ import { compile, serialize, stringify } from 'stylis';\r\n import { version } from '../package.json';\r\n import * as configApi from './config.js';\r\n import { addDiagrams } from './diagram-api/diagram-orchestration.js';\r\n-import { Diagram, getDiagramFromText } from './Diagram.js';\r\n+import { Diagram, getDiagramFromText as getDiagramFromTextInternal } from './Diagram.js';\r\n import errorRenderer from './diagrams/error/errorRenderer.js';\r\n import { attachFunctions } from './interactionDb.js';\r\n import { log, setLogLevel } from './logger.js';\r\n@@ -28,9 +28,10 @@ import type { MermaidConfig } from './config.type.js';\r\n import { evaluate } from './diagrams/common/common.js';\r\n import isEmpty from 'lodash-es/isEmpty.js';\r\n import { setA11yDiagramInfo, addSVGa11yTitleDescription } from './accessibility.js';\r\n-import type { DiagramStyleClassDef } from './diagram-api/types.js';\r\n+import type { DiagramMetadata, DiagramStyleClassDef } from './diagram-api/types.js';\r\n import { preprocessDiagram } from './preprocess.js';\r\n import { decodeEntities } from './utils.js';\r\n \r\n const MAX_TEXTLENGTH = 50_000;\r\n const MAX_TEXTLENGTH_EXCEEDED_MSG =\r\n@@ -519,6 +520,11 @@ function initialize(options: MermaidConfig = {}) {\r\n   addDiagrams();\r\n }\r\n \r\n+const getDiagramFromText = (text: string, metadata: Pick<DiagramMetadata, 'title'> = {}) => {\r\n+  const { code } = preprocessDiagram(text);\r\n+  return getDiagramFromTextInternal(code, metadata);\r\n+};\r\n+\r\n /**\r\n  * Add accessibility (a11y) information to the diagram.\r\n  *\r\n\r\n```",
+          "file_path": "packages/mermaid/src/Diagram.ts",
+          "line_number": 28,
+          "start_line": null,
+          "commit_sha": "4ed7b2be0263333d46ec8bcedef065f3977fde4a",
+          "created_at": "2023-11-27T16:31:11Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85T3dLm",
+          "author": "ad1992",
+          "body": "Thank you, made the change. Should be good to go",
+          "file_path": "packages/mermaid/src/Diagram.ts",
+          "line_number": 28,
+          "start_line": null,
+          "commit_sha": "4ed7b2be0263333d46ec8bcedef065f3977fde4a",
+          "created_at": "2023-11-28T03:44:44Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TyuEo",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n  test('should clean up comments inside getDiagramFromText when present in diagram definition', async () => {\r\n```",
+          "file_path": "packages/mermaid/src/diagram.spec.ts",
+          "line_number": 87,
+          "start_line": null,
+          "commit_sha": "4ed7b2be0263333d46ec8bcedef065f3977fde4a",
+          "created_at": "2023-11-27T08:32:32Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85T4YU4",
+          "author": "ad1992",
+          "body": "```suggestion\r\n      %% This is a comment A -- text --> B{node}\r\n```",
+          "file_path": "packages/mermaid/src/mermaidAPI.spec.ts",
+          "line_number": 753,
+          "start_line": null,
+          "commit_sha": "4ed7b2be0263333d46ec8bcedef065f3977fde4a",
+          "created_at": "2023-11-28T06:35:04Z",
+          "is_outdated": true
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 4
+}

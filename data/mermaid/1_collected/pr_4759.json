@@ -1,0 +1,288 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4759,
+  "title": "Add directive support to all diagrams by preprocessing",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nRemoves the directive grammar from the jison files.\r\nDirectives, frontmatter and comments will be preprocessed and removed, before parsing. \r\nHence, all diagrams will now support directives.\r\n\r\nResolves #4755 \r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nA preprocess step was added, which will extract metadata and remove comments, directives and frontmatter. \r\nwrap and title needed to be handled separately for legacy support.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n- [x] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/docs/community/development.md#3-update-documentation) is used for all new features.\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "sidharthv96",
+  "merged_at": "2023-09-07T07:06:16Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "07f460a1846d22e54016c25862b9eb42642583ef",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "6fa97a8b71d15b2b6ac72c5bfde8eb09ede56276",
+    "667b17bf66ad13fe822a92f43d62265ba4f9fccb"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85OC5tL",
+          "author": "aloisklink",
+          "body": "This needs a `tsdoc` comment, e.g. something like:\r\n\r\n```ts\r\n/**\r\n * @param metadata - Diagram metadata, defined in YAML.\r\n */\r\n```\r\n\r\nAlso, we should probably defined the `{title?: string}` type somewhere once, e.g. with something like:\r\n\r\n```ts\r\ntype DiagramMetadata = {title?: string};\r\n```\r\n\r\n(maybe this should be `type DiagramMetadata = {title?: string, config?: MermaidConfig};` since https://github.com/mermaid-js/mermaid/pull/4750 has been merged?)",
+          "file_path": "packages/mermaid/src/Diagram.ts",
+          "line_number": 84,
+          "start_line": null,
+          "commit_sha": "667b17bf66ad13fe822a92f43d62265ba4f9fccb",
+          "created_at": "2023-08-29T21:43:51Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Og-n9",
+          "author": "sidharthv96",
+          "body": "I've changed it to `Pick<DiagramMetadata, 'title'>`, we should not be passing config here as it'll be confusing right now on which config to use. \r\n\r\nMaybe, `Omit<DiagramMetadata, 'config'>` can be used. ",
+          "file_path": "packages/mermaid/src/Diagram.ts",
+          "line_number": 84,
+          "start_line": null,
+          "commit_sha": "667b17bf66ad13fe822a92f43d62265ba4f9fccb",
+          "created_at": "2023-09-06T13:15:52Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85OjkpQ",
+          "author": "aloisklink",
+          "body": "> I've changed it to `Pick<DiagramMetadata, 'title'>`, we should not be passing config here as it'll be confusing right now on which config to use. \r\n>\r\n> Maybe, `Omit<DiagramMetadata, 'config'>` can be used.\r\n\r\n:rocket: Awesome! The `Pick<DiagramMetadata, 'title'>` seems perfect :) We can always change it to `Omit<DiagramMetadata, 'config'>` once/if we add more fields to the `DiagramMetadata` type in the future.",
+          "file_path": "packages/mermaid/src/Diagram.ts",
+          "line_number": 84,
+          "start_line": null,
+          "commit_sha": "667b17bf66ad13fe822a92f43d62265ba4f9fccb",
+          "created_at": "2023-09-07T00:20:02Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85OC6pO",
+          "author": "aloisklink",
+          "body": "If we're exporting this function, it would be nice to have a `/** */` TSDoc comment quickly explaining what this function does, so we don't need to read this file.",
+          "file_path": "packages/mermaid/src/preprocess.ts",
+          "line_number": 47,
+          "start_line": null,
+          "commit_sha": "667b17bf66ad13fe822a92f43d62265ba4f9fccb",
+          "created_at": "2023-08-29T21:49:50Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85OC7XL",
+          "author": "aloisklink",
+          "body": "Originally, this line was `args: unknown` (so TypeScript type-checked the `args` parameter).\r\n\r\nSee https://github.com/mermaid-js/mermaid/blob/6e51f8fd9840a788bcca1f2cd2aabd78bcf3b74a/packages/mermaid/src/utils.ts#L850\r\n\r\nWhy did we switch to `args: any`?",
+          "file_path": "packages/mermaid/src/utils/sanitizeDirective.ts",
+          "line_number": 9,
+          "start_line": null,
+          "commit_sha": "667b17bf66ad13fe822a92f43d62265ba4f9fccb",
+          "created_at": "2023-08-29T21:54:00Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Ohpa2",
+          "author": "sidharthv96",
+          "body": "Because `utils.ts` had this nifty line at the top, it didn't matter what the type was.\r\nhttps://github.com/mermaid-js/mermaid/blob/6e51f8fd9840a788bcca1f2cd2aabd78bcf3b74a/packages/mermaid/src/utils.ts#L1\r\n\r\nChanging it to unknown adds ~10 errors, which are not really relevant in our case as the args is basically an object | array, hence `any`.\r\n\r\n<img width=\"443\" alt=\"image\" src=\"https://github.com/mermaid-js/mermaid/assets/10703445/c76ffaa5-bf64-4181-8822-355f3b882b4a\">\r\n",
+          "file_path": "packages/mermaid/src/utils/sanitizeDirective.ts",
+          "line_number": 9,
+          "start_line": null,
+          "commit_sha": "667b17bf66ad13fe822a92f43d62265ba4f9fccb",
+          "created_at": "2023-09-06T15:09:30Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85OjkcV",
+          "author": "aloisklink",
+          "body": "> Because `utils.ts` had this nifty line at the top, it didn't matter what the type was\r\n>\r\n> https://github.com/mermaid-js/mermaid/blob/6e51f8fd9840a788bcca1f2cd2aabd78bcf3b74a/packages/mermaid/src/utils.ts#L1\r\n\r\n:rofl: Oh well, `any` is fine then! `unknown` would be even better (especially for security-based code), but if we're not changing existing code, there's no need to change the typing.\r\n",
+          "file_path": "packages/mermaid/src/utils/sanitizeDirective.ts",
+          "line_number": 9,
+          "start_line": null,
+          "commit_sha": "667b17bf66ad13fe822a92f43d62265ba4f9fccb",
+          "created_at": "2023-09-07T00:18:02Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85OC8Ft",
+          "author": "aloisklink",
+          "body": "Would it be better to change this to the following:\r\n\r\n```js\r\n    diagram = new Diagram(str, {config: {theme: \"dark\", logLevel: 1}, wrap: true});\r\n```\r\n\r\n(assuming that's how the new metadata argument will work, once this PR is updated with https://github.com/mermaid-js/mermaid/pull/4750)\r\n\r\nThat way we can keep the following lines in the test, without removing them:\r\n\r\n```js\r\n    expect(mermaid.theme).toBe('dark');\r\n    expect(mermaid.logLevel).toBe(1);\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+          "line_number": 2057,
+          "start_line": null,
+          "commit_sha": "667b17bf66ad13fe822a92f43d62265ba4f9fccb",
+          "created_at": "2023-08-29T21:58:49Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85ObrZX",
+          "author": "knsv",
+          "body": "Sometimes tests address multiple things, then it can be good to split it up. Wrap for instance is actually tested in another test (in this case) so it is safe to remove.",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+          "line_number": 2057,
+          "start_line": null,
+          "commit_sha": "667b17bf66ad13fe822a92f43d62265ba4f9fccb",
+          "created_at": "2023-09-05T13:12:09Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Ohqjo",
+          "author": "sidharthv96",
+          "body": "Wrap has nothing to do with `should handle one actor, when theme is dark and logLevel is 1 DX1 (dfg1)`, and was most likely an artefact from a copied test. No need to complicate the unit test as we have other places to test wrap as Knut pointed out. ",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+          "line_number": 2057,
+          "start_line": null,
+          "commit_sha": "667b17bf66ad13fe822a92f43d62265ba4f9fccb",
+          "created_at": "2023-09-06T15:12:44Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Ojlqi",
+          "author": "aloisklink",
+          "body": "What about the `{theme: \"dark\", logLevel: 1}` bit? (sorry, I should have commented on multiple lines, since the code context preview on GitHub doesn't show that the `%%{init: { \"theme\": \"dark\", \"logLevel\": 1 } }%%` line was removed.)\r\n\r\nIf it's tested in another test, that's fine too, but we should then probably change the title of the test from `should handle one actor, when theme is dark and logLevel is 1 DX1 (dfg1)` to something like `should handle one actor`.\r\n\r\nCurrently this test looks exactly the same as the `should handle one actor, when logLevel is 3 (dfg0)` test (which also has an incorrect title since we've removed the `%%{initialize: { \"logLevel\": 3 }}%%` bit from the diagram.\r\n\r\n---\r\n\r\nSide-note, if we're no longer testing directives in these tests, we should also move these tests out of the:\r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/18079a44bedb09eda7831aaacc5c3b263c97c227/packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js#L2038\r\n\r\nblock (or at least rename the `describe()` block so that it doesn't talk about directives).",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+          "line_number": 2057,
+          "start_line": null,
+          "commit_sha": "667b17bf66ad13fe822a92f43d62265ba4f9fccb",
+          "created_at": "2023-09-07T00:30:34Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85OkEUm",
+          "author": "sidharthv96",
+          "body": "I've removed that block of tests as they are redundant now. ",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+          "line_number": 2057,
+          "start_line": null,
+          "commit_sha": "667b17bf66ad13fe822a92f43d62265ba4f9fccb",
+          "created_at": "2023-09-07T04:47:16Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85OC9bS",
+          "author": "Yokozuna59",
+          "body": "Why this file has been deleted? Shouldn't we just add `.js` or `.ts` extension? Or all test cases in this file are also included in `packages/mermaid/src/diagrams/git/gitGraphParserV2.spec.js`?",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphParser.spec",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "066e0967de7e296febc93d17774c8c102d7ac84b",
+          "created_at": "2023-08-29T22:05:34Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85OhqsU",
+          "author": "sidharthv96",
+          "body": "Added back, fixed some tests, skipped few. ",
+          "file_path": "packages/mermaid/src/diagrams/git/gitGraphParser.spec",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "066e0967de7e296febc93d17774c8c102d7ac84b",
+          "created_at": "2023-09-06T15:13:09Z",
+          "is_outdated": true
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85OC-Fq",
+          "author": "Yokozuna59",
+          "body": "I'm not familiar with this `wrap` option, what does it do? Is it necessary to have it in `init` function of the diagram definition? I also saw it in `c4`.\r\n",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.ts",
+          "line_number": 15,
+          "start_line": 13,
+          "commit_sha": "667b17bf66ad13fe822a92f43d62265ba4f9fccb",
+          "created_at": "2023-08-29T22:09:59Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85ODB40",
+          "author": "aloisklink",
+          "body": "That's a good point. What does `wrap` even do?\r\n\r\nFor other diagrams, should we have something like:\r\n\r\n```js\r\ninit: ({ wrap }) => {\r\n  if (wrap) {\r\n    // or maybe just print a warning?\r\n    throw new Error(\"This diagram does not support %%{wrap}%%\");\r\n  }\r\n},\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.ts",
+          "line_number": 15,
+          "start_line": 13,
+          "commit_sha": "667b17bf66ad13fe822a92f43d62265ba4f9fccb",
+          "created_at": "2023-08-29T22:36:47Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85ObqDD",
+          "author": "knsv",
+          "body": "Wrap makes the text wrap on messages for instance. Example,  no wrap:\r\n<img width=\"1171\" alt=\"image\" src=\"https://github.com/mermaid-js/mermaid/assets/5837277/57ecbec4-8573-499b-8a94-b895d420b843\">\r\n\r\nwrap:\r\n<img width=\"1057\" alt=\"image\" src=\"https://github.com/mermaid-js/mermaid/assets/5837277/b35101ea-ebbf-416c-949f-22b363df1d2c\">\r\n",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.ts",
+          "line_number": 15,
+          "start_line": 13,
+          "commit_sha": "667b17bf66ad13fe822a92f43d62265ba4f9fccb",
+          "created_at": "2023-09-05T13:07:48Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85ObyFD",
+          "author": "Yokozuna59",
+          "body": "I see, but does it has to be inside the DB?\r\nCan't we just use `getConfig`?",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.ts",
+          "line_number": 15,
+          "start_line": 13,
+          "commit_sha": "667b17bf66ad13fe822a92f43d62265ba4f9fccb",
+          "created_at": "2023-09-05T13:32:34Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Ojpbe",
+          "author": "aloisklink",
+          "body": "> Wrap makes the text wrap on messages for instance.\r\n\r\nAh, that makes sense!\r\n\r\nFYI, there is a [`MermaidConfig.wrap`](https://mermaid.js.org/config/schema-docs/config.html#wrap) value, but the documentation for it is empty, which is why I got a bit confused!\r\n\r\nHowever, [`MermaidConfig.c4.wrap`](https://mermaid.js.org/config/schema-docs/config.html#wrap-1), and [`MermaidConfig.sequence.wrap`](https://mermaid.js.org/config/schema-docs/config.html#wrap-2) are documented.\r\n\r\n---\r\n\r\n> I see, but does it has to be inside the DB?\r\n> Can't we just use `getConfig`?\r\n\r\nThey're currently two separate values (but it's probably okay to refactor this in a future PR).\r\n\r\nIf somebody does:\r\n\r\n```mermaid-example\r\n%%{init: {'sequence': {'wrap': false}}}%%\r\n%%{wrap}%%\r\nsequenceDiagram\r\n    Alice->>+John: Hello John, how are you? I am writing a verrrrrrrrrrrry long text.\r\n```\r\n\r\n```mermaid\r\n%%{init: {'sequence': {'wrap': false}}}%%\r\n%%{wrap}%%\r\nsequenceDiagram\r\n    Alice->>+John: Hello John, how are you? I am writing a verrrrrrrrrrrry long text.\r\n```\r\n\r\nYou'd expect `getConfig().sequence.wrap === false`, because that's what the `%%{init: {'sequence': {'wrap': false}}}%%` bit says.\r\n\r\nHowever, the `%%{wrap}%%` is part of the DB, so it would be `true` in the DB.\r\n\r\nTo be honest, the only main difference I see is that a website could set `siteConfig.secure = [\"wrap\"]` to block people from modifying the `wrap` config value in a diagram, then doing  `%%{init: {'sequence': {'wrap': true}}}%%` won't work, but `%%{wrap}%%` will work, but I don't really see why anybody would want to do that.\r\n\r\nAnyway, if we do want to move `wrap` out of the DB and just keep it in the `config`, that should be separate PR to keep things simple :)\r\n",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.ts",
+          "line_number": 15,
+          "start_line": 13,
+          "commit_sha": "667b17bf66ad13fe822a92f43d62265ba4f9fccb",
+          "created_at": "2023-09-07T01:07:34Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85OblZy",
+          "author": "knsv",
+          "body": "\u2764\ufe0f ",
+          "file_path": "packages/mermaid/src/diagrams/class/parser/classDiagram.jison",
+          "line_number": 32,
+          "start_line": null,
+          "commit_sha": "667b17bf66ad13fe822a92f43d62265ba4f9fccb",
+          "created_at": "2023-09-05T12:52:36Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 7
+}

@@ -1,0 +1,92 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/builders/builder-vite/input/iframe.html",
+      "line_number": 73,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The formatter re-indented the content inside this multi-line template literal, adding 6 spaces of leading whitespace to the message body lines (e.g. `\"      It looks like you're visiting...\"`). Because template literals preserve whitespace literally, this changes the runtime string value. The `console.error` output will now include 6 leading spaces on each continuation line, which is a visible behavioral regression. The formatter should not be altering the contents of multi-line string literals. This file should either be excluded from oxfmt (e.g. added to `ignorePatterns`), or the template literal should be refactored to not rely on indentation (e.g. using a string array joined with `\\n`).",
+      "index": 0
+    },
+    {
+      "file_path": "scripts/ci/common-jobs.ts",
+      "line_number": 78,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`yarn fmt:check` at the repo root runs `oxfmt --check .`, but the root `.oxfmtrc.json` lists `\"docs\"` in `ignorePatterns`. This means the `prettyDocs` CI job no longer actually checks any docs formatting \u2014 it just runs the general root format check while silently skipping the `docs/` directory. Previously this job ran `scripts/yarn docs:fmt:check` which targeted `docs/_snippets` directly. The `scripts/package.json` still has a `fmt:check` command that correctly scopes to `docs/_snippets` with the right config (`--config ./.oxfmtrc.json`). The CI step should either run `yarn --cwd scripts fmt:check` or be renamed to reflect its new, broader scope.",
+      "index": 1
+    },
+    {
+      "file_path": "package.json",
+      "line_number": 46,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The lint-staged config uses `\"oxfmt --check\"` instead of `\"oxfmt\"` (without `--check`). The old sub-repo configs used plain `oxfmt` which auto-formatted staged files in place, and then re-staged them \u2014 the standard lint-staged formatter pattern. With `--check`, lint-staged will *fail* on unformatted files but never fix them, forcing the developer to manually run `oxfmt` and re-stage. This is a significant breaking change to the pre-commit developer experience. If the intent is to enforce pre-formatting rather than auto-fix, that should be documented explicitly; otherwise change to `\"oxfmt\"` to restore the previous behavior. Same issue applies to line 50.",
+      "index": 2
+    },
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 43,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `overrides` entry for `[\"*.md\", \"*.mdx\"]` (setting `importOrderSeparation: false` and `importOrderSortSpecifiers: false`) is dead configuration. Both `\"*.md\"` and `\"*.mdx\"` are already listed in `ignorePatterns`, so oxfmt will skip those files entirely before evaluating any overrides. This block can be removed.",
+      "index": 3
+    },
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 56,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The override glob `\"**/frameworks/angular/template/**/*.ts\"` is dead because `\"code/frameworks/angular/template/**\"` is listed in `ignorePatterns` \u2014 those files will be skipped before the override is evaluated. Only the first glob (`**/frameworks/angular/src/**/*.ts`) in this override will ever apply. The redundant glob should be removed for clarity.",
+      "index": 4
+    },
+    {
+      "file_path": ".vscode/extensions.json",
+      "line_number": 9,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The file is missing a newline at end of file (the diff shows `\\ No newline at end of file`). This should be added to follow POSIX conventions and to prevent spurious diff noise in the future.",
+      "index": 5
+    },
+    {
+      "file_path": ".vscode/settings.json",
+      "line_number": 55,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The file is missing a newline at end of file (the diff shows `\\ No newline at end of file`). Additionally, there is a trailing comma after `\"oxc.enable.oxlint\": false` on the penultimate line \u2014 JSON does not allow trailing commas, which will cause parse errors in strict JSON consumers (even though VS Code is lenient about this in `settings.json`).",
+      "index": 6
+    },
+    {
+      "file_path": "code/package.json",
+      "line_number": 27,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `lint` script now runs `yarn lint:js && cd .. && yarn fmt:check`. Having a script inside `code/` change directory to the monorepo root (`cd ..`) and trigger a full root-level format check is surprising \u2014 it changes the scope from just the `code/` directory to the entire monorepo. Running `yarn lint` from the `code/` workspace now silently invokes a broader check than it did before. Consider either keeping this scoped to `code/` (e.g. `oxfmt --check --config ../.oxfmtrc.json .`) or adding a comment explaining the intentional scope expansion.",
+      "index": 7
+    },
+    {
+      "file_path": "package.json",
+      "line_number": 53,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `\"scripts/**/*.{html,js,json,jsx,mjs,ts,tsx}\"` lint-staged pattern only runs `yarn --cwd scripts lint:js:cmd` \u2014 it does not include an `oxfmt` (or `oxfmt --check`) step. This is inconsistent with the `code/**` patterns directly above, which include an `oxfmt --check` step. Files in `scripts/` will not have their formatting validated on commit.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `iframe.html` change incidentally fixes a real HTML bug: the closing tag `<ul></p>` in the original innerHTML template literal was incorrectly written as `<ul>` instead of `</ul>`. The new code correctly uses `</ul></p>`. Good catch, but since this is a bug fix bundled into an automated formatting commit, it should be called out explicitly in the PR description so reviewers don't miss it.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `docs/.oxfmtrc.json` was expanded to mirror the root config options, but it omits `\"bracketSpacing\": true` which is present in the root `.oxfmtrc.json`. If this is intentional (docs doesn't need bracket spacing), it should be documented; if unintentional, the option should be added for consistency.",
+      "index": 10
+    }
+  ],
+  "cost_usd": 0.4123468,
+  "duration_seconds": 281.0032000541687
+}

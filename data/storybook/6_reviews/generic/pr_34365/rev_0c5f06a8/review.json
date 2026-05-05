@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "scripts/eval/eval.ts",
+      "line_number": 87,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`inferAgent(values.model)` is called before `argsSchema.safeParse()` and its error handling block (lines 97\u2013101). If the user passes an unrecognised model string, `inferAgent` throws a raw `Error` with a stack trace instead of the clean, formatted error messages produced by `parsed.error.issues`. Either catch the throw here and print a user-friendly message, or defer agent inference until after `safeParse` returns a valid `args.model` (which will already be validated against `CLAUDE_MODELS`/`CODEX_MODELS`).",
+      "index": 0
+    },
+    {
+      "file_path": "scripts/eval/eval.ts",
+      "line_number": 127,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Both branches of the ternary produce textually identical expressions, which looks like dead code or a copy-paste error. The motivation is TypeScript narrowing \u2014 inside each branch `args.model` and `args.effort` resolve to the agent-specific discriminated-union member types, which satisfies `AgentVariant`. Without a comment explaining this, the next reader will almost certainly delete one branch or collapse the two into a single assignment and break the type. Add a brief comment such as `// branches required for TS to narrow model/effort to the correct discriminated-union member`.",
+      "index": 1
+    },
+    {
+      "file_path": "scripts/eval/lib/run-trial.ts",
+      "line_number": 20,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`verbose?: boolean` is declared in `TrialConfig` and accepted at every call site (including the `satisfies TrialConfig` check in `eval.ts`), but `runTrial` never reads `config.verbose`. The field is not forwarded to `AgentExecuteParams`, not used to gate any log calls, and not used to set the `debug` flag on the Claude SDK query. Either wire it through to `AgentExecuteParams` and respect it in `claude-code.ts`/`codex.ts`, or remove it from the interface.",
+      "index": 2
+    },
+    {
+      "file_path": "scripts/eval/lib/agents/claude-code.ts",
+      "line_number": 32,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`debug: true` is hardcoded unconditionally. This enables SDK-level debug output for every run, regardless of whether the caller requested verbose output. Since `TrialConfig.verbose` exists (even if currently unused), debug mode should be controlled by that flag rather than being always-on. Unconditional debug output can leak internal SDK details into saved transcripts and confuse grading output parsing.",
+      "index": 3
+    },
+    {
+      "file_path": "scripts/eval/lib/prepare-trial.ts",
+      "line_number": 37,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "There is a TOCTOU race condition when `eval-parallel.ts` (referenced in the PR description) spawns multiple processes for the same project simultaneously. On the first run, all 8 processes check `existsSync(cacheDir + '/.git')`, all observe `false`, and all enter the `else` branch. Each clones to a unique `repoRoot`, but they all then call `cp(repoRoot, cacheDir, { recursive: true })` targeting the same shared `cacheDir` concurrently. This can corrupt the cached repo. Consider using an advisory lock file (e.g. create a `.lock` sentinel before writing, fail-fast or spin-wait if it exists) or let only the first process populate the cache and have others spin until it appears.",
+      "index": 4
+    },
+    {
+      "file_path": "scripts/eval/lib/grade.ts",
+      "line_number": 275,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`truncateEnd` is a misleading name: the function discards the *beginning* of the string and keeps the *tail* (via `slice(-maxChars)`). A reader seeing `truncateEnd` would expect the opposite \u2014 that the end is cut. Consider renaming to `keepTail` or `truncateStart` to match the actual behaviour.",
+      "index": 5
+    },
+    {
+      "file_path": "scripts/package.json",
+      "line_number": 79,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`citty` is added as a dependency but is not imported anywhere in the new `scripts/eval/` files. `eval.ts` uses Node's built-in `parseArgs` for argument parsing instead. If `citty` was intended for the missing `eval-parallel.ts`, it should be added when that file lands. As-is it is dead weight that increases install size and supply-chain surface.",
+      "index": 6
+    },
+    {
+      "file_path": ".circleci/config.yml",
+      "line_number": 35,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`resource_class` is upgraded from `small` to `large` with no explanation in the diff, commit message, or PR description. A `large` executor is significantly more expensive than `small`. Is this change intentional (e.g. to handle a memory regression discovered during eval work), and if so, should it be reverted once the root cause is fixed? A comment in the YAML or a note in the PR description would prevent this from silently inflating CI costs long-term.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`eval-parallel.ts` is described in the PR as a first-class entry point (`node scripts/eval/eval-parallel.ts -p mealdrop`) and is central to the 8-combo parallel execution flow, but the file is absent from this diff. The race condition in `prepare-trial.ts` (cache population), the unused `citty` dependency, and possibly `ALL_MODELS`/`ALL_EFFORTS` (which are exported from `config.ts` but not consumed by any file in this diff) all appear to be placeholders waiting for that file. The PR should either include `eval-parallel.ts` or clearly scope it to a follow-up issue.",
+      "index": 8
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`runTrial` in `run-trial.ts` has no timeout guard on agent execution. The Claude SDK exposes `maxTurns` (set to 50) which provides turn-level protection, but a single very slow turn \u2014 or an API hang \u2014 can block the trial indefinitely. Wrapping the `driver.execute(...)` call in a `Promise.race` against a wall-clock timeout (e.g. 30 minutes) and logging a clear error would make the harness more robust for unattended parallel runs.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.7539864999999999,
+  "duration_seconds": 428.13741064071655
+}

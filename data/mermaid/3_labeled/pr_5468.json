@@ -1,0 +1,156 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 5468,
+  "title": "fix: move from objects to Maps",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nSwitches from objects to `Map`s in places where the keys accepted are user inputs.\r\n\r\nResolves #5451\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nDescribe the way your implementation works or what design decisions you made if applicable.\r\n\r\n**This is a breaking change for v11 since it changes the structure of the databases and as such can break code that relies on the db, e.g.**\r\n\r\nhttps://github.com/excalidraw/mermaid-to-excalidraw/blob/d0b00dc63eeabd5e92ca3997650f47bf4901cb2c/src/parser/flowchart.ts#L226\r\n\r\n### Why?\r\n\r\nThe main reason for this change was so that we wouldn't have to validate for `constructor` and `__proto__` (#5451) everytime we have to modify or get a property on the database objects. Another good reason would be that objects in JavaScript are generally designed to work like dynamic structs, where the JIT compiler would store the shape of the object and rereference that shape everytime that object is passed around. However, when we have a \"map\" with user-generated keys, `Map`s work better because they are designed for that purpose.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://mermaid.js.org/community/contributing.html)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n- [x] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://mermaid.js.org/community/contributing.html#update-documentation) is used for all new features.\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "Yash-Singh1",
+  "merged_at": "2024-05-16T07:42:17Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "8a5fe53706f4ed499dfd55e10639ca216f594519",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "0326d899c4f07a8d89d1c61b64de9d504d0409da",
+    "00eaebeac8a960ebb640c4a5e35929dc3e078fe4"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85eyrkU",
+          "author": "Yokozuna59",
+          "body": "Maybe change this into this:\r\n\r\n```suggestion\r\n    expect(classes.get('a')?.styles).toEqual(['stroke-width: 8px']);\r\n    expect(classes.get('b')?.styles).toEqual(['stroke-width: 8px']);\r\n```\r\n\r\nTo be consistent everywhere.",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.spec.ts",
+          "line_number": 57,
+          "start_line": null,
+          "commit_sha": "00eaebeac8a960ebb640c4a5e35929dc3e078fe4",
+          "created_at": "2024-05-05T15:42:51Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Function Consistency",
+          "label_confidence": "high",
+          "label_reasoning": "The comment asks for consistency in how Map values are accessed across test cases."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85ey88d",
+          "author": "Yokozuna59",
+          "body": "Or maybe we can leave it for another PR.",
+          "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.spec.ts",
+          "line_number": 57,
+          "start_line": null,
+          "commit_sha": "00eaebeac8a960ebb640c4a5e35929dc3e078fe4",
+          "created_at": "2024-05-05T21:06:17Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests a concrete code change for consistency using a code suggestion block."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85ez_dv",
+          "author": "Yokozuna59",
+          "body": "Some of test cases in this file follow this approach:\r\n\r\n```ts\r\n[...actors.keys()].sort()\r\n```\r\n\r\nAnd some of them following this approach:\r\n\r\n\r\n```ts\r\n[...actors.keys()]\r\n```\r\n\r\nIs there a reason of them to be different?",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "50c9ede69da13809164ac4f54cbca44a1d141688",
+          "created_at": "2024-05-06T08:20:14Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Function Consistency",
+          "label_confidence": "high",
+          "label_reasoning": "The comment points out inconsistency in how test cases access Map keys \u2014 some sort, some don't \u2014 questioning whether the difference is intentional."
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85fatbd",
+          "author": "Yash-Singh1",
+          "body": "> Is there a reason of them to be different?\r\n\r\nThe order is already sorted, so I was probably just testing around things. I removed the sort calls in dd92aecdcab953b1a3ebf89f5d7e857019a59056",
+          "file_path": "packages/mermaid/src/diagrams/sequence/sequenceDiagram.spec.js",
+          "line_number": null,
+          "start_line": null,
+          "commit_sha": "50c9ede69da13809164ac4f54cbca44a1d141688",
+          "created_at": "2024-05-15T01:34:11Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Although phrased as a question, it flags an inconsistency in test approaches, implying the code should be made consistent."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85fRZwp",
+          "author": "aloisklink",
+          "body": "I'm not a big fan of using the `!` non-null assertion since it can hide bugs.\r\n\r\nWould something like the following be better:\r\n\r\n```suggestion\r\n  let foundClass = classes.get(id);\r\n  if (foundClass === undefined) {\r\n    foundClass = { id: id, styles: [], textStyles: [] };\r\n    classes.set(id, foundClass); // This is a classDef\r\n  }\r\n```\r\n\r\nI've got a big list of minor refactoring changes in https://github.com/mermaid-js/mermaid/commit/730fa89e4c0b9ba81a6242753f8c78c71cce4174 that you're welcome to merge into this branch too.",
+          "file_path": "packages/mermaid/src/diagrams/block/blockDB.ts",
+          "line_number": 32,
+          "start_line": null,
+          "commit_sha": "00eaebeac8a960ebb640c4a5e35929dc3e078fe4",
+          "created_at": "2024-05-13T12:32:46Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Null Pointer",
+          "label_confidence": "high",
+          "label_reasoning": "The comment explicitly flags use of the non-null assertion operator `!` as potentially hiding bugs (null/undefined dereference), and suggests a safer pattern with an explicit undefined check."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly suggests replacing the non-null assertion with a safer alternative and provides a concrete code suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85fRgoP",
+          "author": "aloisklink",
+          "body": "```suggestion\r\n    const classNode = classes.get(id);\r\n    if (classNode) {\r\n      classNode.cssClasses.push(className);\r\n    }\r\n```",
+          "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+          "line_number": 230,
+          "start_line": null,
+          "commit_sha": "00eaebeac8a960ebb640c4a5e35929dc3e078fe4",
+          "created_at": "2024-05-13T12:51:17Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Null Pointer",
+          "label_confidence": "high",
+          "label_reasoning": "The suggestion adds a null/undefined guard before accessing properties on the result of `classes.get(id)`, preventing potential null dereference."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Provides a direct code suggestion to replace existing code with a safer null-check pattern."
+    }
+  ],
+  "review_thread_count": 4,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 4,
+    "stage1_kept": 4,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

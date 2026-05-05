@@ -1,0 +1,60 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/builders/builder-vite/src/plugins/storybook-external-globals-plugin.ts",
+      "line_number": 59,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "When `globalsList` is empty, `globalsList.map(escapeKeys).join('|')` produces the empty string `''`, and `new RegExp('')` is a universal-match regex that matches any code string. Every file then passes the code filter and enters the handler, where `globalsList.every(...)` on an empty array returns `true` and immediately bails out with `return undefined`. This entirely defeats the performance purpose of the code filter (the optimization that justifies this PR) whenever `externals` happens to be an empty object. Guard against this case before constructing the regex:\n\n```ts\nconst globalsCodeFilter = globalsList.length > 0\n  ? new RegExp(globalsList.map(escapeKeys).join('|'))\n  : null;\n```\n\nAnd then conditionally apply `filter: { code: globalsCodeFilter }` only when the filter is non-null (or omit the `filter` key entirely for the empty case).",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/plugins/vite-mock/plugin.ts",
+      "line_number": 166,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`filter.id` in Vite's `HookObject` uses `createFilter` internally, which treats plain strings as micromatch glob patterns\u2014not literal strings. Passing `normalizedPreviewConfigPath` (an absolute filesystem path such as `/home/user/project/.storybook/preview.tsx`) is fragile: on Windows, backslashes in paths can trip up glob parsing; absolute paths with glob-like segments (e.g. `[...]` chars) would be mis-interpreted. Use a `RegExp` to be explicit and cross-platform safe:\n\n```ts\nfilter: { id: new RegExp(normalizedPreviewConfigPath.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')) },\n```\n\nThe inner `if (id === normalizedPreviewConfigPath)` guard already preserves correctness for Vite < 6.3 (and for any filter false-positives), but fixing the filter type avoids silently failing to skip unrelated files on Vite 6.3+ when the string glob doesn't behave as expected.",
+      "index": 1
+    },
+    {
+      "file_path": "code/frameworks/vue3-vite/src/plugins/vue-component-meta.ts",
+      "line_number": 150,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "This PR changed `catch` to `catch (e)`, but `e` is never referenced in the catch body. The original form `catch {` (with no binding) was correct and cleaner. Notably, the same file already uses bare `catch` correctly in `fileExists` (line 220) and `applyTempFixForEventDescriptions` (line 267)\u2014revert this change for consistency:\n\n```ts\n} catch {\n  return undefined;\n}\n```",
+      "index": 2
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/plugins/vite-inject-mocker/plugin.ts",
+      "line_number": 47,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "On Vite 6.3+, the outer `filter: { id: /\\/vite-inject-mocker-entry\\.js/ }` already ensures `source` matches before `handler` is called, making the inner `if (source === ENTRY_PATH)` check redundant. However, on Vite < 6.3 the `filter` property is ignored (the `handler` is still called for all IDs via Rollup's `{ handler }` object support), so this inner guard is necessary for backward compatibility. The same applies to all other inner `if (!filter(id))` guards across this PR. Without an explanatory comment, this code looks like dead code to future maintainers and may be incorrectly removed. Add a short comment:\n\n```ts\n// Inner check is required for Vite < 6.3 backward compat; the outer\n// filter object is silently ignored by older Vite (rollup) versions.\nif (source === ENTRY_PATH) {\n```",
+      "index": 3
+    },
+    {
+      "file_path": "code/addons/docs/src/mdx-plugin.ts",
+      "line_number": 32,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The same backward-compat comment applies here: `if (!filter(id))` is now only reachable on Vite < 6.3 where the outer `filter: { id: include }` is ignored. Without a comment, this guard looks redundant. All changed plugins share this pattern; at minimum the first occurrence (or a shared code comment) should document the Vite < 6.3 intent.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The PR description states the `HookObject` filter is an optimisation \"for Vite 8 with rolldown\", but the `filter` property on plugin hooks was actually introduced in **Vite 6.3** (see https://github.com/vitejs/vite/pull/19770). The `builder-vite` `package.json` declares peer dependency `\"vite\": \"^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0\"`, meaning the optimisation applies from Vite 6.3 onward\u2014not only Vite 8. The strategy of keeping inner `filter(id)` guards for backward compatibility is correct, but the PR description should be updated to accurately reflect the version boundary (Vite < 6.3 vs. \u2265 6.3) to avoid future confusion about when these filters take effect.",
+      "index": 5
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR adds `filter` properties to `HookObject`s so Vite 6.3+ can skip the JS/Rust bridge for non-matching modules, while the inner `filter(id)` / `code.includes(glob)` guards maintain correctness on Vite 5 and Vite 6.0\u20136.2 where the outer `filter` is unknown and silently ignored. This design is sound, but none of the changed files contain an inline comment explaining this two-layer approach. A single shared block comment (or per-handler comment in the most prominent plugin) would prevent future maintainers from incorrectly removing what looks like duplicate logic.",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.5039044500000001,
+  "duration_seconds": 473.70449709892273
+}

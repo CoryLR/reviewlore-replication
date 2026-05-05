@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 195,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `key=\"icon\"` prop on these static SVG elements is meaningless. `key` is a React reconciliation hint that only has an effect when elements are rendered as siblings in an array (e.g., inside `.map()`). These elements are statically defined values in an object and will never be reconciled as list items. Remove the `key` prop from all three SVG entries (`new`, `modified`, `affected`) to avoid misleading future readers.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 218,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`statusOrder` appears to be dead code. The actual priority used by `getMostCriticalStatusValue` is `statusPriority` imported from `status.ts`, which is also the array used for sorting `statusLinks` at line 206. This PR updates `statusOrder` to include `new`, `modified`, and `affected`, but since nothing consumes `statusOrder` at runtime, those additions have no effect. More critically, the reordering of `error` (moved from position 2 to position 5, after the new change-detection values) would be a priority regression if the array were ever used. Verify whether `statusOrder` is consumed anywhere; if not, delete it entirely to prevent future confusion.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 229,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`getChangeDetectionStatus` is a pure status-splitting utility with no dependency on React or any component internals, yet it is defined and exported from `Tree.tsx` \u2014 a UI component file. All related utilities (`getMostCriticalStatusValue`, `getGroupStatus`, `getStatus`, `statusPriority`) live in `status.ts`. Placing this function here creates an awkward import for the test file (`import { getChangeDetectionStatus } from '../components/sidebar/Tree'`) and makes the function harder to discover alongside its siblings. Move it to `status.ts` and export it from there.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 233,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`Object.values(statuses)` is iterated twice: once to collect change values and once for test values. Because `StatusByTypeId` is keyed by `typeId`, and `CHANGE_DETECTION_TYPE_ID` is a single known key, the change slot can be resolved with a direct lookup instead of a filter pass: `const changeEntry = statuses[CHANGE_DETECTION_TYPE_ID]; const changeValues = changeEntry ? [changeEntry.value] : [];`. The remaining entries then drive the test slot. This collapses two O(n) passes into one and makes the intent clearer.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.stories.tsx",
+      "line_number": 322,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`(index[dualSlotStoryId] as any).parent as string` uses `as any` to access the `parent` field. The project rules prohibit bypassing the type system with `as any`. The index entries are typed as a discriminated union (e.g., `StoryEntry`, `ComponentEntry`, `GroupEntry`). Use a proper type guard or type assertion to the correct entry type (e.g., `(index[dualSlotStoryId] as StoryEntry).parent`) rather than escaping through `any`.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.stories.tsx",
+      "line_number": 361,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "None of the five new stories (`WithChangeDetectionOnly`, `WithChangeDetectionAndTestStatus`, `WithTestStatusOnly`, `WithAffectedStatus`, `BranchWithChangeDetectionPriority`) include a `play` function. Per project convention, interactive component stories must include a `play` function that programmatically exercises the interaction and asserts on the resulting DOM so the state is captured in visual regression tests. At minimum, each story should assert that the expected status button(s) are rendered with the correct `data-testid` and `aria-label`, and that the icons are visible.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.stories.tsx",
+      "line_number": 446,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`BranchWithChangeDetectionPriority` is created with `makeDualSlotStory(...)` which already sets a `render`, and then that `render` is immediately overridden via a detached assignment. The only difference from the other stories is the initial `selectedId` (`dualSlotParentId` instead of `dualSlotStoryId`). A cleaner approach is to accept an optional `initialSelectedId` parameter in `makeDualSlotStory` (defaulting to `dualSlotStoryId`) and pass `dualSlotParentId` for this case. This eliminates the surprising two-step mutation pattern.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/manager/utils/status.test.ts",
+      "line_number": 247,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test `'branch/group combined priority: error beats new'` calls `getMostCriticalStatusValue` directly and does not exercise `getChangeDetectionStatus` at all. It belongs in the existing `describe('getHighestStatus')` block alongside the other `getMostCriticalStatusValue` tests, not in `describe('dual-slot status splitting')`. Placing it here implies it is testing dual-slot behavior, which misleads future readers and makes the test suite harder to navigate.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `makeDualSlotStory` helper is a good abstraction, but the five new stories share a lot of structural similarity with no `play` functions to differentiate them from each other in CI output. Consider whether a table-driven or parameterized approach (e.g., a single story with controls for `changeTypeId` and `testTypeId`) would reduce duplication while still providing the visual variants needed for the screenshot suite.",
+      "index": 8
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The test suite for `dual-slot status splitting` lacks a case where `statuses` is an empty object (`{}`). `getChangeDetectionStatus({})` should return `{ changeStatus: 'status-value:unknown', testStatus: 'status-value:unknown' }` \u2014 verifying the empty-input boundary prevents a future regression if the fallback behavior in `getMostCriticalStatusValue` changes.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.53424815,
+  "duration_seconds": 443.3804728984833
+}

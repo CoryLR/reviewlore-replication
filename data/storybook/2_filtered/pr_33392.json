@@ -1,0 +1,259 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33392,
+  "title": "Manifests: Refactor from `componentManifestGenerator` to extensible `manifests` preset property",
+  "body": "Works on Milestone 4 in https://github.com/storybookjs/mcp/issues/107\r\n\r\nTelescopes on to https://github.com/storybookjs/storybook/pull/30612\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\n**This is purely an internal refactor, the manifest locations or content doesn't change in this PR.**\r\n\r\nThis PR refactors component manifest generation, to make it more extensible.\r\n\r\nBefore, it was a function returned by the `experimental_componentManifestGenerator` preset, which the React renderer set. This allowed core to pass in the `StoryIndexGenerator` needed to generate the manifest, as an argument to the generator function. However it's very hard to extend, which we want when we want `addon-docs` to start adding an MDX-based docs manifest too.\r\n\r\nBut now that #30612 makes the `StoryIndexGenerator` available as a preset property, we don't need the manifest generator to be a function anymore, because we don't need to explicitly inject the SIG anymore. \ud83c\udf89\r\n\r\nThis refactor changes the function-returning preset to be an extensible `experimental_manifests` preset instead. That returns a `Record<ManifestName, ManifestContent>`, where `ManifestName` will be the name of the JSON file written to disk, ie. `/manifests/ManifestName.json`, and `ManifestContent` is simply the content of the JSON file. Any preset such as renderers, addons, etc. can define this preset to add their own information to either new manifests or extend other presets manifests. This allows something like this to work:\r\n\r\n```ts\r\n// in @storybook/react preset\r\n\r\nexport const experimental_manifests = (existingManifests) => {\r\n  // ...\r\n  return {\r\n    ...existingManifests,\r\n    components: { // \ud83d\udc48 file name\r\n      // \ud83d\udc47 file content\r\n      v: 0,\r\n      components: { ... }\r\n    }\r\n  }\r\n}\r\n\r\n// in @storybook/addon-docs preset\r\n\r\nexport const experimental_manifests = (existingManifests) => {\r\n  // ...\r\n  return {\r\n    ...existingManifests,\r\n    docs: {\r\n      v: 0,\r\n      documents: { ... }\r\n    }\r\n  }\r\n}\r\n```\r\n\r\nWhich would result in `/manifests/components.json` and `/manifests/docs.json` to exist. `addon-docs` could also modify the manifest output from the React renderer by just smartly merging with `existingManifests`, eg. if it wanted to add references from the component manifest into the docs maninfest.\r\n\r\nIn upcoming PR we'll integrate addon-docs with this new architecture.\r\n\r\n<!-- Briefly describe what your PR does -->\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n_This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!_\r\n\r\n<!-- Please include the steps to test your changes here. For example:\r\n\r\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Open Storybook in your browser\r\n3. Access X story\r\n\r\n-->\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Refactor**\n  * Centralized manifest generation and server endpoints into a dedicated manifests module; manifest creation is now deferred to the effects pipeline.\n\n* **New Features**\n  * Server can generate and serve manifest JSON files and a components HTML view.\n\n* **Tests**\n  * Added comprehensive tests for manifest writing, JSON/HTML endpoints, error handling, and content types.\n\n* **Breaking Changes**\n  * Manifest-related APIs and config keys renamed/reshaped\u2014update integrations.\n\n* **Chores**\n  * ESLint import restriction added and tooling dependency version bumps.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "JReinhold",
+  "merged_at": "2025-12-22T08:43:36Z",
+  "base_ref": "next",
+  "merge_commit_sha": "1cd80ecb9f19cf7ceb2f42962a1ba0e367ba7f9c",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "536e16f2e01b2bf990fb13615efb7ef054131d2f",
+    "9ac5d2c64cb4a7ad9a069e82820a2b6b3a7e126c"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6c0mul",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Remove unreachable return statement.**\n\nThe static analysis tool correctly identifies unreachable code on line 36. The `return Promise.resolve(undefined);` after line 35 in the default case is never executed because line 35 already returns.\n\n\n\n<details>\n<summary>\ud83d\udd0e Apply this diff to remove unreachable code:</summary>\n\n```diff\n       switch (key) {\n         case 'storyIndexGenerator':\n           return Promise.resolve(mockGenerator);\n         case 'experimental_manifests':\n           return Promise.resolve(mockManifests);\n         default:\n           return Promise.resolve(undefined);\n       }\n-      return Promise.resolve(undefined);\n     }),\n   } as any as Presets;\n };\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  const setupMockPresets = () => {\n    mockGenerator = { getIndex: vi.fn().mockResolvedValue({} as StoryIndex) };\n    mockManifests = {};\n\n    return {\n      apply: vi.fn().mockImplementation((key: string) => {\n        switch (key) {\n          case 'storyIndexGenerator':\n            return Promise.resolve(mockGenerator);\n          case 'experimental_manifests':\n            return Promise.resolve(mockManifests);\n          default:\n            return Promise.resolve(undefined);\n        }\n      }),\n    } as any as Presets;\n  };\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\uddf0 Tools</summary>\n\n<details>\n<summary>\ud83e\ude9b Biome (2.1.2)</summary>\n\n[error] 36-36: This code will never be reached ...\n\n... because either this statement, ...\n\n... this statement, ...\n\n... or this statement will return from the function beforehand\n\n\n(lint/correctness/noUnreachable)\n\n</details>\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/core-server/utils/manifests/manifests.test.ts around lines 22\nto 39, the final \"return Promise.resolve(undefined);\" after the switch is\nunreachable because every switch branch already returns; remove that trailing\nreturn so there is only the returns inside the switch (or alternatively collapse\nthe switch into a single returned Promise.resolve(...) call for the default\ncase) to eliminate the dead code and satisfy the static analysis.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/core-server/utils/manifests/manifests.test.ts",
+          "line_number": 38,
+          "start_line": 22,
+          "commit_sha": "9ac5d2c64cb4a7ad9a069e82820a2b6b3a7e126c",
+          "created_at": "2025-12-18T13:09:54Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removal of unreachable code with a specific diff provided."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6c0muu",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Remove misleading performance log.**\n\nThe log message states \"Story index generation took Xms\", but the timing starts at line 31, after the `index` parameter has already been received. Since the index is now provided as a parameter (generated elsewhere), this timing measurement is meaningless and logs essentially 0ms. This appears to be leftover from the previous implementation.\n\n\n\n<details>\n<summary>\ud83d\udd0e Apply this diff to remove the misleading log:</summary>\n\n```diff\n   invalidateCache();\n \n-  const startIndex = performance.now();\n-  logger.verbose(`Story index generation took ${performance.now() - startIndex}ms`);\n-\n   const startPerformance = performance.now();\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  invalidateCache();\n\n  const startPerformance = performance.now();\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/renderers/react/src/componentManifest/generator.ts around lines 31 to\n32, remove the misleading performance timing: the startIndex/performance.now\nmeasurement and the logger.verbose call that reports \"Story index generation\ntook Xms\" because the index is now passed in as a parameter and this timing is\nmeaningless; simply delete the startIndex assignment and the logger.verbose line\n(or replace the verbose call with a clear message stating the index was received\nexternally) so no near-zero/incorrect timing is logged.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+          "line_number": 32,
+          "start_line": null,
+          "commit_sha": "cfa30008ad3ef0a2c7f2514bb7aef22677e6a0f2",
+          "created_at": "2025-12-18T13:09:54Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removal of misleading performance logging code with a specific diff provided."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6c0oaF",
+          "author": "copilot-pull-request-reviewer",
+          "body": "This logging code is dead/misleading code left over from the refactoring. Previously, the story index was fetched asynchronously from the generator (via `await storyIndexGenerator.getIndex()`), and this timing measurement captured that operation. Now that the index is passed in as a parameter, this line will always log approximately 0ms since it measures the time between calling `performance.now()` and immediately logging it.\n\nThis timing measurement should be removed since it no longer serves its original purpose.\n```suggestion\n\n```",
+          "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+          "line_number": 33,
+          "start_line": null,
+          "commit_sha": "cfa30008ad3ef0a2c7f2514bb7aef22677e6a0f2",
+          "created_at": "2025-12-18T13:11:13Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags dead/misleading code and suggests it should be removed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6c0oa0",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The test description still references the old function name \"componentManifestGenerator\" but the test has been updated to use the new \"manifests\" function. Consider updating the test description to match the new API, for example: \"manifests generates correct id, name, description and examples\"\n```suggestion\ntest('manifests generates correct id, name, description and examples ', async () => {\n```",
+          "file_path": "code/renderers/react/src/componentManifest/generator.test.ts",
+          "line_number": 16,
+          "start_line": null,
+          "commit_sha": "cfa30008ad3ef0a2c7f2514bb7aef22677e6a0f2",
+          "created_at": "2025-12-18T13:11:14Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests updating a test description to match the new API name, with a specific suggestion."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6c0obe",
+          "author": "copilot-pull-request-reviewer",
+          "body": "This statement is unreachable.\n```suggestion\n\n```",
+          "file_path": "code/core/src/core-server/utils/manifests/manifests.test.ts",
+          "line_number": 36,
+          "start_line": null,
+          "commit_sha": "cfa30008ad3ef0a2c7f2514bb7aef22677e6a0f2",
+          "created_at": "2025-12-18T13:11:14Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags unreachable code that should be removed."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6c1CfC",
+          "author": "valentinpalkovic",
+          "body": "This preset is quite verbose. Could you find meaningful ways to encapsulate logic in smaller helper functions to make the logic more readable and declarative?",
+          "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+          "line_number": 100,
+          "start_line": null,
+          "commit_sha": "9ac5d2c64cb4a7ad9a069e82820a2b6b3a7e126c",
+          "created_at": "2025-12-18T13:40:17Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6c18qz",
+          "author": "JReinhold",
+          "body": "I did some minor refactoring to helper functions and variable names to improve the readability a little.",
+          "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+          "line_number": 100,
+          "start_line": null,
+          "commit_sha": "9ac5d2c64cb4a7ad9a069e82820a2b6b3a7e126c",
+          "created_at": "2025-12-18T14:48:05Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests refactoring the preset into smaller helper functions to improve readability."
+    }
+  ],
+  "review_thread_count": 9,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_collapsed": false,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6c0OLH",
+            "author": "JReinhold",
+            "body": "there's an obvious performance optimization needed here. Any request to `/manifests/X.json` will currently cause _all_ manifests to get re-generated. I have ideas for how to fix this, but perf optimisation is for later.",
+            "file_path": "code/core/src/core-server/utils/manifests/manifests.ts",
+            "line_number": 44,
+            "start_line": null,
+            "commit_sha": "9ac5d2c64cb4a7ad9a069e82820a2b6b3a7e126c",
+            "created_at": "2025-12-18T12:47:56Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6c0Pem",
+            "author": "JReinhold",
+            "body": "I don't know if @kasperpeulen has ideas for this todo. Otherwise it's not mission critical right now.",
+            "file_path": "code/core/src/types/modules/core-common.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "13ad5be752a45d246e731e585458d783ee82a3ad",
+            "created_at": "2025-12-18T12:49:30Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6dByim",
+            "author": "JReinhold",
+            "body": "narrator: he had ideas, they didn't work.",
+            "file_path": "code/core/src/types/modules/core-common.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "13ad5be752a45d246e731e585458d783ee82a3ad",
+            "created_at": "2025-12-19T10:03:21Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_collapsed": false,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6c0QwM",
+            "author": "JReinhold",
+            "body": "most changes here are whitespace, I recommend you to use the \"Hide whitespace\" feature when reviewing",
+            "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "9ac5d2c64cb4a7ad9a069e82820a2b6b3a7e126c",
+            "created_at": "2025-12-18T12:50:38Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6c18JK",
+            "author": "JReinhold",
+            "body": "scratch that, this file was refactored into helper functions, but functionality should be identical.",
+            "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "9ac5d2c64cb4a7ad9a069e82820a2b6b3a7e126c",
+            "created_at": "2025-12-18T14:47:31Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 9,
+    "stage1_kept": 6,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 3,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

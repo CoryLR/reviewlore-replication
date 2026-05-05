@@ -1,0 +1,184 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34305,
+  "title": "StatusValue: Add 'status-value:<new|modified|affected>'",
+  "body": "Closes https://github.com/storybookjs/storybook/issues/34292\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you should not need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\nAdded two new `StatusValue` variants: `status-value:new`, `status-value:modified` and `status-value:affected`. These are intended for use in agentic UI review workflows to surface which stories are new or have changed content.\r\n\r\nChanges include:\r\n\r\n- Extended the `StatusValue` union type (`status-store/index.ts`) with `status-value:new` and `status-value:modified`\r\n- Added SVG icon symbols (`AddIcon` for `new`, `EditIcon` for `modified`) to the sidebar `IconSymbols`\r\n- Configured colors: `new` uses `theme.color.positive` (green), `modified` uses `theme.color.secondary` (purple)\r\n- Inserted the new values into the status priority order between `success` and `warning`\r\n- Updated the vitest addon's `statusValueToStoryIds` map to include the new values\r\n- Added unit tests covering new status ranking and group aggregation behavior\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n> [!CAUTION]\r\n> This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!\r\n\r\nNot testable yet. This needs further integration.\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that do not fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Added three new status types \u2014 New, Modified, Affected \u2014 with distinct icons and integrated into status ranking, sidebar, and tree views.\n  * Added several sidebar stories demonstrating the new statuses and mixed/prioritized scenarios.\n\n* **Tests**\n  * Added unit tests for new status precedence and group aggregation; updated e2e expectations to reflect the label change.\n\n* **Chores**\n  * Updated UI label text from \"Test status\" to \"Status\".\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "valentinpalkovic",
+  "merged_at": "2026-03-25T13:14:33Z",
+  "base_ref": "next",
+  "merge_commit_sha": "3f91f48ddcd1bb7cb7ee42a8b22229599317b796",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "09a3460d197b07e4f8201a4ba21f846eb3416fcc",
+    "0b1442a14b6b73770d8349a307e1eb051e82b46d"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6yBZRK",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Avoid narrowing + casting here; it can break at runtime for new status values.**\n\nWith `StatusValue` expanded, `status.value as TestStatusValue` can index a missing key and crash on `.push`. This path should be safely exhaustive (or explicitly guarded).\n\n\n\n<details>\n<summary>\ud83d\udee0\ufe0f Proposed fix</summary>\n\n```diff\n type TestStatusValue = Extract<\n   StatusValue,\n-  `status-value:${'pending' | 'success' | 'error' | 'warning' | 'unknown'}`\n+  | `status-value:${'pending' | 'success' | 'error' | 'warning' | 'unknown'}`\n+  | `status-value:${'new' | 'modified' | 'affected'}`\n >;\n```\n\n```diff\n   const statusValueToStoryIdsMap: StatusValueToStoryIds = {\n     'status-value:pending': [],\n     'status-value:success': [],\n+    'status-value:new': [],\n+    'status-value:modified': [],\n+    'status-value:affected': [],\n     'status-value:error': [],\n     'status-value:warning': [],\n     'status-value:unknown': [],\n   };\n```\n\n```diff\n-    statusValueToStoryIdsMap[status.value as TestStatusValue].push(status.storyId);\n+    statusValueToStoryIdsMap[status.value].push(status.storyId);\n```\n</details>\n\n\nAlso applies to: 51-51\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/addons/vitest/src/use-test-provider-state.ts` around lines 23 - 29, The\ncurrent narrowing to TestStatusValue and casting (e.g., using status.value as\nTestStatusValue to index StatusValueToStoryIds) can crash if new StatusValue\nvariants appear; update the code to avoid unsafe casts by making the mapping\ncreation and access exhaustive or guarded: initialize StatusValueToStoryIds with\nall possible StatusValue keys (or use a Map keyed by StatusValue) and replace\ndirect casts like status.value as TestStatusValue with a safe check/lookup\n(e.g., verify the key exists or use a default bucket) before calling .push;\nadjust functions that reference TestStatusValue and StatusValueToStoryIds so\nthey either compute keys from StatusValue without casting or handle unknown\nvalues explicitly.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/addons/vitest/src/use-test-provider-state.ts",
+          "line_number": 29,
+          "start_line": 23,
+          "commit_sha": "0b1442a14b6b73770d8349a307e1eb051e82b46d",
+          "created_at": "2026-03-25T08:46:36Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a potential runtime crash due to unsafe casting and proposes a concrete fix to make the mapping exhaustive and remove the unsafe cast."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6yBZRS",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Use distinct semantic colors for `new`, `modified`, and `affected`.**\n\nThese three values are currently collapsed to `theme.fgColor.accent`, which removes status distinction and diverges from the status rendering mapping. They should stay color-specific.\n\n\n\n<details>\n<summary>\ud83c\udfaf Proposed fix</summary>\n\n```diff\n-      'status-value:new': theme.fgColor.accent,\n-      'status-value:modified': theme.fgColor.accent,\n-      'status-value:affected': theme.fgColor.accent,\n+      'status-value:new': theme.color.positive,\n+      'status-value:modified': theme.color.secondary,\n+      'status-value:affected': theme.color.warning,\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n      'status-value:new': theme.color.positive,\n      'status-value:modified': theme.color.secondary,\n      'status-value:affected': theme.color.warning,\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager/components/sidebar/StatusButton.tsx` around lines 21 -\n23, The three status color entries in the StatusButton component are all set to\ntheme.fgColor.accent, losing semantic distinction; update the mapping in\nStatusButton (the 'status-value:new', 'status-value:modified',\n'status-value:affected' entries) to use distinct semantic theme colors (e.g. map\n'status-value:new' to theme.fgColor.success, 'status-value:modified' to\ntheme.fgColor.warning, and 'status-value:affected' to theme.fgColor.danger or\nthe equivalent names used in your theme) so each status retains its unique color\nin the status rendering.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/components/sidebar/StatusButton.tsx",
+          "line_number": 23,
+          "start_line": 21,
+          "commit_sha": "0b1442a14b6b73770d8349a307e1eb051e82b46d",
+          "created_at": "2026-03-25T08:46:36Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that new status values are mapped to the same color, losing semantic distinction, and proposes specific distinct colors for each."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6yBZRk",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Fix `statusPriority` order for change-detection statuses.**\n\nCurrent order makes `status-value:new` outrank `status-value:affected`. The intended order is `success < new < modified < affected < warning`.\n\n\n\n<details>\n<summary>\ud83d\udd01 Proposed fix</summary>\n\n```diff\n-  'status-value:modified',\n-  'status-value:affected',\n-  'status-value:new',\n+  'status-value:new',\n+  'status-value:modified',\n+  'status-value:affected',\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n  'status-value:new',\n  'status-value:modified',\n  'status-value:affected',\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/manager/utils/status.tsx` around lines 32 - 34, The\nstatusPriority array currently places 'status-value:new' after\n'status-value:affected'; update the ordering in the statusPriority constant so\nit follows the intended precedence success < new < modified < affected < warning\nby placing 'status-value:new' immediately after 'status-value:success', then\n'status-value:modified', then 'status-value:affected', and keeping\n'status-value:warning' last; modify the statusPriority definition (and any\nreferences to it) accordingly to ensure change-detection statuses rank as:\n'status-value:success', 'status-value:new', 'status-value:modified',\n'status-value:affected', 'status-value:warning'.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager/utils/status.tsx",
+          "line_number": 34,
+          "start_line": null,
+          "commit_sha": "40a470ee497cc231e42ea34a01b8955e7d0916a1",
+          "created_at": "2026-03-25T08:46:37Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies an incorrect ordering in the statusPriority array and proposes a specific reordering fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6yBZRq",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Description: Find all consumption sites of the changeDetection feature flag\n\n# Search for references to changeDetection in the codebase\nrg -n -C3 -P 'features\\??\\.\\s*changeDetection' --type ts --type tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for changeDetection references without problematic file type flags\nrg -n -C3 'changeDetection' --type ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4900\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check the structure of common-preset.ts and how it defines features\ncat -n code/core/src/core-server/presets/common-preset.ts | head -250\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 10401\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Find where features object is consumed/used\nrg -n 'features\\?\\.' code/ --type ts -A 2 | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2983\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Get the full context around the feature flag definition\nsed -n '530,560p' code/core/src/types/modules/core-common.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 928\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for TODO or FIXME related to changeDetection or agentic\nrg -n -i 'todo|fixme|wip' code/core/src/types/modules/core-common.ts -B 5 -A 5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1476\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for \"agentic\" references that might provide context\nrg -n 'agentic' --type ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 165\n\n---\n\n\n\n</details>\n\n**Documentation claims `@default true` but no runtime default exists.**\n\nThe JSDoc indicates this flag defaults to `true`, but the default features preset at `code/core/src/core-server/presets/common-preset.ts:205-220` does not include `changeDetection`. Since consumption sites use optional chaining (e.g., `features?.changeDetection`), an undefined value is treated as falsy, making the effective default `false`, not `true`.\n\nThis mismatch will mislead users who expect the feature to be enabled by default.\n\n**Choose one of the following fixes:**\n\n<details>\n<summary>Option 1: Remove the misleading `@default true` comment (if feature should be opt-in)</summary>\n\n```diff\n /**\n  * Enable change detection for agentic UI review.\n- *\n- * `@default` true\n  */\n changeDetection?: boolean;\n```\n</details>\n\n<details>\n<summary>Option 2: Add the default to the preset (if feature should default to enabled)</summary>\n\nIn `code/core/src/core-server/presets/common-preset.ts`, add:\n\n```typescript\nexport const features: PresetProperty<'features'> = async (existing) => ({\n  ...existing,\n  argTypeTargetsV7: true,\n  legacyDecoratorFileOrder: false,\n  disallowImplicitActionsInRenderV8: true,\n  viewport: true,\n  highlight: true,\n  controls: true,\n  interactions: true,\n  actions: true,\n  backgrounds: true,\n  outline: true,\n  measure: true,\n  sidebarOnboardingChecklist: true,\n  componentsManifest: true,\n+ changeDetection: true,\n});\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/types/modules/core-common.ts` around lines 539 - 544, The JSDoc\nfor the optional flag changeDetection claims \"@default true\" but the features\npreset does not set it, causing an effective default of false; to fix, update\nthe features PresetProperty<'features'> export (the features variable in the\ncommon preset) to include changeDetection: true so runtime matches the\ndocumented default, and verify the changeDetection?: boolean JSDoc remains\naccurate.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:triton:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/types/modules/core-common.ts",
+          "line_number": 544,
+          "start_line": null,
+          "commit_sha": "5f2595642256c4bf8eef58a015cd2c8dac5beac9",
+          "created_at": "2026-03-25T08:46:37Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a mismatch between documented default (@default true) and actual runtime behavior (effective false), and proposes two concrete fixes."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": true,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6yDlki",
+          "author": "ghengeveld",
+          "body": "This doesn't seem right.",
+          "file_path": "code/core/src/manager/utils/status.test.ts",
+          "line_number": 47,
+          "start_line": null,
+          "commit_sha": "49b23fd053d8197e83b2bad02c3f364048717c9e",
+          "created_at": "2026-03-25T10:34:54Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "outdated",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "While brief, 'This doesn't seem right' flags a concern about the code at that location, implying it should be changed or corrected."
+    }
+  ],
+  "review_thread_count": 6,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6yDMIW",
+            "author": "valentinpalkovic",
+            "body": "@MichaelArestad suggested to use `@storybook/icons` here instead. This will be a follow up task, as soon as the icons are indeed available.",
+            "file_path": "code/core/src/manager/components/sidebar/IconSymbols.tsx",
+            "line_number": 110,
+            "start_line": null,
+            "commit_sha": "0b1442a14b6b73770d8349a307e1eb051e82b46d",
+            "created_at": "2026-03-25T10:15:10Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6yDsYN",
+            "author": "ghengeveld",
+            "body": "IIRC it's not possible to load `@storybook/icons` icons as symbols due to the way they're exported (as svgs rather than symbols). The symbol trick is pretty relevant for performance, otherwise we'll end up rendering hundreds of unique SVGs in the sidebar.",
+            "file_path": "code/core/src/manager/components/sidebar/IconSymbols.tsx",
+            "line_number": 110,
+            "start_line": null,
+            "commit_sha": "0b1442a14b6b73770d8349a307e1eb051e82b46d",
+            "created_at": "2026-03-25T10:40:09Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6yDs9z",
+            "author": "valentinpalkovic",
+            "body": "ok. Thanks for elaborating!",
+            "file_path": "code/core/src/manager/components/sidebar/IconSymbols.tsx",
+            "line_number": 110,
+            "start_line": null,
+            "commit_sha": "0b1442a14b6b73770d8349a307e1eb051e82b46d",
+            "created_at": "2026-03-25T10:40:40Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 6,
+    "stage1_kept": 5,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 1,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 48,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Leftover debug comment `// logger.info(\\`Story ${entry.id} absolute path: ${absolutePath}\\`)` should be removed. Per project guidelines, committed code must not contain commented-out debug statements without an actionable `// TODO:` and a tracking issue reference.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 122,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `enabled` parameter is typed `boolean | undefined`, but the guard `if (enabled === false)` treats `undefined` as enabled. This works in production because the common preset always sets `changeDetection: false` as the explicit default. However, any call path that bypasses the common preset (e.g., unit tests constructing `Options` manually, or third-party builders that inject their own feature set) will silently start change detection when `enabled` is `undefined`. Consider changing the guard to `if (!enabled)` to make the opt-in semantics robust regardless of how the preset pipeline is configured, or at minimum add a comment noting the invariant that `enabled` is always a boolean at this call site.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 212,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "After a `ChangeDetectionFailureError`, readiness is resolved to `{ status: 'error' }` and the service continues running (unlike `ChangeDetectionUnavailableError`, which disposes). Because `resolveReadiness` is a one-time setter (`if (this.readinessResolved) { return; }`), if this failure occurs *before* any successful scan, all subsequent successful scans will update the status store correctly but can never advance readiness to `{ status: 'ready' }`. Consumers of `getChangeDetectionReadiness()` will permanently observe the error state even after recovery. There is no test covering this specific ordering (failure before first success). Consider whether `readinessResolved` should be reset on recovery, or add a test and a comment documenting the intentional one-shot semantics.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 350,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`void this.dispose()` silently discards the Promise returned by the `async dispose()` method. Per project guidelines, all async operations that can reject must have explicit error handling via `.catch()` to prevent unhandled rejections. Change to `void this.dispose().catch((err) => logger.error(err))` or add a `.catch()` chain.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/core-server/dev-server.ts",
+      "line_number": 165,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`changeDetectionService` is declared inside the `if (!options.ignorePreview)` block and disposed in the `previewBuilder.start().catch(...)` handler \u2014 but NOT in the outer `catch (e)` block. If an exception is thrown between `changeDetectionService.start(...)` and the end of the `if (!options.ignorePreview)` block by any intervening code (e.g., middleware registration), the service's debounce timer and watcher subscription will leak. Add `await changeDetectionService?.dispose().catch(() => undefined)` alongside the existing bail calls in the outer catch.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/readiness.ts",
+      "line_number": 38,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`resetChangeDetectionReadiness()` is called from the `ChangeDetectionService` constructor, replacing the module-level `readinessDeferred`. Any code that received a reference to `getChangeDetectionReadiness()` before the new service instance is constructed will hold a stale Promise that never resolves \u2014 the old deferred's `resolve` function is simply discarded. In production this fires once per dev-server lifecycle, so the impact is contained; but the coupling between a class constructor and global module state is fragile and has already required explicit `internal_resetChangeDetectionReadiness()` calls in every `beforeEach`/`afterEach` in the test suite. Consider encapsulating the deferred inside a class instance rather than a module-level singleton.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/git-diff-provider.ts",
+      "line_number": 47,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`getChangedFiles()` begins by calling `this.getRepoRoot()` internally. In `ChangeDetectionService.buildStatuses()`, both `getChangedFiles()` and `getRepoRoot()` are passed to `Promise.all`, causing two concurrent calls to `getRepoRoot()` on the first invocation before either has been cached. Both calls will spawn a `git rev-parse --show-toplevel` subprocess. The in-memory `this.repoRoot` cache only prevents duplicate calls after the first one resolves; there is no in-flight promise deduplication. Consider returning `repoRoot` as part of `GitDiffResult` to eliminate the redundant separate call from `buildStatuses`, or add in-flight promise caching to `getRepoRoot()`.",
+      "index": 6
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 111,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`server.warmupRequest(importPath)` is called with `importPath` values taken directly from `storyIndex.entries`, which are typically relative paths like `./src/Button.stories.tsx`. Vite's `warmupRequest` API expects a root-relative URL path (e.g., `/src/Button.stories.tsx`). Passing a `./`-prefixed relative path may not resolve correctly, causing the warm-up to silently no-op and leaving the module graph empty longer than necessary \u2014 potentially triggering the 30-second timeout on machines where Vite's lazy loading is slow. Verify that Vite normalizes the `./` prefix, or normalize the import paths before passing them (e.g., strip the leading `./`).",
+      "index": 7
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.test.ts",
+      "line_number": 274,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "After `bail()` + second `start()`, the test now expects `fakeViteServer.watcher.listenerCount('all')` to be `0` rather than `1`. This is a behavioral change: after a bail-and-restart cycle, the watcher is no longer attached unless new listeners are registered before `start()`. The test documents this correctly, but the change means that if `ChangeDetectionService.start()` calls `onModuleGraphChange` *after* `previewBuilder.start()` (rather than before), the watcher would never be re-attached on restart. Confirm in `dev-server.ts` that `changeDetectionService.start()` \u2014 and therefore the `onModuleGraphChange` registration \u2014 always precedes `previewBuilder.start()`, as that ordering is now a correctness invariant required by this behavior.",
+      "index": 8
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/git-diff-provider.test.ts",
+      "line_number": 82,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test \"attributes staged diff failures to the specific git command\" calls `provider.getChangedFiles()` twice and makes two separate assertions. Both assertions verify the same rejection; the first already confirms the error name via `objectContaining({ name: 'ChangeDetectionFailureError' })`, which is equivalent to the `instanceof` check in the second. The double call also exercises the mock's git subprocess path twice unnecessarily. Consider combining into a single call and assertion, or use `toMatchObject` alongside `toBeInstanceOf` in one `await expect(...).rejects` chain.",
+      "index": 9
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 265,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`buildStatuses` calls both `this.gitDiffProvider.getChangedFiles()` and `this.gitDiffProvider.getRepoRoot()` in `Promise.all`. Since `getChangedFiles()` already calls `getRepoRoot()` internally (and caches it), the separate `getRepoRoot()` call is a second fetch of the same value. A comment explaining why `repoRoot` is fetched independently (to use it for `resolve(repoRoot, filePath)` path normalization) versus having it embedded in `GitDiffResult` would clarify the design intent and prevent future maintainers from removing either call inadvertently.",
+      "index": 10
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`ChangeDetectionService` manages six boolean/state flags (`disposed`, `scanInFlight`, `rerunAfterCurrentScan`, `hasReceivedModuleGraph`, `readinessResolved`, `previousStatuses`) whose interactions are non-trivial. In particular: (1) `rerunAfterCurrentScan` is reset to `false` in `dispose()`, which means a module-graph event that arrives during an in-flight scan and sets this flag will have that flag cleared without triggering a scan if `dispose()` races; (2) `readinessResolved` prevents readiness from being updated after the first resolution even when a `ChangeDetectionFailureError` occurs before the first success scan. These state-machine edge cases are covered by tests but are not documented. A brief class-level comment describing the concurrency model (single scan at a time, re-queue via `rerunAfterCurrentScan`, one-shot readiness) would significantly help future maintainers.",
+      "index": 11
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `ChangeDetectionService` constructor calls `resetChangeDetectionReadiness()` which mutates a module-level singleton in `readiness.ts`. This couples object construction to global state side effects \u2014 a pattern that the project's own test suite works around by calling `internal_resetChangeDetectionReadiness()` in both `beforeEach` and `afterEach`. Extracting the deferred/state into an injectable or instance-owned object (rather than module-level) would remove the need for `internal_reset*` exports, make the lifetime explicit, and eliminate the orphaned-promise risk when a second service instance is created.",
+      "index": 12
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `ChangeDetectionService` exports `ChangeDetectionService` from both `code/core/src/core-server/index.ts` (as `ChangeDetectionService`) and from `code/core/src/core-server/change-detection/index.ts`. The `index.ts` export at the core-server level does not go through the re-export in `change-detection/index.ts` but imports directly from `./change-detection/service`. This means the public surface has two separate export paths for the same class. Prefer routing through `change-detection/index.ts` consistently to keep the module boundary clean and avoid future divergence.",
+      "index": 13
+    },
+    {
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "In `builder-vite/src/index.ts`, `startChangeDetection` warms up the module graph by calling `server.warmupRequest` for every story file import path in parallel. For large projects with hundreds of story files, this fires hundreds of concurrent HTTP-like warm-up requests to the Vite dev server simultaneously, which could saturate Vite's internal request queue and slow initial startup more than a sequential or batched approach would. Consider batching warm-up requests (e.g., in groups of 20-50) rather than firing all of them at once.",
+      "index": 14
+    }
+  ],
+  "cost_usd": 2.0041097999999997,
+  "duration_seconds": 1744.4879970550537
+}

@@ -1,0 +1,126 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33037,
+  "title": "Sidebar: Prevent updating non-existent stories",
+  "body": "Closes #32997\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\nAfter identifying that the error was caused by `LeafNode` becoming `undefined`, I added logs in `code/core/src/manager/components/sidebar/Tree.tsx`.\r\n\r\nThe logs show:\r\n\r\n```\r\nInitial data prop: {..., example-button--primary: {parameters: {\u2026}, ..., prepared: true}}\r\nItem passed to Node: {parameters: {\u2026}, ..., prepared: true}\r\n```\r\n\r\nThese logs indicate that incomplete data was passed to the `Node` component \u2014 the `item` object was missing its `type` property.\r\nAs a result, `const LeafNode = ...[item.type]` evaluated to `undefined`, causing the render error.\r\n\r\nRoot Cause\r\nThe `updateStory` function incorrectly created an incomplete entry in the index when handling an update event for a story that had been filtered out.\r\n\r\nFix\r\nAdded an existence check in `updateStory` so it only updates entries that already exist.\r\n\r\n## Testing\r\n\r\n### Manual testing\r\n_(added by @Sidnioulz)_\r\n\r\n1. Open Storybook and select a story you know how to filter\r\n2. Apply a filter to exclude the current story\r\n3. Open DevTools or resize window to force a switch to the mobile layout\r\n4. Attempt to open the sidebar menu button\r\n\r\nWithout the PR, I confirm a React crash occurs. With the PR, the sidebar opens (which incidentally clears filters due to https://github.com/storybookjs/storybook/issues/32997 which I'm working on).\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [x] stories\r\n- [x] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\nThe error described in the issue has disappeared, and no new errors have been found.\r\n\r\n<!-- Please include the steps to test your changes here. For example:\r\n\r\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n6. Open Storybook in your browser\r\n7. Access X story\r\n\r\n-->\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [x] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\r\n\r\n## Summary by CodeRabbit\r\n\r\n## Release Notes\r\n\r\n* **Bug Fixes**\r\n  * Improved story update stability with enhanced validation checks to prevent errors during modifications.\r\n\r\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ia319",
+  "merged_at": "2025-12-15T11:15:58Z",
+  "base_ref": "next",
+  "merge_commit_sha": "8a46fe28eb5d9cb2a88618d197e3966841c9bb00",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "a1c20cf634b5ee193dbd0660163be1062c25f6c9",
+    "aed740fcb9d7a22ca529b18913619b01c228e1a7"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6WXE6-",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n**LGTM! Consistent defensive guards across both branches.**\n\nThe ref branch now has the same existence checks as the no-ref branch, ensuring consistent behavior. However, the `updateDocs` function (lines 642-676) still performs unconditional updates without existence checks.\n\n\n\nVerify whether `updateDocs` can encounter the same filtered-entry scenario and needs similar defensive guards for consistency:\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Description: Check how updateDocs is called and whether it can receive updates for filtered-out docs entries\n\n# Search for calls to updateDocs to understand the calling patterns\nrg -nP --type=ts -C3 '\\bupdateDocs\\s*\\(' \n\n# Search for DOCS_PREPARED event handling to see if similar filtering scenarios apply\nrg -nP --type=ts -C5 'DOCS_PREPARED'\n```\n\nLength of output: 19635\n\n---\n\n```\n\nWait, this will need cloning. Let me revise:\n\n\n\n```\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for updateDocs function definition and all its usages\nrg -nP --type=ts 'updateDocs' code/core/src/manager-api/modules/stories.ts\n```\n\nLength of output: 125\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for updateDocs function definition and all its usages in the stories module\nrg -nP --type=ts 'updateDocs'\n```\n\nLength of output: 215\n\n---\n\n```\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Extract the updateDocs implementation\nsed -n '642,676p' code/core/src/manager-api/modules/stories.ts\n```\n\nLength of output: 997\n\n---\n\n\n\n</details>\n\n**Add defensive existence checks to updateDocs ref branch for consistency.**\n\nThe updateStory fix correctly adds existence checks in the ref branch. However, updateDocs's ref branch (lines 664-669) unconditionally updates `index[docsId]` and `filteredIndex[docsId]` without verifying those entries exist, mirroring updateStory's pre-fix vulnerability. Apply the same defensive pattern:\n\n```\n} else {\n  const { id: refId, index, filteredIndex }: any = ref;\n  if (index && index[docsId]) {\n    index[docsId] = { ...index[docsId], ...update } as API_DocsEntry;\n  }\n  if (filteredIndex && filteredIndex[docsId]) {\n    filteredIndex[docsId] = { ...filteredIndex[docsId], ...update } as API_DocsEntry;\n  }\n  await fullAPI.updateRef(refId, { index, filteredIndex });\n}\n```\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn code/core/src/manager-api/modules/stories.ts around lines 625 to 640, the ref\nbranch of updateDocs unconditionally mutates index[docsId] and\nfilteredIndex[docsId]; add the same defensive existence checks used in\nupdateStory: guard with if (index && index[docsId]) before merging update into\nindex[docsId], and if (filteredIndex && filteredIndex[docsId]) before merging\ninto filteredIndex[docsId], then call await fullAPI.updateRef(refId, { index,\nfilteredIndex }) as before.\n```\n\n</details>\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/manager-api/modules/stories.ts",
+          "line_number": 651,
+          "start_line": 636,
+          "commit_sha": "aed740fcb9d7a22ca529b18913619b01c228e1a7",
+          "created_at": "2025-11-13T09:46:23Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The comment identifies that updateDocs performs unconditional updates without existence checks, mirroring a pre-fix vulnerability in updateStory. This is a missing edge case / defensive guard issue where the code may attempt to update non-existent entries."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6WXTE2",
+          "author": "ia319",
+          "body": "Currently, I haven\u2019t noticed any errors caused by it, but it might still be necessary. Awaiting suggestions.",
+          "file_path": "code/core/src/manager-api/modules/stories.ts",
+          "line_number": 651,
+          "start_line": 636,
+          "commit_sha": "aed740fcb9d7a22ca529b18913619b01c228e1a7",
+          "created_at": "2025-11-13T09:58:04Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a missing defensive existence check in the updateDocs ref branch and provides a concrete code suggestion to fix it, mirroring the pattern used in updateStory."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6XDr_5",
+          "author": "Sidnioulz",
+          "body": "* [ ] Note to self: must ensure this does not impact HMR",
+          "file_path": "code/core/src/manager-api/modules/stories.ts",
+          "line_number": 621,
+          "start_line": null,
+          "commit_sha": "aed740fcb9d7a22ca529b18913619b01c228e1a7",
+          "created_at": "2025-11-17T14:36:09Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Dead-Code Related Issues",
+          "label_confidence": "medium",
+          "label_reasoning": "This is a personal note/TODO comment left in the code as a reminder, which is a form of informal inline note that should not remain in production code."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6XEsCt",
+          "author": "ia319",
+          "body": "Do I need to investigate this?",
+          "file_path": "code/core/src/manager-api/modules/stories.ts",
+          "line_number": 621,
+          "start_line": null,
+          "commit_sha": "aed740fcb9d7a22ca529b18913619b01c228e1a7",
+          "created_at": "2025-11-17T15:43:37Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6Xg5n9",
+          "author": "Sidnioulz",
+          "body": "I will test it when I do the review, but feel free to investigate it as well :)",
+          "file_path": "code/core/src/manager-api/modules/stories.ts",
+          "line_number": 621,
+          "start_line": null,
+          "commit_sha": "aed740fcb9d7a22ca529b18913619b01c228e1a7",
+          "created_at": "2025-11-19T13:19:06Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6XiNza",
+          "author": "Sidnioulz",
+          "body": "I checked and can confirm HMR continues to run well.",
+          "file_path": "code/core/src/manager-api/modules/stories.ts",
+          "line_number": 621,
+          "start_line": null,
+          "commit_sha": "aed740fcb9d7a22ca529b18913619b01c228e1a7",
+          "created_at": "2025-11-19T14:44:15Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The author flags a concern that needs to be verified (HMR impact), implying the code may need changes if HMR is affected."
+    }
+  ],
+  "review_thread_count": 2,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 2,
+    "stage1_kept": 2,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

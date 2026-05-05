@@ -1,0 +1,37 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34417,
+  "title": "Build: Require explicit relative import extensions",
+  "body": "Closes #\n\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\n\n<!--\n\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\n\n-->\n\n## What I did\n\n<!-- Briefly describe what your PR does -->\n\nSwitched the import-extension migration over to the official `import-x/extensions` rule instead of a custom local rule, with `fix: true` enabled so ESLint can rewrite missing relative TS/JS extensions automatically.\n\nThis keeps package imports untouched via `ignorePackages: true`, excludes consumer-facing surfaces entirely in ESLint config (`docs`, `template`, `templates`, `__testfixtures__`, and `__mocks-ng-workspace__`), and splits the change into two commits:\n\n1. configure the guardrails\n2. run full-repo `lint --fix` to rewrite imports\n\nThe earlier \u201creports but does not rewrite\u201d behavior came from using the rule without its built-in `fix: true` option.\n\n## Checklist for Contributors\n\n### Testing\n\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\n\n#### The changes in this PR are covered in the following automated tests:\n\n- [ ] stories\n- [ ] unit tests\n- [ ] integration tests\n- [ ] end-to-end tests\n\n#### Manual testing\n\n> [!CAUTION]\n> This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!\n\n<!-- Please include the steps to test your changes here. For example:\n\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\n2. Open Storybook in your browser\n3. Access X story\n\n-->\n\nNo browser or sandbox validation was needed for this internal tooling migration.\n\nValidation run from the first commit (`Build: Add explicit import extension guardrails`):\n\n1. Run `yarn --cwd scripts lint:js:cmd . --fix --quiet`\n2. Run `yarn --cwd code lint:js:cmd . --fix --quiet`\n3. Confirm the resulting full-tree rewrite matches the second commit\n4. Confirm excluded consumer-facing surfaces remain untouched\n\n### Documentation\n\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\n\n- [x] Add or update documentation reflecting your changes\n- [ ] If you are deprecating/removing a feature, make sure to update\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\n\n## Checklist for Maintainers\n\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\n- [ ] Make sure this PR contains **one** of the labels below:\n   <details>\n     <summary>Available labels</summary>\n\n  - `bug`: Internal changes that fixes incorrect behavior.\n  - `maintenance`: User-facing maintenance tasks.\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\n  - `feature request`: Introducing a new feature.\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\n  - `other`: Changes that don't fit in the above categories.\n\n   </details>\n\n### \ud83e\udd8b Canary release\n\n<!-- CANARY_RELEASE_SECTION -->\n\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\n\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\n\n<!-- CANARY_RELEASE_SECTION -->\n\n<!-- BENCHMARK_SECTION -->\n<!-- BENCHMARK_SECTION -->\n",
+  "author": "kasperpeulen",
+  "merged_at": "2026-04-01T14:57:58Z",
+  "base_ref": "next",
+  "merge_commit_sha": "95aa11484a255b1c7f6227f2c81e2d441bb28988",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "a4a2449d45dfd5e7d2a4c3a8a0b18d22948796a4",
+    "4c95059249d484a07dee30024e08cc67f84d0f22"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6z1FO0",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Mock specifier does not match import specifier \u2014 tests will fail.**\n\nThe import on line 7 now uses `'../versions.ts'`, but `vi.mock` on line 14 still uses the extensionless `'../versions'`. Without a resolver alias in the Vitest config, these are treated as different modules, so the mock is never applied. The tests will use the real `versions` module instead of the mocked value.\n\n\n\n<details>\n<summary>\ud83d\udc1b Proposed fix: update mock specifier to match import</summary>\n\n```diff\n-vi.mock('../versions', () => ({\n+vi.mock('../versions.ts', () => ({\n   default: {\n     storybook: '10.3.0-alpha.1',\n   },\n }));\n```\n\n</details>\n\n\nAlso applies to: 14-18\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/common/utils/resolve-path-in-sb-cache.test.ts` around lines 7 -\n8, Update the mock specifier so it exactly matches the import used in the test:\nchange the vi.mock call that targets '../versions' to use the same module\nspecifier string as the import (../versions.ts) so the mock is actually applied\nto the imported module (affects the vi.mock for the module providing versions\nused by resolvePathInStorybookCache).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot:a1e4c428-de24-4fc5-9df9-e6440ec5779f -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits c99a708 to 3e483a2",
+          "file_path": "code/core/src/common/utils/resolve-path-in-sb-cache.test.ts",
+          "line_number": 8,
+          "start_line": 7,
+          "commit_sha": "56d4a801adcc13a4f0898c85b6926452c2383615",
+          "created_at": "2026-03-31T16:36:16Z",
+          "is_outdated": true
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 1
+}

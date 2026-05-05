@@ -1,0 +1,85 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33673,
+  "title": "CSF-Factories: Fix codemod for preview files without exports",
+  "body": "Closes #33640\n\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\n\n<!--\n\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\n\n-->\n\n## What I did\n\nFixed the CSF factories codemod to handle preview files that have no exports (only side-effect imports or empty files).\n\nWhen a preview file only has `import './preview.scss'` or is empty, the codemod now correctly adds `export default definePreview({})`.\n\n**Problem:** Story files using CSF factories import from preview:\n```ts\nimport preview from '../.storybook/preview'\n```\n\nBut if the preview file only has side-effect imports or is empty, the codemod wouldn't add a default export, causing broken imports.\n\n## Checklist for Contributors\n\n### Testing\n\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\n\n#### The changes in this PR are covered in the following automated tests:\n\n- [ ] stories\n- [x] unit tests\n- [ ] integration tests\n- [ ] end-to-end tests\n\n#### Manual testing\n\n> [!CAUTION]\n> This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!\n\nNo manual testing necessary - the fix is fully covered by the 3 new unit tests:\n- Empty preview file\n- Preview with single side-effect import  \n- Preview with multiple side-effect imports\n\n### Documentation\n\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\n\n- [ ] Add or update documentation reflecting your changes\n- [ ] If you are deprecating/removing a feature, make sure to update\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\n\n## Checklist for Maintainers\n\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\n- [ ] Make sure this PR contains **one** of the labels below:\n   <details>\n     <summary>Available labels</summary>\n\n  - `bug`: Internal changes that fixes incorrect behavior.\n  - `maintenance`: User-facing maintenance tasks.\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\n  - `feature request`: Introducing a new feature.\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\n  - `other`: Changes that don't fit in the above categories.\n\n   </details>\n\n### \ud83e\udd8b Canary release\n\n<!-- CANARY_RELEASE_SECTION -->\n\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\n\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\n\n<!-- CANARY_RELEASE_SECTION -->\n\n<!-- BENCHMARK_SECTION -->\n<!-- BENCHMARK_SECTION -->\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Bug Fixes**\n  * Preview configuration files that are empty or contain only side-effect imports now receive a generated default export so previews work correctly.\n  * Existing behavior preserved: previews that re-export symbols are not altered.\n\n* **Tests**\n  * Added tests covering empty, side-effect-only, multiple-import, and re-export preview scenarios, including import ordering.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "kasperpeulen",
+  "merged_at": "2026-01-28T13:53:34Z",
+  "base_ref": "next",
+  "merge_commit_sha": "0d867e479591e3b7f73ced4be9dbe15e82ea5864",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "e71f28052ce5568c116b76f5ccd59c11dabe7316",
+    "b9b703626f2fdfcfdab2e16c1d6786835deaf29b"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6ixfdU",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Guard Scenario 4 with a true \u201cno exports\u201d check.**\n\nRight now this branch fires for any preview file that doesn\u2019t yield `config._exportsObject` or `defineConfigProps`, even if it *does* contain export declarations (e.g., re-exports). That can introduce a second default export or unexpected output. Please gate this branch on `exportDecls.length === 0` (or equivalent).\n\n<details>\n<summary>\ud83d\udd27 Suggested fix</summary>\n\n```diff\n-  } else if (configType === 'preview') {\n+  } else if (configType === 'preview' && exportDecls.length === 0) {\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n} else if (configType === 'preview' && exportDecls.length === 0) {\n    /**\n     * Scenario 4: No exports (empty file or only side-effect imports)\n     *\n     *\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn `@code/lib/cli-storybook/src/codemod/helpers/config-to-csf-factory.ts` around\nlines 168 - 182, The preview-case branch currently always appends an export\ndefault defineConfig call when configType === 'preview', which can create\nduplicate exports for files that actually contain exports (e.g., re-exports);\nupdate the guard to only run this branch when there are truly no export\ndeclarations by checking exportDecls.length === 0 (or equivalent) before\ncreating defineConfigCall and pushing exportDefaultDeclaration onto\nprogramNode.body (referencing configType, exportDecls, methodName,\ndefineConfigCall, and programNode).\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:eagle -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 339a6bc to 1aec190",
+          "file_path": "code/lib/cli-storybook/src/codemod/helpers/config-to-csf-factory.ts",
+          "line_number": 182,
+          "start_line": null,
+          "commit_sha": "b0fc95ac330e78b5db9611ec406260d79dfc8ef4",
+          "created_at": "2026-01-27T08:41:39Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6iyh6X",
+          "author": "shilman",
+          "body": "@kasperpeulen Is this needed? I don't know if this even makes sense.",
+          "file_path": "code/lib/cli-storybook/src/codemod/helpers/config-to-csf-factory.ts",
+          "line_number": 182,
+          "start_line": null,
+          "commit_sha": "b0fc95ac330e78b5db9611ec406260d79dfc8ef4",
+          "created_at": "2026-01-27T09:49:45Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a potential bug where the branch fires for preview files with exports, and provides a specific code fix to gate the condition on exportDecls.length === 0."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6iyeM1",
+          "author": "shilman",
+          "body": "@kasperpeulen do we need to handle this case for any other configs?",
+          "file_path": "code/lib/cli-storybook/src/codemod/helpers/config-to-csf-factory.ts",
+          "line_number": 169,
+          "start_line": null,
+          "commit_sha": "b9b703626f2fdfcfdab2e16c1d6786835deaf29b",
+          "created_at": "2026-01-27T09:45:41Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Phrased as a question but implies a suggestion that similar handling may need to be applied to other config types, making it actionable."
+    }
+  ],
+  "review_thread_count": 2,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 2,
+    "stage1_kept": 2,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

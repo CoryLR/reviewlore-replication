@@ -1,0 +1,82 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+      "line_number": 501,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The custom `escapeHtml` method is inconsistent with `flowDb.ts`, which uses `DOMPurify.sanitize(title)` for its tooltip content. Both exist in the same codebase, producing an ad-hoc dual sanitisation strategy. More importantly, `escapeHtml` only substitutes 5 literal characters, while DOMPurify handles a far broader surface area (attribute injection, namespace confusion, DOM clobbering, etc.). Replace this with `DOMPurify.sanitize(title)` to match `flowDb` and eliminate the divergence. If `<br/>` line-break support is still needed, pass a DOMPurify option such as `ALLOWED_TAGS: ['br']` rather than the manual unescape regex.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+      "line_number": 501,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`escapeHtml` is declared `private` on `ClassDB`, making it impossible to reuse from other diagram types that might need the same logic. If this helper is kept (instead of switching to DOMPurify), it should be extracted to a shared utility module (e.g. `diagrams/common/htmlUtils.ts`) so it can be used consistently across the codebase.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+      "line_number": 530,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The replacement regex `/.replace(/&lt;br\\/&gt;/g, '<br/>')` only matches the self-closing XHTML form `<br/>`. Tooltip strings that contain the HTML5 void-element form `<br>` (without a trailing slash) will be left as the literal escaped text `&lt;br&gt;` instead of being rendered as a line break. If both forms should produce a line break, also add `.replace(/&lt;br&gt;/g, '<br/>')`, or consolidate by matching both in one expression: `/&lt;br\\s*\\/?&gt;/g`.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/class/classDb.ts",
+      "line_number": 515,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Changing the selector from `svg.selectAll('g.node')` to `svg.selectAll('g').filter(\u2026attr('title') !== null)` is broader than the original intent. In a class diagram SVG, `<g>` elements are used for edges, arrowhead markers, and structural grouping, in addition to nodes. Any of those that happen to carry a `title` attribute (e.g. from underlying renderer libraries) will now also get `mouseover`/`mouseout` listeners and may unexpectedly display tooltips. If the goal was to support tooltip-enabled elements beyond `.node`, the PR description should explain why, and any unintentional hits should be audited.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/common/svgDrawCommon.ts",
+      "line_number": 150,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The visual colours `#ffffde` (background) and `#333` (border) are hardcoded values that are not driven by any Mermaid theme or config option. The existing `div.mermaidTooltip` rules in `flowchart/styles.ts` and `block/styles.ts` use theme-variable expressions (`${options.tertiaryColor}` and `${options.border2}`). Although those rules are embedded inside the SVG element and therefore do not cascade to this out-of-SVG `div`, the intent was clearly to make the tooltip theme-aware. Consider reading the relevant theme values from `getConfig()` inside `createTooltip`, or accepting them as parameters, so the colours track the active theme rather than always rendering as light-yellow.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/common/svgDrawCommon.ts",
+      "line_number": 149,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `font-family` style is absent from the inline styles added here, even though the corresponding `div.mermaidTooltip` CSS rules in `flowchart/styles.ts` (line 149) and `block/styles.ts` (line 142) both set `font-family: ${options.fontFamily}`. Because those rules are SVG-scoped and never reach this `body`-level div, the tooltip will fall back to the browser default font rather than the configured diagram font. Add `.style('font-family', ...)` reading the font family from `getConfig()` to match the documented intent.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/flowchart/flowDb.ts",
+      "line_number": 606,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The mouseover handler in `flowDb.setupToolTips` (not shown in the diff, but context is at lines 622\u2013628 in the current file) calls `.text(el.attr('title'))` to set the tooltip content and then immediately overwrites it with `.html(DOMPurify.sanitize(title))`. The `.text()` call is dead code and will always be clobbered. This is a pre-existing issue, but since this PR already touches this function's preamble, it is a good opportunity to clean it up.",
+      "index": 6
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The PR inconsistently uses two different sanitisation strategies for tooltip content: `classDb.ts` introduces a bespoke `escapeHtml` helper (character substitution), while `flowDb.ts` uses `DOMPurify.sanitize()`. Every other diagram type that surfaces user-supplied strings in `.html()` should follow the same approach. This divergence makes future security audits harder and risks the manual escaper drifting out of parity with what DOMPurify protects against. Pick one approach (DOMPurify) and apply it consistently.",
+      "index": 7
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `div.mermaidTooltip` CSS rules in `flowchart/styles.ts`, `block/styles.ts`, and `user-journey/styles.js` are inserted via `style1.innerHTML` into the SVG element itself (see `mermaidAPI.ts` line 422\u2013424). Because the tooltip `div` lives in `document.body` (outside the SVG), those scoped rules never reach it. The existing CSS is effectively dead code for the tooltip element. This PR adds the missing inline styles to `createTooltip()`, which correctly solves the immediate positioning problem, but the now-redundant `div.mermaidTooltip` blocks in the styles files should be cleaned up to avoid confusion.",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "No unit or end-to-end tests were added (the PR checklist explicitly un-checks that item). At minimum, a test verifying that the tooltip appears near the hovered element (rather than at an incorrect location) would guard against regressions for the core bug this PR fixes.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.63761775,
+  "duration_seconds": 483.8430299758911
+}

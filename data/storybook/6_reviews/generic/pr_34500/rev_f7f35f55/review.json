@@ -1,0 +1,62 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/types/modules/core-common.ts",
+      "line_number": 433,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description explicitly states that `deviceAddons` is 'intentionally not added to the shared `StorybookConfigRaw` core type since it is React Native-specific' and that the automigration relies on string-path AST APIs to avoid needing a type declaration. Yet this diff adds the field directly to the shared interface. Adding it is arguably better (users get autocompletion and type-checking in their `main.ts`), but the decision clearly changed mid-implementation and the PR description was never updated. The description should be corrected to reflect what was actually shipped.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 28,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The heuristic `getAddonName(addon).includes('ondevice')` is a broad substring match. It would also migrate a hypothetical third-party addon like `my-company/addon-ondevice-logger` that is not a React Native on-device addon. All known first-party addons follow the pattern `@storybook/addon-ondevice-*`. A more targeted check \u2014 for example `getAddonName(addon).startsWith('@storybook/addon-ondevice')` \u2014 would avoid inadvertently migrating unrelated packages.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 27,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`check` inspects only `mainConfig.addons` and never looks at `mainConfig.deviceAddons`. If a user has manually added an addon to both `addons` and `deviceAddons` already, the migration will still see it in `addons`, pass the guard, and then `run` will remove it from `addons` and append it again to `deviceAddons` \u2014 creating a duplicate entry. Consider filtering the candidates against `mainConfig.deviceAddons ?? []` so that addons already present there are excluded.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 38,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `BaseFix` interface's comment on `prompt` says 'Keep the prompt message short and concise.' This message runs to two full sentences. The adjacent `rnstorybookConfig` migration uses a single short sentence. Consider shortening to something like: `'On-device addons found in \\`addons\\` will be moved to \\`deviceAddons\\` to prevent Storybook Core from evaluating them as presets.'`",
+      "index": 3
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.ts",
+      "line_number": 44,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`!!dryRun` coerces `boolean | undefined` to `boolean`. Prefer `dryRun ?? false`, which makes the intent explicit: `undefined` (the flag was not supplied) should be treated the same as `false` (explicitly disabled). The double-negation form obscures that this is a default-to-false operation rather than a truthy/falsy check.",
+      "index": 4
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/rn-ondevice-addons-to-device-addons.test.ts",
+      "line_number": 146,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test is titled 'handles the case where @storybook/react-native is in dependencies (not devDependencies)', implying it verifies a behavioral distinction between dep buckets. In practice, the real `getAllDependencies()` merges `dependencies`, `devDependencies`, and `peerDependencies` into one flat record, so no such distinction exists at the call site. The `makePackageManager` mock returns the same object regardless. The test exercises the same code path as the preceding string-addon test (one fewer addon) and the description is misleading. Either remove it or rewrite it to cover a meaningfully different scenario (e.g., RN in `peerDependencies`).",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "There is a subtle gap between what `check` reports and what `run` can safely act on. `check` reads `mainConfig.addons`, which contains evaluated JavaScript values (strings and plain objects). `run` then calls `removeEntryFromArray`, which walks the raw AST looking for string literals or object expressions with a `name` property. If an addon is expressed as a variable reference (e.g., `const controls = '@storybook/addon-ondevice-controls'; addons: [controls, ...]`), `check` will include it in `ondeviceAddons`, but `removeEntryFromArray` will throw because the AST element is an `Identifier`, not a `StringLiteral`. `updateMainConfig`'s catch block handles this gracefully with a logged error, but the migration silently fails for that user. A test covering this scenario (e.g., confirming the error is surfaced rather than silently swallowed) would improve observability.",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.6621302,
+  "duration_seconds": 569.6349608898163
+}

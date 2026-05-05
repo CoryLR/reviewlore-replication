@@ -1,0 +1,124 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/schemas/config.schema.yaml",
+      "line_number": 59,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`radar` is removed from the `required` list and replaced with `venn` instead of added alongside it. The change goes from `- radar` to `- venn`, dropping the requirement that a `radar` config block must be present in the schema. This is a regression: existing radar config validation silently degrades. Both `radar` and `venn` should appear in the `required` list.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/styles.ts",
+      "line_number": 4,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "`VennChartStyleOptions` includes many properties that are specific to flowcharts and have nothing to do with Venn diagrams: `arrowheadColor`, `clusterBkg`, `clusterBorder`, `edgeLabelBackground`, `mainBkg`, `nodeBorder`, `nodeTextColor`, `border2`. This strongly indicates the entire file was copy-pasted from the flowchart styles module. Only Venn-relevant theme variables (e.g. something like `vennFillColor`, `fontFamily`, `textColor`, `titleColor`) should appear here.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/styles.ts",
+      "line_number": 66,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The CSS rules starting at `.node rect, .node circle, .node ellipse, .node polygon, .node path` and continuing through `.arrowheadPath`, `.edgePath .path`, `.flowchart-link`, `.edgeLabel`, `.labelBkg`, `.node .cluster`, `div.mermaidTooltip`, and `.flowchartTitleText` are all flowchart-specific and have no corresponding DOM elements in a Venn diagram. They constitute dead CSS that bloats every diagram render, could produce specificity collisions if Venn diagrams are embedded alongside flowcharts, and make the module misleading for future maintainers. Only styles targeting Venn-specific classes (`.venn-circle`, `.venn-intersection`, `.venn-text-node`, `.venn-title`) should be included.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/styles.ts",
+      "line_number": 119,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`// background-color:` is an incomplete, dangling comment \u2014 a development artifact. The line has no value and should be removed.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/vennRenderer.ts",
+      "line_number": 30,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`customFontColorMap` (and the analogous `customBackgroundColorMap`) uses `VennData['sets']` \u2014 a `string[]` \u2014 as the Map key. JavaScript `Map` compares keys with reference equality (`SameValueZero`), so two distinct array instances containing the same strings will never match. The lookups on lines 95 and 98\u201399 retrieve `(e as VennData).sets` from the D3 datum; this only succeeds if venn.js binds the exact same object references from the input `sets` array without copying them. If the library ever wraps or filters the data objects internally, custom `color` and `background` values on intersections will silently never be applied. The already-defined `stableSetsKey()` function should be used as the key instead:\n```ts\nconst customFontColorMap = new Map<string, string>(\n  sets.filter((s) => s.color).map((s) => [stableSetsKey([...s.sets].sort()), s.color!])\n);\n```\nAnd the lookup should call `stableSetsKey([...(e as VennData).sets].sort())`.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/vennRenderer.ts",
+      "line_number": 39,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`svgWidth` and `svgHeight` are hardcoded to `1600` and `900`. There is no way for users or config to control the rendered canvas size. Consider exposing `width` and `height` in `VennDiagramConfig` (analogous to how other diagram configs work) so users can tune the output for their context.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/vennRenderer.ts",
+      "line_number": 66,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`config?.padding ?? 15` falls back to `15`, but the `VennDiagramConfig` schema declares the default for `padding` as `8`. If `config` is ever `undefined` (e.g., in a test with a partial mock that omits `getConfig`), the renderer uses an undocumented fallback that contradicts the schema. Use the schema-declared default (`8`) or reference the default config constant to keep the two in sync.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/vennRenderer.ts",
+      "line_number": 77,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`config` is obtained via `db.getConfig?.()` (optional chaining), giving it the type `Required<VennDiagramConfig> | undefined`. It is then passed to `renderTextNodes(config, ...)` whose first parameter is typed `Required<VennDiagramConfig>` \u2014 a non-optional type. TypeScript may not flag this depending on inference, but if `getConfig` is absent on a partial mock, `undefined` is silently forwarded. Since `VennDB` always provides `getConfig`, the `?.` on line 38 (`db.getConfig?.()`) is unnecessary and should be removed to resolve the type mismatch.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/vennRenderer.ts",
+      "line_number": 122,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`config?.useDebugLayout` uses optional chaining on `config`, which is typed `Required<VennDiagramConfig>` (non-optional) inside `renderTextNodes`. The `?.` is redundant and misleading \u2014 it implies `config` could be `undefined` when it cannot be by the function's contract. Change to `config.useDebugLayout ?? false`.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/parser/venn.jison",
+      "line_number": 74,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `TEXT identifierList stylesOpt` rule calls `yy.addTextData($identifierList, \"\", $stylesOpt)`, passing the parsed identifiers as the `sets` argument and an empty string as the text `id`. This means a non-indented `text foo label: bar` creates a node with `sets=['foo']` (treating the text label token as a set name) and `id=''`. Multiple non-indented text nodes would share `id=''`, making them indistinguishable in the data model. This is semantically opposite to the intended design, where identifiers following `text` are node IDs and set membership is inferred from indentation context (via `getCurrentSets()`). The `INDENT_TEXT indentedTextTail` path on the next line correctly captures this. Since the documentation only describes the indented form, this non-indented `TEXT` rule appears to be dead code with incorrect semantics and should be removed or fixed to call `yy.addTextData(yy.getCurrentSets(), $first_identifier, $stylesOpt)`.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/venn/parser/venn.jison",
+      "line_number": 26,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The TITLE lex rule `\"title\"\\s[^#\\n;]+` matches exactly one whitespace character after the `title` keyword. If a user writes `title  foo` (two or more spaces), `yytext` is `\"title  foo\"` and `$1.substr(6)` yields `\" foo\"` \u2014 a string with a leading space \u2014 which gets stored as the diagram title. Adding `.trim()` to the grammar action (`yy.setDiagramTitle($1.substr(6).trim())`) prevents this.",
+      "index": 10
+    },
+    {
+      "file_path": "demos/venn.html",
+      "line_number": 147,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `<style>` block at the bottom of `<body>` contains only commented-out `pre` width/padding rules \u2014 a development artifact. It should be removed before merging.",
+      "index": 11
+    },
+    {
+      "file_path": "packages/examples/src/examples/venn.ts",
+      "line_number": 9,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The example's `title` field is `'Sales Revenue'` but the diagram code contains `title \"Three overlapping sets\"`. These describe unrelated scenarios. The example title is shown in the Mermaid Live Editor and docs, so it should match the diagram content. Update one or the other so they are consistent (e.g., rename the example to `'Three overlapping sets'` or rewrite the diagram code to illustrate a sales revenue use case).",
+      "index": 12
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "Text nodes inside Venn circles are rendered via `<foreignObject>` + `<xhtml:span>` (vennRenderer.ts lines ~189\u2013215). While this conveniently enables CSS-based text wrapping, `foreignObject` has known compatibility issues: Mermaid CLI's PNG/PDF export path (puppeteer may not always render it), some SVG-to-image converters, and environments that strip HTML namespaces from embedded SVGs. Other Mermaid diagram types that need wrapping (mindmap, treemap) use native SVG `<text>` / `<tspan>` elements. If Mermaid CLI compatibility or robust image export is a goal, consider implementing a native SVG text layout fallback, even if simpler wrap logic is required.",
+      "index": 13
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "In `indentedTextTail` (venn.jison), the `labelField` alternatives (`| labelField ...` and `| labelField COMMA stylesOpt ...`) call `yy.addTextData(currentSets, \"\", ...)` \u2014 passing an empty string as the text node `id`. A text node declared as `text label: \"Some note\"` (label-only, no identifier) will be stored with `id=''`. If multiple such nodes appear in the same set, they all share `id=''`. The renderer uses `node.label ?? node.id` for display so they render, but their empty IDs make programmatic lookup and deduplication impossible. A generated unique ID (e.g., an incrementing counter) should be used when no explicit identifier is provided.",
+      "index": 14
+    }
+  ],
+  "cost_usd": 1.3588621499999998,
+  "duration_seconds": 988.3713262081146
+}

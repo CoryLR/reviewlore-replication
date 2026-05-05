@@ -1,0 +1,86 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/manager/components/sidebar/FilterPanel.tsx",
+      "line_number": 160,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`hasItems` only checks `builtInItems.length > 0 || tagItems.length > 0`, not `statusItems.length > 0`. When a user has active status filters but no custom tags and no matching built-in items, the action header (containing the 'Select all' / 'Clear filters' buttons) is hidden entirely. Those users have no way to clear their active status filters from within the panel. Fix: `const hasItems = builtInItems.length > 0 || tagItems.length > 0 || statusItems.length > 0;`",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager-api/lib/stories.ts",
+      "line_number": 199,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The `{ ...entry, statuses }` and `{ ...child, statuses: allStatuses[child.id] ?? {} }` spreads appear to pass status data into `statusFilterFn`, but `computeStatusFilterFn` \u2014 the only registered implementation \u2014 ignores `entry.statuses` entirely and re-fetches from `fullStatusStore.getAll()` by `entry.id`. The `statuses` key in these spreads is dead code. This is misleading: a future implementor of a custom status filter function would reasonably expect `entry.statuses` to be populated and usable, but it isn't. Either remove the spurious spread, or refactor `computeStatusFilterFn` to accept and use the passed-in statuses so the interface is honest.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/statuses.ts",
+      "line_number": 64,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`computeStatusFilterFn` reads from `fullStatusStore.getAll()` at invocation time inside the returned closure rather than using status data passed via the entry argument. While `fullStatusStore.getAll()` currently returns the same data as the `allStatuses` parameter already threaded through `transformStoryIndexToStoriesHash`, this creates an implicit coupling to global state that makes the function impure and harder to reason about in isolation. The filter function could instead close over `allStatuses` passed at construction time, removing the hidden dependency and making testing and reasoning straightforward.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Filter.tsx",
+      "line_number": 4,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Two separate `import type` statements pull from the same module `'storybook/internal/types'` on lines 4\u20135. Merge into one: `import type { StatusesByStoryIdAndTypeId, StatusValue, StoryIndex } from 'storybook/internal/types';`",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/manager-api/modules/stories.ts",
+      "line_number": 525,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Status filter length checks use defensive optional chaining (`includedStatusFilters?.length ?? 0`) while the equivalent tag filter checks directly access `.length`. Since `SubState` declares both as `StatusValue[]` (non-optional), the `?.` and `?? []` guards are unnecessary and create a false impression that status arrays can be nullish while tag arrays cannot. The same inconsistency reappears around the `STORY_SPECIFIED` handler (~line 985) and in `recomputeStatusFilter` which uses `?? []` while `recomputeTagsFilter` does not.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/manager-api/tests/stories.test.ts",
+      "line_number": 1676,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `parseStatusesParam` and `serializeStatusesParam` describe blocks added here duplicate the tests already present in `statuses.test.ts`. These utility functions now have a dedicated test file, so the duplicate coverage here adds maintenance burden with no additional safety net. Consider removing these suites from `stories.test.ts` and keeping them exclusively in `statuses.test.ts`.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/useFilterData.tsx",
+      "line_number": 97,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "After filtering with `(counts[statusValue] ?? 0) > 0`, `counts[statusValue]` is guaranteed to be a positive number, but TypeScript infers it as `number | undefined` from the index type of `counts`. This means the `count` field in the returned object has a widened type. Use `counts[statusValue]!` (non-null assertion) or `counts[statusValue] ?? 0` to make the intent explicit and keep the `StatusFilterEntry.count` field cleanly typed as `number`.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/FilterPanelLink.tsx",
+      "line_number": 67,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The inline `style={{ minWidth: 45 }}` is inconsistent with the rest of the codebase, which uses `styled` from `'storybook/theming'` for component-level styles. Consider extracting to a small styled component: `const InvertButtonText = styled.span({ minWidth: 45 })` and replacing the `<span>` with `<InvertButtonText>`.",
+      "index": 7
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/FilterPanel.stories.tsx",
+      "line_number": 12,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Import ordering is inconsistent: `@storybook/react-vite` (external/third-party) and `../../../manager-api` (relative) appear after the relative `./Filter.story-helpers`, `./FilterPanel`, and `./IconSymbols` imports. The conventional order (enforced by ESLint `import/order`) is: external packages first, then relative imports. Move the `@storybook/react-vite` and `../../../manager-api` imports above the `./` imports.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "The `getStatus` memoizerific cache was increased from 5 to 10. However, there are 8 distinct `StatusValue` strings and at least 2 themes (light/dark), giving up to 16 unique `(theme, status)` argument pairs. With a cache of 10, at least 6 combinations are always subject to LRU eviction when both themes are in play (e.g. in SSR or theme-switching scenarios), causing repeated React element re-creation. Consider raising the limit to `STATUS_VALUES.length * 2` (currently 16) to cover all realistic combinations.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.8443917499999999,
+  "duration_seconds": 468.8265347480774
+}

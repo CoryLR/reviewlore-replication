@@ -1,0 +1,92 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 43,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Commented-out debug log `// logger.info(\\`Story ${entry.id} absolute path: ${absolutePath}\\`)` must be removed before merging. Per project rules, all debugging artifacts\u2014including commented-out debug blocks\u2014must be removed prior to merge.",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 122,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`startChangeDetection(options)` is called without `await` and without a `.catch()` handler. Any error thrown during its async body\u2014from `options.presets.apply(...)`, `indexGenerator.getIndex()`, or any `server.warmupRequest(...)` call rejecting\u2014becomes an unhandled promise rejection that is silently discarded. The accompanying comment says 'Cleanup happens in bail()' but bail cannot clean up a startup that never completed. Add a `.catch` handler, e.g.:\n\n```ts\nstartChangeDetection(options).catch((e) => {\n  logger.warn(`Change detection startup failed: ${e instanceof Error ? e.message : String(e)}`);\n});\n```",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/dev-server.ts",
+      "line_number": 137,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`changeDetectionService.dispose().catch()` is called with no argument, silently swallowing any error thrown by `dispose()`. Per project rules, catch blocks must not silently swallow errors. Use at minimum `dispose().catch((e) => logger.debug(\\`Change detection disposal failed: ${e}\\`))` to preserve diagnostic information.",
+      "index": 2
+    },
+    {
+      "file_path": "code/builders/builder-vite/src/index.ts",
+      "line_number": 88,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "When `process.hrtime(startTime)[0] > 30` seconds elapses before the module graph populates, the interval silently clears itself. Change detection becomes non-functional with no indication to the developer. Consider adding a `logger.warn('Change detection: timed out waiting for module graph to populate after 30s')` before clearing, so users understand why no change annotations appear.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/trace-changed.ts",
+      "line_number": 28,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `if (!current) { continue; }` guard is logically unreachable: `queue.shift()` is only called inside `while (queue.length > 0)`, guaranteeing a defined return value. The check exists solely to satisfy TypeScript's `T | undefined` return type for `shift()`. Replace it with a non-null assertion or restructure the loop to avoid the ambiguity:\n\n```ts\nwhile (queue.length > 0) {\n  const { node, distance } = queue.shift()!;\n  node.importers.forEach(...);\n}\n```\nThis makes the intent clear and removes dead code.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/core-server/index.ts",
+      "line_number": 32,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`ChangeDetectionService` is exported directly from `'./change-detection/service'` rather than from the `'./change-detection'` barrel, even though `change-detection/index.ts` already re-exports it. The adjacent exports on lines 28-31 correctly use the barrel. For consistency, change this to:\n\n```ts\nexport { ChangeDetectionService } from './change-detection';\n```",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 128,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`dispose()` is declared `async` but contains no `await` expressions\u2014it always returns a synchronously-resolved `Promise<void>`. Remove the `async` keyword so the signature accurately reflects its synchronous nature:\n\n```ts\ndispose(): void {\n```\n\nCallers that already `await` it will continue to work correctly since a non-Promise return is automatically coerced.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/service.ts",
+      "line_number": 95,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`resetChangeDetectionReadiness()` is called as a constructor side effect, mutating module-level global state each time a `ChangeDetectionService` is instantiated. If two instances are created (e.g., test setup followed by production initialization), the second constructor call silently discards any readiness state established by the first. Consider moving this reset into `start()` instead, so it only fires when change detection is actually starting, and the constructor remains side-effect-free.",
+      "index": 7
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/git-diff-provider.test.ts",
+      "line_number": 27,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test data arranges `src/NewButton.stories.tsx` as simultaneously staged (appearing in the second `mockResolvedValueOnce`) **and** untracked (appearing in the fourth). In real Git a file cannot be both staged/tracked and untracked at the same time. While this doesn't break the test (the union logic is exercised correctly), the inconsistent data is misleading to future readers. Consider using distinct, non-overlapping filenames for the staged and untracked sets to accurately reflect what git would actually produce.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`readiness.ts` stores `readinessDeferred` and `readinessState` as module-level mutable variables, creating a process-wide singleton. `ChangeDetectionService` resets this global state in its constructor (see service.ts line 95) and tests must call `internal_resetChangeDetectionReadiness()` in both `beforeEach` and `afterEach` to avoid cross-test leakage. This tight coupling between an instantiable class and a module-level singleton is fragile: creating a second service instance anywhere in the same process discards the first instance's readiness state. A cleaner design would encapsulate readiness state entirely within `ChangeDetectionService` and expose it via a method or callback rather than a shared module export.",
+      "index": 9
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`ChangeDetectionService.dispose()` does not prevent in-flight `scan()` calls from completing after disposal. If a scan is awaiting `gitDiffProvider.getChangedFiles()` or `storyIndexGenerator.getIndex()` when `dispose()` is called, it will complete asynchronously and invoke `this.applyPatch(nextStatuses)`, writing to the status store after the service has logically been shut down. Adding a `private disposed = false` flag\u2014set to `true` in `dispose()` and checked at the start of `applyPatch`\u2014would prevent post-disposal status mutations.",
+      "index": 10
+    }
+  ],
+  "cost_usd": 0.9959018499999999,
+  "duration_seconds": 751.5926110744476
+}

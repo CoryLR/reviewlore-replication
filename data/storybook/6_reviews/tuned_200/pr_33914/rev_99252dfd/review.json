@@ -1,0 +1,130 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/utils/manifests/render-components-manifest.ts",
+      "line_number": 9,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This is a deep cross-package relative import (`../../../../../renderers/react/src/...`) from `code/core` into `code/renderers/react`. Even as a type-only import it introduces a structural coupling between core and a specific renderer, making core dependent on renderer internals. If the React renderer's directory structure changes, this path silently breaks. The `ComponentDoc` type (and its dependent types `PropItem`, `PropItemType`, `ParentType`) should instead be extracted to a shared location in `storybook/internal/types` or `storybook/internal/core-common`, then referenced from both the renderer and this file. Alternatively, define a local minimal interface here that describes only the fields actually consumed by `parseReactComponentMeta` and `getDocgenRenderData`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/componentMeta/ComponentMetaManager.ts",
+      "line_number": 441,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This `while` loop walks up the directory tree without a depth limit. The `checker/ComponentMetaManager.ts` version of the same function guards this with `MAX_WALK_DEPTH = 10` and a `depth` counter (`while (candidate !== path.dirname(candidate) && depth < MAX_WALK_DEPTH)`). In an edge case where no `package.json` or `tsconfig.json` exists along the entire path and no existing watchers cover the directory, this loop runs all the way to the filesystem root. On deep paths (e.g. CI environments with long `/home/runner/work/...` prefixes) that can be 15\u201320 iterations rather than 10. Align with the `checker/` implementation by adding `const MAX_WALK_DEPTH = 10; let depth = 0;` and include `&& depth < MAX_WALK_DEPTH` (with `depth++` inside the loop body).",
+      "index": 1
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 358,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This catch block silently swallows all per-component errors with only a comment. Per project convention, even non-fatal errors on best-effort paths must be logged at minimum at debug level so failures remain visible during troubleshooting. Change to `catch (err) { logger.debug(`[reactComponentMeta] Skipping component in batch: ${err}`); continue; }`. The same issue exists in the equivalent `componentMeta/ComponentMetaProject.ts` at the same location.",
+      "index": 2
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaProject.ts",
+      "line_number": 146,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`this.commandLine.fileNames.includes(fileName)` is O(n) and is called once per file in `fileNames`, making the overall method O(n\u00b2). For large projects (e.g. Mantine with 9 tsconfig projects containing hundreds of source files), this is called on every `extractPropsFromStories` invocation. Use a `Set` instead: `const existing = new Set(this.commandLine.fileNames); for (const fileName of fileNames) { if (!existing.has(fileName)) { this.commandLine.fileNames.push(fileName); existing.add(fileName); added = true; } }`. The identical issue exists in `componentMeta/ComponentMetaProject.ts`.",
+      "index": 3
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 50,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `catch` block does not capture the thrown error, so the actual exception message is silently discarded. A debug log with only a static string makes it impossible to diagnose why TypeScript was unavailable. Change to `catch (err) { logger.debug(`[reactComponentMeta] TypeScript not available, skipping component meta extraction: ${err}`); }`. This matches the logging pattern used in other debug-level catch blocks in `ComponentMetaManager.ts`.",
+      "index": 4
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 100,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`DocgenEngine` is already exported from `getComponentImports.ts` (line 20). Redefining it locally here as a private `type DocgenEngine = ...` creates two in-sync definitions that can drift. Import it instead: add `type DocgenEngine` to the destructured import from `'./getComponentImports'`.",
+      "index": 5
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/getComponentImports.test.ts",
+      "line_number": 8,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`vi.mock('node:fs')` and `vi.mock('node:fs/promises')` are missing the `{ spy: true }` option required by project coding guidelines. All `vi.mock()` calls in test files must include this option. Change to `vi.mock('node:fs', { spy: true })` and `vi.mock('node:fs/promises', { spy: true })`.",
+      "index": 6
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.test.ts",
+      "line_number": 11,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Same as in `getComponentImports.test.ts`: `vi.mock('node:fs')` and `vi.mock('node:fs/promises')` are missing `{ spy: true }`. All `vi.mock()` calls must include this option per project guidelines.",
+      "index": 7
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/checker/ComponentMetaManager.test.ts",
+      "line_number": 210,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`sys.deleteFile!(possibleTsconfig)` uses a non-null assertion on `ts.sys.deleteFile`, which is typed as `((path: string) => void) | undefined` in the TypeScript compiler API. If `ts.sys.deleteFile` is absent (e.g. in restricted environments), this throws at runtime. Guard it: `sys.deleteFile?.(possibleTsconfig)`. This also satisfies the project rule against non-null assertions on optional properties.",
+      "index": 8
+    },
+    {
+      "file_path": "code/core/src/core-server/utils/manifests/manifests.ts",
+      "line_number": 27,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`watch` is declared as `boolean | undefined` (via `{ watch?: boolean } = {}`) but is passed directly into `presets.apply(...)` whose inferred type for the third argument constrains it to `{ manifestEntries: IndexEntry[]; watch: boolean }`. The `writeManifests` call site passes no `watch` at all, so `watch` is `undefined` at runtime. Either (a) change the preset type signature to `{ watch?: boolean }` and add a `?? false` default inside `generator.ts`, or (b) default here: `{ watch = false }: { watch?: boolean } = {}` and propagate `watch: watch`.",
+      "index": 9
+    },
+    {
+      "file_path": "code/core/src/core-server/utils/manifests/manifests.test.ts",
+      "line_number": 253,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`mockApp as Polka` is an unverified type assertion: `mockApp` is `Pick<Polka, 'get'>` and does not implement the full `Polka` interface. This assertion is needed at every call site only because `registerManifests` accepts `app: Polka`. Since the function only calls `app.get(...)`, widen the parameter type to `Pick<Polka, 'get'>` in `manifests.ts`. That eliminates the need for the cast in every test case and makes the API surface explicit.",
+      "index": 10
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/componentMeta/componentMetaExtractor.ts",
+      "line_number": 1680,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`typescript.sys.readFile(filePath)` inside `extractDefaultsFromSourceFile` is not wrapped in a try/catch. While TypeScript's `sys.readFile` returns `undefined` for missing files, it can still throw for EISDIR, EACCES, or other I/O errors. The `!content` guard on line 1682 handles the `undefined` case but not thrown exceptions. Wrap the `readFile` call: `let content: string | undefined; try { content = typescript.sys.readFile(filePath); } catch { return defaults; }`. The identical pattern is in the root-level `componentMetaExtractor.ts`.",
+      "index": 11
+    },
+    {
+      "file_path": "code/renderers/react/package.json",
+      "line_number": 57,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`@volar/language-core` and `@volar/typescript` are added as `dependencies`, not `devDependencies`. These are development/analysis-time packages (TypeScript language tooling), not packages required at runtime by users of the React renderer. They should be `devDependencies` alongside the existing `react-docgen` and `react-docgen-typescript` entries to avoid bloating the installed package for end users. Verify that they aren't bundled into user-facing output; if the manifest extractor is only executed server-side during Storybook dev, `devDependencies` is the correct placement.",
+      "index": 12
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "There are two nearly-identical, parallel implementations of the same core system in this PR: `checker/ComponentMetaManager.ts` + `checker/ComponentMetaProject.ts` + root-level `componentMetaExtractor.ts` (used by `generator.ts`), AND `componentMeta/ComponentMetaManager.ts` + `componentMeta/ComponentMetaProject.ts` + `componentMeta/componentMetaExtractor.ts` (with its own test suite). Both `componentMetaExtractor.ts` files are 1732 lines and appear identical in content. Both `ComponentMetaManager` implementations are 620 lines of nearly identical code differing only in the depth-limit guard noted in an inline comment. Both `ComponentMetaProject` implementations are ~465 lines and structurally identical. The `generator.ts` wires up the `checker/` version; the `componentMeta/` version exists only to be tested by its own test suite, which mirrors the `checker/` tests. This violates the project rule against creating two near-identical utility modules. One canonical implementation should be used everywhere, with one set of tests that verifies it. The `componentMeta/` folder should be removed and its tests consolidated into the `checker/` test suite (or vice versa). Keeping both is a significant maintenance burden: every bug fix or enhancement must be applied twice, and the two copies will inevitably drift.",
+      "index": 13
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The warmup timer's catch block in both `ComponentMetaProject` implementations silently swallows errors with only a comment (`// Warmup failure is non-fatal`). While the non-fatal intent is correct, at minimum a `logger.debug` call should be included so operators can diagnose repeated warmup failures. Add `catch (err) { logger.debug(`[reactComponentMeta] Warmup extraction failed: ${err}`); }` to both the `checker/` and `componentMeta/` versions.",
+      "index": 14
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `generator.ts` `manifests` function now uses `presets?.apply('features', {})` to read `features.experimentalReactComponentMeta`, but the `features` shape is widened to any object. Per the existing pattern used for other feature flags in the codebase (e.g. reading `global.FEATURES?.flagName !== false`), consider using `features?.experimentalReactComponentMeta === true` explicitly rather than truthy coercion, and document the default value (currently implicitly `false`) in a brief inline comment so future readers understand the opt-in behavior.",
+      "index": 15
+    }
+  ],
+  "cost_usd": 1.6218192999999999,
+  "duration_seconds": 643.6001219749451
+}

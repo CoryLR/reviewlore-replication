@@ -1,0 +1,568 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33365,
+  "title": "CSF: Add CSF Factories for Vue3, Web Components, and Angular",
+  "body": "This PR implements CSF (Component Story Format) factories for Vue3, Web Components, and Angular, along with enhanced parser support for the `.type()` chaining pattern. This enables type-safe story creation across multiple frameworks with improved TypeScript inference.\r\n\r\n## What I did\r\n\r\n### 1. Vue3 CSF Factories\r\n\r\nAdded CSF factories support for Vue3 with automatic component prop inference.\r\n\r\n**Features:**\r\n- Automatic type inference from Vue component props and slots\r\n- `.type<R>()` method for extending types\r\n- Type-safe `meta()` and `story()` factory functions\r\n\r\n**Example:**\r\n\\`\\`\\`typescript\r\nimport { definePreview } from '@storybook/vue3-vite';\r\n\r\nconst preview = definePreview({ addons: [] });\r\n\r\nconst meta = preview.meta({\r\n  component: Button,\r\n  args: { disabled: true },\r\n});\r\n\r\nexport const Primary = meta.story({ \r\n  args: { label: 'Click me' } \r\n});\r\n\\`\\`\\`\r\n\r\n**Files Added:**\r\n- \\`code/renderers/vue3/src/preview.ts\\`\r\n- \\`code/renderers/vue3/src/csf-factories.test.ts\\`\r\n\r\n### 2. Web Components CSF Factories\r\n\r\nAdded CSF factories support for Web Components with Lit templates.\r\n\r\n**Features:**\r\n- \\`.type<>()\\` method for explicit type parameters\r\n- Support for Lit \\`html\\` tagged templates\r\n- Type-safe story creation with string-based components\r\n\r\n**Example:**\r\n\\`\\`\\`typescript\r\nimport { definePreview } from '@storybook/web-components-vite';\r\n\r\nconst preview = definePreview({ addons: [] });\r\n\r\nconst meta = preview.type<{ args: ButtonProps }>().meta({\r\n  component: 'my-button',\r\n  args: { disabled: true },\r\n});\r\n\r\nexport const Primary = meta.story({ \r\n  args: { label: 'Click me' } \r\n});\r\n\\`\\`\\`\r\n\r\n**Files Added:**\r\n- \\`code/renderers/web-components/src/preview.ts\\`\r\n- \\`code/renderers/web-components/src/csf-factories.test.ts\\`\r\n\r\n### 3. Angular CSF Factories\r\n\r\nAdded CSF factories support for Angular with proper decorator handling.\r\n\r\n**Features:**\r\n- \\`.type<{ args: Props }>()\\` method for explicit type parameters (required because Angular decorators aren't extractable at compile time)\r\n- Support for Angular components as classes\r\n- Template-based story results\r\n- Decorator pattern that wraps story templates\r\n\r\n**Example:**\r\n\\`\\`\\`typescript\r\nimport { definePreview } from '@storybook/angular';\r\n\r\nconst preview = definePreview({ addons: [] });\r\n\r\nconst meta = preview.type<{ args: ButtonProps }>().meta({\r\n  component: ButtonComponent,\r\n  args: { disabled: true },\r\n});\r\n\r\nexport const Primary = meta.story({ \r\n  args: { label: 'Click me' } \r\n});\r\n\\`\\`\\`\r\n\r\n**Files Added:**\r\n- \\`code/frameworks/angular/src/client/preview.ts\\`\r\n- \\`code/frameworks/angular/src/client/csf-factories.test.ts\\`\r\n\r\n### 4. Enhanced CSF Parser\r\n\r\nUpdated the CSF AST parser to recognize the \\`.type().meta()\\` chaining pattern used by Web Components and Angular.\r\n\r\n**What Changed:**\r\n- \\`CsfFile.ts\\` now traverses through chained method calls to find the root preview object\r\n- Supports both \\`preview.meta()\\` and \\`preview.type().meta()\\` patterns\r\n- Maintains backward compatibility with existing patterns\r\n\r\n**Files Modified:**\r\n- \\`code/core/src/csf-tools/CsfFile.ts\\` - Added chaining support\r\n- \\`code/core/src/csf-tools/CsfFile.test.ts\\` - Added test for \\`.type()\\` chaining\r\n\r\n### Framework Comparison\r\n\r\n| Framework | Component Type | Type Inference | Story Result |\r\n|-----------|---------------|----------------|--------------|\r\n| **Vue3** | Vue component object | Automatic from props | Vue component |\r\n| **Web Components** | String (\\`'my-button'\\`) | Manual via \\`.type<>()\\` | Lit \\`html\\` template |\r\n| **Angular** | Angular class | Manual via \\`.type<>()\\` | \\`{ template, props }\\` |\r\n| **React** | React component | Automatic from props | React element |\r\n\r\n### Testing\r\n\r\n- \u2705 All existing CSF parser tests pass (105 tests)\r\n- \u2705 New test for \\`.type().meta()\\` chaining pattern\r\n- \u2705 Comprehensive TypeScript type tests for all three frameworks\r\n- \u2705 Tests cover decorators, render functions, story extension, and args inference\r\n\r\n### Migration\r\n\r\nNo breaking changes. This is purely additive:\r\n- Existing \\`preview.meta()\\` patterns continue to work\r\n- New \\`.type().meta()\\` pattern is available for frameworks that need it\r\n- All existing CSF stories remain compatible\r\n\r\n### Summary\r\n\r\nThis PR completes the CSF factories implementation across major frameworks:\r\n- \u2705 React (existing)\r\n- \u2705 Vue3 (this PR)\r\n- \u2705 Web Components (this PR)\r\n- \u2705 Angular (this PR)\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\nRun the automigration in any React, vue or web component project. And see if the project still works the same.\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\nThis pull request has been released as version `0.0.0-pr-33365-sha-b6656566`. Try it out in a new sandbox by running `npx storybook@0.0.0-pr-33365-sha-b6656566 sandbox` or in an existing project with `npx storybook@0.0.0-pr-33365-sha-b6656566 upgrade`.\n<details>\n<summary>More information</summary>\n\n| | |\n| --- | --- |\n| **Published version** | [`0.0.0-pr-33365-sha-b6656566`](https://npmjs.com/package/storybook/v/0.0.0-pr-33365-sha-b6656566) |\n| **Triggered by** | @kasperpeulen |\n| **Repository** | [storybookjs/storybook](https://github.com/storybookjs/storybook) |\n| **Branch** | [`kasper/vue-csf-factories`](https://github.com/storybookjs/storybook/tree/kasper/vue-csf-factories) |\n| **Commit** | [`b6656566`](https://github.com/storybookjs/storybook/commit/b6656566aa143a3e9d0674bcf511cebccdaae7f9) |\n| **Datetime** | Mon Jan 12 11:11:51 UTC 2026 (`1768216311`) |\n| **Workflow run** | [20917257992](https://github.com/storybookjs/storybook/actions/runs/20917257992) |\n\nTo request a new release of this pull request, mention the `@storybookjs/core` team.\n\n_core team members can create a new canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=33365`_\n</details>\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\r\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Added preview.type<T>() and new definePreview re-exports to enable type-parametrized previews and optional no-args stories.\n\n* **Refactor**\n  * Unified and expanded public typings for stronger args inference across React, Vue3, Angular, and Web Components; exposes addon args surface.\n\n* **Tests**\n  * Added/updated CSF factory tests covering play composition, no-args stories, decorators, slots, and multi-framework scenarios.\n\n* **Chores**\n  * Enabled CSF factory in sandbox templates and widened codemod file matching.\n\n<sub>\u270f\ufe0f Tip: You can customize this high-level summary in your review settings.</sub>\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "kasperpeulen",
+  "merged_at": "2026-01-12T14:40:33Z",
+  "base_ref": "next",
+  "merge_commit_sha": "2d801559ff702f2ae51e1e67ecaa70e206656053",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "d65ae2347d0302cc1d600af87d59326ae16945c3",
+    "e7e76a157b14513c1eb6c1df7a70c4b0ad622eb8"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6cJFih",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The import statement references `VueTypes` which does not exist in the types.ts file. The types.ts file only exports `VueRenderer`. \n\nLooking at the React implementation, it has a `ReactTypes` interface that extends `ReactRenderer` with additional parameters. Vue3 needs a similar `VueTypes` type/interface to be defined in types.ts, or this code should use `VueRenderer` instead. \n\nIf following the React pattern, you would need to add to types.ts:\n```typescript\nexport interface VueTypes extends VueRenderer {\n  // Add any Vue-specific parameters here if needed\n}\n```\n\nAlternatively, if no additional types are needed, replace all references to `VueTypes` with `VueRenderer` throughout this file.",
+          "file_path": "code/renderers/vue3/src/preview.ts",
+          "line_number": 24,
+          "start_line": null,
+          "commit_sha": "9a550fa11a4899dfe68ff4657232722dbdf1d632",
+          "created_at": "2025-12-15T14:19:00Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The import references a type `VueTypes` that doesn't exist in types.ts, causing a semantic mismatch between what the code references and what's actually defined."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a missing type definition (VueTypes) and suggests either adding it to types.ts or replacing references with VueRenderer."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6cJFi0",
+          "author": "copilot-pull-request-reviewer",
+          "body": "This PR adds CSF factories support for Vue3 by introducing a new preview.tsx file with __definePreview, VuePreview, VueMeta, and VueStory interfaces. However, there are no corresponding test files to verify this functionality works correctly.\n\nThe React renderer has comprehensive tests in csf-factories.test.tsx that verify:\n- Args can be provided in multiple ways\n- Type safety for required vs optional args\n- Story composition and inheritance\n- Decorator args inference\n- Play function composition (as shown in the test added to React)\n\nVue3 should have similar test coverage to ensure the CSF factories implementation works correctly and maintains API consistency with React. Consider adding a csf-factories.test.ts file for Vue3 that mirrors the React test structure.",
+          "file_path": "code/renderers/vue3/src/preview.tsx",
+          "line_number": 120,
+          "start_line": null,
+          "commit_sha": "a6d79ae4e679a86809a855141bab577e0ec8a2aa",
+          "created_at": "2025-12-15T14:19:00Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment is about missing test coverage for Vue3 CSF factories, which is a maintainability concern about ensuring the implementation is properly validated."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags missing test coverage and requests adding a csf-factories.test.ts file for Vue3."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6cJFi_",
+          "author": "copilot-pull-request-reviewer",
+          "body": "Unused variable Basic.",
+          "file_path": "code/renderers/react/src/csf-factories.test.tsx",
+          "line_number": 72,
+          "start_line": null,
+          "commit_sha": "21fc5f1d251da2f28e3f8a9678ad7f66d276be4a",
+          "created_at": "2025-12-15T14:19:00Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Dead-Code Related Issues",
+          "label_confidence": "high",
+          "label_reasoning": "The variable `Basic` is declared but never used, which is an unused variable issue."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags an unused variable that should be removed or used."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6er75x",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncd code/renderers/vue3/src && wc -l preview.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 79\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/renderers/vue3/src/preview.ts | sed -n '85,105p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 895\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for the Meta interface definition and related types\nrg \"interface Meta|type Meta\" code/renderers/vue3 -A 5 -B 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 586\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there's a tsconfig file and run TypeScript on this specific file\nfd tsconfig code/renderers/vue3 -type f\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 235\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nfind code/renderers/vue3 -name \"tsconfig*.json\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 98\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Try running TypeScript check on this specific file\ncd code/renderers/vue3 && npm list typescript 2>/dev/null | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 113\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's check the git history for this @ts-expect-error comment\ngit log -p --follow -S \"@ts-expect-error hard\" -- code/renderers/vue3/src/preview.ts | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look at the Meta interface more carefully to understand the type incompatibility\ncat -n code/renderers/vue3/src/public-types.ts | sed -n '1,50p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1888\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Run tsc with the tsconfig to see the actual error\ncd code/renderers/vue3 && npx tsc --noEmit src/preview.ts 2>&1 | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 691\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look at more context around VueMeta - what comes after line 96\ncat -n code/renderers/vue3/src/preview.ts | sed -n '94,150p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1503\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for usages of VueMeta in the codebase\nrg \"VueMeta<\" code/renderers/vue3 -B 2 -A 3\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1412\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there are comments explaining this pattern in git blame or surrounding code\ngit log --oneline code/renderers/vue3/src/preview.ts | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 127\n\n---\n\n\n\n</details>\n\n**Improve the `@ts-expect-error` comment for clarity.**\n\nThe `@ts-expect-error hard` suppression is necessary because `VueMeta` requires two type parameters (`T` for inferred Vue types and `MetaInput` for custom annotations), but the public `Meta` type only accepts a single parameter. This is an intentional design to support the overloaded `story()` methods that need to track both annotation sources separately.\n\nReplace the vague comment \"hard\" with a specific explanation so future maintainers understand why this suppression exists:\n\n```diff\nexport interface VueMeta<T extends VueTypes, MetaInput extends ComponentAnnotations<T>>\n-/** @ts-expect-error hard */\n+/** @ts-expect-error VueMeta requires two type parameters to track both inferred component types (T) and custom annotations (MetaInput), which Meta's single-parameter type doesn't support. */\n  extends Meta<T, MetaInput> {\n```\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nexport interface VueMeta<T extends VueTypes, MetaInput extends ComponentAnnotations<T>>\n/** @ts-expect-error VueMeta requires two type parameters to track both inferred component types (T) and custom annotations (MetaInput), which Meta's single-parameter type doesn't support. */\n  extends Meta<T, MetaInput> {\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/renderers/vue3/src/preview.ts around lines 94-96, Replace the vague\n\"@ts-expect-error hard\" with a clear explanation that the suppression is\nintentional: note that VueMeta<T extends VueTypes, MetaInput extends\nComponentAnnotations<T>> intentionally declares two type parameters while the\npublic Meta type only accepts one, and this mismatch is required to track both\ninferred Vue types and explicit component annotations for the overloaded story()\nmethods; keep the @ts-expect-error but replace \"hard\" with that specific\nrationale so future maintainers understand why the error is suppressed.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 840bc0a to 8c512fa",
+          "file_path": "code/renderers/vue3/src/preview.ts",
+          "line_number": 149,
+          "start_line": 147,
+          "commit_sha": "e7e76a157b14513c1eb6c1df7a70c4b0ad622eb8",
+          "created_at": "2026-01-05T17:45:30Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "high",
+          "label_reasoning": "The `@ts-expect-error hard` comment is vague and doesn't explain why the TypeScript error suppression is necessary, making it harder for future maintainers to understand."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests replacing a vague '@ts-expect-error hard' comment with a specific explanation."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6etWKL",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Update the misleading comment.**\n\nThe comment states there are no assertions, but line 52 contains `expect(MyStory.input.args?.label).toBe('Hello world');`. Update the comment to accurately reflect that the file includes both TypeScript type tests and runtime assertions.\n\n\n\n<details>\n<summary>\ud83d\udd0e Proposed fix</summary>\n\n```diff\n-// this file tests Typescript types that's why there are no assertions\n+// this file primarily tests TypeScript types with some runtime assertions\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n// this file primarily tests TypeScript types with some runtime assertions\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/renderers/web-components/src/csf-factories.test.ts around line 1, The\ntop-of-file comment is misleading: it claims there are no assertions but the\ntest includes a runtime assertion (expect(MyStory.input.args?.label).toBe('Hello\nworld')). Update the comment to accurately state that the file contains both\nTypeScript type-level tests and runtime assertions (e.g., \"This file tests\nTypeScript types and includes runtime assertions such as\nexpect(MyStory.input.args?.label).toBe(...)\"). Ensure the revised comment\nreplaces the existing one at the top of the file.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/renderers/web-components/src/csf-factories.test.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "21fc5f1d251da2f28e3f8a9678ad7f66d276be4a",
+          "created_at": "2026-01-05T20:16:46Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "high",
+          "label_reasoning": "The comment inaccurately states there are no assertions when runtime assertions exist in the file, which is a misleading code description."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a misleading comment and requests updating it to accurately reflect the file's content."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6etWKV",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Explain or resolve the TypeScript error suppression.**\n\nThe `@ts-expect-error hard` comment on line 102 is concerning because it:\n1. Lacks explanation of what error is being suppressed\n2. Uses unclear terminology (\"hard\") without context\n3. May hide legitimate type safety issues\n\nPlease either:\n- Document the specific TypeScript limitation being worked around with a reference to the issue\n- Fix the underlying type incompatibility\n- Provide a clear explanation of why this suppression is necessary\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 840bc0a to 8c512fa",
+          "file_path": "code/renderers/web-components/src/preview.ts",
+          "line_number": 103,
+          "start_line": null,
+          "commit_sha": "e4edd4168c7aaf04173db6af56cf709023c2845e",
+          "created_at": "2026-01-05T20:16:46Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "high",
+          "label_reasoning": "The `@ts-expect-error hard` comment lacks explanation of what error is being suppressed and why, reducing maintainability."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags an unexplained '@ts-expect-error hard' comment and requests documentation, a fix, or a clear explanation."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e0ULg",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check the file structure first\necho \"=== Checking sandbox-templates.ts structure for RsBuild variants ===\"\nrg -n \"vue3.*rsbuild|lit.*rsbuild|react.*rsbuild\" code/lib/cli-storybook/src/sandbox-templates.ts | head -20\n\necho -e \"\\n=== Vue3 RsBuild template details (lines 541-559) ===\"\nsed -n '541,559p' code/lib/cli-storybook/src/sandbox-templates.ts\n\necho -e \"\\n=== React RsBuild template details ===\"\nrg -n \"react-rsbuild/default-ts\" code/lib/cli-storybook/src/sandbox-templates.ts -A 20 | head -30\n\necho -e \"\\n=== Lit RsBuild template details ===\"\nrg -n \"lit-rsbuild/default-ts\" code/lib/cli-storybook/src/sandbox-templates.ts -A 20 | head -30\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 3202\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check for CSF factory implementation/support files\necho \"=== Searching for CSF factory implementation references ===\"\nrg -n \"useCsfFactory\" code/lib/cli-storybook/src/sandbox-templates.ts | wc -l\necho \"Total useCsfFactory occurrences\"\n\necho -e \"\\n=== Check react-rsbuild pattern ===\"\nrg -n \"react-rsbuild\" code/lib/cli-storybook/src/sandbox-templates.ts -B 2 -A 10 | grep -A 10 \"useCsfFactory\"\n\necho -e \"\\n=== Check if vue3-rsbuild has any CSF-related config ===\"\nrg -n \"vue3-rsbuild\" code/lib/cli-storybook/src/sandbox-templates.ts -A 20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2314\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check build tool specific handling in the codebase\necho \"=== Search for rsbuild specific handling or limitations ===\"\nrg -n \"rsbuild.*vue|vue.*rsbuild\" -g '!sandbox-templates.ts' --type ts --type js | head -20\n\necho -e \"\\n=== Check preview.ts or similar files in vue3 templates ===\"\nfd -e ts -e js \"preview\" | xargs rg -l \"vue3\" | head -10\n\necho -e \"\\n=== Look for rsbuild configuration differences ===\"\nfd -e ts -e js -e json | xargs rg -l \"useCsfFactory.*rsbuild|rsbuild.*useCsfFactory\" 2>/dev/null | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1021\n\n---\n\n\n\n</details>\n\n**Add `useCsfFactory: true` to `vue3-rsbuild/default-ts` and `lit-rsbuild/default-ts`.**\n\nThe PR adds CSF factory support to Vue3 and Lit templates (Vite variants), but the RsBuild variants are missing this flag. Since `react-rsbuild/default-ts` already has `useCsfFactory: true` enabled, both `vue3-rsbuild/default-ts` and `lit-rsbuild/default-ts` should also include it for consistency.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/lib/cli-storybook/src/sandbox-templates.ts around lines 523 - 525, Add\nthe missing useCsfFactory flag to the RsBuild TypeScript templates: in the\ntemplate definitions for \"vue3-rsbuild/default-ts\" and \"lit-rsbuild/default-ts\"\nadd modifications: { useCsfFactory: true } (same pattern as in\n\"react-rsbuild/default-ts\") so the CSF factory support is enabled consistently\nacross RsBuild variants; locate the template objects by their names and update\ntheir modifications property to include useCsfFactory: true.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/lib/cli-storybook/src/sandbox-templates.ts",
+          "line_number": 525,
+          "start_line": 523,
+          "commit_sha": "e7e76a157b14513c1eb6c1df7a70c4b0ad622eb8",
+          "created_at": "2026-01-06T10:50:10Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The `useCsfFactory: true` flag is missing from RsBuild variants (`vue3-rsbuild/default-ts` and `lit-rsbuild/default-ts`) while present in Vite variants, causing inconsistent behavior across templates."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6fVzDK",
+          "author": "kasperpeulen",
+          "body": "Added `useCsfFactory: true` to `vue3-rsbuild/default-ts` and `lit-rsbuild/default-ts` to match their Vite counterparts. The `html-rsbuild/default-ts` template is left unchanged since the Vite HTML templates also don't use CSF factories.\n\nNote: The hardcoded Vue3 preview path in `sandbox-parts.ts` is intentionally unchanged - it only applies when `useCsfFactory` is true, and the Vue3 sandboxes that use CSF factories all have the `src/stories` structure.",
+          "file_path": "code/lib/cli-storybook/src/sandbox-templates.ts",
+          "line_number": 525,
+          "start_line": 523,
+          "commit_sha": "e7e76a157b14513c1eb6c1df7a70c4b0ad622eb8",
+          "created_at": "2026-01-08T17:44:31Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding 'useCsfFactory: true' to vue3-rsbuild and lit-rsbuild templates for consistency with other templates."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e0ULo",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# First, let's look at the specific sections mentioned in the review\necho \"=== Checking lit-rsbuild/default-ts around lines 706-718 ===\"\nsed -n '700,720p' code/lib/cli-storybook/src/sandbox-templates.ts\n\necho -e \"\\n=== Checking lit-vite-ts around lines 685-702 ===\"\nsed -n '680,705p' code/lib/cli-storybook/src/sandbox-templates.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1984\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check for Vue3 RsBuild pattern to verify if similar exclusion exists\necho \"=== Searching for Vue3 template patterns ===\"\nrg -n \"vue3.*rsbuild|rsbuild.*vue3\" code/lib/cli-storybook/src/sandbox-templates.ts -i -A2 -B2 | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 738\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check if there's any RsBuild-specific exclusion or condition\necho \"=== Checking for RsBuild conditional logic ===\"\nrg -n \"rsbuild\" code/lib/cli-storybook/src/sandbox-templates.ts -i -B3 -A3 | grep -E \"(skipMocking|useCsfFactory|rsbuild)\" -A2 -B2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2593\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check how skipMocking and useCsfFactory are used in the codebase\necho \"=== Checking skipMocking usage context ===\"\nrg -n \"skipMocking\" code/lib/cli-storybook/src/sandbox-templates.ts -B2 -A2 | head -40\n\necho -e \"\\n=== Checking useCsfFactory usage context ===\"\nrg -n \"useCsfFactory\" code/lib/cli-storybook/src/sandbox-templates.ts -B2 -A2 | head -40\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2241\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for documentation or comments about RsBuild CSF factory support\necho \"=== Checking for RsBuild/CSF factory related comments or issues ===\"\nrg -n \"rsbuild.*csf|csf.*rsbuild|skipMocking.*useCsf|useCsf.*skipMocking\" code/lib/cli-storybook/src/sandbox-templates.ts -i\n\necho -e \"\\n=== Checking for RsBuild builder capabilities ===\"\nfd -t f \"rsbuild\" code/builders --type f 2>/dev/null | head -10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 183\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check if there's a storybook-builder-rsbuild package and what it supports\necho \"=== Looking for RsBuild builder references ===\"\nrg -l \"storybook.*rsbuild|rsbuild.*storybook\" --type ts --type json code/ 2>/dev/null | head -10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 258\n\n---\n\n\ud83c\udf10 Web query:\n\n`storybook RsBuild builder CSF factory support`\n\n\ud83d\udca1 Result:\n\nShort answer: Yes.\n\n- Storybook's core added CSF factories support (notably in the 8.6 changelog). [2]\n- Storybook Rsbuild (the Rsbuild/Rspack builder integration) is a supported Storybook builder and follows Storybook's CSF features, so you can use CSF factories with the Rsbuild builder. See the Storybook Rsbuild docs and builder integration notes. [1][3]\n\nSources:\n1. Storybook Rsbuild docs (integration/configuration). [1]\n2. Storybook changelog / release notes (CSF: Add support for CSF factories). [2]\n3. Storybook Builders docs (notes about Rspack / Rsbuild support). [3]\n\n---\n\n\n\n</details>\n\n**Add `useCsfFactory: true` to `lit-rsbuild/default-ts` (and other RsBuild templates).**\n\nThe RsBuild builder supports CSF factories as a core Storybook feature. The Vite-based Lit templates correctly include `useCsfFactory: true`, but `lit-rsbuild/default-ts` omits it. This same pattern affects all RsBuild templates (react-rsbuild, vue3-rsbuild, html-rsbuild). The `skipMocking` flag is independent and should not prevent CSF factory adoption.\n\nConsider applying `useCsfFactory: true` to all RsBuild templates to align with Vite variants and ensure consistent CSF support across builders.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/lib/cli-storybook/src/sandbox-templates.ts at line 641, Add\nuseCsfFactory: true to the RsBuild template definitions missing it (e.g., the\nlit-rsbuild/default-ts template and the other RsBuild templates such as\nreact-rsbuild, vue3-rsbuild, html-rsbuild) so they match the Vite variants;\nupdate each template object in sandbox-templates.ts to include the property\nuseCsfFactory: true alongside existing flags (do not remove or change\nskipMocking), ensuring the template objects that currently omit useCsfFactory\ngain this boolean property.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/lib/cli-storybook/src/sandbox-templates.ts",
+          "line_number": 641,
+          "start_line": null,
+          "commit_sha": "e7e76a157b14513c1eb6c1df7a70c4b0ad622eb8",
+          "created_at": "2026-01-06T10:50:10Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Missing `useCsfFactory: true` flag in RsBuild templates (`lit-rsbuild/default-ts` and others), creating inconsistency with equivalent Vite variants."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6fVzHf",
+          "author": "kasperpeulen",
+          "body": "Fixed - added `useCsfFactory: true` to `lit-rsbuild/default-ts` to match the Vite variant.",
+          "file_path": "code/lib/cli-storybook/src/sandbox-templates.ts",
+          "line_number": 641,
+          "start_line": null,
+          "commit_sha": "e7e76a157b14513c1eb6c1df7a70c4b0ad622eb8",
+          "created_at": "2026-01-08T17:44:37Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Requests adding 'useCsfFactory: true' to RsBuild templates that are missing it to align with Vite variants."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e2tub",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Fix duplicate test name and validate signal support.**\n\nThe tests correctly validate components without props and modern Angular signal-based components. However, there's a duplicate test name.\n\n\n\n<details>\n<summary>\ud83d\udd27 Fix duplicate test name</summary>\n\nLines 272 and 296 have the same test name. Rename the second test to reflect its purpose:\n\n```diff\n-it('Components without Props can be used', () => {\n+it('Components with Angular signals can be used', () => {\n   @Component({\n     standalone: false,\n```\n\n</details>\n\nThe SignalButtonComponent test (lines 296-347) provides valuable validation that the CSF factories work with modern Angular signal APIs including `input()`, `input.required<string>()`, and `output()`.\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/frameworks/angular/src/client/csf-factories.test.ts around lines 272 -\n347, Two tests share the same title \"Components without Props can be used\",\ncausing a duplicate test name; rename the second test (the one that declares\nSignalButtonComponent and calls meta.story({...})) to a unique, descriptive name\n(e.g., \"Signal-based components can be used\" or \"Components with signals can be\nused\") so it no longer conflicts with the SimpleComponent test, and ensure the\nnew name clearly reflects that it validates signal APIs (input, input.required,\noutput) for SignalButtonComponent and its meta/story usage.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 840bc0a to 8c512fa",
+          "file_path": "code/frameworks/angular/src/client/csf-factories.test.ts",
+          "line_number": 371,
+          "start_line": 296,
+          "commit_sha": "e7e76a157b14513c1eb6c1df7a70c4b0ad622eb8",
+          "created_at": "2026-01-06T14:37:57Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "Two test cases share the same name 'Components without Props can be used', which is a logic/structural error in the test suite that can cause confusion and incorrect test reporting."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a duplicate test name and requests renaming the second test to a unique, descriptive name."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6e4nJw",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# First, let's examine the file structure and content around lines 865-867\ncd scripts/tasks && wc -l sandbox-parts.ts && echo \"---\" && sed -n '850,880p' sandbox-parts.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1236\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check the full context of the extendPreview function to understand the pattern\nsed -n '856,905p' scripts/tasks/sandbox-parts.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1860\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for Angular and Web Components preview file handling\nrg -n \"preview\\.(js|ts)\" scripts/tasks/sandbox-parts.ts | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 297\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check setupVitest around line 510 for similar Vue3 patterns\nsed -n '500,520p' scripts/tasks/sandbox-parts.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 891\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Look for pathExists usage pattern in the file to understand how it's used\nrg -n \"pathExists\" scripts/tasks/sandbox-parts.ts | head -10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 683\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for Angular and Web Components handling in the extendPreview function\ngrep -n \"renderer ===\" scripts/tasks/sandbox-parts.ts | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 198\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check if there are any other renderer-specific imports besides Vue3\nsed -n '856,905p' scripts/tasks/sandbox-parts.ts | grep -E \"(angular|web-components|@storybook)\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 124\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check template.modifications?.useCsfFactory context - is it only for Vue3 or all renderers?\nrg -B5 -A15 \"useCsfFactory\" scripts/tasks/sandbox-parts.ts | head -50\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1452\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check for CSF factory template definitions to understand structure\nrg -n \"useCsfFactory\" . --type ts -B3 -A3 | head -60\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 4740\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Search for \"renderers/vue3\" directory structure in templates\nfd -t d \"renderers\" . --path \"*/template*\" 2>/dev/null\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check if vue3 preview file actually exists in expected location\nfind . -type f -path \"*/renderers/vue3/preview.*\" 2>/dev/null | head -10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\n\n</details>\n\n**Hardcoded Vue3 preview path contradicts conditional logic for storiesDir.**\n\nLines 861\u2013863 check whether `src/stories` exists to determine the correct path for components, but line 866 hardcodes `'../src/stories/renderers/vue3/preview.js'` without the same check. If `src/stories` doesn't exist in a sandbox configuration, the Vue3 preview import path will be incorrect and cause a runtime failure.\n\nAlign the Vue3 preview import with the conditional storiesDir pattern:\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n    const storiesDir = (await pathExists(join(sandboxDir, 'src/stories')))\n      ? '../src/stories/components'\n      : '../stories/components';\n    previewConfig.setImport(null, storiesDir);\n+   const vuePreviewPath = (await pathExists(join(sandboxDir, 'src/stories')))\n+     ? '../src/stories/renderers/vue3/preview.js'\n+     : '../stories/renderers/vue3/preview.js';\n    if (template.expected.renderer === '@storybook/vue3') {\n-     previewConfig.setImport(null, '../src/stories/renderers/vue3/preview.js');\n+     previewConfig.setImport(null, vuePreviewPath);\n    }\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    const storiesDir = (await pathExists(join(sandboxDir, 'src/stories')))\n      ? '../src/stories/components'\n      : '../stories/components';\n    previewConfig.setImport(null, storiesDir);\n    const vuePreviewPath = (await pathExists(join(sandboxDir, 'src/stories')))\n      ? '../src/stories/renderers/vue3/preview.js'\n      : '../stories/renderers/vue3/preview.js';\n    if (template.expected.renderer === '@storybook/vue3') {\n      previewConfig.setImport(null, vuePreviewPath);\n    }\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @scripts/tasks/sandbox-parts.ts around lines 865 - 867, The Vue3 preview\nimport is hardcoded in the template.expected.renderer branch; update the\npreviewConfig.setImport call so it uses the same storiesDir conditional used\nearlier (the check that determines whether to use '../src/stories/...' vs\n'../stories/...') instead of always using\n'../src/stories/renderers/vue3/preview.js'; locate the\ntemplate.expected.renderer === '@storybook/vue3' block and compute the preview\npath the same way as the existing stories/components path logic, then pass that\ncomputed path into previewConfig.setImport.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "scripts/tasks/sandbox-parts.ts",
+          "line_number": 875,
+          "start_line": 873,
+          "commit_sha": "e7e76a157b14513c1eb6c1df7a70c4b0ad622eb8",
+          "created_at": "2026-01-06T17:10:48Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Logic Error",
+          "label_confidence": "high",
+          "label_reasoning": "The Vue3 preview import path is hardcoded to `../src/stories/...` without checking if `src/stories` exists, while the storiesDir above it correctly uses a conditional check. This inconsistency can cause runtime failure."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6fVzLw",
+          "author": "kasperpeulen",
+          "body": "The hardcoded path is intentionally unchanged. It only applies when `useCsfFactory` is true, and all Vue3 sandboxes that use CSF factories have the `src/stories` structure. The conditional check for `storiesDir` handles the components path which varies, but the Vue3 preview path is consistent across CSF factory templates.",
+          "file_path": "scripts/tasks/sandbox-parts.ts",
+          "line_number": 875,
+          "start_line": 873,
+          "commit_sha": "e7e76a157b14513c1eb6c1df7a70c4b0ad622eb8",
+          "created_at": "2026-01-08T17:44:44Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a hardcoded path that doesn't account for the conditional storiesDir logic, potentially causing runtime failures, and suggests a fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6fVWML",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Clarify the comment about assertions.**\n\nThe comment states \"there are no assertions,\" but line 44 contains `expect(MyStory.input.args?.label).toBe('Hello world')`. This is a runtime assertion validating the test behavior.\n\n\n\n<details>\n<summary>\ud83d\udcdd Suggested clarification</summary>\n\n```diff\n-// this file tests Typescript types that's why there are no assertions\n+// this file primarily tests Typescript types, with minimal runtime assertions\n```\n\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n// this file primarily tests Typescript types, with minimal runtime assertions\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/frameworks/angular/src/client/csf-factories.test.ts at line 1, Update\nthe top-of-file comment to accurately state that while the file primarily tests\nTypeScript types, it contains a runtime assertion\n(expect(MyStory.input.args?.label).toBe('Hello world')) that validates behavior;\nmodify the comment in csf-factories.test.ts to mention the single runtime\nassertion or remove/relocate that expect if you truly intend no runtime checks.\nInclude the symbol MyStory and the expect expression in the comment so reviewers\ncan find the assertion quickly.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:puma -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/frameworks/angular/src/client/csf-factories.test.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "21fc5f1d251da2f28e3f8a9678ad7f66d276be4a",
+          "created_at": "2026-01-08T17:07:06Z",
+          "is_outdated": true,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "high",
+          "label_reasoning": "The comment falsely states there are no assertions while a runtime `expect` assertion exists in the file, making the comment misleading."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags an inaccurate comment claiming no assertions exist when one does, and requests updating the comment."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6f01ji",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncd code/frameworks/angular && find . -name \"preview.ts\" -type f\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 88\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncd code/frameworks && ls -la\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1032\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, let's examine the Angular preview file around lines 150-153\nsed -n '140,160p' code/frameworks/angular/src/client/preview.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 930\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Let's also check Vue3, Web Components, and React for comparison\necho \"=== Vue3 ===\" && sed -n '140,160p' code/frameworks/vue3/src/client/preview.ts\necho \"=== Web Components ===\" && sed -n '140,160p' code/frameworks/web-components/src/client/preview.ts\necho \"=== React ===\" && sed -n '140,160p' code/frameworks/react/src/client/preview.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 400\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Run TypeScript compilation on the Angular preview file\ncd code/frameworks/angular && npx tsc --noEmit src/client/preview.ts 2>&1 | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 691\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nfind code/frameworks -name \"preview.ts\" -type f\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 246\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Read the Angular preview.ts file to see the full AngularMeta interface context\ncat -n code/frameworks/angular/src/client/preview.ts | sed -n '145,160p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 888\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there are any related interfaces with @ts-expect-error in Angular file\ngrep -n \"@ts-expect-error\" code/frameworks/angular/src/client/preview.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for @ts-expect-error followed by Meta extends\nrg \"@ts-expect-error\" -A 5 -B 2 \"code/frameworks\" | grep -A 5 -B 2 \"extends Meta\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find all files containing both \"extends Meta\" and \"@ts-expect-error\"\nrg \"extends Meta\" code/frameworks --type ts --type tsx -l\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for FrameworkMeta or similar interfaces across frameworks\nrg \"interface.*Meta.*extends Meta\" code/frameworks --type ts --type tsx -B 2\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 92\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the structure - let's look at files that might contain these Meta definitions\nfind code/frameworks -name \"*.ts\" -o -name \"*.tsx\" | xargs grep -l \"extends Meta<T\" 2>/dev/null\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 110\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\nfind code/renderers -name \"preview.ts\" -type f\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 262\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for Meta extends patterns more broadly\nfind code -name \"*.ts\" -type f | xargs grep -l \"extends Meta<T\" 2>/dev/null | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 190\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for @ts-expect-error near Meta interfaces\nrg \"ts-expect-error\" code/ -B 3 -A 3 | grep -A 5 -B 5 \"extends Meta\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2260\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check Vue3 preview.ts for the VueMeta interface and @ts-expect-error line number\ngrep -n \"export interface VueMeta\\|@ts-expect-error\" code/renderers/vue3/src/preview.ts | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 250\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check Web Components preview.ts for the WebComponentsMeta interface\ngrep -n \"export interface WebComponentsMeta\\|@ts-expect-error\" code/renderers/web-components/src/preview.ts | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 208\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check React preview.tsx for the ReactMeta interface\ngrep -n \"export interface ReactMeta\\|@ts-expect-error\" code/renderers/react/src/preview.tsx | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 447\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Now get the exact context around Angular's AngularMeta to confirm it lacks @ts-expect-error\nsed -n '148,156p' code/frameworks/angular/src/client/preview.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 301\n\n---\n\n\n\n</details>\n\n**Add `@ts-expect-error` comment before `AngularMeta` extends clause.**\n\nThe `AngularMeta` interface is missing the `@ts-expect-error` comment that's present in React (line 148), Vue3 (line 148), and Web Components (line 157) renderers. All frameworks have the same type constraint pattern and require this suppression with the explanation: \"requires two type parameters, but Meta's constraints differ\".\n\nAdd the comment before the `extends Meta<T, MetaInput>` line:\n\n<details>\n<summary>Suggested change</summary>\n\n```diff\nexport interface AngularMeta<\n  T extends AngularRenderer,\n  MetaInput extends ComponentAnnotations<T>,\n+  // @ts-expect-error AngularMeta requires two type parameters, but Meta's constraints differ\n> extends Meta<T, MetaInput> {\n```\n\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nexport interface AngularMeta<\n  T extends AngularRenderer,\n  MetaInput extends ComponentAnnotations<T>,\n  // @ts-expect-error AngularMeta requires two type parameters, but Meta's constraints differ\n> extends Meta<T, MetaInput> {\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nIn @code/frameworks/angular/src/client/preview.ts around lines 150 - 153, The\nAngularMeta interface declaration is missing the same TypeScript suppression\nused by other renderers; add a single-line comment \"// @ts-expect-error requires\ntwo type parameters, but Meta's constraints differ\" immediately before the\n\"extends Meta<T, MetaInput>\" clause in the AngularMeta interface so the compiler\nsuppression and explanation match React, Vue3, and Web Components renderers.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/frameworks/angular/src/client/preview.ts",
+          "line_number": 153,
+          "start_line": 150,
+          "commit_sha": "e7e76a157b14513c1eb6c1df7a70c4b0ad622eb8",
+          "created_at": "2026-01-12T09:19:40Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The `AngularMeta` interface is missing the `@ts-expect-error` suppression that all other renderer Meta interfaces (React, Vue3, Web Components) require for the same two-parameter type pattern, causing a deviation from the intended consistent behavior."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a missing '@ts-expect-error' comment in AngularMeta that is present in all other renderers and requests adding it."
+    }
+  ],
+  "review_thread_count": 18,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6fUUoz",
+            "author": "kasperpeulen",
+            "body": "Explain, when this can be used, those addon args.",
+            "file_path": "code/core/src/csf/story.ts",
+            "line_number": 189,
+            "start_line": null,
+            "commit_sha": "e7e76a157b14513c1eb6c1df7a70c4b0ad622eb8",
+            "created_at": "2026-01-08T15:51:35Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6fVT0n",
+            "author": "kasperpeulen",
+            "body": "Fixed in 840bc0a544a - Added JSDoc explaining how addons use `definePreviewAddon<AddonTypes>()` to extend the type system with additional args, parameters, and globals.",
+            "file_path": "code/core/src/csf/story.ts",
+            "line_number": 189,
+            "start_line": null,
+            "commit_sha": "e7e76a157b14513c1eb6c1df7a70c4b0ad622eb8",
+            "created_at": "2026-01-08T17:04:09Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6fUZO7",
+            "author": "kasperpeulen",
+            "body": "add test case for when disabledChangeToggle is required",
+            "file_path": "code/frameworks/angular/src/client/csf-factories.test.ts",
+            "line_number": 227,
+            "start_line": null,
+            "commit_sha": "e7e76a157b14513c1eb6c1df7a70c4b0ad622eb8",
+            "created_at": "2026-01-08T15:56:38Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6fVT9d",
+            "author": "kasperpeulen",
+            "body": "Fixed in 5b03e2ac91b - Added test case where `disabledChangeToggle` is required (not optional). Uses `@ts-expect-error` to verify type error when arg is missing.",
+            "file_path": "code/frameworks/angular/src/client/csf-factories.test.ts",
+            "line_number": 227,
+            "start_line": null,
+            "commit_sha": "e7e76a157b14513c1eb6c1df7a70c4b0ad622eb8",
+            "created_at": "2026-01-08T17:04:19Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6fUZsU",
+            "author": "kasperpeulen",
+            "body": "change test title",
+            "file_path": "code/frameworks/angular/src/client/csf-factories.test.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "d2df3decfbcca11ea819b65a3b45a7d45fb33c1e",
+            "created_at": "2026-01-08T15:57:07Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6fVUG7",
+            "author": "kasperpeulen",
+            "body": "Fixed in 2e398166cc5 - Renamed to 'Signal components can be used' to avoid duplicate test title.",
+            "file_path": "code/frameworks/angular/src/client/csf-factories.test.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "d2df3decfbcca11ea819b65a3b45a7d45fb33c1e",
+            "created_at": "2026-01-08T17:04:29Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6fUbjy",
+            "author": "kasperpeulen",
+            "body": "add some more coments to all the preview.ts files",
+            "file_path": "code/frameworks/angular/src/client/preview.ts",
+            "line_number": 81,
+            "start_line": null,
+            "commit_sha": "e7e76a157b14513c1eb6c1df7a70c4b0ad622eb8",
+            "created_at": "2026-01-08T15:59:06Z",
+            "is_outdated": false
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6fVUSK",
+            "author": "kasperpeulen",
+            "body": "Fixed in 4b2f9a3f29e and 8c512fa39d2 - Added comprehensive JSDoc documentation to all preview.ts files (Angular, Vue3, Web Components, React) including:\n- `__definePreview` function with usage examples\n- Preview interface with `type()` method docs\n- Meta interface explaining story creation\n- Story interface docs\n- All three `meta.story()` overloads documented",
+            "file_path": "code/frameworks/angular/src/client/preview.ts",
+            "line_number": 81,
+            "start_line": null,
+            "commit_sha": "e7e76a157b14513c1eb6c1df7a70c4b0ad622eb8",
+            "created_at": "2026-01-08T17:04:42Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6fUe49",
+            "author": "kasperpeulen",
+            "body": "comments",
+            "file_path": "code/frameworks/angular/src/client/preview.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "d2df3decfbcca11ea819b65a3b45a7d45fb33c1e",
+            "created_at": "2026-01-08T16:02:36Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6fVUYF",
+            "author": "kasperpeulen",
+            "body": "Fixed in bc7d9e16d06 - Added detailed comment explaining the zero-args overload conditional type trick (`[never]` makes overload unmatchable when args are still required).",
+            "file_path": "code/frameworks/angular/src/client/preview.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "d2df3decfbcca11ea819b65a3b45a7d45fb33c1e",
+            "created_at": "2026-01-08T17:04:50Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6fUhxm",
+            "author": "kasperpeulen",
+            "body": "cleanup",
+            "file_path": "code/renderers/react/src/preview.tsx",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "d2df3decfbcca11ea819b65a3b45a7d45fb33c1e",
+            "created_at": "2026-01-08T16:05:19Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAzqfmc6fVUfC",
+            "author": "kasperpeulen",
+            "body": "Fixed in 641cc12409d - Cleaned up by extracting `InferArgs` and `InferReactTypes` helper types (matching pattern used in other frameworks), moved `DecoratorsArgs` to top, and simplified the complex inline return type.",
+            "file_path": "code/renderers/react/src/preview.tsx",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "d2df3decfbcca11ea819b65a3b45a7d45fb33c1e",
+            "created_at": "2026-01-08T17:04:59Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 18,
+    "stage1_kept": 12,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 6,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

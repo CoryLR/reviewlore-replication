@@ -1,0 +1,166 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/config.type.ts",
+      "line_number": 1068,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`packages/mermaid/src/config.type.ts` is auto-generated from `config.schema.yaml` and must NOT be manually modified. The `layoutAlgorithm?: string` field was added here directly instead of being generated. Adding it to the YAML schema is the correct path; the TypeScript file must then be regenerated via the build script. Manual edits risk being silently overwritten the next time the generation script runs.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/preprocess.ts",
+      "line_number": 31,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This silently changes the default layout for every mindmap that has no `layout` config key. The PR description says cose-bilkent is the default, but this sets `tidy-tree` as the primary choice for all existing diagrams. More critically, in the `tiny` build `includeLargeFeatures` is false, so neither tidy-tree (never built-in) nor cose-bilkent (gated on `includeLargeFeatures`) will be registered. `getRegisteredLayoutAlgorithm` throws when both the requested layout AND its fallback are unregistered \u2014 meaning all mindmaps will break in the tiny bundle after this change. The fallback in the renderer (`fallback: 'cose-bilkent'`) only helps when cose-bilkent IS registered.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid-layout-elk/src/render.ts",
+      "line_number": 730,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The new `calcIntersect`-based edge attachment only fires if a node has that property set. Of all the shapes in the project, only `circle`, `drawRect` (rect), `question` (diamond), `cloud`, and `bang` have been updated to provide `calcIntersect`. Every other shape \u2014 `rounded`, `hexagon`, `kanbanItem`, `erBox`, `classBox`, `triangle`, stadium, and dozens more \u2014 does not. For those shapes the edge will silently connect without any boundary adjustment, which is exactly the behaviour this PR is supposed to fix. This is a regression from the old `cutPathAtIntersect` code path that applied to all shapes.",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapRenderer.ts",
+      "line_number": 17,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`_drawNodes` is defined with an underscore prefix and uses `any` throughout, but it is never called anywhere in the new `draw` function. Similarly `_updateNodeDimensions` (line ~42) is defined but never invoked. Both are dead code left over from the refactoring. The `_` prefix is not a TypeScript convention for 'unused'; the linter/compiler will not catch this. These functions should be deleted.",
+      "index": 3
+    },
+    {
+      "file_path": "instructions.md",
+      "line_number": 1,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "A one-line scratch file committed to the repository root. Its content (`The instructions for Tidy-Tree layout can be found in [Tidy Tree Configuration](/config/tidy-tree)`) already exists inside the proper documentation tree. Root-level scratch or work-in-progress files should not be committed; this will appear in every consumer's checkout and in GitHub's file listing.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/package.json",
+      "line_number": 38,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `mermaid` peer dependency uses a hardcoded semver range `\"^11.0.2\"` instead of the `workspace:^` protocol required by project convention. From the project rules: *\"In external diagram/plugin packages, declare `mermaid` as a `peerDependency` using the `workspace:^` protocol so that `pnpm publish` automatically resolves to the correct released version.\"* Using a hardcoded version will cause consumers to receive a stale or mismatched version warning and breaks the monorepo release pipeline.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/mindmap/mindmapDb.ts",
+      "line_number": 371,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`diagramId: 'mindmap-' + Date.now()` \u2014 `Date.now()` is non-monotonic and produces duplicate IDs when called within the same millisecond. More importantly, this value is immediately overwritten in `mindmapRenderer.ts` with `data4Layout.diagramId = id`, so the `Date.now()` result is never read. This combination means `getData()` has a dead side-effect: it performs a system clock read that has no observable impact. Either use a deterministic counter here or rely entirely on the assignment in the renderer.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/types.ts",
+      "line_number": 51,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`isGroup` was changed from a required `boolean` to an optional `boolean?`. The project rule is: *\"only fields that are truly nullable or omittable at every call site should carry `?`\"*. A node either is or isn't a group \u2014 leaving this unset produces `undefined` which is falsy but semantically different from `false`. All layout algorithms and renderers that branch on `if (node.isGroup)` will still work correctly, but the compiler no longer enforces that callers set this field, hiding potential bugs at construction sites.",
+      "index": 7
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layouts.ts",
+      "line_number": 3,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`const loader = async () => await import(\\`./render.js\\`)` \u2014 using a template literal for a static, constant path prevents bundlers (Rollup, Vite, esbuild) from performing static analysis and tree-shaking on the import. This can break code-splitting and lazy-loading optimisations. Use a regular string literal: `import('./render.js')`.",
+      "index": 8
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/render.ts",
+      "line_number": 73,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`await Promise.all(data4Layout.nodes.map(async (node) => { ... }))` runs all `insertNode` DOM operations concurrently. Node shapes that depend on shared mutable DOM state (e.g. text measurement against the document body, or `foreignObject` measurement in the shadow DOM) can produce stale or incorrect bounding boxes when computed in parallel. The ELK renderer uses a sequential loop for insertion for this reason. Use `for...of` with sequential `await` here to match that established pattern.",
+      "index": 9
+    },
+    {
+      "file_path": "packages/mermaid-layout-elk/src/render.ts",
+      "line_number": 596,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Multiple debug lines with the `APA01` development prefix have been left in: `log.debug('APA01 processing edges, count:' ...)`, `log.debug('APA01 before')`, `log.debug('APA01 elkGraph structure:', JSON.stringify(elkGraph, null, 2))`, etc. Per the project rule, `JSON.stringify`-ing the full graph on every render is both noisy and potentially expensive. Development-prefix debug statements should be removed or reduced to a single, minimal trace before merging.",
+      "index": 10
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/edges.js",
+      "line_number": 437,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`// lineData = fixCorners(lineData);` \u2014 commented-out code should not be committed. If `fixCorners` is intentionally replaced by `adjustForArrowHeads`, delete the old call rather than leaving it as a comment. Git history preserves the prior version.",
+      "index": 11
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layout.test.ts",
+      "line_number": 224,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The test `'should handle empty layout data gracefully'` and the test at line ~233 `'should throw error for missing nodes'` are functionally identical: both spread `mockLayoutData` with `nodes: []` and assert the same error message. One of them should be removed, or they should be differentiated to cover distinct scenarios (e.g. `nodes: null` vs `nodes: []`).",
+      "index": 12
+    },
+    {
+      "file_path": "packages/mermaid-layout-tidy-tree/src/layout.ts",
+      "line_number": 54,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`let intersectionShift = 50;` is declared and then unconditionally overwritten two lines later with `intersectionShift = 30;`. The initial value of 50 is never observed. Either remove the declaration and initialise directly to 30, or document why 50 is the starting value and 30 is the override.",
+      "index": 13
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/question.ts",
+      "line_number": 78,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`// @ts-ignore TODO fix this (KNSV)` \u2014 the project convention is to use `// @ts-expect-error: <reason>` instead of `@ts-ignore`. `@ts-ignore` suppresses the error silently even if it disappears, while `@ts-expect-error` will itself error when the underlying issue is fixed, making it self-documenting. Please change to `@ts-expect-error` with a description of the root cause.",
+      "index": 14
+    },
+    {
+      "file_path": "packages/mermaid-layout-elk/src/render.d.ts",
+      "line_number": 1,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Manually authored `.d.ts` declaration files (`render.d.ts`, `find-common-ancestor.d.ts`) were added alongside the TypeScript source files. These should be emitted by the TypeScript compiler from the source, not hand-written. Hand-written declarations can silently drift from the actual implementation. If the build pipeline doesn't emit declarations for this package, the correct fix is to configure `\"declaration\": true` in `tsconfig.json` and re-run the build, not to write the types by hand.",
+      "index": 15
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "**Mindmap default layout is inconsistent across the codebase.** Three sources now disagree on what the default layout is: (1) `preprocess.ts` injects `layout: 'tidy-tree'` for diagrams without an explicit layout key; (2) `config.schema.yaml` declares `layoutAlgorithm` defaulting to `'cose-bilkent'`; (3) the renderer's `getRegisteredLayoutAlgorithm` call uses `fallback: 'cose-bilkent'`. The PR description also states cose-bilkent is the default. There needs to be a single source of truth. The `preprocess.ts` injection forces tidy-tree as the primary algorithm for all existing mindmaps \u2014 silently changing the appearance of diagrams that have been rendering fine with cose-bilkent. This should either be reverted (keeping cose-bilkent as the default and letting users opt in to tidy-tree explicitly) or documented prominently as a breaking visual change.",
+      "index": 16
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "**The `createGraph.ts` file appears to be unused dead code.** The new file `packages/mermaid/src/rendering-util/createGraph.ts` exports `createGraphWithElements`, but no file in the diff imports or calls it. If this is preparatory work for a follow-up PR, it should not be merged in this PR. The project rule is clear: don't commit work-in-progress code that is not yet wired up.",
+      "index": 17
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**`cypress/platform/knsv2.html` has grown into a development scratch file.** The diff adds 5+ unrelated flowchart examples (alongside mindmap examples), replaces a previously committed flowchart test with mindmap content, and all new `<pre>` elements share the same `id=\"diagram4\"` (duplicate IDs are invalid HTML). The file's original purpose was demonstrating specific rendering scenarios; it should not accumulate ad-hoc development experiments. New demo scenarios should go into dedicated files under `cypress/platform/` with unique IDs and descriptive headings.",
+      "index": 18
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**The tidy-tree `PositionedEdge` type is missing the `points` field.** `calculateEdgePositions` in `layout.ts` populates a `points` array on each edge and the renderer consumes `positionedEdge.points`, but the `PositionedEdge` interface in `types.ts` does not declare a `points` field \u2014 it only works because of the `[key: string]: unknown` index signature. The field should be explicitly typed (e.g. `points: { x: number; y: number }[]`) so TypeScript enforces it and consumers have autocomplete.",
+      "index": 19
+    },
+    {
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "**Inconsistent YAML frontmatter indentation in `cypress/platform/mindmap-layouts.html`.** Some `<pre>` blocks begin their `---` marker at column 0 with a leading space (`\\n ---\\n`) while others use deep indentation matching the surrounding HTML. Inconsistent leading whitespace inside `<pre>` elements is sent verbatim to the mermaid parser and may cause front-matter parse failures for some diagrams while others work. Normalise all frontmatter blocks to start at column 0 inside the `<pre>` tag, as the mermaid parser trims leading whitespace line-by-line.",
+      "index": 20
+    }
+  ],
+  "cost_usd": 2.1114848,
+  "duration_seconds": 316.57045817375183
+}

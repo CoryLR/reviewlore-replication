@@ -1,0 +1,108 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/index.ts",
+      "line_number": 47,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The function silently returns `undefined` \u2014 no output, no error \u2014 when the framework is not `@storybook/react-vite`. A user on Angular, Vue, Svelte, or any other supported framework will run `storybook ai init`, see a blank terminal, and have no idea why nothing happened. At minimum this should log an informative error (e.g., `'This command currently only supports @storybook/react-vite projects.'`). Ideally the guard should be removed entirely: the instructions in `prompt.ts` are largely renderer-agnostic and would be useful for other frameworks too.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/bin/run.ts",
+      "line_number": 126,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`logger.log(`Detecting agent presence: ${detectAgent().name}`)` runs unconditionally on every `storybook init` invocation. Users who are not running via an AI agent will see output like `Detecting agent presence: Unknown` every time they init. This is debug/development code that was clearly not intended for production. It should either be removed or moved inside the `if (isAgent)` block.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/commands/UserPreferencesCommand.ts",
+      "line_number": 186,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`promptAiSetup` returns `true` when `skipPrompt` is `true`. `skipPrompt` is set to `true` whenever `--yes` is passed or the terminal is non-interactive. This means `storybook init --yes` \u2014 the standard flag used in CI/CD pipelines and automation scripts \u2014 will silently add `@storybook/addon-mcp` to every project without any user consent. The default for a skipped opt-in prompt should be `false`, not `true`:\n```ts\nif (skipPrompt) {\n  return false;\n}\n```",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/initiate.ts",
+      "line_number": 118,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "`await import('../../cli-storybook/src/ai')` crosses a package boundary via a relative path into another package's source directory. This bypasses the published package interface, will silently break if `cli-storybook`'s internal file structure is reorganized, and makes the build and test dependency graph harder to reason about. `aiInit` should be exposed through `cli-storybook`'s public entry point and imported by package name (e.g., `await import('@storybook/cli-storybook')` or the appropriate workspace package identifier).",
+      "index": 3
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/bin/run.ts",
+      "line_number": 12,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`std-env` is imported directly here but is not listed as a dependency in `create-storybook/package.json` \u2014 it only has `semver` and the `storybook` workspace package as runtime dependencies. This import relies on `std-env` being transitively hoisted through the workspace, which is fragile and can fail with strict package managers (pnpm, Yarn PnP). `std-env` should be added to `create-storybook`'s direct `dependencies`.",
+      "index": 4
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/bin/run.ts",
+      "line_number": 12,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `std-env` import (an external package) is placed after the relative local imports (`'../generators/types'`, `''../initiate'`), breaking conventional import grouping (external packages before local modules). It should be co-located with the other third-party import (`'commander'`) near the top of the file.",
+      "index": 5
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/bin/run.ts",
+      "line_number": 27,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`import { aiInit } from '../ai'` is placed at the end of the local import block (after `'../sandbox'`), but `'ai'` sorts alphabetically before `'add'`. It should be the first import in the local `'../'` group, above `import { add } from '../add'`.",
+      "index": 6
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/types.ts",
+      "line_number": 10,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`framework`, `renderer`, and `builder` are typed as `string | null`, but in `index.ts` they are always assigned via `data.frameworkPackage ?? 'unknown'`, so they can never actually be `null` in any `ProjectInfo` instance. This forces all consuming code (e.g., `|| 'react'` in `prompt.ts`) to defensively guard against nulls that will never occur. Changing the type to `string` would make the invariant explicit and remove unnecessary null-handling at use sites.",
+      "index": 7
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/types.ts",
+      "line_number": 20,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The JSDoc says \"Represents a skill category\" and \"Each skill provides...\" \u2014 stale language from when the feature was called `skill`. It should be updated to describe `AiPrompt`, e.g., \"Represents an AI prompt containing setup instructions for a specific Storybook workflow.\"",
+      "index": 8
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/ai/prompt.ts",
+      "line_number": 141,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The generated example declares the preview file as `preview.ts` but the decorator body uses JSX syntax (`<ThemeProvider>`, `<MemoryRouter>`, `<Story />`). TypeScript rejects JSX in `.ts` files \u2014 the file must be `.tsx` (or the `\"jsx\"` compiler option must be set). An AI agent following these instructions literally will create a file that fails to compile. The comment should reference `preview.tsx`, or the decorator example should use `React.createElement` to avoid JSX entirely.",
+      "index": 9
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/commands/UserPreferencesCommand.ts",
+      "line_number": 190,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `dedent` template will not remove the leading whitespace from the second line. `dedent` strips the *minimum* common indentation of all non-empty lines; since the first line (`Would you like...`) begins immediately after the backtick with zero leading spaces, the minimum is 0, and the second line retains its full source indentation (~6 spaces). The rendered prompt will display the second sentence visibly indented. Consider writing the full message as a single string literal, or starting the template on a new line so `dedent` can strip a consistent indent level.",
+      "index": 10
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The old `storybook skill` command is being removed and replaced by `storybook ai init` with no backward-compatibility alias or migration notice. Although `skill` previously had only a stub implementation, any users or internal tooling that had already started invoking `storybook skill` will silently get an \"Invalid command\" error after this change. The MIGRATION.md should document the rename, or a deprecated `skill` alias should be retained with a warning directing users to the new command.",
+      "index": 11
+    },
+    {
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "In `code/lib/create-storybook/src/bin/run.ts`, `detectAgent()` is called twice: once unconditionally on line 126 and again inside the `if (isAgent)` block on line 131. The result should be captured once in a variable (`const agent = detectAgent()`) and reused, both to avoid redundant work and to make the relationship between the two log messages clearer.",
+      "index": 12
+    }
+  ],
+  "cost_usd": 0.8488578,
+  "duration_seconds": 655.6026470661163
+}

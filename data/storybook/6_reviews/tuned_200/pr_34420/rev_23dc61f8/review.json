@@ -1,0 +1,44 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.ts",
+      "line_number": 106,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This `while` loop creates an infinite async retry storm when `setupWatchers` completes but establishes no watchers.\n\nScenario: the project is not inside a git repo, so `getRepoRoot()` (called inside `getGitDir()`) throws. The `setupWatchers` catch block swallows the error, leaving `this.watchers` empty. The `finally` block then resets `watcherSetupInFlight` to `undefined`. On the next loop iteration both conditions are still true, so a new `setupWatchers` call is launched \u2014 repeating indefinitely. Because `getRepoRoot()` doesn't cache a failed result, every iteration spawns a fresh `execa` call to `git rev-parse`.\n\nA simple fix is to drop the `while` loop and only attempt setup once per `ensureWatchers` invocation:\n\n```ts\nprivate async ensureWatchers(): Promise<void> {\n  if (Object.keys(this.watchers).length > 0) return;\n  if (!this.watcherSetupInFlight && this.gitStateCallbacks.size > 0) {\n    this.watcherSetupInFlight = this.setupWatchers(this.watcherSetupGeneration);\n  }\n  await this.watcherSetupInFlight;\n}\n```\n\nConcurrent `onGitStateChange` callers are still handled correctly (they await the same in-flight promise), but there is no retry when setup fails to produce any watchers.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/GitDiffProvider.test.ts",
+      "line_number": 3,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Lines 1 and 3 both import from `'node:fs'` and should be merged into a single import statement:\n\n```ts\nimport type { FSWatcher, watch } from 'node:fs';\nimport type { readFile, stat } from 'node:fs/promises';\n```\n\nSplitting imports from the same module across multiple declarations adds noise and can trip import-order linters.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/core-server/change-detection/ChangeDetectionService.test.ts",
+      "line_number": 100,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`void callback` is an unusual idiom for suppressing an unused-parameter warning. The conventional approach in TypeScript is to prefix the parameter name with `_`:\n\n```ts\nreadonly onGitStateChangeMock = vi.fn<(callback: () => void) => () => void>((_callback) => {\n  return vi.fn();\n});\n```\n\nThis is self-documenting, avoids the `void` expression whose only purpose is a side-effect-free evaluation, and works consistently with linter rules.",
+      "index": 2
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "There is no test for `GitDiffProvider.onGitStateChange` when the project is not inside a git repository (i.e. when `getRepoRoot()` / `execa` throws). This is the exact scenario that triggers the infinite retry loop described in the `ensureWatchers` inline comment. A test along these lines would both document the expected behaviour and serve as a regression guard:\n\n```ts\nit('does not retry indefinitely when git is unavailable', async () => {\n  // Arrange: mock execa to reject so getRepoRoot() fails\n  vi.mocked(execa).mockRejectedValue(new Error('not a git repository'));\n  const provider = new GitDiffProvider('/not-a-repo');\n  const callback = vi.fn();\n\n  const unsubscribe = provider.onGitStateChange(callback);\n  await Promise.resolve(); // flush microtasks\n  await Promise.resolve();\n\n  // Assert: watcher setup ran exactly once and did not spin\n  expect(vi.mocked(execa)).toHaveBeenCalledTimes(1);\n  expect(callback).not.toHaveBeenCalled();\n\n  unsubscribe();\n});\n```",
+      "index": 3
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "In `configureBranchWatcher`, `this.clearWatcher('branch')` is called explicitly at the start of the method, and then `watchFile` unconditionally calls `this.clearWatcher(key)` again internally before registering the new watcher. The redundant pre-clear is intentional \u2014 it closes the stale watcher promptly before the async `readHeadRef` call, preventing a window where the old watcher could fire \u2014 but this intent is not obvious to readers. A short inline comment would prevent future maintainers from treating it as dead code and removing it:\n\n```ts\n// Close the stale branch watcher immediately (before the async readHeadRef)\n// so it can't fire spuriously while we're reconfiguring.\nthis.clearWatcher('branch');\n```",
+      "index": 4
+    }
+  ],
+  "cost_usd": 0.7620893499999998,
+  "duration_seconds": 551.9645857810974
+}

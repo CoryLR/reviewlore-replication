@@ -1,0 +1,179 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3842,
+  "title": "Make vasp incar reader use first instance of each key, like vasp itself",
+  "body": "Modify vasp incar reader to use a function that only sets values in `self.params_*` if value hasn't been set before, so that first instance of each key is used, like vasp itself. \n\nAlso clean up parsing of scalar bool values.\n\ncloses #1751 \n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [X] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [X] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [X] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [X] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [X] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "noambern",
+  "merged_at": "2025-12-22T16:59:03.285Z",
+  "base_ref": "master",
+  "merge_commit_sha": "36f6528cc3656afc7e037ae929b6d7df34b38376",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2886640299",
+          "author": "yuzie007",
+          "body": "I am wondering how it behaves if `key` has not exist yet in `collection`.\nIt may be then safer to do e.g.\n```python\n@staticmethod\ndef set_if_none(d: dict[str, Any], key: str, value: Any) -> None:\n    d[key] = value if d.get(key) is None else d[key]\n```",
+          "file_path": "ase/calculators/vasp/create_input.py",
+          "line_number": 1867,
+          "commit_sha": "bbab663d5730c3e86304546a24ce32046d656bcd",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2025-11-13T12:35:29.469Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2886859895",
+          "author": "ajjackson",
+          "body": "If I recall correctly, it is appropriate to raise an error if the key is missing as this method should only be used for known keys that get instantiated with None.\n\nIdeally the collection wouldn't be full of `None` values and this would be `setdefault`, but that is a bit much of a refactor to add to this MR.",
+          "file_path": "ase/calculators/vasp/create_input.py",
+          "line_number": 1867,
+          "commit_sha": "bbab663d5730c3e86304546a24ce32046d656bcd",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2025-11-13T13:55:17.664Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2886862626",
+          "author": "noambern",
+          "body": "Clearly it'd fail, but the reader as currently implemented initializes every valid key to `None`, starting at https://gitlab.com/ase/ase/-/blob/master/ase/calculators/vasp/create_input.py?ref_type=heads#L1259. I guess if it's a \"non-registered\" key it could be an issue, so I'll change it.",
+          "file_path": "ase/calculators/vasp/create_input.py",
+          "line_number": 1867,
+          "commit_sha": "bbab663d5730c3e86304546a24ce32046d656bcd",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2025-11-13T13:56:18.628Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2887131684",
+          "author": "noambern",
+          "body": "@ajjackson this https://gitlab.com/ase/ase/-/blob/vasp_first_instance/ase/calculators/vasp/create_input.py?ref_type=heads#L1986 will try to run this against unknown keys, right?",
+          "file_path": "ase/calculators/vasp/create_input.py",
+          "line_number": 1867,
+          "commit_sha": "bbab663d5730c3e86304546a24ce32046d656bcd",
+          "base_sha": "495e9ed6e9b1694b184826e2fb4ac7e0a4d3c512",
+          "created_at": "2025-11-13T15:22:00.496Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Raises a concern about missing key behavior and suggests a concrete alternative implementation."
+    }
+  ],
+  "review_thread_count": 5,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2761806775",
+            "author": "noambern",
+            "body": "Sorry about the duplicate, @ajjackson - I was cleaning up my repo and deleted the relevant branch, and then decided it'd all be a bit simpler if I used the main repo, so as not to be limited by my runner minutes.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-09-18T21:59:57.367Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2763106287",
+            "author": "ajjackson",
+            "body": "No worries, I have a similar issue this month :laughing:",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-09-19T07:33:02.070Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure social/off-topic comment with no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2886640325",
+            "author": "yuzie007",
+            "body": "Thank you @noambern for the MR!\n\nThe change of the INCAR-parser behavior sounds fully reasonable to me as well. I just find one question / suggestion; apart from that it looks OK to me to merge.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-11-13T12:35:30.094Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Acknowledgment and approval comment; references a separate suggestion but makes no new actionable request itself."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2969969658",
+            "author": "yuzie007",
+            "body": "I have rebased the MR to resolve the merge conflict; I now set auto-merge if test passes. Thank you so much @noambern once again!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-12-22T16:54:45.248Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Meta-discussion about PR process (rebasing, auto-merge) with no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 5,
+    "stage1_kept": 4,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 1,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 3,
+    "stage3_cost_usd": 0.01452025
+  }
+}

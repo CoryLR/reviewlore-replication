@@ -1,0 +1,116 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 309,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`changeStatus` is destructured from `getChangeDetectionStatus` but immediately discarded \u2014 only `testStatus` drives the icon and text color. A leaf story with only a `storybook/change-detection` status (e.g., `status-value:new`) will have `testStatus = 'status-value:unknown'`, produce `testIcon = null`, and render **no visible icon at all**. The PR description says dual-slot for leaf nodes, but the implementation is single-slot (test only). Either add a second `StatusButton` for `changeStatus` on leaf nodes (mirroring the branch logic), or document and enforce that change-detection icons are intentionally suppressed at the leaf level.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 445,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`<svg key=\"icon\" viewBox=\"0 0 6 6\" width=\"6\" height=\"6\" type=\"dot\">` \u2014 `type` is not a valid attribute on `<svg>` elements (it is only meaningful on `<input>` and `<button>` elements in HTML, and has no meaning in SVG). This appears to be a copy-paste error from the `UseSymbol` `type` prop. Remove the `type=\"dot\"` attribute from the `<svg>` tag.",
+      "index": 1
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 493,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "When only `branchChangeIcon` exists (no `branchTestIcon`), the layout renders `[<StatusSlotPlaceholder />] [change button]` \u2014 the change icon ends up in the RIGHT (test) slot position. The first ternary `branchChangeIcon && branchTestIcon` is `false`, so it renders a placeholder in the left slot; the second ternary `branchTestIcon` is also `false`, so the change button falls into the `else` branch and occupies the right slot. This is semantically inconsistent: when both icons exist, change is on the left; when only change exists, it shifts to the right. Consider simplifying to two independent slot renders with per-slot placeholders:\n```tsx\n{branchChangeIcon ? (\n  <StatusButton ariaLabel={`Change status: ...`} ...>{branchChangeIcon}</StatusButton>\n) : (\n  <StatusSlotPlaceholder aria-hidden=\"true\" />\n)}\n{branchTestIcon ? (\n  <StatusButton ariaLabel={`Test status: ...`} ...>{branchTestIcon}</StatusButton>\n) : (\n  <StatusSlotPlaceholder aria-hidden=\"true\" />\n)}\n```\nThis keeps change consistently in the left slot and test in the right.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 177,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`groupStatus: Record<StoryId, StatusValue>` is still declared in `NodeProps` and still passed by the `Tree` component, but the `Node` function's destructuring was changed from `groupStatus` to `groupDualStatus` in this PR \u2014 it is no longer read inside `Node`. This dead prop declaration adds noise to the interface and misleads callers into thinking it has an effect. Either remove it from `NodeProps` (if `Node` truly never needs the old single-value group status), or add a comment explaining why it is retained.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 241,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`getChangeDetectionStatus` is a pure utility that duplicates the same `typeId === CHANGE_DETECTION_STATUS_TYPE_ID` filter/split logic already implemented in `getGroupDualStatus` in `status.tsx`. Having two copies in different files risks them diverging silently. Move `getChangeDetectionStatus` into `status.tsx` alongside `getGroupDualStatus` and re-export it from there (or import it in `Tree.tsx`). The test file already imports it via a relative path to the UI component, which is a sign it belongs in the utility layer.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/manager/utils/status.tsx",
+      "line_number": 168,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`// @ts-expect-error (non strict)` suppresses a type error on the `getDescendantIds` call. Per project rules, `@ts-expect-error` should not be used to silence real mismatches \u2014 fix the underlying type mismatch instead (e.g., add proper typing for `collapsedData` or cast through a narrowed type rather than `as any`).",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/manager/utils/status.tsx",
+      "line_number": 194,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Second `// @ts-expect-error (non strict)` on `acc[item.id] = { ... }`. Same concern as the first: fix the accumulator's index signature type (e.g., add `id?: string` to the `Partial<API_HashEntry>` type guard branch, or use a typed `id` before assignment) rather than suppressing the error.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.stories.tsx",
+      "line_number": 322,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`(index[dualSlotStoryId] as any).parent as string` \u2014 the double cast through `any` bypasses TypeScript's type checking. The `API_HashEntry` union types contain a `parent` property on `StoryEntry` and `ComponentEntry`; use a proper type narrowing or cast (e.g., `(index[dualSlotStoryId] as StoryEntry).parent`) instead of going through `any`.",
+      "index": 7
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.stories.tsx",
+      "line_number": 329,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`(index[currentId] as any)?.parent` \u2014 same `as any` bypass inside `getAncestorChain`. Use a typed cast such as `(index[currentId] as { parent?: string })?.parent` or a proper type guard so TypeScript can verify the shape.",
+      "index": 8
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.stories.tsx",
+      "line_number": 452,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`BranchWithChangeDetectionPriority` is first created by `makeDualSlotStory({...})` (which already sets a `render` function selecting `dualSlotStoryId`), and then that `render` is immediately overwritten by the detached `BranchWithChangeDetectionPriority.render = (args) => { ... }` assignment below. The intermediate `render` from `makeDualSlotStory` is dead code. Prefer defining the story inline with the desired `render` directly, or extract a second factory variant (e.g., `makeDualSlotStory(statuses, { selectedId: dualSlotParentId })`) to avoid the confusing two-step construction.",
+      "index": 9
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.stories.tsx",
+      "line_number": 363,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "None of the five new story variants (`WithChangeDetectionOnly`, `WithChangeDetectionAndTestStatus`, `WithTestStatusOnly`, `WithAffectedStatus`, `BranchWithChangeDetectionPriority`) include a `play` function. Per project conventions, interactive sidebar stories must include a `play` function that programmatically exercises the interaction so the rendered state (status icon, tooltip, etc.) is captured in visual regression tests. At minimum, each story should assert that the expected status button(s) are present in the DOM with the correct `aria-label`.",
+      "index": 10
+    },
+    {
+      "file_path": "code/core/src/manager/utils/status.test.ts",
+      "line_number": 250,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `'branch/group combined priority: error beats new'` test only asserts `getMostCriticalStatusValue(['status-value:new', 'status-value:error']) === 'status-value:error'`. This tests pre-existing behavior of `getMostCriticalStatusValue` and is unrelated to the new dual-slot splitting logic. It belongs inside the existing `describe('getHighestStatus')` block alongside the other `getMostCriticalStatusValue` tests, not in `describe('dual-slot status splitting')`.",
+      "index": 11
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `statusOrder` array in `Tree.tsx` and the `statusPriority` array in `status.tsx` now define the same ordering (`unknown \u2192 pending \u2192 success \u2192 affected \u2192 modified \u2192 new \u2192 warning \u2192 error`). However, `getMostCriticalStatusValue` is driven exclusively by `statusPriority` in `status.tsx`. Any future change to one array will silently diverge from the other. Consider removing `statusOrder` from `Tree.tsx` and deriving context-menu ordering directly from `statusPriority` (re-exported from `status.tsx`) so there is a single source of truth.",
+      "index": 12
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `getChangeDetectionStatus` function is exported from the UI component file `Tree.tsx` and the test imports it via `import { getChangeDetectionStatus } from '../components/sidebar/Tree.tsx'`. Importing a pure logic utility from a styled-component-heavy render file couples the test to the UI layer and forces the test runner to parse JSX/theme imports. Moving `getChangeDetectionStatus` to `status.tsx` (where `getGroupDualStatus` already lives) would make the import path more natural and keep pure logic co-located.",
+      "index": 13
+    }
+  ],
+  "cost_usd": 0.7371021,
+  "duration_seconds": 465.5144348144531
+}

@@ -1,0 +1,223 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34122,
+  "title": "Build: Improve NX Cloud performance and flakiness with enterprise plan",
+  "body": "Closes #\n\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\n\n<!--\n\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\n\n-->\n\n## What I did\n\nWe're trying out NX Cloud as an alternative for Circle CI \u2014 we have the free enterprise plan for a month to evaluate. This PR improves the NX Cloud CI pipeline.\n\n### Removed uncacheable `prepare-sandbox` NX target\n\nThe sandbox preparation step (copying from cache, waiting for verdaccio, running `yarn install`) is now inlined into each downstream task's `run()` function. These targets were uncacheable because they moved cached output to the working directory \u2014 NX Cloud reruns work best when every target in the graph is cacheable. This also makes NX Cloud runs significantly faster.\n\n### Dynamic changeset-based agent distribution\n\nNow that we're on the NX enterprise plan for a month, we can use more agents. Agents now scale based on changeset size (small/medium/large/extra-large) instead of a fixed 20-agent pool. A separate daily distribution config uses even more agents for the larger daily sandbox set \u2014 the daily run now takes less than 10 minutes.\n\n### Reduced agent disk usage\n\nNX Cloud agents were running out of disk space. To fix this:\n- Switched to the global yarn cache (`enableGlobalCache: true`) so each sandbox doesn't duplicate its own `.yarn/cache` directory.\n- Removed `node_modules` from the NX Cloud cache paths (the yarn global cache is sufficient).\n- Removed Cypress browser cache and installed only Playwright Chromium instead of all browsers.\n\nBecause the global cache is shared across sandboxes, stale `@storybook/*` packages (same version, different contents from verdaccio) can cause `yarn install` to pick up published versions instead of local builds. A cleanup step purges these entries before each run to force fresh copies from verdaccio.\n\n### Core compile DTS retry logic\n\nFound a way to make the core compile task less flaky. Parallel DTS generation processes can race when one reads another's partially-written `.d.ts` output (TS2306). Instead of immediately bailing and killing all processes on the first failure, failed entries are now retried sequentially after all parallel processes complete. By that point all dependency `.d.ts` files are fully written, so the retry almost always succeeds. This adds ~8s only when the race actually occurs.\n\n### NX Cloud remote caching disabled on Circle CI (temporary)\n\nNX Cloud remote caching is disabled on Circle CI so we can measure the true cost of NX Cloud without also getting cache-hit costs from Circle CI runs. This will be reverted once the NX Cloud experiment concludes.\n\n### E2E test stabilization\n\n- **Playwright setup project.** Added a dedicated Playwright `setup` project that waits for Storybook readiness through `/index.json`, opens `example-button--primary`, verifies the manager selection, and waits for the preview to settle before the browser tests start.\n- **Onboarding test fixes.** Tightened E2E synchronization by clearing the checklist cache and using `trySelectStory` for reliable story selection after creation.\n\n### Misc\n\n- **Removed `cypress` from `ALL_TASKS`** in the NX workflow. We can likely remove cypress from CI altogether, but for now it's removed from the NX experiment.\n- **Upgraded NX** from 22.1.3 to 22.6.1.\n- Added `isNxTaskExecution()` helper replacing scattered `NX_CLI_SET` checks.\n- Added `$schema` references to `project.json` files.\n- Added Playwright result outputs to NX task cache configuration.\n\n## Checklist for Contributors\n\n### Testing\n\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\n\n#### The changes in this PR are covered in the following automated tests:\n\n- [ ] stories\n- [ ] unit tests\n- [ ] integration tests\n- [x] end-to-end tests\n\n#### Manual testing\n\nVerify in the NX Cloud dashboard that runs are faster and less flaky compared to previous runs.\n\n### Documentation\n\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\n\n- [ ] Add or update documentation reflecting your changes\n- [ ] If you are deprecating/removing a feature, make sure to update\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\n\n## Checklist for Maintainers\n\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\n- [ ] Make sure this PR contains **one** of the labels below:\n   <details>\n     <summary>Available labels</summary>\n\n  - `bug`: Internal changes that fixes incorrect behavior.\n  - `maintenance`: User-facing maintenance tasks.\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\n  - `feature request`: Introducing a new feature.\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\n  - `other`: Changes that don't fit in the above categories.\n\n   </details>\n\n### \ud83e\udd8b Canary release\n\n<!-- CANARY_RELEASE_SECTION -->\n\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\n\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\n\n<!-- CANARY_RELEASE_SECTION -->\n\n<!-- BENCHMARK_SECTION -->\n<!-- BENCHMARK_SECTION -->",
+  "author": "kasperpeulen",
+  "merged_at": "2026-03-23T13:54:53Z",
+  "base_ref": "next",
+  "merge_commit_sha": "26495138b3afc6a2e3d44c8c9f416ee0cdbf918c",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "71c46555103e2f20f39c1f9d106d63d7f3c72c1a",
+    "a471ffada770d2177fb898c5e6d4b50f38ee8af2"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6un9rO",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n**Bug: Incorrect f-string syntax.**\n\nThe f-string uses shell-style `${...}` instead of Python's `{...}` syntax. This will print the literal string `${results[0]['template']}:${results[0]['target']}` instead of the interpolated values.\n\n\n\n<details>\n<summary>\ud83d\udc1b Proposed fix</summary>\n\n```diff\n-            handle.write(f\"- Target: `${results[0]['template']}:{results[0]['target']}`\\n\" if results else \"- Target: unknown\\n\")\n+            handle.write(f\"- Target: `{results[0]['template']}:{results[0]['target']}`\\n\" if results else \"- Target: unknown\\n\")\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n            handle.write(f\"- Target: `{results[0]['template']}:{results[0]['target']}`\\n\" if results else \"- Target: unknown\\n\")\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn @.github/workflows/qa.yml at line 155, The f-string passed to handle.write\ncurrently uses shell-style `${...}` so it will not interpolate; update the\nstring in the handle.write call that references results (the expression\n\"handle.write(f\\\"- Target:\n`${results[0]['template']}:{results[0]['target']}`\\\\n\\\" if results else \\\"-\nTarget: unknown\\\\n\\\")\") to use Python curly-brace interpolation (e.g.\n`{results[0]['template']}` and `{results[0]['target']}`) so the template and\ntarget values are correctly formatted when results is non-empty.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 928a5bb",
+          "file_path": ".github/workflows/qa.yml",
+          "line_number": 155,
+          "start_line": null,
+          "commit_sha": "5ed77051c5c87d12ff62853ac479a75cfb8eb605",
+          "created_at": "2026-03-13T08:10:52Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Semantic Deviation",
+          "label_confidence": "high",
+          "label_reasoning": "The f-string uses shell-style `${...}` syntax instead of Python's `{...}` syntax, causing the string to not interpolate the values as intended \u2014 the code behavior does not match the developer's intent."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug with incorrect f-string syntax and provides a specific fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uoCaZ",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, find and examine the workflow file\nfind . -name \"qa.yml\" -path \"*/.github/workflows/*\" -type f\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 91\n\n---\n\n\ud83c\udf10 Web query:\n\n`GitHub Actions workflow job name env context availability`\n\n\ud83d\udca1 Result:\n\n`env` **is not available** when evaluating a **job name** (`jobs.<job_id>.name`). GitHub\u2019s context-availability table lists the only allowed contexts there as: **`github`, `needs`, `strategy`, `matrix`, `vars`, `inputs`**\u2014so using `${{ env.SOMETHING }}` in a job name typically fails with *\u201cUnrecognized named-value: 'env'\u201d*. [1], [2]\n\nIf you need a dynamic job name, use one of the supported contexts (commonly `matrix.*`, `inputs.*`, or `vars.*`) instead. [1]\n\n**Sources**  \n[1] GitHub Docs \u2013 Context availability table (`jobs.<job_id>.name`) ([docs.github.com](https://docs.github.com/en/enterprise-server%403.14/actions/reference/workflows-and-actions/contexts))  \n[2] Stack Overflow \u2013 \u201cWhat contexts can be used when setting a GitHub Action job name?\u201d ([stackoverflow.com](https://stackoverflow.com/questions/76317844/what-contexts-can-be-used-when-setting-a-github-action-job-name?utm_source=openai))\n\nCitations:\n\n- 1: https://docs.github.com/en/enterprise-server%403.14/actions/reference/workflows-and-actions/contexts\n- 2: https://stackoverflow.com/questions/76317844/what-contexts-can-be-used-when-setting-a-github-action-job-name?utm_source=openai\n\n---\n\n\ud83c\udf10 Web query:\n\n`GitHub Actions strategy max-parallel env context availability`\n\n\ud83d\udca1 Result:\n\n`jobs.<job_id>.strategy.max-parallel` is evaluated in the **`jobs.<job_id>.strategy`** section, where the **`env` context is *not* available** (only `github`, `needs`, `vars`, and `inputs` are allowed there). So `${{ env.SOMETHING }}` won\u2019t work for `max-parallel`. [1]\n\nTo control `max-parallel`, you must use a value available in that context scope (for example `${{ vars.MAX_PARALLEL }}`, `${{ inputs.max_parallel }}`, or `${{ needs.somejob.outputs.max_parallel }}`), or hardcode a number. `max-parallel` itself is set via `jobs.<job_id>.strategy.max-parallel`. [2]\n\n**Sources:** [1] [2]\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Examine the qa.yml file, focusing on lines 36-43\ncat -n ./.github/workflows/qa.yml | sed -n '30,50p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 845\n\n---\n\n\n\n</details>\n\n**Fix invalid `env` context usage in job-level expressions.**\n\nLines 36 and 41 use `${{ env.* }}` where `env` is not available. The `env` context is only accessible in `jobs.<job_id>.steps`, not in `jobs.<job_id>.name` or `jobs.<job_id>.strategy`. This will cause workflow expression evaluation to fail before execution.\n\nUse `vars.*`, `inputs.*`, `needs.*`, or hardcoded values instead.\n\n<details>\n<summary>\ud83d\udc1b Example fix</summary>\n\n```diff\n-    name: \"${{ env.QA_TEMPLATE }}:${{ env.QA_TARGET }} (#${{ matrix.attempt }})\"\n+    name: \"qa-${{ matrix.attempt }}\"\n@@\n-      max-parallel: ${{ fromJSON(env.QA_MAX_PARALLEL) }}\n+      max-parallel: 1\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n    name: \"qa-${{ matrix.attempt }}\"\n    needs: prepare\n    runs-on: ubuntu-latest\n    strategy:\n      fail-fast: false\n      max-parallel: 1\n      matrix:\n        attempt: ${{ fromJSON(needs.prepare.outputs.matrix) }}\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\uddf0 Tools</summary>\n\n<details>\n<summary>\ud83e\ude9b actionlint (1.7.11)</summary>\n\n[error] 36-36: context \"env\" is not allowed here. available contexts are \"github\", \"inputs\", \"matrix\", \"needs\", \"strategy\", \"vars\". see https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability for more details\n\n(expression)\n\n---\n\n[error] 41-41: context \"env\" is not allowed here. available contexts are \"github\", \"inputs\", \"needs\", \"vars\". see https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability for more details\n\n(expression)\n\n</details>\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn @.github/workflows/qa.yml around lines 36 - 43, Job-level expressions use the\nenv context incorrectly (QA_TEMPLATE, QA_TARGET, QA_MAX_PARALLEL) and will fail\nevaluation; update the job \"name\" and the \"strategy.max-parallel\" and\n\"matrix.attempt\" expressions to use a valid context (e.g., vars.*, inputs.*, or\nneeds.*) or hardcoded values: replace `${{ env.QA_TEMPLATE }}`, `${{\nenv.QA_TARGET }}`, and `${{ fromJSON(env.QA_MAX_PARALLEL) }}` with appropriate\n`vars`/`inputs`/`needs` references and ensure the matrix `attempt` source\n(`needs.prepare.outputs.matrix`) is parsed in a valid context (use needs.prepare\noutputs or vars instead of env). Locate these in the job definition where \"name\"\nand \"strategy\" are defined and update the expressions accordingly.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 928a5bb",
+          "file_path": ".github/workflows/qa.yml",
+          "line_number": 43,
+          "start_line": null,
+          "commit_sha": "5ed77051c5c87d12ff62853ac479a75cfb8eb605",
+          "created_at": "2026-03-13T08:15:55Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "high",
+          "label_reasoning": "Using the `env` context in GitHub Actions job `name` and `strategy.max-parallel` fields is an incorrect use of the GitHub Actions context API, as `env` is not available in those scopes."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies invalid use of the env context in job-level expressions and suggests specific fixes."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uoGlE",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**Trigger is hard-coded to a feature branch and may become dead after merge.**\n\nLine 7 limits execution to `kasper/stabilize-onboarding-e2e-waits`. If this workflow is intended to live on `next`, it won\u2019t run for normal branch activity post-merge.\n\n\n<details>\n<summary>\ud83d\udca1 Suggested trigger adjustment</summary>\n\n```diff\n on:\n-  push:\n-    branches:\n-      - kasper/stabilize-onboarding-e2e-waits\n+  workflow_dispatch:\n+  push:\n+    branches:\n+      - next\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn @.github/workflows/qa.yml around lines 4 - 8, The workflow trigger is\nhard-coded to a feature branch (\"push\" -> \"branches\" ->\nkasper/stabilize-onboarding-e2e-waits); update the trigger so the workflow runs\non the intended long-lived branch(s) instead of the feature branch\u2014for example\nreplace or extend the branches list under on: push: to include \"next\" (or\n\"main\"/\"develop\" as appropriate) and/or add a manual trigger (workflow_dispatch)\nso the job runs post-merge; modify the on: push: branches array in the QA\nworkflow accordingly.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 49b8341 to ffddf68",
+          "file_path": ".github/workflows/qa.yml",
+          "line_number": 8,
+          "start_line": null,
+          "commit_sha": "e7ef0731d742ff086c218bbbecd58de3d817ee78",
+          "created_at": "2026-03-13T08:20:25Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "Dead Code",
+          "label_confidence": "medium",
+          "label_reasoning": "The workflow trigger is hard-coded to a feature branch that will no longer exist after merge, effectively making the workflow unreachable/dead in its intended environment post-merge."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that the workflow trigger is hard-coded to a feature branch and suggests updating it to a long-lived branch."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6uoGlL",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nset -euo pipefail\n\necho \"Workflow command using nx:\"\nrg -n 'start-ci-run|nx@latest' .github/workflows/qa.yml\n\necho\necho \"Declared Nx versions in package.json files:\"\nfd -a '^package\\.json$' -E node_modules -x rg -n '\"nx\"\\s*:\\s*\"' {}\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 219\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nset -euo pipefail\n\necho \"=== Package.json files and their nx dependency ===\"\nfd -a '^package\\.json$' -E node_modules | while read f; do\n  echo \"File: $f\"\n  rg -A 1 -B 1 '\"nx\"\\s*:\\s*' \"$f\" | head -5\n  echo \"---\"\ndone\n\necho\necho \"=== Package manager detection ===\"\nif [ -f \"package-lock.json\" ]; then\n  echo \"Found: package-lock.json (npm)\"\nfi\nif [ -f \"yarn.lock\" ]; then\n  echo \"Found: yarn.lock (yarn)\"\nfi\nif [ -f \"pnpm-lock.yaml\" ]; then\n  echo \"Found: pnpm-lock.yaml (pnpm)\"\nfi\n\necho\necho \"=== Checking if workspace structure ===\"\ncat -n package.json | grep -E '\"name\"|\"workspaces\"|\"nx\"' | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 170\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nset -euo pipefail\n\necho \"=== Root package.json ===\"\nhead -30 package.json | grep -E '\"name\"|\"workspaces\"|\"packageManager\"|\"nx\"'\n\necho\necho \"=== Lockfile check ===\"\nls -la | grep -E 'package-lock|yarn.lock|pnpm-lock' || echo \"No lockfile found in root\"\n\necho\necho \"=== nx dependency locations ===\"\nfd -a '^package\\.json$' -E node_modules -exec rg -l '\"nx\"\\s*:\\s*' {} \\; | while read f; do\n  echo \"$f:\"\n  rg '\"nx\"\\s*:\\s*\"[^\"]*\"' \"$f\"\ndone\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 485\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nset -euo pipefocheckpath\n\necho \"=== Root package.json nx dependency ===\"\nrg '\"nx\"\\s*:\\s*\"[^\"]*\"' package.json\n\necho\necho \"=== All package.json files with nx ===\"\nfd -a '^package\\.json$' -E node_modules | while read f; do\n  result=$(rg '\"nx\"\\s*:\\s*\"[^\"]*\"' \"$f\" || true)\n  if [ -n \"$result\" ]; then\n    echo \"$f: $result\"\n  fi\ndone\n\necho\necho \"=== Check if workspace uses workspace: protocol ===\"\nrg 'workspace:\\*' package.json || echo \"No workspace: protocol found\"\n\necho\necho \"=== Other nx commands in workflow ===\"\nrg -i 'nx ' .github/workflows/qa.yml | head -10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 125\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nset -euo pipefail\n\necho \"=== Root package.json nx dependency ===\"\nrg '\"nx\"\\s*:\\s*\"[^\"]*\"' package.json\n\necho\necho \"=== All package.json files with nx ===\"\nfd -a '^package\\.json$' -E node_modules | while read f; do\n  result=$(rg '\"nx\"\\s*:\\s*\"[^\"]*\"' \"$f\" || true)\n  if [ -n \"$result\" ]; then\n    echo \"$f: $result\"\n  fi\ndone\n\necho\necho \"=== Check if workspace uses workspace: protocol ===\"\nrg 'workspace:\\*' package.json || echo \"No workspace: protocol found\"\n\necho\necho \"=== Other nx commands in workflow ===\"\nrg -i 'npx nx' .github/workflows/qa.yml | head -10\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 409\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\nset -euo pipefail\n\necho \"=== Full workflow qa.yml for all nx references ===\"\nrg -n 'nx' .github/workflows/qa.yml\n\necho\necho \"=== Context around start-ci-run command ===\"\nrg -B 3 -A 3 'start-ci-run' .github/workflows/qa.yml\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1166\n\n---\n\n\n\n</details>\n\n**Use pinned Nx version in CI startup command for consistency.**\n\nLine 37 uses `npx nx@latest`, which fetches the latest Nx at runtime instead of the workspace's pinned version (^22.1.3 in package.json). This creates CI behavior drift. The workflow already uses `yarn nx` correctly on line 44\u2014apply the same approach here.\n\n<details>\n<summary>\ud83d\udca1 Suggested change</summary>\n\n```diff\n-          npx nx@latest start-ci-run\n+          yarn nx start-ci-run\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n      - name: Start Nx Cloud distributed run\n        run: >\n          yarn nx start-ci-run\n          --distribute-on=\"./.nx/workflows/distribution-config.yaml\"\n          --stop-agents-after=\"e2e-tests-dev\"\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn @.github/workflows/qa.yml around lines 35 - 39, Replace the runtime-installed\nNx invocation \"npx nx@latest start-ci-run\" with the workspace-pinned runner\n\"yarn nx start-ci-run\" so the CI uses the repository's pinned Nx version\n(matching the later step that uses \"yarn nx\"); keep the existing flags\n(--distribute-on and --stop-agents-after) unchanged so the behavior is identical\nexcept for using the pinned Nx version.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits b691c83 to 08fa00d",
+          "file_path": ".github/workflows/qa.yml",
+          "line_number": 39,
+          "start_line": null,
+          "commit_sha": "928a5bb04f9472f91c9ec36348b267498d430554",
+          "created_at": "2026-03-13T08:20:26Z",
+          "is_outdated": true,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "high",
+          "label_reasoning": "Using `npx nx@latest` instead of the workspace-pinned version (`yarn nx`) is an incorrect usage pattern that bypasses the project's dependency management, leading to potential version drift and inconsistent CI behavior."
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests replacing npx nx@latest with yarn nx to use the workspace-pinned Nx version for consistency."
+    }
+  ],
+  "review_thread_count": 8,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6xTCfg",
+            "author": "kasperpeulen",
+            "body": "Write a better command why this is needed",
+            "file_path": ".nx/workflows/agents.yaml",
+            "line_number": 52,
+            "start_line": 41,
+            "commit_sha": "a471ffada770d2177fb898c5e6d4b50f38ee8af2",
+            "created_at": "2026-03-23T11:51:46Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6xTF-k",
+            "author": "kasperpeulen",
+            "body": "This change should be part of PR description",
+            "file_path": "scripts/build/utils/generate-types.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "e2205c2f7510af1ba91c6f981cb52d91eb7f5f9e",
+            "created_at": "2026-03-23T11:54:55Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6xTJsA",
+            "author": "kasperpeulen",
+            "body": "Write a comment, and update PR description. That we disable nx cache in CI for the NX experiment, to get a better idea of the costs of NX cloud. Will revert after the NX experiment",
+            "file_path": "scripts/tasks/compile.ts",
+            "line_number": 39,
+            "start_line": null,
+            "commit_sha": "a471ffada770d2177fb898c5e6d4b50f38ee8af2",
+            "created_at": "2026-03-23T11:58:18Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAzqfmc6u7zE3",
+            "author": "valentinpalkovic",
+            "body": "Nice. Didn't know about this assertion!",
+            "file_path": "code/e2e-tests/storybook.setup.ts",
+            "line_number": 16,
+            "start_line": 15,
+            "commit_sha": "a471ffada770d2177fb898c5e6d4b50f38ee8af2",
+            "created_at": "2026-03-14T08:14:15Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure acknowledgment expressing that the author learned something; no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 8,
+    "stage1_kept": 5,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 3,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 1
+  }
+}

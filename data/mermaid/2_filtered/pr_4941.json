@@ -1,0 +1,327 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 4941,
+  "title": "fix/1294_exhaustive-clear-sequenceDb-variables",
+  "body": "## :bookmark_tabs: Summary\r\n\r\nReason of bugs like one in issue are global variables cached between renders. I've made exhaustive cleanup of sequenceDb.\r\n\r\nYou can reproduce the bug in [mermaid live editor](https://mermaid.live/edit) with these diagrams:\r\n\r\n```mermaid-example\r\nsequenceDiagram\r\n    Alice->>Bob: Hello Bob, how are you ?\r\n    Bob->>Alice: Fine, thank you. And you?\r\n    create participant Carl\r\n    Alice->>Carl: Hi Carl!\r\n    create actor D as Donald\r\n    Carl->>D: Hi!\r\n    destroy Carl\r\n    Alice-xCarl: We are too many\r\n    destroy Bo\r\n    Bob->>Alice: I agree\r\n```\r\n\r\n```mermaid-example\r\nsequenceDiagram\r\n    Alice->>Bob: Hello Bob, how are you ?\r\n    Bob->>Alice: Fine, thank you. And you?\r\n    create participant Carl\r\n    Alice->>Carl: Hi Carl!\r\n    create actor D as Donald\r\n    Carl->>D: Hi!\r\n    destroy Carl\r\n    Alice-xCarl: We are too many\r\n    destroy Bob\r\n    Bob->>Alice: I agree\r\n```\r\n\r\nResolves [#1294](https://github.com/mermaid-js/mermaid-live-editor/issues/1294)\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nI've added imperative state. It's simple structure, that is created from init function and provides reset method, that recalls init function to restore initial values of state's fields. This approach ensures that newly added state fields are cleared.\r\n\r\nAlso I've added two identity functions, that help specify type of state initial values for typescript.\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://github.com/mermaid-js/mermaid/blob/develop/CONTRIBUTING.md)\r\n- [x] :computer: have added necessary unit/e2e tests.\r\n- [x] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://github.com/mermaid-js/mermaid/blob/develop/packages/mermaid/src/docs/community/development.md#3-update-documentation) is used for all new features.\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "rflban",
+  "merged_at": "2024-01-11T04:52:19Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "54446f1ec58240ec970ef38066ab7ee75680f883",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "34e0942fa227086bd3db8d68876dd3637dc41e8a",
+    "1b20fe97231258338bf15eb0d1c2f5d749b7044c"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85RGuV2",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n#### Unfixable actor/participant creation/deletion error\r\n\r\nIf an error of the following type occurs when creating or deleting an actor/participant:\r\n\r\n> The destroyed participant **participant-name** does not have an associated destroying message after its declaration. Please check the sequence diagram.\r\n\r\nAnd fixing diagram code does not get rid of this error and rendering of all other diagrams results in the same error, then you need to update the mermaid version to (v<MERMAID_RELEASE_VERSION>+).\r\n\r\n```",
+          "file_path": "packages/mermaid/src/docs/syntax/sequenceDiagram.md",
+          "line_number": 93,
+          "start_line": null,
+          "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+          "created_at": "2023-10-16T14:02:58Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Provides a specific text suggestion to replace existing documentation content."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85RGvbu",
+          "author": "sidharthv96",
+          "body": "Would making state a mutable variable and doing `state = init();` here cause any issues? ",
+          "file_path": "packages/mermaid/src/utils/imperativeState.ts",
+          "line_number": 14,
+          "start_line": null,
+          "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+          "created_at": "2023-10-16T14:06:32Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85RHlsb",
+          "author": "rflban",
+          "body": "I want to keep reference equality after reset, but it is not a big deal",
+          "file_path": "packages/mermaid/src/utils/imperativeState.ts",
+          "line_number": 14,
+          "start_line": null,
+          "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+          "created_at": "2023-10-16T16:35:28Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests an alternative implementation approach (using a mutable variable with reassignment)."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85RGv6R",
+          "author": "sidharthv96",
+          "body": "This does not seem to be used outside the test. Move it into the test file?",
+          "file_path": "packages/mermaid/src/utils/imperativeState.ts",
+          "line_number": 21,
+          "start_line": null,
+          "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+          "created_at": "2023-10-16T14:07:49Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85RHlIH",
+          "author": "rflban",
+          "body": "This functions are for db files written in typescript and will be useful in the future",
+          "file_path": "packages/mermaid/src/utils/imperativeState.ts",
+          "line_number": 21,
+          "start_line": null,
+          "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+          "created_at": "2023-10-16T16:33:42Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85TBZBs",
+          "author": "aloisklink",
+          "body": "After the TypeScript to JavaScript compilation, these functions will still exist and slow down our code (although only by a tiny amount!).\r\n\r\nIt's potentially worth replacing them with `as <TYPE>` and `as <TYPE> | undefined`, but the syntax is not as nice and the performance impact isn't too big so I'm on the fence, e.g.\r\n\r\n```typescript\r\nstate = createImperativeState(() => {\r\n  foo: domain.optional<string>(\"default\"),\r\n});\r\n// this is equivalent (but faster)\r\nstate = createImperativeState(() => {\r\n  foo: \"default\" as string | undefined,\r\n});\r\n```\r\n",
+          "file_path": "packages/mermaid/src/utils/imperativeState.ts",
+          "line_number": 21,
+          "start_line": null,
+          "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+          "created_at": "2023-11-14T16:20:49Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85UjWME",
+          "author": "rflban",
+          "body": "I've replace cif with assert, but this way is not strict enough. For example, it's possible: `const value = {} as string;`. Constrained identity functions are commonly used in functional typescript and modern javascript engines can inline functions like this one.",
+          "file_path": "packages/mermaid/src/utils/imperativeState.ts",
+          "line_number": 21,
+          "start_line": null,
+          "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+          "created_at": "2023-12-07T08:23:33Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85UkIMl",
+          "author": "aloisklink",
+          "body": "Hmmm, TypeScript does throw an error if the object is not empty, like `const value = {hi: 1} as string; // TypeScript error`.\r\n\r\n> modern javascript engines can inline functions\r\n\r\nThat's a good point! Although, as a browser-based library, we also need to worry about about size and initial parsing/compile times.\r\n\r\nTo be honest, I'm still not fully convinced that CIFs are a good fit for this project, but I'm not super experienced with TypeScript. Maybe it makes sense for more complicated use-cases? Well, how it is currently works fines, so we can always decide on using CIFs in the future. We still have a bunch of JS files to convert to TS too :)\r\n",
+          "file_path": "packages/mermaid/src/utils/imperativeState.ts",
+          "line_number": 21,
+          "start_line": null,
+          "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+          "created_at": "2023-12-07T10:44:54Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests moving code into the test file since it's only used there."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85RGwg3",
+          "author": "sidharthv96",
+          "body": "As this is a type only change, does the viewer support arrays currently?",
+          "file_path": "cypress/helpers/util.ts",
+          "line_number": 28,
+          "start_line": null,
+          "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+          "created_at": "2023-10-16T14:09:33Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85RHkT4",
+          "author": "rflban",
+          "body": "Yes, and it was a pleasant surprise for me\r\n\r\nhttps://github.com/mermaid-js/mermaid/blob/7eac75c15c7a5c3e1d71ed0d49586f62c3ca7d0b/cypress/platform/viewer.js#L31-L46",
+          "file_path": "cypress/helpers/util.ts",
+          "line_number": 28,
+          "start_line": null,
+          "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+          "created_at": "2023-10-16T16:31:11Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions phrased to imply whether the type change is valid/supported, suggesting potential need for code change or verification."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85TBCb7",
+          "author": "aloisklink",
+          "body": "I feel like this will probably be nicer as an ES6 class, e.g. something like:\r\n\r\n```typescript\r\n/**\r\n * Resettable state storage.\r\n *\r\n * @example\r\n * ```\r\n * // you can use the `domain` functions for easier typing\r\n * const state = new ImperativeState(() => {\r\n *   foo: domain.optional<string>(\"default\"),\r\n *   bar: domain.identity<number[]>([]),\r\n *   baz: domain.optional(1),\r\n * });\r\n *\r\n * state.records.foo = \"hi\";\r\n * console.log(state.records.foo); // prints \"hi\";\r\n * state.reset();\r\n * console.log(state.records.foo); // prints \"default\";\r\n *\r\n * // typeof state.records:\r\n * // {\r\n * //   foo: string | undefined, // actual: undefined\r\n * //   bar: number[],           // actual: []\r\n * //   baz: number | undefined, // actual: 1\r\n * // }\r\n * ```\r\n */\r\nexport class ImperativeState<S extends Record<string, unknown>> {\r\n  init: () => S;\r\n  records: S;\r\n\r\n  /**\r\n   * @param init - Function that creates the default state.\r\n   */\r\n  constructor(init: () => S) {\r\n    this.init = init;\r\n    this.records = init();\r\n  }\r\n\r\n  reset() {\r\n    Object.keys(this.records).forEach((key) => {\r\n      delete this.records[key];\r\n    });\r\n    Object.entries(this.init()).forEach(\r\n      ([key, value]: [\r\n        keyof S,\r\n        any // eslint-disable-line @typescript-eslint/no-explicit-any\r\n      ]) => {\r\n        this.records[key] = value;\r\n      }\r\n    );\r\n  }\r\n}\r\n```\r\n\r\nThe behavior will then be exactly the same, but it will match the normal JavaScript/TypeScript code-style that most projects use.\r\n\r\nI've also got an example commit at https://github.com/aloisklink/mermaid/commit/35191a611947ff152eaaf849c8d006a387b6dccb that we could push to this branch.",
+          "file_path": "packages/mermaid/src/utils/imperativeState.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+          "created_at": "2023-11-14T15:26:43Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85UQSqc",
+          "author": "rflban",
+          "body": "I agree, let's do it that way",
+          "file_path": "packages/mermaid/src/utils/imperativeState.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+          "created_at": "2023-12-04T08:59:56Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85UjY4k",
+          "author": "rflban",
+          "body": "done",
+          "file_path": "packages/mermaid/src/utils/imperativeState.ts",
+          "line_number": 1,
+          "start_line": null,
+          "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+          "created_at": "2023-12-07T08:29:01Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests refactoring the implementation to use an ES6 class with a concrete code example."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Uvqtu",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n    this.records = this.init();\r\n```\r\n\r\nI remember your reply to the last comment, but is there any particular reason for keeping the reference equality after reset? Because reassigning the variable is much cleaner than deleting and assigning individual properties.\r\n\r\n> I want to keep reference equality after reset, but it is not a big deal\r\n",
+          "file_path": "packages/mermaid/src/utils/imperativeState.ts",
+          "line_number": 48,
+          "start_line": null,
+          "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+          "created_at": "2023-12-10T16:46:21Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Provides a specific code suggestion to simplify the reset method by reassigning the variable instead of deleting and re-assigning individual properties."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Uvqt6",
+          "author": "sidharthv96",
+          "body": "```suggestion\r\n  records: S;\r\n\r\n  /**\r\n   * @param init - Function that creates the default state.\r\n   */\r\n  constructor(private init: () => S) {\r\n```",
+          "file_path": "packages/mermaid/src/utils/imperativeState.ts",
+          "line_number": 31,
+          "start_line": null,
+          "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+          "created_at": "2023-12-10T16:46:40Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Provides a specific code suggestion to simplify the class by using TypeScript's private parameter shorthand in the constructor."
+    }
+  ],
+  "review_thread_count": 8,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": true,
+        "is_collapsed": true,
+        "comments": [
+          {
+            "id": "PRRC_kwDOAY2_J85RGuiA",
+            "author": "sidharthv96",
+            "body": "Remove?",
+            "file_path": "packages/mermaid/src/utils/imperativeState.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+            "created_at": "2023-10-16T14:03:36Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85RHl2L",
+            "author": "rflban",
+            "body": "This is an example, but I realize it makes sense to remove it",
+            "file_path": "packages/mermaid/src/utils/imperativeState.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+            "created_at": "2023-10-16T16:35:57Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85TBeij",
+            "author": "aloisklink",
+            "body": "We can add it to a [TSDoc `@example` comment](https://tsdoc.org/pages/tags/example/) for good integration with most code-editors, see https://github.com/mermaid-js/mermaid/pull/4941#discussion_r1392781051\r\n\r\n",
+            "file_path": "packages/mermaid/src/utils/imperativeState.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+            "created_at": "2023-11-14T16:35:58Z",
+            "is_outdated": true
+          },
+          {
+            "id": "PRRC_kwDOAY2_J85UjXAW",
+            "author": "rflban",
+            "body": "done",
+            "file_path": "packages/mermaid/src/utils/imperativeState.ts",
+            "line_number": null,
+            "start_line": null,
+            "commit_sha": "1b20fe97231258338bf15eb0d1c2f5d749b7044c",
+            "created_at": "2023-12-07T08:26:18Z",
+            "is_outdated": true
+          }
+        ]
+      },
+      "removal_reason": "stage1_too_short"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 8,
+    "stage1_kept": 7,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 1,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

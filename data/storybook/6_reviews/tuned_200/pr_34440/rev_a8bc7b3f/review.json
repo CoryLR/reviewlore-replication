@@ -1,0 +1,68 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/common/node-version.ts",
+      "line_number": 1,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "Six imports are dead code \u2014 none of `readFileSync`, `writeFileSync`, `find` (from `empathic/find`), `detectIndent`, `join` (from `pathe`), or `getProjectRoot` are referenced anywhere in the functions currently defined in this file. The test file even mocks `empathic/find`, `node:fs`, and `./utils/paths.ts` without any of the tested functions actually touching them, which is a further signal.\n\nIf these imports are infrastructure for a follow-up preflight feature (the PR description hints at `.nvmrc` / `package.json engines` detection), they must not be committed here \u2014 they will fail `no-unused-vars` / lint checks and make the module's footprint misleadingly large. Either: (a) include the code that uses them in this PR, or (b) remove the imports and add them in the follow-up PR where they are first used.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/common/node-version.ts",
+      "line_number": 72,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`Math.max(...MIN_SUPPORTED_NODE_VERSIONS.map((v) => v.major))` is re-evaluated on every call to `isNodeVersionSupported`. Since `MIN_SUPPORTED_NODE_VERSIONS` is a module-level constant, this value never changes. Compute it once at module initialization:\n\n```ts\nconst MAX_DEFINED_MAJOR = Math.max(...MIN_SUPPORTED_NODE_VERSIONS.map((v) => v.major));\n```\n\nThen reference `MAX_DEFINED_MAJOR` inside the function. Calls here are infrequent, so this is low-priority, but the fix is trivial.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/bin/index.ts",
+      "line_number": 2,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`export {}` appears without explanation. A future reader will wonder why it is here. Add a short inline comment:\n\n```ts\nexport {}; // Makes this file an ESM module, enabling top-level `await`.\n```",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/bin/index.ts",
+      "line_number": 8,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`storybook/internal/common` is dynamically imported twice: once on line 4 for `isNodeVersionSupported`, and again here inside the error branch for `MIN_SUPPORTED_NODE_DESCRIPTION`. While Node's module cache means the second `import()` is practically free, splitting one conceptual import across two locations is confusing and makes the happy path slightly slower for no benefit.\n\nConsolidate into a single destructured import before the check:\n\n```ts\nconst { isNodeVersionSupported, MIN_SUPPORTED_NODE_DESCRIPTION } = await import('storybook/internal/common');\n```",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/common/node-version.test.ts",
+      "line_number": 1,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`beforeEach` is imported from `vitest` but is never called anywhere in this test file. Remove it from the import to avoid a lint warning and prevent readers from expecting setup/teardown logic that does not exist.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/common/node-version.test.ts",
+      "line_number": 3,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "All three mocks (`empathic/find`, `node:fs`, `./utils/paths.ts`) are inert: none of the four exported symbols being tested (`formatMinVersion`, `isNodeVersionSupported`, `parseNodeVersionString`, `MIN_SUPPORTED_NODE_DESCRIPTION`) read files, traverse the filesystem, or call `getProjectRoot`. These mocks neither protect against real I/O nor exercise any observable code path.\n\nThis is directly connected to the dead imports in `node-version.ts` itself. Once those imports are resolved (removed or wired to real logic), the mocks should be revisited and either activated by real test cases or deleted.",
+      "index": 5
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The error message in `create-storybook/src/bin/index.ts` is missing the sentence \"Please upgrade your Node.js installation.\" that appears in the equivalent error paths in both `dispatcher.ts` and `cli-storybook/src/bin/index.ts`. All three entry points should present the same message to users so the experience is consistent regardless of which binary they invoked.",
+      "index": 6
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The new `isNodeVersionSupported` logic changes behaviour for Node.js 21.x (and any future odd-numbered major below 22). The old condition only rejected specific majors and minor combinations; anything not explicitly listed \u2014 including 21.x \u2014 would pass. The new implementation rejects any major that falls between defined ranges and is not above the highest defined major. Since Node 21 reached EOL in June 2024, silently rejecting it is the correct outcome, but it is a previously-undocumented breaking change for any user still on that major. The PR description and/or a comment near `isNodeVersionSupported` should note this intentional tightening.",
+      "index": 7
+    }
+  ],
+  "cost_usd": 0.5208626999999999,
+  "duration_seconds": 341.0006172657013
+}

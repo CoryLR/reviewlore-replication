@@ -1,0 +1,94 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/builders/builder-vite/input/iframe.html",
+      "line_number": 73,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The auto-formatter has modified the content of this template literal. Lines 73\u201374 and 76 now have 6 spaces of leading whitespace (e.g., `      It looks like you're visiting...`). Because template literals preserve all whitespace literally, the runtime value of `message` is now different from the original \u2014 `console.error` will print those leading spaces, and the `innerHTML` path will embed them in the DOM error text. The `embeddedLanguageFormatting: \"off\"` config option was presumably added to prevent exactly this problem in the future, but the file was already modified before (or alongside) that setting taking effect. The original template literal had the continuation lines flush to the left margin, which is the correct approach for preserving the intended string content.",
+      "index": 0
+    },
+    {
+      "file_path": "code/builders/builder-vite/input/iframe.html",
+      "line_number": 68,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The function body inside the `<script>` block is now indented 12 spaces to match the HTML nesting level, making the JavaScript code significantly harder to read. JavaScript inside `<script>` tags is conventionally kept at a low indentation level regardless of the HTML context. This is the class of change `embeddedLanguageFormatting: \"off\"` was added to prevent \u2014 but by the time that guard was in place, this file had already been reformatted.",
+      "index": 1
+    },
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 43,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "This `overrides` block for `*.md` and `*.mdx` is dead code. Both patterns are also listed in `ignorePatterns` (lines 38\u201339), so oxfmt will never process these files and the override options (`importOrderSeparation`, `importOrderSortSpecifiers`) will never be applied. The block can be removed.",
+      "index": 2
+    },
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 56,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `**/frameworks/angular/template/**/*.ts` pattern in this override is dead code. Those files are excluded from formatting via `code/frameworks/angular/template/**` in `ignorePatterns` (line 33), so the `parser: \"babel-ts\"` override will never apply to them. The `**/frameworks/angular/src/**/*.ts` half of the glob is valid and will work correctly. Consider splitting the two patterns into separate entries or removing the unreachable one.",
+      "index": 3
+    },
+    {
+      "file_path": "package.json",
+      "line_number": 46,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The pre-commit `lint-staged` hook now calls `oxfmt --check` instead of `oxfmt`. The previous behavior (in `code/package.json`) was to auto-format staged files before committing; the new behavior only validates them and fails the commit if they are not already formatted. This is a meaningful workflow change: contributors who relied on the pre-commit hook to fix formatting will now get unexpected commit failures. If the intent is to require pre-formatting, that should be clearly documented (e.g., in CONTRIBUTING.md or a developer setup guide).",
+      "index": 4
+    },
+    {
+      "file_path": ".vscode/extensions.json",
+      "line_number": 8,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "File is missing a newline at the end (`\\ No newline at end of file`). Most editors and linters expect files to end with a trailing newline.",
+      "index": 5
+    },
+    {
+      "file_path": ".vscode/settings.json",
+      "line_number": 75,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "File is missing a newline at the end (`\\ No newline at end of file`). Both modified `.vscode` files have this issue \u2014 it was likely introduced during the manual edits in this PR. Note that the `.vscode` directory is in `ignorePatterns`, so the formatter won't fix this automatically.",
+      "index": 6
+    },
+    {
+      "file_path": "scripts/project.json",
+      "line_number": 10,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `pretty-docs` NX target declares `inputs: [\"{workspaceRoot}/docs/**/*\"]`, so the cache is invalidated whenever docs files change. But `command: \"yarn fmt:check\"` runs at `{workspaceRoot}`, which invokes `oxfmt --check .` \u2014 and `docs` is in the root `ignorePatterns`, so docs files are never actually checked. The result is that this target's cache is unnecessarily busted on every docs change, yet the command provides no meaningful verification of docs formatting. The `inputs` should be updated to reflect what the command actually checks, or the target should run the scripts-level `fmt:check` that targets `docs/_snippets` once that path is unblocked.",
+      "index": 7
+    },
+    {
+      "file_path": "scripts/ci/common-jobs.ts",
+      "line_number": 78,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `prettyDocs` CI job (named `'Prettify docs'` at line 67) no longer checks docs formatting. It now runs `yarn fmt:check` without a `working_directory`, which defaults to the checkout root and runs `oxfmt --check .` \u2014 docs are excluded from that check via `ignorePatterns`. The job name and its step label (`'Format check'`) are now misleading. Consider renaming the job to reflect that it is a general format check, or restore docs-specific validation once the docs formatting story is settled with the DX team.",
+      "index": 8
+    },
+    {
+      "file_path": "scripts/package.json",
+      "line_number": 12,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`fmt:check` and `fmt:write` cd into `docs/` and invoke `oxfmt --check ./_snippets` (or `oxfmt ./_snippets`). However, `docs/.oxfmtrc.json` was deleted in this PR and no local config exists there anymore. oxfmt will walk up and discover the root `.oxfmtrc.json`, which has `\"docs\"` in `ignorePatterns`. Depending on how oxfmt resolves ignore patterns relative to its config location, `docs/_snippets` may match the `\"docs\"` ignore rule and be silently skipped \u2014 meaning these scripts become effective no-ops. This should be verified. If docs formatting is intentionally deferred (as the PR description implies), these scripts should either be removed or be clearly marked as non-functional until the follow-up PR lands.",
+      "index": 9
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `lint` script in `code/package.json` uses `cd .. && yarn fmt:check` to invoke the root-level format check. Using `cd` in an npm script is fragile: it assumes the script is always invoked from the `code/` directory. If ever run via a different working directory or a tool that changes CWD, the path will be wrong. A safer alternative is `yarn --cwd .. fmt:check`, which explicitly targets the parent directory regardless of where the script is invoked from.",
+      "index": 10
+    }
+  ],
+  "cost_usd": 0.65849745,
+  "duration_seconds": 514.5646820068359
+}

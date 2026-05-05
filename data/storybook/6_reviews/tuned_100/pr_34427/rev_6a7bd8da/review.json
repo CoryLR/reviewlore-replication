@@ -1,0 +1,36 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/common/js-package-manager/JsPackageManagerFactory.test.ts",
+      "line_number": 373,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This `readFileSyncMock.mockImplementation(...)` is configured inside an `it()` body, violating the project's spy-mocking convention (`.cursor/rules/spy-mocking.mdc`), which requires mock behavior to be configured exclusively inside `beforeEach` blocks. The same issue appears again at line 408.\n\nThe `beforeEach` at the top of the describe block resets `findMock.up` and `executeCommandSyncMock` but does NOT reset `readFileSyncMock`. After these two tests run, the mock retains its implementation (throwing `'File not found'` for any unknown path). Any future test that sets `findMock.up` to return a `package.json` path \u2014 but doesn't re-configure `readFileSyncMock` \u2014 will inherit this leftover behavior and fail unexpectedly.\n\nFix: add `readFileSyncMock.mockReset()` to the top-level `beforeEach`, or wrap these two tests in a nested `describe` block with its own `beforeEach` that sets the mock implementation and an `afterEach` (or reset in `beforeEach`) that clears it.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/common/js-package-manager/JsPackageManagerFactory.ts",
+      "line_number": 258,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description states that `getProjectRoot()` is \"computed once in `getYarnVersion()` and passed to helper functions to avoid repeated filesystem traversals,\" but the actual implementation does the opposite: both `getYarnVersionFromPackageJson` (here, line 258) and `hasYarnBerryConfig` (line 285) call `getProjectRoot()` independently. `getYarnVersion()` passes nothing to them.\n\nThis is not a runtime performance bug because `getProjectRoot()` caches its result internally, making subsequent calls cheap. However, the PR description is misleading, and if the intent was to share a single computed root, the helper function signatures should accept an optional `root` parameter rather than calling `getProjectRoot()` themselves. Consider either updating the PR description/JSDoc to reflect the actual caching-based approach or refactoring the helpers to accept a `root` parameter.",
+      "index": 1
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `getYarnVersionFromPackageJson` function has a branch that returns `1` when the `packageManager` field is `'yarn@1.x'` (`match[1] === '1'` on line 270). No test covers this path. All three `packageManager`-field tests use `yarn@4.1.0`. Without a test for `packageManager: 'yarn@1.22.0'`, there is no verification that `Yarn1Proxy` is returned correctly in that scenario. Add a test such as: `'CLASSIC VIA packageManager FIELD: when package.json has packageManager yarn@1.22.0'` asserting `toBeInstanceOf(Yarn1Proxy)`.",
+      "index": 2
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "In monorepos, `getYarnVersionFromPackageJson` only reads the *nearest* `package.json` (via `find.up`). In a workspace where an inner package has its own `package.json` without a `packageManager` field, the root-level `package.json` that carries `packageManager: 'yarn@4'` is never consulted \u2014 `find.up` returns on the first match and the function returns `undefined`. For Yarn Berry, `hasYarnBerryConfig` (checking `.yarnrc.yml` which typically lives at the root and is found by walking up) compensates for this gap. However, a root-level `packageManager: 'yarn@1.x'` in a monorepo where an inner workspace package has its own `package.json` without that field would still be missed. Consider documenting this limitation in a comment, or walking up through multiple `package.json` files when the first one found does not contain a yarn `packageManager` field.",
+      "index": 3
+    }
+  ],
+  "cost_usd": 0.58958845,
+  "duration_seconds": 349.7610309123993
+}

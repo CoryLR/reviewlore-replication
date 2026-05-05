@@ -1,0 +1,98 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/create-storybook/src/generators/configure.test.ts",
+      "line_number": 174,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The diff renames the second test case to 'should generate preview.tsx' and changes the expectation for the Angular-specific test from `.ts` to `.tsx`. However, the implementation in `configure.ts` only applies the `.tsx`/`.jsx` extension for JSX-based renderers (React, Preact, Solid, React Native). Angular does not use JSX, so this test expectation is incorrect \u2014 it should remain `.ts`. The test name 'should generate preview.tsx' is also too generic and would mislead readers into thinking all renderers get `.tsx`. The correct expectation for the Angular test case is `.storybook/preview.ts`.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/generators/configure.test.ts",
+      "line_number": 177,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "After this PR, there are effectively two distinct behaviors (JSX extension for React-like renderers, plain extension otherwise), but the existing tests only cover one path each. A test explicitly asserting that non-React renderers like Angular or Vue continue to produce `.ts`/`.js` \u2014 not `.tsx`/`.jsx` \u2014 would guard against future regressions where the renderer check is accidentally removed.",
+      "index": 1
+    },
+    {
+      "file_path": "docs/_snippets/storybook-addons-preset-preview.md",
+      "line_number": 1,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "This snippet documents an addon's own internal preview source file at `example-addon/src/preview.js`, not the user's `.storybook/preview.js`. Renaming the addon source file to `example-addon/src/preview.jsx` is out of scope for this PR and may mislead addon authors into thinking their addon's preview entry point must use a JSX extension. Only `.storybook/preview.*` (the project config file) is the target of this change.",
+      "index": 2
+    },
+    {
+      "file_path": "docs/_snippets/storybook-preview-use-global-type.md",
+      "line_number": 31,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The filename was `\".storybook/preview.js|jsx\"` (indicating either `.js` or `.jsx`), but the replacement is `\".storybook/preview.jsx|jsx\"`, which now has a redundant `|jsx` suffix \u2014 `preview.jsx|jsx` is nonsensical. It should simply be `\".storybook/preview.jsx\"`. The same issue appears in the TSX variant around line 51 (`preview.tsx|tsx`), and again around lines 205 and 229 in the CSF Next blocks. Compare the handling in `mock-context-container-global.md`, where the equivalent change is correctly simplified to just `.storybook/preview.jsx` / `.storybook/preview.tsx` with no trailing `|jsx` or `|tsx`.",
+      "index": 3
+    },
+    {
+      "file_path": "docs/_snippets/decorator-parameterized-in-preview.md",
+      "line_number": 208,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The Svelte renderer's preview file is now shown as `.storybook/preview.tsx`. Svelte components live in `.svelte` files; the preview configuration file for Svelte does not contain JSX and has no reason to use the `.tsx` extension. The Storybook CLI (with the renderer-aware `isJsx` logic) would actually generate `.storybook/preview.ts` for Svelte projects, making this documentation snippet incorrect. The same applies to the web-components block below it \u2014 Lit uses HTML template literals, not JSX.",
+      "index": 4
+    },
+    {
+      "file_path": "docs/_snippets/storybook-preview-with-styled-components-decorator.md",
+      "line_number": 141,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The Svelte preview snippet now uses `.storybook/preview.tsx`. This is inconsistent with what Storybook's CLI would actually generate for a Svelte project (`.preview.ts`), since Svelte is not a JSX renderer. Svelte decorators use `.svelte` component files imported into the preview, not JSX \u2014 a `.tsx` filename suggests JSX support that isn't needed or expected.",
+      "index": 5
+    },
+    {
+      "file_path": "docs/_snippets/storybook-addons-preset-preview.md",
+      "line_number": 14,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Similarly to line 1, the TypeScript variant renames `example-addon/src/preview.ts` to `example-addon/src/preview.tsx`. This is an addon source file, not a `.storybook/preview.ts` user config file. Addon preview entry points don't need to be `.tsx` \u2014 they typically export `ProjectAnnotations` without any JSX. This change may mislead addon authors.",
+      "index": 6
+    },
+    {
+      "file_path": "docs/api/csf/csf-next.mdx",
+      "line_number": 54,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The title attribute is updated to `\".storybook/preview.jsx|tsx\"`. This mixes JS and TS extensions in a single title string in a way that is confusing \u2014 `|` here implies either/or but `.jsx` is the JS variant and `.tsx` is the TS variant, which aren't interchangeable. The correct form matching the existing convention used elsewhere in the docs would be `\".storybook/preview.jsx|tsx\"` only if you intend to display both JS and TS options together; more clearly, the two variants should use `\".storybook/preview.jsx\"` and `\".storybook/preview.tsx\"` in their respective code blocks. Contrast with the `main.js|ts` pattern used in the same section which has separate blocks.",
+      "index": 7
+    },
+    {
+      "file_path": "code/e2e-tests/storybook-hooks.spec.ts",
+      "line_number": 21,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `previewFilePath` is hardcoded to `preview.tsx` for the `react-vite-default-ts` sandbox, which is correct since React is a JSX renderer. However, if there are other sandboxes that exercise non-React renderers (Angular, Vue, Svelte) and their e2e tests similarly reference a preview file path, those would need to remain `.ts` \u2014 not `.tsx`. Consider adding a comment or assertion to make the React-specific reason explicit, so future contributors don't copy this pattern for non-React sandboxes.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "There is a significant mismatch between the documentation changes and the actual code behavior. The diff updates virtually all renderer-specific documentation snippets \u2014 including Angular, Vue, Svelte, and Web Components \u2014 to show `.storybook/preview.tsx` / `.storybook/preview.jsx`. However, the actual `configure.ts` implementation uses a renderer-aware `isJsx` flag that only applies the `.tsx`/`.jsx` extension for React, Preact, Solid, and React Native. Angular, Vue, Svelte, and Web Components projects will still have `.storybook/preview.ts` / `.storybook/preview.js` generated by the CLI. This means the documentation will actively mislead users of non-JSX frameworks: they will see `.storybook/preview.tsx` in every doc snippet but find a `.storybook/preview.ts` file on disk. All renderer-specific snippets for Angular, Vue, Svelte, and Web Components should continue to use `.ts`/`.js` extensions in their `filename=` attributes.",
+      "index": 9
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "Several documentation pages now reference `preview.jsx|tsx` (mixing JS and TS extensions in a single title string) in headings and inline code like `docs/api/csf/csf-next.mdx` and `docs/api/parameters.mdx`. This particular notation was not consistently used before this PR: the codebase historically used either `preview.js|ts` (the plain variants) or separate language-specific snippets. If the intent is to show both variants, the conventional form `preview.jsx|tsx` should be consistently applied everywhere it appears \u2014 and avoided in contexts where only one language (TS or JS) applies.",
+      "index": 10
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The AGENTS.md update and all prose documentation changes consistently rename `preview.ts` \u2192 `preview.tsx` and `preview.js` \u2192 `preview.jsx` regardless of renderer context. This is fine for the general/project-level documentation where renderer-neutral phrasing applies. However, framework-specific documentation pages (Angular, Vue, Svelte, Web Components) should preserve `.ts`/`.js` to match the files those users actually have on disk. The breadth of this change \u2014 hundreds of snippet files updated globally \u2014 makes it easy to introduce silent inaccuracies in renderer-specific sections, as seen with the Svelte and Web Components blocks.",
+      "index": 11
+    }
+  ],
+  "cost_usd": 1.42593945,
+  "duration_seconds": 521.4868810176849
+}

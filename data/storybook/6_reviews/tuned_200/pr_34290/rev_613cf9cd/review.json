@@ -1,0 +1,54 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/storybook-package-name-conflict.ts",
+      "line_number": 26,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The value returned here \u2014 `{ packageName }` \u2014 is never consumed downstream. `BaseFix.prompt` is typed `() => string` (no args), and `notification` fixes have `run?: never`, so the result from `check()` is used solely as a truthy/falsy signal. Since `packageName` is always the constant `'storybook'` when non-null, this field adds no practical information. The generic parameter `Fix<StorybookPackageNameOptions>` and the interface can be simplified to `Fix<Record<string, never>>` or omitted (`Fix`) to avoid implying the data is used somewhere.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/automigrate/fixes/storybook-package-name-conflict.test.ts",
+      "line_number": 49,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The three `toContain` assertions ('storybook', 'node_modules/storybook', 'rename') are very broad. The string `'storybook'` appears in ANSI-colorized fragments (e.g., `picocolors.cyan('\"storybook\"')`), so the checks are technically correct but would pass even if large portions of the message were removed or restructured. Consider asserting on a more complete, distinctive substring \u2014 e.g., the full opening sentence `'Your package.json'` \u2014 to provide a more meaningful regression guard.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/commands/PreflightCheckCommand.test.ts",
+      "line_number": 127,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`not.toHaveBeenCalledWith(expect.stringContaining(...))` only verifies the specific conflict message was not emitted; it allows `logger.warn` to be called with other messages. Because `execute()` has other `logger.warn` call-sites (yarn1 fallback, PnP deprecation, outdated-version warning), a test that inadvertently triggers one of those branches still passes. Where possible, scope the mock or assert `expect(logger.warn).not.toHaveBeenCalled()` to make intent explicit, or add a comment explaining why the partial check is sufficient here.",
+      "index": 2
+    },
+    {
+      "file_path": "code/lib/eslint-plugin/docs/rules/no-stories-of.md",
+      "line_number": 26,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "This quote-style change (single \u2192 double quotes in the code example) is unrelated to the PR's stated objective of adding a package-name conflict check. Per project conventions, unrelated changes should be extracted into a separate PR to keep history bisectable and diffs reviewable.",
+      "index": 3
+    },
+    {
+      "file_path": "docs/configure/integration/eslint-plugin.mdx",
+      "line_number": 78,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "Same as above \u2014 the quote-style normalisation in this documentation snippet is unrelated to the automigrate fix being introduced. Please move it to a dedicated formatting PR.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The package-name conflict detection is implemented in two independent places: `PreflightCheckCommand.checkPackageNameConflict()` (init / create-storybook flow) and `storybook-package-name-conflict.ts` (automigrate flow). Both duplicate the same `packageName === 'storybook'` predicate and near-identical prose \u2014 but the wording already diverges ('To fix this, rename\u2026' vs 'Please rename\u2026'), and the automigrate version uses `picocolors` while the preflight version is plain text. If the condition or message ever changes (e.g., to also catch 'storybook-config' or adjust the suggested alternatives), both files must be updated in sync. Consider extracting the predicate into a shared helper (e.g., `isConflictingPackageName(name: string): boolean`) and, if feasible, sharing the message string between the two entry points to eliminate the drift.",
+      "index": 5
+    }
+  ],
+  "cost_usd": 0.4685412,
+  "duration_seconds": 299.50969314575195
+}

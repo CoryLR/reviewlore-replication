@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 43,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "This `overrides` entry for `*.md` and `*.mdx` is dead code. Both `*.md` (line 38) and `*.mdx` (line 39) are already listed in `ignorePatterns`, so oxfmt will never process these files and the override options (`importOrderSeparation`, `importOrderSortSpecifiers`) will never be applied. Remove this block to avoid misleading future readers.",
+      "index": 0
+    },
+    {
+      "file_path": ".oxfmtrc.json",
+      "line_number": 56,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The second file pattern in this override\u2014`**/frameworks/angular/template/**/*.ts`\u2014is dead code. The directory `code/frameworks/angular/template/**` is already in `ignorePatterns` (line 33), so those `.ts` files are excluded before any override can apply. Only the `**/frameworks/angular/src/**/*.ts` pattern is active. Consider splitting these into two separate `overrides` entries or removing the unreachable pattern, so the config's intent is clear.",
+      "index": 1
+    },
+    {
+      "file_path": "package.json",
+      "line_number": 46,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The lint-staged config uses `\"oxfmt --check\"` (check mode) rather than `\"oxfmt\"` (write mode). The previous `code/package.json` lint-staged config used write mode, which auto-formatted staged files in place and re-staged them automatically on commit. With `--check`, the pre-commit hook will simply fail if a file isn't already formatted, requiring the developer to manually run `yarn fmt:write` before retrying their commit. This is a DX regression\u2014consider switching to write mode (`\"oxfmt\"`) to restore auto-fix-on-commit behavior. The same applies to the identical `\"oxfmt --check\"` on line 50.",
+      "index": 2
+    },
+    {
+      "file_path": "code/package.json",
+      "line_number": 27,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "`\"yarn lint:js && cd .. && yarn fmt:check\"` uses an inline `cd ..` to change the working directory within the same shell process. While this works due to `&&` chaining, it is fragile and unconventional for npm scripts. Prefer the idiomatic `yarn --cwd ..` form: `\"yarn lint:js && yarn --cwd .. fmt:check\"`. This avoids mutating the shell's working directory and is consistent with how other scripts in this repo reference cross-package commands.",
+      "index": 3
+    },
+    {
+      "file_path": "code/builders/builder-vite/input/iframe.html",
+      "line_number": 68,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The JavaScript inside the `<script>` block is now indented at 12 spaces (8 spaces deeper than the `<script>` tag itself at 4 spaces), resulting in very deep nesting throughout the entire function body. The `embeddedLanguageFormatting: \"off\"` setting in `.oxfmtrc.json` appears to prevent running the JS formatter on the content but does not prevent the HTML formatter from re-adjusting the indentation baseline of the script block. Consider whether this file should be added to `ignorePatterns` in `.oxfmtrc.json` to preserve its original, more readable indentation.",
+      "index": 4
+    },
+    {
+      "file_path": "code/builders/builder-vite/input/iframe.html",
+      "line_number": 88,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "This line contains a real bug fix\u2014`<ul>...</ul></p>` now correctly closes the `<ul>` element, whereas the original had `<ul>...</ul></p>` where the prior code actually had `<ul>...<ul></p>` (an opening `<ul>` tag where the closing `</ul>` should have been, leaving the list element unclosed). This is a meaningful functional correction that is buried inside a large formatting-only diff, making it hard to spot in review and hard to trace in git history. Consider separating functional fixes from pure formatting changes into distinct commits.",
+      "index": 5
+    },
+    {
+      "file_path": "scripts/ci/common-jobs.ts",
+      "line_number": 78,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "The `prettyDocs` CI job now runs `yarn fmt:check` (line 78), which is `oxfmt --check .` scoped to the entire repository. The `lint` job (line 200) runs the exact same command. This means every CI run that includes both jobs will format-check the entire codebase twice. Previously, `prettyDocs` was scoped only to `docs/_snippets`. Consider either keeping `prettyDocs` scoped to docs-only checking (using `yarn --cwd scripts fmt:check`) or removing the `fmt:check` step from `prettyDocs` entirely since it is now covered by the `lint` job. The job name \"Prettify docs\" is also misleading now that it checks all code.",
+      "index": 6
+    },
+    {
+      "file_path": ".vscode/extensions.json",
+      "line_number": 9,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The file is missing a newline at end of file (indicated by `\\ No newline at end of file` in the diff). POSIX and EditorConfig conventions (this repo ships a `.editorconfig`) require a trailing newline. The `.vscode/settings.json` file has the same issue on its final line.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `pretty-docs` root script changed from `\"cd scripts; yarn install >/dev/null; yarn docs:fmt:write\"` to `\"cd scripts; yarn fmt:write\"`. The explicit `yarn install` step was removed. If this script is ever run locally in an environment where the `scripts` workspace hasn't been installed yet, it will fail because `oxfmt` may not be available. The CI job compensates by calling `npm.install('.')` before running the check, so CI is safe. But a comment (or a check in the script itself) clarifying the install assumption would help future readers.",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `docs/.oxfmtrc.json` config now has several new settings (`tabWidth`, `trailingComma`, `arrowParens`, `sortPackageJson`, `embeddedLanguageFormatting`) that mirror the root `.oxfmtrc.json` but without the `ignorePatterns` block. This creates two nearly-identical config files that will need to be kept in sync. If the docs config is always a subset of the root config, consider whether an `extends`-style mechanism in oxfmt could unify them, or at minimum add an inline comment noting that this config intentionally only targets `docs/_snippets` via explicit CLI path arguments in `scripts/package.json`.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.5903162500000001,
+  "duration_seconds": 403.36096000671387
+}

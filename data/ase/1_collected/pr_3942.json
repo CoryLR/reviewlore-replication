@@ -1,0 +1,51 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3942,
+  "title": "Fix `iread_xyz` to avoid `RuntimeError: generator raised StopIteration`",
+  "body": "# Summary\n\nThis MR fixes `RuntimeError: generator raised StopIteration` in `iread_xyz` when called in a for loop.\n\n# Details\n\n`iread_xyz` has been implemented in https://gitlab.com/ase/ase/-/merge_requests/341 to read the extended-XYZ file as an iterator.\n[This has however not been tested](https://ase.gitlab.io/ase/coverage-html/z_fc41ef7ac65888e5_extxyz_py.html#t550).\n\nFor the following `test.xyz`\n```\n1\nProperties=species:S:1:pos:R:3 pbc=\"F F F\"\nH        0.00000000       0.00000000       0.00000000\n```\nthe following `test.py` shows `RuntimeError: generator raised StopIteration`.\n```python\nfrom ase.io.extxyz import iread_xyz\n\nwith open(\"test.xyz\") as fd:\n    for atoms in iread_xyz(fd):\n        print(atoms)\n```\nwhile if correct it should leave the for loop after reading the last frame.\nThis error is due to the `while True` loop and the following `next(fd)` line in `ixyzchunks`.\n\nThe present MR fixes the issue with replaceing `while True` with `for line in fd` so that it can go out the loop after reading the file till the end.\n\n@askhl Could you have a review on it, as it is related to your `ImageIterator`?\n\n# Notes\n\nAs far as I understand !341, `read_xyz` was planed to re-implement with `iread_xyz`, but it has not been done yet. We therefore need to test `iread_xyz` separately, but once `read_xyz` starts relying on `iread_xyz`, the separate test would not be necessary.\n\nI switch `next(fd)` to `fd.readline()` in order to avoid `OSError: telling position disabled by next() call` (see https://stackoverflow.com/q/29618936). To make it complete, we also need to revise `_read_xyz_frame`, but I would so far leave it for future revision.\n\nSeveral annotations are also done for preparation of follow-up MRs I plan (e.g. for #1853).\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [~] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [x] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [~] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [~] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "yuzie007",
+  "merged_at": "2026-01-23T10:47:53.925Z",
+  "base_ref": "master",
+  "merge_commit_sha": "ead368bb86a9b90a8180921679120140f43dcb26",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3022968702",
+          "author": "yuzie007",
+          "body": "@askhl Would you mind if I set %3.27.1 to this MR?\n\nThis is in the end a small (but important to make `iread_xyz` work with a for loop) bug-fix to `ixyzchunks`, which may not take long time for review (other parts are just annotations).\nI plan to have a follow-up to refactor `read_lammps_dump_text` with `ImageIterator`, and for that it would be helpful to first clean up the related code, which is partly done in the present MR.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-01-21T09:09:08.413Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3029897428",
+          "author": "askhl",
+          "body": "Thanks a lot @yuzie007!",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-01-23T10:47:51.252Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 2
+}

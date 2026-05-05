@@ -1,0 +1,261 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33868,
+  "title": "Core: Sanitize inputs for save from controls",
+  "body": "Closes #\r\n\r\n<!-- If your PR is related to an issue, provide the number(s) above; if it resolves multiple issues, be sure to break them up (e.g. \"closes #1000, closes #1001\"). -->\r\n\r\n<!--\r\n\r\nThank you for contributing to Storybook! Please submit all PRs to the `next` branch unless they are specific to the current release. Storybook maintainers cherry-pick bug and documentation fixes into the `main` branch as part of the release process, so you shouldn't need to worry about this. For additional guidance: https://storybook.js.org/docs/contribute\r\n\r\n-->\r\n\r\n## What I did\r\n\r\n<!-- Briefly describe what your PR does -->\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\n> [!CAUTION]\r\n> This section is mandatory for all contributions. If you believe no manual test is necessary, please state so explicitly. Thanks!\r\n\r\n<!-- Please include the steps to test your changes here. For example:\r\n\r\n1. Run a sandbox for template, e.g. `yarn task --task sandbox --start-from auto --template react-vite/default-ts`\r\n2. Open Storybook in your browser\r\n3. Access X story\r\n\r\n-->\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Bug Fixes**\n  * Improved security when generating code/templates by escaping special characters in interpolated names and import paths to prevent XSS and malformed output.\n\n* **Tests**\n  * Added tests covering character escaping and XSS protection to ensure generated files remain safe and correctly escaped.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "valentinpalkovic",
+  "merged_at": "2026-02-24T13:05:18Z",
+  "base_ref": "next",
+  "merge_commit_sha": "12db183a595c84d13bc215e30a1adc589ed25c49",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "62d1aead9a29c9e2e1bc161065750bcc87b1c874",
+    "4d8237d24d835d7e9c08769f1ab6960f10d29a7f"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6oPCUB",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Regex matches characters not handled in the escape mapping.**\n\nThe regex `/['\"\\\\\\b\\f\\n\\r\\t]/g` matches backspace (`\\b`), form feed (`\\f`), and tab (`\\t`), but the `codes` object doesn't include mappings for them. These characters will pass through unescaped due to the `|| char` fallback.\n\nEither remove these characters from the regex if they don't need escaping, or add them to the mapping for consistency:\n\n\n<details>\n<summary>\ud83d\udd27 Proposed fix to add missing escape mappings</summary>\n\n```diff\n     const codes: Record<string, string> = {\n       \"'\": \"\\\\'\",\n       '\"': '\\\\\"',\n       \"\\\\\": \"\\\\\\\\\",\n+      \"\\b\": \"\\\\b\",\n+      \"\\f\": \"\\\\f\",\n       \"\\n\": \"\\\\n\",\n-      \"\\r\": \"\\\\r\"\n+      \"\\r\": \"\\\\r\",\n+      \"\\t\": \"\\\\t\"\n     };\n```\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/core-server/utils/safeString.ts` around lines 6 - 14, The regex\nin the replace call inside safeString.ts includes \\b, \\f and \\t but the codes\nmapping object (codes) lacks entries for backspace, form-feed and tab so those\ncharacters are left unescaped; update the codes object used by the str.replace\ncallback (the codes constant in the replace handler) to include mappings for\n\"\\b\": \"\\\\b\", \"\\f\": \"\\\\f\" and \"\\t\": \"\\\\t\" (or alternatively remove those\nsequences from the regex), ensuring the replace callback returns the proper\nescaped sequences for all characters matched by the regex.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits caa833c to 3c4f034",
+          "file_path": "code/core/src/core-server/utils/safeString.ts",
+          "line_number": 14,
+          "start_line": null,
+          "commit_sha": "60cae6256baa7b11e7c9624e248b92af38c20a17",
+          "created_at": "2026-02-18T14:01:23Z",
+          "is_outdated": true
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6oQ9h7",
+          "author": "yannbf",
+          "body": "@valentinpalkovic apart from the cases mentioned above, there are other cases with backticks and string interpolation:\n- \\`; console.log(\"boom\");\\`\n- '${require(\"child_process\").exec(\"rm -rf /\")}'",
+          "file_path": "code/core/src/core-server/utils/safeString.ts",
+          "line_number": 14,
+          "start_line": null,
+          "commit_sha": "60cae6256baa7b11e7c9624e248b92af38c20a17",
+          "created_at": "2026-02-18T15:46:08Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a bug where regex matches characters not handled in the escape mapping, and proposes a specific fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6o14PQ",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The regex pattern includes `\\b`, `\\f`, and `\\t` characters, but the `codes` mapping doesn't include escape sequences for these characters. This means when these characters are matched, the function falls back to `return codes[char] || char`, which returns the original character unchanged, defeating the purpose of including them in the regex.\n\nEither add the missing escape codes to the mapping:\n```\n\"\\b\": \"\\\\b\",\n\"\\f\": \"\\\\f\",\n\"\\t\": \"\\\\t\"\n```\n\nOr remove `\\b\\f\\t` from the regex pattern if escaping them is not needed.\n```suggestion\n      \"\\b\": \"\\\\b\",\n      \"\\f\": \"\\\\f\",\n      \"\\n\": \"\\\\n\",\n      \"\\r\": \"\\\\r\",\n      \"\\t\": \"\\\\t\"\n```",
+          "file_path": "code/core/src/core-server/utils/safeString.ts",
+          "line_number": 12,
+          "start_line": null,
+          "commit_sha": "60cae6256baa7b11e7c9624e248b92af38c20a17",
+          "created_at": "2026-02-20T11:12:40Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies the same bug and suggests specific code changes to fix the missing escape mappings."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6o14QG",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The approach of escaping special characters in file paths and export names is fundamentally flawed for this use case. The sanitization is being applied to `componentFilePath` and `componentExportName` before they're passed to `generateStoryFile`. However:\n\n1. In `get-new-story-file.ts`, the code uses Node.js path manipulation functions (`basename`, `dirname`, `extname`) on the already-escaped path. This will break because escaped characters like `\\\\'` or `\\\\n` are not valid file path characters.\n\n2. The escaped strings are used directly in template literals to construct import statements (e.g., `import Component from './${basenameWithoutExtension}'`), which would generate syntactically invalid code with double-escaped characters.\n\n3. File paths should be valid filesystem paths, not escaped JavaScript strings. The real file system won't have files with names like `button\\\\'s.tsx`.\n\nInstead of escaping the inputs at the channel layer, sanitization should be applied at the point where the strings are inserted into generated code templates, or use a different approach like parameterized templates or proper AST generation. This would maintain valid file paths while protecting against injection in the generated code.",
+          "file_path": "code/core/src/core-server/server-channel/create-new-story-channel.ts",
+          "line_number": 43,
+          "start_line": null,
+          "commit_sha": "60cae6256baa7b11e7c9624e248b92af38c20a17",
+          "created_at": "2026-02-20T11:12:40Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a fundamental design flaw in the sanitization approach and suggests an alternative strategy."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6o14Qe",
+          "author": "copilot-pull-request-reviewer",
+          "body": "Missing spaces after commas in the import statement. This violates the expected code style conventions seen throughout the codebase.\n```suggestion\nimport { describe, expect, it } from \"vitest\";\nimport { safeJsString } from './safeString';\n```",
+          "file_path": "code/core/src/core-server/utils/safeString.test.ts",
+          "line_number": 2,
+          "start_line": null,
+          "commit_sha": "dc7d85344aa3c358594f532f1a6a0540bc0a5afb",
+          "created_at": "2026-02-20T11:12:41Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a code style violation (missing spaces after commas) and provides a suggested fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6o14Q0",
+          "author": "copilot-pull-request-reviewer",
+          "body": "Trailing whitespace at the end of the line. This should be removed.\n```suggestion\n  it('should escape backslashes characters', () => {\n```",
+          "file_path": "code/core/src/core-server/utils/safeString.test.ts",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "dc7d85344aa3c358594f532f1a6a0540bc0a5afb",
+          "created_at": "2026-02-20T11:12:41Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags trailing whitespace and provides a suggested fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6o14RP",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The test description says \"should escape double quotes characters\" but should be \"should escape double quote characters\" for grammatical correctness.\n```suggestion\n  it('should escape double quote characters', () => {\n```",
+          "file_path": "code/core/src/core-server/utils/safeString.test.ts",
+          "line_number": 9,
+          "start_line": null,
+          "commit_sha": "60cae6256baa7b11e7c9624e248b92af38c20a17",
+          "created_at": "2026-02-20T11:12:41Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a grammatical error in a test description and suggests a correction."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6o14Rl",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The test description says \"should escape backslashes characters\" but should be \"should escape backslash characters\" for grammatical correctness.\n```suggestion\n  it('should escape backslash characters', () => {  \n```",
+          "file_path": "code/core/src/core-server/utils/safeString.test.ts",
+          "line_number": 13,
+          "start_line": null,
+          "commit_sha": "dc7d85344aa3c358594f532f1a6a0540bc0a5afb",
+          "created_at": "2026-02-20T11:12:41Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a grammatical error in a test description and suggests a correction."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6o14SE",
+          "author": "copilot-pull-request-reviewer",
+          "body": "Missing space after comma in the import statement. This violates the expected code style conventions.\n```suggestion\nimport { describe, expect, it } from \"vitest\";\nimport { safeJsString } from './safeString';\n```",
+          "file_path": "code/core/src/core-server/utils/safeString.test.ts",
+          "line_number": 2,
+          "start_line": null,
+          "commit_sha": "dc7d85344aa3c358594f532f1a6a0540bc0a5afb",
+          "created_at": "2026-02-20T11:12:42Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a code style violation (missing space after comma) and provides a suggested fix."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6o14Sc",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The test description says \"should escape single quotes characters\" but the plural \"characters\" should be singular \"character\" or the phrase should be reworded to \"should escape single quote characters\" for grammatical correctness.\n```suggestion\n  it('should escape single quote characters', () => {\n    expect(safeJsString(\"./button.tsx'alert({ console.log('malicious code') })\")).toMatchInlineSnapshot(`\"./button.tsx\\\\'alert({ console.log(\\\\'malicious code\\\\') })\"`);\n  });\n\n  it('should escape double quote characters', () => {\n    expect(safeJsString('./button.tsx\"alert({ console.log(\"malicious code\") })')).toMatchInlineSnapshot(`\"./button.tsx\\\\\"alert({ console.log(\\\\\"malicious code\\\\\") })\"`);\n  });\n\n  it('should escape backslash characters', () => {  \n    expect(safeJsString('const file = \"\\\\nexports.ts\"')).toMatchInlineSnapshot(`\"const file = \\\\\"\\\\\\\\nexports.ts\\\\\"\"`);\n  });\n\n  it('should escape newline characters', () => {\n```",
+          "file_path": "code/core/src/core-server/utils/safeString.test.ts",
+          "line_number": 17,
+          "start_line": null,
+          "commit_sha": "60cae6256baa7b11e7c9624e248b92af38c20a17",
+          "created_at": "2026-02-20T11:12:42Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags grammatical errors in multiple test descriptions and provides suggested corrections."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6o14S8",
+          "author": "copilot-pull-request-reviewer",
+          "body": "The test description says \"should escape new line characters\" but should be \"should escape newline characters\" (newline is one word when referring to the line break character).\n```suggestion\n  it('should escape newline characters', () => {\n```",
+          "file_path": "code/core/src/core-server/utils/safeString.test.ts",
+          "line_number": 17,
+          "start_line": null,
+          "commit_sha": "60cae6256baa7b11e7c9624e248b92af38c20a17",
+          "created_at": "2026-02-20T11:12:42Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags a grammatical error in a test description ('new line' vs 'newline') and provides a suggested fix."
+    }
+  ],
+  "review_thread_count": 10,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 10,
+    "stage1_kept": 10,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

@@ -1,0 +1,562 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3950,
+  "title": "Elk calculator params",
+  "body": "Closes #1865 \n\nList of major changes:\n* arrays parameters are only accepted as numpy arrays.\n* add the string type\n* process two types of tuples\n  - top-level tuple to describe an input block: the elements become lines separated by line breaks\n  - nested tuples to describe the multi-key inputs within a line; dict is not suitable because the key ordering is crucial for Elk\n\nThe doc strings and one test have been adapted accoringly. A new test has been added that covers all parameter types.\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [x] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [x] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [x] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [x] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "ikondov",
+  "merged_at": "2026-02-26T00:22:52.278Z",
+  "base_ref": "master",
+  "merge_commit_sha": "bfbe2a98fa571057d6654c032c36760300314828",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3037229926",
+          "author": "yuzie007",
+          "body": "Thank you very much @ikondov for the MR!\n\nI agree the motivation described in #1865; particularly, both `tasks` and `dft+u` tags are important, so we should have some way to offer these parameters to the `ELK` calculator.\n\nMy major concern is the breaking of backward compatiblity due to\n\n> arrays parameters are only accepted as numpy arrays.\n\nI understand this is to handle e.g. `tasks` and other array-like parameters separately, but I think we can/should avoid it, based on the following thourght.\n\nFirst, according to Elk's `readinput.f90`, it defines how to parse each field one-by-one; there seems no systematic manner that we can expect *a priori*.\nIn this sense, I would say it is in principle not possible to guaranetee that `write_elk_in` can make all possible `elk.in` in a systematic manner, unless we define a proper parser for each field.\n(Note: this is in contrast to e.g. VASP INCAR, where we can mostly consider common parsers depending on data types.)\n\nIn this sense, for `write_elk_in`, I think it is reasonable to handle several important fields separately.\nFor example, for `tasks`, we can write each integer element for every line separately, regardless if it is given in `tuple`, `list`, or `np.ndarray`, while for the other array-like parameters, we can keep the original behavior.\n\nSimilarly, there is no guarantee that the suggested syntax adjusted for `dft+u` is compatible with other potential complex fields.\n(This is *not* the drawback of the present MR but just due to the design of `elk.in`.)\nI would therefore say, for `dft+u`, we just need to define a specific syntax and write a special parser for it.\nRegarding the syntax, I mostly agree on your suggestion, but maybe we need to have a `list` (or `tuple` or `np.ndarray`) for `is` / `l` / `u` / `j` somehow like\n```\n{'dft+u': {\n    'dftu': 2,\n    'inpdftu': 1,\n    'is': [..., ...],\n    'l': [..., ...],\n    'u': [..., ...],\n    'j': [..., ...],\n}\n```\n\nWhat's your view? If you agree, could you kindly implement the suggestions?\n\n> add the string type\n\nThis is nice as we can also handle `sppath` in a consistent manner.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-01-27T10:51:14.767Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Raises a major concern about breaking backward compatibility and requests specific implementation changes: handle tasks/array-like parameters without differentiating numpy arrays from lists, and implement a special parser for dft+u with a suggested syntax."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3065902229",
+          "author": "yuzie007",
+          "body": "@ikondov Thank you for your detailed response!\n\nFor some parts I agree. For some other parts I still would like to try to convince you.\n\nRegarding the different treatments for NumPy array and Python list, let me re-emphasize that this is a backward compatibility breaking, i.e., the code worked before the present MR may not work. Unless really necessary, I wish to avoid it. Also, from users' perspective, it's not intuitive that NumPy array and Python list are handled differently. It's probably not the best code design.\nI believe, for the present case, there is a better alternative that does not break backward compatibility and more intuitive.\n\nI agree that, some good syntax would cover (maybe, practically) all practical Elk input files.\n\nI also agree that `dict` is not the solution. Related to this, regarding `dft+u`, some of my comments above came from my confusion; I now found that `is`, `l`, `u`, `j` are really scalar values, not arrays. I am sorry for it.\n(I thought the syntax should be compatible with the cases where multiple species have different U values, but it's the limitation of Elk, independent of the present MR.)\n\nAnother point is that, I think it is better *not* to incoporlate the annotation part into the syntax.\nPresently it is not so clear how to achieve e.g. (with our without the the `vvlp1d` annotation)\n```\nplot1d\n  3  200                                : nvp1d, npp1d\n  0.5  0.0  0.0                         : vvlp1d\n  0.0  0.0  0.0\n  0.5  0.5  0.0\n```\nWith the present syntax, the corresponding input needs to be written e.g. as\n```python\nparameters = {\n    'plot1d': (\n        (('nvp1d', 3), ('npp1d', 200)),\n        (('vvlp1d', np.array((0.5, 0.0, 0.0))),),\n        np.array((0.0, 0.0, 0.0)),\n        np.array((0.5, 0.5, 0.0)),\n    ),\n}\n```\nwhich is however less intuitive.\n\nWith these, my present suggestion would be to simply handle \"list of lists\", or more precisely Iterable of Iterables, regardless they are Python list or tuple or NumPy arrays.\nSpecifically, every element in a list may be written in a single line, except the one corresponding to the last level.\n\nThe syntax would be like\n```python\nparameters = {\n    'dft+u': (\n        (2, 1),  # dftu, inpdftu\n        (1, 2, 0.183, 0.034911967),  # is, l, u, j\n    ),\n}\n```\nor\n```python\nparameters = {\n    'tasks': [[0], [10]],\n    'ngridk': (3, 3, 3),\n    'plot1d': (\n        [3, 200],\n        np.array([\n            [0.5, 0.0, 0.0],\n            [0.0, 0.0, 0.0],\n            [0.5, 0.5, 0.0],\n        ]),\n    ),\n}\n```\n\nThe parser would be\n```python\n    from collections.abc import Iterable\n    from numbers import Integral\n\n    def get_string_value(value_):\n        if isinstance(value_, dict):\n            raise TypeError('Field value cannot be a dict.')\n        if isinstance(value_, bool):\n            return f'.{(\"false\", \"true\")[value_]}.'\n        if isinstance(value_, (Integral, float, str)):\n            return f'{value_}'\n        if isinstance(value_, Iterable):  # list, tuple, np.ndarray\n            if all(isinstance(v, (bool, Integral, float, str)) for v in value_):\n                sep = ' '  # last level -> single line\n            else:\n                sep = '\\n  '\n            return sep.join(get_string_value(v) for v in value_)\n        raise TypeError(value_)\n```\n\nThe advantages are that:\n- Backward compatibility is fully preserved for valid inputs, including e.g. `'tasks': [2]`.\n- Extension to e.g. multiple tasks, e.g., `'tasks': [[0], [10]]`\n\nAs far as I checked, all the other fields you wrote, i.e., `mommtfix`, `mommtfixm`, `plot1d`, `plot2d`, `plot3d`, `pulse`, `ramp`, `tm3fix`, `vhmat`, `wplot`, can be covered with this syntax extension.\n\nIn my above suggestion, there are no annotations like `dftu`, `inpdftu`, `is`, `l`, `u`, `j`.\nWhile I would not say they are useless, for me it is reasonable to *not* have them, because they are just comments.\nAlso, practically, such an annotation may be helpful only for a few fields like `dft+u`.\nIn my opinion, dealing with annotations makes both the syntax and the parser unnecessarily complex.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-07T09:28:29.252Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3070450240",
+          "author": "ikondov",
+          "body": "> Regarding the different treatments for NumPy array and Python list, let me re-emphasize that this is a backward compatibility breaking, i.e., the code worked before the present MR may not work. Unless really necessary, I wish to avoid it. Also, from users' perspective, it's not intuitive that NumPy array and Python list are handled differently. It's probably not the best code design.\n\nI agree regarding the backward compatibility. But I do not agree about the \"not the best code design\". In Python there is a distinct difference between array (fixed length, same data type) and list (variable length, variable data types), also from user's perspective this should be the same. And it should be very intuitive to handle these two very different data types differently. For the sake of backward compatibility, I would agree to use lists.\n\nThe comments in Elk after the column sign (:) correspond to part of the data in Python. [Explicit is better than implicit](https://peps.python.org/pep-0020/). But if you do not wish to include them then we save one level of parentheses, indeed. And loose clarity.\n\nI will try to adapt the MR accordingly and let us see.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-09T20:41:31.914Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3078974800",
+          "author": "ikondov",
+          "body": "And here the result. See commit https://gitlab.com/ase/ase/-/merge_requests/3950/diffs?commit_id=4ddb4c637811ffcb2fddcd96a980c651827def0c.\n\nIt seems to work for the mentioned input blocks but it fails with input blocks where we have several types in a line and one of them is array. For example, this block from the elk examples:\n\n```\nmommtfix\n  1 1  0.0 0.0 0.0\n  1 2  0.0 0.0 0.0\n```\n\nThe Python code: `params = {'mommtfix': ((1, 1, (0.0, 0.0, 0.0)), (1, 2, (0.0, 0.0, 0.0)))}` produces this block:\n\n```\nmommtfix\n  1\n  1\n  0.0 0.0 0.0\n  1\n  2\n  0.0 0.0 0.0\n```\n\nThere are two solutions:\n\na) remove the parentheses around the array input:\n\n  `params = {'mommtfix': ((1, 1, 0.0, 0.0, 0.0), (1, 2, 0.0, 0.0, 0.0))}`.\n  This is not really \"intuitive\". There is even no indication that the first two numbers are two other inputs and the next three numbers are actually the elements of an array. But it is also no better when reading it the elk.in when there is nothing like `: is, ia, mommtfix` (as in our new version). No need to change the code.\n\nb) Define specific levels of parentheses such that the third level is always in one line. With this solution, the two input variants `params = {'mommtfix': ((1, 1, (0.0, 0.0, 0.0)), (1, 2, (0.0, 0.0, 0.0)))}` and `params = {'mommtfix': ((1, 1, 0.0, 0.0, 0.0), (1, 2, 0.0, 0.0, 0.0))}` will produce the same (valid) output. This has to be implemented if we decide to have this. In this solution, we can add more space when third-level parentheses are encountered. This will make the produced elk input more readable (see reference above).\n\nApropos:\nI have discovered that the elk writer does not work with non-collinear spins. For example,\n```\nfrom ase import Atoms\nfrom ase.io.elk import write_elk_in\natoms = Atoms('CrCr', positions=[[0.0]*3, [5.4897/2]*3], cell=[5.4897]*3)\natoms.set_initial_magnetic_moments([[0.0, 0.0, 0.01], [0.0, 0.0, -0.01]])\nwrite_elk_in('elk.in', atoms)\n```\n\nproduces this exception:\n\n```\nTraceback (most recent call last):\n  File \"/mnt/data/ubuntu/work/elk/elk-10.8.12/examples/script.py\", line 15, in <module>\n    write_elk_in('/home/ubuntu/work/elk/elk-10.8.12/examples/elk.in', atoms, parameters=params)\n  File \"/mnt/data/ubuntu/work/ase/ase/utils/__init__.py\", line 599, in iofunc\n    obj = func(fd, *args, **kwargs)\n  File \"/mnt/data/ubuntu/work/ase/ase/io/elk.py\", line 267, in write_elk_in\n    fd.write('  %.14f %.14f %.14f 0.0 0.0 %.14f\\n' %\nTypeError: only length-1 arrays can be converted to Python scalars\n```\n\nShall we fix this here or should we open another issue and MR?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-12T12:44:24.739Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3097723218",
+          "author": "ikondov",
+          "body": "Variant (b) is implemented. Variant (a) just continues working.\nNon-collinear spins issue has been filed separately.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-19T13:30:07.070Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Proposes a concrete alternative implementation with specific syntax, a code snippet for the parser, and requests changes to avoid backward compatibility breakage and remove annotation support."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3087954269",
+          "author": "yuzie007",
+          "body": "Thank you @ikondov for the update!\n\nI will have a detailed look on the implementation later. I first would like to reply to your comment above.\n\nWhile I personally feel (a) is sufficient because of its simplicity, I am also OK to further extend the syntax for (b).\u2028One case (b) looks substantially convenient for users is when using variables like\n```python\nmommtfix = (0.0, 0.0, 0.0)\nparameters = {\"mommtfix\": ((1, 1, mommtfix), (1, 2, mommtfix))}\n```\n\nThank you also for finding issues for non-collinear spins.\nI think it is better to address it in a separate MR, because handling non-collinear spins is a long-standing, unsolved issue in ASE (https://gitlab.com/ase/ase/-/issues?search=non-collinear), and therefore we definitely need to involve multiple developers into discussion.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-16T22:28:05.405Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3092632964",
+          "author": "ikondov",
+          "body": "@yuzie007 Thanks for you feedback! I will implement (b) and will open an issue for the bug regarding the non-collinear spins.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-18T09:43:51.444Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3097725687",
+          "author": "ikondov",
+          "body": "@yuzie007 Please have a look at the last commit.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-19T13:30:56.603Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests addressing non-collinear spin issues in a separate MR, which is an actionable process/scoping suggestion, and implicitly approves the syntax extension as acceptable."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "3088696944",
+          "author": "ajjackson",
+          "body": "I would agree that comment fields and named parameters are a nice thing to have - on the condition that they are validated somehow.\n\nIf they can be silently incorrect then they can be quite misleading, and do more harm than good. In this case neither ASE nor Elk will notice if named arguments are given out-of-order or in the wrong section.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-17T08:45:03.966Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3092665393",
+          "author": "ikondov",
+          "body": "Yes, absolutely! Originally, I had in mind something like the [`TurbomoleParameters` class](https://gitlab.com/ase/ase/-/blob/master/ase/calculators/turbomole/parameters.py) that I had written for the Turbomole calculator. Therein, not only the keywords are checked but also their types, and the units are converted. Unfortunately, this is not the case with the Elk calculator. In `TurbomoleParameters` the `group` attribute describes the turbomole *data group*, that is semantically equivalent to Elk's input block (has only different syntax in turbomole, a new line starting with `$`).",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2026-02-18T09:54:23.674Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Flags that named/comment parameters should be validated, otherwise they can be misleading. This implies a concrete requirement: add validation or remove the feature."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3103545196",
+          "author": "yuzie007",
+          "body": "Shall we do `'bfieldc': [[0.0, 0.0, -0.01]]`? (Or, possibly would we like to indicate that it does not matter if we provide a list, tuple, or ndarray?)",
+          "file_path": "ase/calculators/elk.py",
+          "line_number": 142,
+          "commit_sha": "6fb39078aea6df4f1fa7763b41d0e2177c5c7a3e",
+          "base_sha": "9e022fa5b8d123bc1785145661104a4f893a10c0",
+          "created_at": "2026-02-22T11:24:56.585Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3105697828",
+          "author": "ikondov",
+          "body": "Now all these are equivalent:\n* `'bfieldc': np.array([0.0, 0.0, -0.01])`\n* `'bfieldc': [0.0, 0.0, -0.01]`\n* `'bfieldc': [[0.0, 0.0, -0.01]]`\n* all of the above including combinations of tuples, lists and arrays\n\nI have adapted the doc string accordingly.",
+          "file_path": "ase/calculators/elk.py",
+          "line_number": 142,
+          "commit_sha": "6fb39078aea6df4f1fa7763b41d0e2177c5c7a3e",
+          "base_sha": "9e022fa5b8d123bc1785145661104a4f893a10c0",
+          "created_at": "2026-02-23T14:47:33.865Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests changing the example to use a list (`[[0.0, 0.0, -0.01]]`) to better illustrate flexibility with different iterable types."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3103545202",
+          "author": "yuzie007",
+          "body": "Same as above",
+          "file_path": "ase/io/elk.py",
+          "line_number": 136,
+          "commit_sha": "6fb39078aea6df4f1fa7763b41d0e2177c5c7a3e",
+          "base_sha": "9e022fa5b8d123bc1785145661104a4f893a10c0",
+          "created_at": "2026-02-22T11:24:57.245Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3105698216",
+          "author": "ikondov",
+          "body": "dito",
+          "file_path": "ase/io/elk.py",
+          "line_number": 136,
+          "commit_sha": "6fb39078aea6df4f1fa7763b41d0e2177c5c7a3e",
+          "base_sha": "9e022fa5b8d123bc1785145661104a4f893a10c0",
+          "created_at": "2026-02-23T14:47:40.493Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "References the same suggestion as index 4, implying the same change should be made at this location."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3103545204",
+          "author": "yuzie007",
+          "body": "Removing this means we now rely on the Elk default (0.001 Hartree ~= 0.027 eV).\nThis itself looks OK to me (because there is no reason to set 1 Hartree as the default, both semantically as well as practically (1 Ha ~= 27 eV is probably too large for the smearing width).\n\nWe can remove this line rather than commenting it out.",
+          "file_path": "ase/io/elk.py",
+          "line_number": 13,
+          "commit_sha": "61660c76138013a3efc32c968f35721280af1ebf",
+          "base_sha": "9e022fa5b8d123bc1785145661104a4f893a10c0",
+          "created_at": "2026-02-22T11:24:57.427Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3105619438",
+          "author": "ikondov",
+          "body": "I guess, when this was written, this must have been meant to be rather a conversion factor from eV (ASE units) to Hartree (Elk units). The commented block (lines 218-220) and the added line 214 (see the two threads below) are related to this.",
+          "file_path": "ase/io/elk.py",
+          "line_number": 13,
+          "commit_sha": "61660c76138013a3efc32c968f35721280af1ebf",
+          "base_sha": "9e022fa5b8d123bc1785145661104a4f893a10c0",
+          "created_at": "2026-02-23T14:27:39.828Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Requests removing the commented-out line rather than leaving it commented out."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3103545206",
+          "author": "yuzie007",
+          "body": "To to be sure, is this a \"bugfix\", since the ASE `smearing` should be in eV while Elk `swidth` is in Hartree?",
+          "file_path": "ase/io/elk.py",
+          "line_number": 215,
+          "commit_sha": "6fb39078aea6df4f1fa7763b41d0e2177c5c7a3e",
+          "base_sha": "9e022fa5b8d123bc1785145661104a4f893a10c0",
+          "created_at": "2026-02-22T11:24:57.655Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3105635616",
+          "author": "ikondov",
+          "body": "Regarding the first change, `parameters.smearing` -> `parameters['smearing']`, yes this is a bug fix. This can never have worked as it was because `parameters` has no attribute named 'smearing'. But `parameters` is a dict with 'smearing' key.\n\nThe second change correlates with the commented out block lines 218-220. If we do not perform the conversion there, then we should do it here.",
+          "file_path": "ase/io/elk.py",
+          "line_number": 215,
+          "commit_sha": "6fb39078aea6df4f1fa7763b41d0e2177c5c7a3e",
+          "base_sha": "9e022fa5b8d123bc1785145661104a4f893a10c0",
+          "created_at": "2026-02-23T14:31:49.355Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Questions whether the change is a bugfix related to unit conversion (eV vs Hartree), implying the code may need correction or clarification."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3103545208",
+          "author": "yuzie007",
+          "body": "We can simply remove this commented-out part.",
+          "file_path": "ase/io/elk.py",
+          "line_number": 223,
+          "commit_sha": "61660c76138013a3efc32c968f35721280af1ebf",
+          "base_sha": "9e022fa5b8d123bc1785145661104a4f893a10c0",
+          "created_at": "2026-02-22T11:24:57.812Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3105666198",
+          "author": "ikondov",
+          "body": "I suggest to remove this block because:\n1) only one parameter key is considered for units conversion; inconsistent with all other parameter keys\n2) if the user provides the Elk native 'swidth' key (that will be in Hartree) an erroneous second conversion will be done.\n\nTherefore, with this change, I wrote in the doc string - all parameters provided a s ASE keywords are in ASE units, all provided in Elk native keywords are Elk units.",
+          "file_path": "ase/io/elk.py",
+          "line_number": 223,
+          "commit_sha": "61660c76138013a3efc32c968f35721280af1ebf",
+          "base_sha": "9e022fa5b8d123bc1785145661104a4f893a10c0",
+          "created_at": "2026-02-23T14:39:48.154Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Explicitly requests removal of a commented-out code block."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3103545216",
+          "author": "yuzie007",
+          "body": "These two are not for users, so maybe not necessary to be in the change log.",
+          "file_path": "changelog.d/20260122_104303_ivan.kondov_elk_calculator_params.rst",
+          "line_number": 14,
+          "commit_sha": "831188c0fa309c36988d4a8b0fca2491a3aa9a61",
+          "base_sha": "9e022fa5b8d123bc1785145661104a4f893a10c0",
+          "created_at": "2026-02-22T11:24:58.352Z",
+          "is_outdated": false
+        },
+        {
+          "id": "3105675364",
+          "author": "ikondov",
+          "body": "I agree.",
+          "file_path": "changelog.d/20260122_104303_ivan.kondov_elk_calculator_params.rst",
+          "line_number": 14,
+          "commit_sha": "831188c0fa309c36988d4a8b0fca2491a3aa9a61",
+          "base_sha": "9e022fa5b8d123bc1785145661104a4f893a10c0",
+          "created_at": "2026-02-23T14:42:13.625Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests removing two items from the changelog as they are not user-facing."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "3103545218",
+          "author": "yuzie007",
+          "body": "Same as above",
+          "file_path": "changelog.d/20260122_104303_ivan.kondov_elk_calculator_params.rst",
+          "line_number": 13,
+          "commit_sha": "6fb39078aea6df4f1fa7763b41d0e2177c5c7a3e",
+          "base_sha": "9e022fa5b8d123bc1785145661104a4f893a10c0",
+          "created_at": "2026-02-22T11:24:58.505Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Same as index 9 \u2014 suggests removing a changelog entry that is not user-facing."
+    }
+  ],
+  "review_thread_count": 17,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_inline": true,
+        "comments": [
+          {
+            "id": "3017222962",
+            "author": "ikondov",
+            "body": "objects -> object",
+            "file_path": "ase/io/elk.py",
+            "line_number": 104,
+            "commit_sha": "8e4f388cf2aee71953595f25ef877614c80b8a22",
+            "base_sha": "10a91baa9ad755de6cc1f9dfc7f42a434ad03f0a",
+            "created_at": "2026-01-19T14:13:00.335Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3054107529",
+            "author": "ikondov",
+            "body": "@yuzie007 Thank you very much for reviewing the MR!\n\nFor the new implementation, I have used the oficial published Elk documentation [1] and not the Fortran source code. IMHO this is fair to the end user.\n\nOne can find that not only dft+u is a multiline input block from the list of elk input blocks. It is only an example test case that I used for the implementation. Of course, I have to assume that all such multiline blocks are parsed in the same way. Otherwise we will have to write separate python code for every single input block of this kind. Further such blocks (other than atoms, avec and dft+u): mommtfix, mommtfixm, plot1d, plot2d, plot3d, pulse, ramp, tm3fix, vhmat, wplot. I use the ASE calculators in the context of a consumer project [2] where it is important to cover the full code functionality.\n\n> ```\n> {'dft+u': {\n>     'dftu': 2,\n>     'inpdftu': 1,\n>     'is': [..., ...],\n>     'l': [..., ...],\n>     'u': [..., ...],\n>     'j': [..., ...],\n> }\n> ```\n\nI had tested this approach before but had issues with the missing ordering in dictionaries. If the ordering was changed (this happenned!) then elk produced wrong results! It even does not issue a parsing or type errors. This is why I had to switch to tuple/list. And because there is no **other** way to specify the arrays, my only choice is to use numpy array. IMO it is no bad choice because the type matches the fortran type read into elk. So all things in the elk docs annotated as real(3), integer(3), etc. are arrays and only these inputs. And tuple/list is an ordered sequence of elements of possibly different types.\n\n[1] https://elk.sourceforge.io/elk.pdf\n[2] https://vre-language.readthedocs.io",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-03T08:31:01.180Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_inline": true,
+        "comments": [
+          {
+            "id": "3097731971",
+            "author": "ikondov",
+            "body": "* remove \"arrays parameters are only accepted as numpy arrays\"\n* add \"remove partial inconsistent ase->elk units conversion\"",
+            "file_path": "changelog.d/20260122_104303_ivan.kondov_elk_calculator_params.rst",
+            "line_number": 9,
+            "commit_sha": "831188c0fa309c36988d4a8b0fca2491a3aa9a61",
+            "base_sha": "9e022fa5b8d123bc1785145661104a4f893a10c0",
+            "created_at": "2026-02-19T13:32:50.905Z",
+            "is_outdated": false
+          },
+          {
+            "id": "3103545212",
+            "author": "yuzie007",
+            "body": "I agree on both!",
+            "file_path": "changelog.d/20260122_104303_ivan.kondov_elk_calculator_params.rst",
+            "line_number": 9,
+            "commit_sha": "831188c0fa309c36988d4a8b0fca2491a3aa9a61",
+            "base_sha": "9e022fa5b8d123bc1785145661104a4f893a10c0",
+            "created_at": "2026-02-22T11:24:58.028Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    },
+    {
+      "thread": {
+        "is_resolved": true,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3103545220",
+            "author": "yuzie007",
+            "body": "Thank you so much @ikondov for the update! It is now very convincing to me. I have left a few minor comments / suggestions (stylistically) / questions. Afterwards the MR will be ready from my view.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-22T11:24:59.026Z",
+            "is_outdated": false
+          },
+          {
+            "id": "3105729807",
+            "author": "ikondov",
+            "body": "Thank you very much @yuzie007 for reviewing and supporting me. I completed all threads but closed only the minor ones. I hope we have converged to merging more or less.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-23T14:55:29.946Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "resolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Acknowledgment and status update; no concrete code change requested."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3105941921",
+            "author": "yuzie007",
+            "body": "Thank you so much @ikondov for your revision! It looks to me ready to merge. @ajjackson would you be willing to review as well? Otherwise, I would like to merge in a few days.",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-23T15:55:40.453Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Meta-discussion about review logistics and merge readiness; no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    },
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "3114209420",
+            "author": "yuzie007",
+            "body": "I am going to merge. Thank you so much once again!",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2026-02-26T00:22:37.131Z",
+            "is_outdated": false
+          }
+        ],
+        "resolution_signal": "unresolved",
+        "has_acknowledgment": false,
+        "actionable": false,
+        "actionability_reasoning": "Pure status update announcing intent to merge; no code change implied."
+      },
+      "removal_reason": "stage3_non_actionable"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 17,
+    "stage1_kept": 14,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 3,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 3,
+    "stage3_cost_usd": 0.037145250000000005
+  }
+}

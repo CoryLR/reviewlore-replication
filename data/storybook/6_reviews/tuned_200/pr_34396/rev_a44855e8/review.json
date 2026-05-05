@@ -1,0 +1,114 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/create-storybook/src/generators/configure.ts",
+      "line_number": 113,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`SupportedRenderer.QWIK` is missing from the `isJsx` list. Qwik uses JSX/TSX syntax (`.tsx` files), just like React and Solid. Looking at the `SupportedRenderer` enum, Qwik is a valid renderer value. Without it here, Qwik projects will receive a `preview.ts` or `preview.js` instead of `preview.tsx`/`preview.jsx`, causing JSX syntax errors for decorators written in those files\u2014defeating the stated goal of this PR.\n\nAdd `SupportedRenderer.QWIK` to the array alongside REACT, PREACT, REACT_NATIVE, and SOLID.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/create-storybook/src/generators/baseGenerator.ts",
+      "line_number": 279,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The log message `- Configuring preview.${configurationFileExtension}` uses the bare language extension (`ts` or `js`) which does not reflect the actual filename written by `configurePreview`. For React TypeScript projects, the file is `preview.tsx`, but the log will print `Configuring preview.ts`. Consider computing and logging the full extension the same way `configurePreview` does, or simply removing the extension from the log (e.g., `- Configuring preview config`).",
+      "index": 1
+    },
+    {
+      "file_path": "docs/_snippets/automock-register-mock-file.md",
+      "line_number": 65,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The Vue renderer snippet filename is incorrectly changed to `preview.tsx`. Vue 3 does not use JSX\u2014it uses `.vue` single-file components and template syntax. The correct filename for this renderer is `preview.ts`. The same bug appears at lines 82, 97, 112, and 129 for the Vue JS, Angular, and Web Components variants (`preview.jsx`, `preview.tsx`, `preview.tsx`, `preview.jsx` respectively). All of these non-JSX renderers should use `preview.ts`/`preview.js`. Other snippet files in this PR correctly change Vue/Angular/Web Components from `.tsx` \u2192 `.ts`, so this file is going in the wrong direction.",
+      "index": 2
+    },
+    {
+      "file_path": "docs/_snippets/mock-provider-in-preview.md",
+      "line_number": 1,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The React CSF 3 (JS) snippet is changed FROM `preview.jsx` TO `preview.js|jsx`. Before this PR the filename was already the specific `.jsx` form, which is correct for React. This change reverts it to the ambiguous `js|jsx` form\u2014the opposite direction from every other React CSF 3 snippet in this PR. The same applies to line 25 where the TypeScript variant is reverted from `preview.tsx` to `preview.ts|tsx`. These two snippets should keep (or restore to) the specific `preview.jsx` / `preview.tsx` filenames used before the PR.",
+      "index": 3
+    },
+    {
+      "file_path": "docs/api/portable-stories/portable-stories-jest.mdx",
+      "line_number": 175,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This bullet point now says `.storybook/preview.tsx`, but the portable-stories-jest page is renderer-agnostic\u2014it describes usage for Vue, Angular, Svelte, and React alike. Specifying `.tsx` implies React-only and would mislead Angular/Vue users who have `preview.ts`. The rest of this file already uses the generic `.storybook/preview.*` form. This line should match that convention: `.storybook/preview.*`.",
+      "index": 4
+    },
+    {
+      "file_path": "docs/configure/story-rendering.mdx",
+      "line_number": 12,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The description was changed from `preview.js|ts` to `preview.ts|tsx`, silently dropping the `.js` and `.jsx` references for JavaScript users. `story-rendering.mdx` is a renderer-agnostic page; users of Vue, Angular, or Svelte with plain JavaScript projects have `preview.js`, not `preview.ts`. The reference should cover all variants\u2014e.g., `preview.js|ts` (or use `preview.*` as done elsewhere in this PR).",
+      "index": 5
+    },
+    {
+      "file_path": "docs/writing-stories/decorators.mdx",
+      "line_number": 151,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The link text was changed from `.storybook/preview.js|ts` to `.storybook/preview.ts|tsx`, dropping the `.js` mention for JavaScript users. `decorators.mdx` describes a feature that applies to all renderers. Non-React JavaScript projects have `preview.js`, which is now unrepresented in this reference. Consider `.storybook/preview.*` or restore `js|ts`.",
+      "index": 6
+    },
+    {
+      "file_path": "docs/writing-stories/parameters.mdx",
+      "line_number": 55,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Same pattern as `decorators.mdx`: the reference was changed from `.storybook/preview.js|ts` to `.storybook/preview.ts|tsx`. `parameters.mdx` covers all renderers, so JavaScript users (`preview.js`) and non-JSX TypeScript users (`preview.ts`) are dropped from the documentation. Use `.storybook/preview.*` for consistency with the generic references introduced elsewhere in this PR.",
+      "index": 7
+    },
+    {
+      "file_path": "docs/writing-docs/autodocs.mdx",
+      "line_number": 18,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "Changed from `preview.js|ts` to `preview.jsx|tsx`, which drops both the plain `.ts` (Angular, Vue, Svelte TypeScript users) and `.js` (non-React JavaScript users) variants. Autodocs is supported by all renderers. Either keep `js|ts` or use the generic `preview.*`.",
+      "index": 8
+    },
+    {
+      "file_path": "docs/_snippets/storybook-preview-global-decorator.md",
+      "line_number": 1,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The Angular renderer snippet filename was changed from `preview.ts` to `preview.ts|tsx`. Angular does not use JSX\u2014`preview.tsx` would be incorrect for Angular projects, so showing `|tsx` as a valid variant for this renderer is misleading. The original `preview.ts` was correct for Angular and should be restored.",
+      "index": 9
+    },
+    {
+      "file_path": "docs/get-started/frameworks/nextjs.mdx",
+      "line_number": 434,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The code block title was narrowed from `index.jsx|tsx` to `index.tsx`. The example shows JSX code that is equally valid in JavaScript (`.jsx`), so both extensions should be mentioned. The equivalent change in `nextjs-vite.mdx` uses `index.*` as a wildcard, creating an inconsistency between the two nearly-identical pages.",
+      "index": 10
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "**Inconsistent documentation changes across snippet files**: This PR applies the `.tsx`/`.jsx` rename in inconsistent directions across the documentation snippets. Most snippet files correctly change React snippets FROM `preview.ts`/`preview.js` TO `preview.tsx`/`preview.jsx`, and correctly change non-JSX renderers (Vue, Angular, Web Components) FROM `preview.tsx`/`preview.jsx` TO `preview.ts`/`preview.js`. However, `automock-register-mock-file.md` does the opposite for Vue, Angular, and Web Components (incorrectly assigning `.tsx`/`.jsx`), and `mock-provider-in-preview.md` reverses already-correct `.tsx`/`.jsx` React CSF 3 snippets to the generic `ts|tsx`/`js|jsx` form. A documentation audit pass is needed to verify every snippet file matches the convention: React/Preact/Solid use `.tsx`/`.jsx`; all other renderers use `.ts`/`.js`; renderer-agnostic snippets use `ts|tsx`/`js|jsx`.",
+      "index": 11
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**Generic documentation references**: Several renderer-agnostic prose references were updated in a way that drops JavaScript variants or assumes TypeScript. For example, references to `.storybook/preview.js|ts` were changed to `.storybook/preview.ts|tsx` in `story-rendering.mdx`, `decorators.mdx`, `parameters.mdx`, and `autodocs.mdx`. A more maintainable approach would be to use `.storybook/preview.*` uniformly in all prose (as done for the portable-stories pages in this PR), which is already an established pattern and doesn't require updating every time a new extension is introduced.",
+      "index": 12
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**Missing test coverage for `SupportedRenderer.QWIK`**: The test suite adds cases for JSX renderers (REACT_NATIVE, PREACT) and non-JSX renderers (VUE3, ANGULAR) but has no test case for `SupportedRenderer.QWIK`. Given that Qwik uses JSX and its absence from the `isJsx` list is a bug (see inline comment), a dedicated test asserting `preview.tsx` is generated for `SupportedRenderer.QWIK` would both document the intent and prevent regression.",
+      "index": 13
+    }
+  ],
+  "cost_usd": 1.1147539499999999,
+  "duration_seconds": 310.9319190979004
+}

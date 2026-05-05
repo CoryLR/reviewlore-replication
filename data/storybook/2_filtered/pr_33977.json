@@ -1,0 +1,85 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 33977,
+  "title": "Actions: Add expandLevel parameter to configure tree depth",
+  "body": "## What this PR does\n\nAdds an `expandLevel` parameter to the actions addon configuration, allowing users to control how deep the action object tree is initially expanded in the panel.\n\nThe addon uses [react-inspector](https://www.npmjs.com/package/react-inspector)'s `Inspector` component which already supports an `expandLevel` prop \u2014 this PR exposes it as a configurable story parameter.\n\n## How to use\n\n```ts\n// .storybook/preview.ts  (global)\nconst preview = {\n  parameters: {\n    actions: { expandLevel: 2 },\n  },\n};\n```\n\n```ts\n// Individual story\nconst meta = {\n  parameters: {\n    actions: { expandLevel: 3 },\n  },\n};\n```\n\nThe default value is `1` (same as before \u2014 no visible change for existing users).\n\n## Closes\n\nCloses #22390\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **New Features**\n  * Configurable initial expansion level for the action inspector (controls how many tree levels are expanded on load; default: 1).\n\n* **Refactor**\n  * Action logger rewritten to a modern implementation for more reliable, responsive action capture and display.\n\n* **Documentation**\n  * Updated docs describing the new expansion-level parameter and usage.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "mixelburg",
+  "merged_at": "2026-03-06T13:24:08Z",
+  "base_ref": "next",
+  "merge_commit_sha": "869fe6ce398162a12d86ba184147910c627856f1",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "b0d8dd4a235a6c72e00ec15e11e0eb0e8488cc75",
+    "179914e73933338b02f895e5a664518a28164883"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6rW_gf",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe1 Minor_\n\n**Normalize and centralize `expandLevel` resolution.**\n\nThe parameter is read in two places and used as-is. Since story parameters can come from untyped JS, invalid values (e.g. negative, float, NaN) can leak into state. Please normalize once in a helper and reuse it.\n\n \n\n<details>\n<summary>Suggested refactor</summary>\n\n```diff\n export default class ActionLogger extends Component<ActionLoggerProps, ActionLoggerState> {\n   private mounted: boolean;\n+  private getExpandLevel = () => {\n+    const raw = this.props.api.getCurrentParameter<ActionsParameters['actions']>(PARAM_KEY)\n+      ?.expandLevel;\n+    return Number.isInteger(raw) && (raw as number) >= 0 ? (raw as number) : 1;\n+  };\n\n   constructor(props: ActionLoggerProps) {\n     super(props);\n\n     this.mounted = false;\n\n     this.state = { actions: [], expandLevel: 1 };\n   }\n\n   override componentDidMount() {\n@@\n-    const expandLevel =\n-      api.getCurrentParameter<ActionsParameters['actions']>(PARAM_KEY)?.expandLevel ?? 1;\n-    this.setState({ expandLevel });\n+    this.setState({ expandLevel: this.getExpandLevel() });\n   }\n@@\n-    const expandLevel =\n-      api.getCurrentParameter<ActionsParameters['actions']>(PARAM_KEY)?.expandLevel ?? 1;\n-    this.setState({ expandLevel });\n+    this.setState({ expandLevel: this.getExpandLevel() });\n   };\n```\n</details>\n\n\nAlso applies to: 68-70\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/actions/containers/ActionLogger/index.tsx` around lines 49 -\n51, Create a single normalized resolver for the expandLevel parameter so invalid\nvalues can't reach state: add a helper function (e.g., normalizeExpandLevel)\nthat reads the raw value via\napi.getCurrentParameter<ActionsParameters['actions']>(PARAM_KEY), coerces it to\na safe integer >= 1 (handle NaN, floats, negatives by using Number conversion\nand Math.floor or default to 1), and then use that helper wherever expandLevel\nis set (replace the inline reads before this.setState and at the other\noccurrence around the lines using expandLevel); ensure calls reference the\nPARAM_KEY and update setState({ expandLevel }) with the sanitized value.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/actions/containers/ActionLogger/index.tsx",
+          "line_number": 51,
+          "start_line": null,
+          "commit_sha": "9b5d17ea89131eb637e5171f25464e13ae776705",
+          "created_at": "2026-03-02T22:14:14Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment requests normalizing and centralizing the expandLevel resolution into a helper function to prevent invalid values from leaking into state, with a specific suggested refactor provided."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6siywP",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# First, check the suggested ast-grep pattern for slice behavior\nast-grep --pattern 'slice(0, $_.options.limit)'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Also search for any similar slice patterns with action.options.limit\nrg \"slice.*action\\.options\\.limit|slice.*limit\" code/core/src/actions/containers/ActionLogger/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 176\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find and examine the ActionDisplay type definition\nfd -e ts -e tsx | xargs grep -l \"type ActionDisplay\\|interface ActionDisplay\" | head -5\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 110\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the full context of the ActionLogger file to understand the component structure\ncat -n code/core/src/actions/containers/ActionLogger/index.tsx\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2835\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n code/core/src/actions/models/ActionDisplay.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 338\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there are any comments or related files that explain the action display order\nrg -A 5 -B 5 \"ActionDisplay\\[\\]\" code/core/src/actions/\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 2025\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if the component that displays actions shows them in order\nfd -e tsx -e ts \"ActionLogger\" code/core/src/actions/components/ | xargs cat\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\n\n</details>\n\n**State mutation detected in setActions updater \u2014 shallow copy does not prevent mutation of nested objects.**\n\nThe spread operator `[...prevActions]` creates a shallow copy of the array, so `previous` still references the same object in `prevActions`. Mutating `previous.count++` (line 42) and `action.count = 1` (line 44) violates React's immutability principle and can cause subtle state update bugs with reconciliation.\n\nAdditionally, `slice(0, limit)` retains the **oldest** actions and discards the **newest** when at capacity. Verify this is intentional; typically action logs keep the most recent entries. If newest actions should be preserved, use `slice(-limit)` instead.\n\n<details>\n<summary>Proposed fix for immutability and slice direction</summary>\n\n```diff\n const addAction = useCallback((action: ActionDisplay) => {\n   setActions((prevActions) => {\n-    const newActions = [...prevActions];\n-    const previous = newActions.length && newActions[newActions.length - 1];\n+    const previous = prevActions.length ? prevActions[prevActions.length - 1] : null;\n+\n     if (previous && safeDeepEqual(previous.data, action.data)) {\n-      previous.count++;\n+      const updated = [...prevActions];\n+      updated[updated.length - 1] = { ...previous, count: previous.count + 1 };\n+      return updated.slice(-action.options.limit);\n     } else {\n-      action.count = 1;\n-      newActions.push(action);\n+      const newAction = { ...action, count: 1 };\n+      return [...prevActions, newAction].slice(-action.options.limit);\n     }\n-    return newActions.slice(0, action.options.limit);\n   });\n }, []);\n```\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/actions/containers/ActionLogger/index.tsx` around lines 37 -\n49, The updater in addAction mutates objects: newActions uses a shallow copy so\nmodifying previous.count and action.count mutates prior state and the incoming\nobject; fix by creating new objects instead of mutating\u2014when merging with the\nprevious entry construct a new object (e.g., copy previous and increment its\ncount) and when pushing the incoming action create a newAction copy with count =\n1 rather than assigning to action.count; also change the final slice to\nslice(-action.options.limit) (or handle undefined safely) so the most recent\nactions are retained; reference addAction, setActions, previous, safeDeepEqual,\nand action.options.limit when applying these changes.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "code/core/src/actions/containers/ActionLogger/index.tsx",
+          "line_number": 49,
+          "start_line": 37,
+          "commit_sha": "179914e73933338b02f895e5a664518a28164883",
+          "created_at": "2026-03-06T09:41:01Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6sqNyS",
+          "author": "Sidnioulz",
+          "body": "@valentinpalkovic this looks like a bug we haven't discovered yet, I've converted it to https://github.com/storybookjs/storybook/issues/34052 so it doesn't get lost. @mixelburg this would be an excellent small community contribution to make \ud83d\ude09 ",
+          "file_path": "code/core/src/actions/containers/ActionLogger/index.tsx",
+          "line_number": 49,
+          "start_line": 37,
+          "commit_sha": "179914e73933338b02f895e5a664518a28164883",
+          "created_at": "2026-03-06T16:38:51Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies two concrete issues: state mutation via shallow copy and incorrect slice direction, and provides a specific code fix for both."
+    }
+  ],
+  "review_thread_count": 2,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 2,
+    "stage1_kept": 2,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

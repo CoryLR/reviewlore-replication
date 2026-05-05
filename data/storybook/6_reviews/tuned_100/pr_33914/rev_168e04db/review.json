@@ -1,0 +1,106 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/core-server/utils/manifests/render-components-manifest.ts",
+      "line_number": 9,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This type-only import creates a cross-package coupling between `code/core` (core-server) and the React renderer package. Even though it's `import type` (no runtime dep), it means `core-server` now depends on a React-specific internal type path deep inside the renderer. If `componentMetaExtractor.ts` is restructured or its export names change, this core file silently breaks.\n\nConsider instead either: (a) defining a shared `ComponentDoc` interface in `storybook/internal/types` or a new shared manifest types module, or (b) duplicating a minimal interface locally in this file with a comment referencing the source of truth. The existing approach violates the architecture principle that `core` should not import renderer-specific internals.",
+      "index": 0
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/componentMeta/ComponentMetaProject.ts",
+      "line_number": 307,
+      "dimension": "Maintainability and Readability",
+      "importance": "major",
+      "comment": "The catch block in the `extractPropsFromStories` loop swallows all errors silently. When extraction fails for a component (type checker error, unresolved import, assertion failure, etc.), the `component.reactComponentMeta` simply stays `undefined`, making it look identical to the case where the component was skipped intentionally.\n\nAdd at minimum a `logger.debug(...)` call, e.g.:\n```typescript\n} catch (err) {\n  logger.debug(`[reactComponentMeta] Failed to extract props for ${entryComponent?.componentName}: ${err}`);\n  continue;\n}\n```\nWithout this, debugging extraction failures in production is nearly impossible.",
+      "index": 1
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/types.ts",
+      "line_number": 15,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The JSDoc comment says **\"1 = outermost JSX element\"** but the implementation in `getComponentImports.ts` computes `depth = jsxDepth - 1`, where `jsxDepth` is already incremented by `JSXElement.enter` before `JSXOpeningElement` fires. So the outermost top-level element gets `depth = 0`, not `1`.\n\nThis is confirmed by `findMatchingComponent` in `generator.ts` which treats `jsxDepth === 0` as the top-level sentinel:\n```typescript\nif (cur.jsxDepth === 0) {\n  return cur; // Cannot be shallower\n}\n```\nThe JSDoc should read: `/** Minimum JSX nesting depth ... (0 = outermost JSX element). */`",
+      "index": 2
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/componentMeta/ComponentMetaProject.ts",
+      "line_number": 190,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`ensureFiles` performs an O(n) `Array.includes()` search for every `fileName` in the input. For a project with N tracked files, adding M new files is O(N\u00d7M). `extractPropsFromStories` calls `ensureFiles` on every batch invocation (including background warmup ticks), so for large design systems (Mantine at 9 tsconfig projects with many files) this repeated linear scanning can accumulate.\n\nConsider maintaining a `Set<string>` alongside `commandLine.fileNames` for O(1) membership checks, or converting `commandLine.fileNames` into a `Set` in a preprocessing step:\n```typescript\nconst existing = new Set(this.commandLine.fileNames);\nfor (const fileName of fileNames) {\n  if (!existing.has(fileName)) {\n    this.commandLine.fileNames.push(fileName);\n    existing.add(fileName);\n    added = true;\n  }\n}\n```",
+      "index": 3
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/componentMeta/ComponentMetaManager.ts",
+      "line_number": 454,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "When `fs.watch` with `{ recursive: true }` fails (e.g., on Linux kernels < 5.x or Node.js < 22), the error is logged only at `logger.debug` level \u2014 essentially invisible to the user in a default Storybook setup. The consequence is that all file watching is silently disabled, so component prop changes won't be reflected until a full restart.\n\nThis should be at least `logger.warn` with a message explaining the degraded behavior, e.g.:\n```\n[reactComponentMeta] Failed to watch directory (file watching disabled \u2014 incremental prop updates unavailable): ${err}\n```\nAlternatively, document in the feature docs that recursive watch on Linux requires Node.js \u2265 22.",
+      "index": 4
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 40,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The module-level `componentMetaManager` singleton is only stored when `watch: true`. If a subsequent call comes in with `watch: true` after the previous manager was disposed (e.g., on Storybook config reload), the old `componentMetaManager` reference may be stale:\n\n```typescript\nasync function createComponentMetaManager(watch: boolean) {\n  if (componentMetaManager && watch) {\n    return componentMetaManager; // returns stale disposed manager if dispose() was called externally\n  }\n  ...\n}\n```\n\nSince `ComponentMetaManager.dispose()` sets internal state to disposed but doesn't nullify the module-level variable, calling `batchExtract` on a disposed manager would silently do nothing (projects map is cleared). Consider checking `componentMetaManager.isDisposed` (which doesn't currently exist) or nullifying `componentMetaManager` inside `dispose()` if this module owns its lifecycle.",
+      "index": 5
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/generator.ts",
+      "line_number": 222,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The preset type signature declares `{ manifestEntries: IndexEntry[]; watch: boolean }` (non-optional `boolean`), but `writeManifests` calls `getManifests(presets)` without a `watch` argument, so `watch` defaults to `undefined`. This value propagates to `presets.apply('experimental_manifests', undefined, { manifestEntries, watch: undefined })` and is destructured in `manifests()` as `boolean` (the declared type), creating a runtime/type mismatch.\n\nThe runtime behavior happens to be correct (`undefined` is falsy \u2192 non-watch path), but the type contract is violated. Change the preset options type to `{ manifestEntries: IndexEntry[]; watch?: boolean }` and update `createComponentMetaManager(watch: boolean | undefined)` accordingly to make the intent explicit.",
+      "index": 6
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/memfs-test-setup.ts",
+      "line_number": 22,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The old `vitest.setup.ts` used `vi.resetAllMocks()`, which clears both call history AND resets mock implementations to their defaults. The new `setupMemfsMocks()` uses `vi.clearAllMocks()`, which only clears call history but leaves implementations intact from a previous test's `mockImplementation` call.\n\nSince the setup explicitly re-applies all mock implementations immediately after, this is usually equivalent in practice. However, any mock that was set outside of `setupMemfsMocks()` (e.g., a spy set up inside an individual test's `beforeEach`) will retain its implementation across tests. This is a subtle behavioral difference that could cause test pollution. Consider using `vi.resetAllMocks()` to match the original behavior.",
+      "index": 7
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/componentMeta/test-helpers.ts",
+      "line_number": 9,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`require.resolve('react/package.json')` is a CommonJS API. If this test helper is loaded as an ES module (which is the case when `package.json` declares `\"type\": \"module\"` or when Vitest transforms in ESM mode), `require` is not defined and this will throw a `ReferenceError` at module initialization time.\n\nUse `createRequire` from `node:module` instead:\n```typescript\nimport { createRequire } from 'node:module';\nconst require = createRequire(import.meta.url);\nconst NODE_MODULES_DIR = path.resolve(require.resolve('react/package.json'), '../..');\n```",
+      "index": 8
+    },
+    {
+      "file_path": "code/renderers/react/src/componentManifest/componentMeta/ComponentMetaProject.ts",
+      "line_number": 426,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "In `extractStaticDefaultProps`, the loop over class members checks `member.name.getText() !== 'defaultProps'` but doesn't verify the `static` modifier. This means an instance property named `defaultProps` would also be collected, which is not a valid React pattern.\n\nAdd a modifier check:\n```typescript\nif (\n  !typescript.isPropertyDeclaration(member) ||\n  !member.name || member.name.getText() !== 'defaultProps' ||\n  !typescript.getModifiers(member)?.some(m => m.kind === typescript.SyntaxKind.StaticKeyword)\n) {\n  continue;\n}\n```",
+      "index": 9
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "**`fs.watch` with `recursive: true` is not supported on Linux (Node.js < 22).**\n\nThe `watchDirectory` method in `ComponentMetaManager` uses `watch(dir, { recursive: true }, ...)`. On Linux with Node.js versions before 22.5.0, `fs.watch` with `recursive: true` throws `Error: ENOSYS: function not implemented`. While the error is caught and logged at `logger.debug`, the practical effect is that *no directories are watched at all* on most CI environments and Linux development machines.\n\nThis means the main value proposition of the new `react-component-meta` engine in dev mode \u2014 incremental updates without full restarts \u2014 silently does not work on Linux. At minimum, surface a `logger.warn` after the first watch failure. A longer-term fix would be to use a cross-platform recursive watcher library (e.g., `chokidar`, which is already available in the monorepo) or to polyfill recursive watching with multiple shallow `fs.watch` calls on Linux.",
+      "index": 10
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**`vitest.setup.ts` gutted; mocks now opt-in per test file \u2014 risks inconsistent setups.**\n\nThe previous `vitest.setup.ts` established a guaranteed, consistent environment for all tests in the renderer: memfs mocking, `cachedResolveImport` override, `loadConfig` stub, etc. These were applied globally in `beforeEach`. The new approach moves all of this into `setupMemfsMocks()` and requires each test file to call it explicitly.\n\nThis is fragile: a new test file that imports `getComponents` or `manifests` without calling `setupMemfsMocks()` will inadvertently hit the real filesystem, produce non-deterministic results, or fail with import resolution errors. The `ComponentMetaManager.test.ts` and `ComponentMetaProject.*.test.ts` files intentionally use real filesystem (temp dirs) \u2014 but the `generator.test.ts` and `getComponentImports.test.ts` files now silently depend on remembering to call `setupMemfsMocks()`. Consider re-establishing a global setup that applies only to the memfs-based tests (e.g., via a separate `vitest.config` project or a tagged test group) to make the boundary explicit.",
+      "index": 11
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "**`getComponents` signature change from sync to async is a breaking API change without documentation.**\n\n`getComponents` was previously synchronous and is now `async`, returning `Promise<ComponentRef[]>`. `getComponentData` similarly became `async`. These are exported functions (or at least internally used across multiple callers). The change cascades through `generator.ts`, `getComponentImports.test.ts`, and related test files. While the diff updates all known callers, this is a breaking change for any third-party addons or internal consumers that cached a synchronous call. The function signatures (and the `getComponentData` public export) should have corresponding changelog or deprecation notices given that `getComponentData` is marked `@public`.",
+      "index": 12
+    }
+  ],
+  "cost_usd": 0.9974145999999999,
+  "duration_seconds": 431.55698323249817
+}

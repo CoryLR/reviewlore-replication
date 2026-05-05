@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/core/src/manager/utils/status.tsx",
+      "line_number": 32,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The priority ordering inserted here contradicts the stated intent. `getMostCriticalStatusValue` returns the *last* match in `statusPriority`, so placing the array as `[..., 'status-value:affected', 'status-value:modified', 'status-value:new', ...]` makes `new` the most critical of the three. However the PR's own story comment in `StatusesChangeDetectionPriority` says `\"error > warning > affected > modified > new\"` (i.e. `affected` is most critical). The array should be reversed to `'status-value:new', 'status-value:modified', 'status-value:affected'` to match that intent.",
+      "index": 0
+    },
+    {
+      "file_path": "code/core/src/manager/utils/status.test.ts",
+      "line_number": 55,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "This assertion will fail with the current priority array. `getMostCriticalStatusValue(['status-value:affected', 'status-value:modified', 'status-value:success'])` iterates through `statusPriority` and returns the last match; with `affected` positioned before `modified` in the array, it returns `'status-value:modified'`, not `'status-value:affected'`. The test description also says \"above\" when it should say \"below\" given the priority ordering. Either the test expectation or the priority array must be corrected to be consistent.",
+      "index": 1
+    },
+    {
+      "file_path": "code/addons/vitest/src/use-test-provider-state.ts",
+      "line_number": 51,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`statusValueToStoryIdsMap[status.value as TestStatusValue]` will be `undefined` at runtime if `status.value` is one of the new change-detection values (`'status-value:new'`, `'status-value:modified'`, `'status-value:affected'`), because those keys are not present in the map. Calling `.push()` on `undefined` throws a `TypeError`. The TypeScript cast suppresses the type error but does not add safety. A runtime guard is needed: `const arr = statusValueToStoryIdsMap[status.value as TestStatusValue]; if (arr) arr.push(status.storyId);`",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/StatusButton.tsx",
+      "line_number": 21,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description states that `new` should use `theme.color.positive` (green) and `modified` should use `theme.color.secondary` (purple), but all three new statuses are mapped to `theme.fgColor.accent`. This makes `new`, `modified`, and `affected` visually identical in the sidebar (same color, different icons that are easy to miss), which limits the utility of having three distinct states. Either update the description or differentiate the colors.",
+      "index": 3
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Sidebar.stories.tsx",
+      "line_number": 629,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The inline comment `// priority ordering (most critical wins): error > warning > affected > modified > new` is inverted relative to the `statusPriority` array as written. With `['...', 'status-value:affected', 'status-value:modified', 'status-value:new', '...']`, `new` is actually the most critical of the three, not the least. This will mislead future maintainers trying to understand the priority ordering.",
+      "index": 4
+    },
+    {
+      "file_path": "code/core/src/types/modules/core-common.ts",
+      "line_number": 542,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`changeDetection?: boolean` is added to the `features` block of `StorybookConfigRaw`, but no code in this diff reads or acts on it. Without a consuming implementation, this is dead configuration \u2014 users who set it will see no effect, and it adds noise to the public config surface. Either wire it up or defer its addition until the consuming logic is ready.",
+      "index": 5
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/Tree.tsx",
+      "line_number": 190,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`StatusIconMap` returns `null` for all three new status values, meaning leaf/story nodes never render an icon for `new`, `modified`, or `affected`. The `showBranchStatus` logic then gates display to the group/component level only. However, the new Sidebar stories (`StatusesNew`, `StatusesModified`, `StatusesAffected`) set these statuses directly on individual stories, implying per-story display is expected. It is unclear whether the null leaf icons are an intentional design choice (aggregate only) or an oversight; if intentional, a code comment explaining the rationale would help.",
+      "index": 6
+    },
+    {
+      "file_path": "code/core/src/manager/components/sidebar/IconSymbols.tsx",
+      "line_number": 149,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `AFFECTED_ID` symbol paths include explicit `strokeWidth=\"1\"` attributes, while the `NEW_ID` paths rely on the SVG default stroke width. For consistency all symbol paths should either explicitly declare their stroke widths or all rely on the default.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "All three new status values (`new`, `modified`, `affected`) are assigned the same `theme.fgColor.accent` color throughout (in `StatusButton.tsx` and in the `null` color slot of the `getStatus` tuple). Combined with the relatively similar small circular/diamond icons, users and consumers of the API will have difficulty distinguishing between the three states at a glance. If the goal is to convey different levels of change impact, each state should use a distinct color or the icons should differ more significantly.",
+      "index": 8
+    },
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The `StatusValue` union type in `status-store/index.ts` is a public API surface. Inserting `new`, `modified`, and `affected` between `success` and `warning` in the union (purely a source-code ordering choice) is fine, but the ordering in the union does not match the semantic `statusPriority` array, which could confuse users who read the type definition expecting it to reflect priority. Consider either aligning the union's declaration order with the priority array, or adding a comment pointing to `statusPriority` for the authoritative ordering.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.61971605,
+  "duration_seconds": 600.9670369625092
+}

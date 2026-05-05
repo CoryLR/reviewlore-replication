@@ -1,0 +1,86 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/edges.js",
+      "line_number": 98,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`useHtmlLabels` is being passed as the `addBackground` argument (5th parameter) to `createLabel`. These are semantically different: `addBackground` controls whether to apply the `labelBkg` CSS class (a visual background), while `useHtmlLabels` controls whether HTML rendering is used at all. When `useHtmlLabels` is `true`, this inadvertently adds a background to edge terminal labels (startLabelLeft, startLabelRight, endLabelLeft, endLabelRight), which is unintended. The same bug appears in all four terminal label calls. The 5th argument should be `false` for all of these calls.",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/util.ts",
+      "line_number": 25,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`labelHelper` is used by many diagram types (ER, state, class, etc.), but the config path has been narrowed to `getConfig()?.flowchart?.htmlLabels`. For non-flowchart diagrams, this may not reflect the correct diagram-specific `htmlLabels` setting \u2014 for example, `classdiagram.htmlLabels` defaults to `false` while `flowchart.htmlLabels` defaults to `true`. A node in a class diagram that relied on its own `htmlLabels: false` config could now accidentally fall through to the flowchart default. Consider using the diagram-type-aware config or documenting why `flowchart` is the right fallback for all diagrams.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/createLabel.js",
+      "line_number": 69,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The temporary SVG is appended to `document.body` for measurement but is only removed on the happy path. If `configureLabelImages` or the bounding box measurement throws an exception, `tempSvg` will never be removed, leaking a hidden `<svg>` element into the document. Wrap the measurement block in a `try/finally` to guarantee cleanup:\n```js\ntry {\n  await configureLabelImages(div.node(), node.label);\n  // ... bbox measurement ...\n} finally {\n  tempSvg.remove();\n}\n```",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/createLabel.js",
+      "line_number": 58,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`applyStyle` is called with `node.labelStyle` on both the `span` (line 55) and the `div` (line 58). The `span` is the correct target for label typography \u2014 applying the same style to the `div` wrapper is redundant and can cause double-cascading for inherited properties like `font-size` or `color`. Consider removing the `applyStyle(div, node.labelStyle)` call, which was present in the old code but is now superseded by the explicit span styling.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/createLabel.js",
+      "line_number": 29,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`getWrappingWidth()` reads from `getConfig().flowchart?.wrappingWidth`, but `createLabel` is also called from non-flowchart diagrams (e.g. ER diagrams via `rectWithTitle.ts`, subgraph clusters). For those diagrams `flowchart.wrappingWidth` is not the configured value, so it silently falls back to the hardcoded `DEFAULT_WRAPPING_WIDTH = 200`. At minimum, this should be documented; ideally the caller should pass the width explicitly (as some callers do) rather than relying on this fallback.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/labelImageUtils.ts",
+      "line_number": 26,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`getConfig()` is called twice in the same ternary (lines 26\u201327). The function is not free \u2014 it performs a config merge/lookup. Cache the result once:\n```ts\nconst cfg = getConfig();\nconst bodyFontSize = cfg.fontSize\n  ? cfg.fontSize\n  : window.getComputedStyle(document.body).fontSize;\n```",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/labelImageUtils.ts",
+      "line_number": 19,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `new Promise` on line 19 is missing its TypeScript type parameter. Since `res(img)` resolves with an `HTMLImageElement` but the resolved value is discarded by `Promise.all`, the correct annotation is `new Promise<void>((res) => { ... res(); })` or passing the image value as `new Promise<HTMLImageElement>((res) => { ... res(img); })`. The untyped form produces an implicit `Promise<unknown>`, which weakens type safety in the surrounding `Promise.all` call.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/rendering-util/rendering-elements/shapes/util.ts",
+      "line_number": 10,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The JSDoc block on lines 10\u201317 describes `configureLabelImages` (its parameters, return type, and purpose) but is placed immediately before `export const labelHelper`. IDEs and documentation generators will attach this doc block to `labelHelper`, producing incorrect API docs. Either remove the comment here (since the function is documented at its declaration in `labelImageUtils.ts`) or add a blank line and a proper `// See configureLabelImages` inline comment instead.",
+      "index": 7
+    },
+    {
+      "file_path": ".changeset/vast-masks-say.md",
+      "line_number": 2,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The changeset is marked as `patch`, but this PR enables new user-visible features \u2014 KaTeX rendering and iconpack/FontAwesome icons \u2014 in `createLabel` code paths that previously lacked them. Per the contribution guidelines referenced in the PR's own checklist: \"Changesets that add features should be `minor`\". Consider bumping this to `minor` and updating the message prefix from `fix:` to `feat:`.",
+      "index": 8
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The old `addHtmlLabel` applied `padding-right: 1px` with a comment \"Fix for firefox\". This line is silently removed in the refactored version with no explanation or replacement. Browser-specific workarounds of this kind tend to encode hard-won knowledge about rendering edge cases. If the Firefox issue is genuinely resolved by the new rendering approach, that should be noted in a comment; if it was simply forgotten, its absence could cause a visual regression in Firefox where labels are clipped or cause unwanted reflow.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.6309413000000001,
+  "duration_seconds": 363.9551820755005
+}

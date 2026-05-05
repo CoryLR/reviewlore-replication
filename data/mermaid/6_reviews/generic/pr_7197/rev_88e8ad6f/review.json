@@ -1,0 +1,84 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 619,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The function does not guard against invalid `Date` inputs. If `minTime` or `maxTime` is an invalid `Date` (whose `.valueOf()` is `NaN`), then `maxTime - minTime` evaluates to `NaN`, `Math.ceil(NaN / intervalMs)` is `NaN`, and `NaN > MAX_TICK_COUNT` is `false`. The guard in the bottom-axis branch therefore silently falls through to the `switch` statement and still applies ticks \u2014 the exact scenario this PR is meant to prevent. The function should return `Infinity` (or some value guaranteed to exceed the limit) when the inputs are not finite, e.g.:\n```js\nif (!isFinite(+minTime) || !isFinite(+maxTime)) return Infinity;\n```",
+      "index": 0
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 621,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "There is no guard against `intervalMs === 0`. If `dayjs.duration({ [interval]: every })` doesn't recognise the key (e.g. dayjs duration uses plural keys like `days`/`months`, not `day`/`month`), it returns a zero-duration, making `timeDiffMs / 0 === Infinity`. In that case `Infinity > MAX_TICK_COUNT` is `true`, so the tick is skipped \u2014 which accidentally produces safe behaviour but silently suppresses all custom tick intervals. Verify that singular unit names (`millisecond`, `second`, \u2026, `month`) are accepted by the dayjs `duration` plugin, or add an explicit `if (intervalMs <= 0) return Infinity;` guard with a log warning.",
+      "index": 1
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 611,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The JSDoc `@returns` description says \"Returns the count or Infinity if there would be too many ticks\", but the implementation never explicitly returns `Infinity` \u2014 it can actually return `NaN` for invalid date inputs. Update the description to match the real contract, e.g. \"Returns the estimated tick count; may return `NaN` if inputs are invalid or `Infinity` if the interval resolves to zero milliseconds.\"",
+      "index": 2
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 618,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "`getEstimatedTickCount` is declared inside `draw` but closes over no local variables \u2014 it only uses its own parameters and the module-level `dayjs` import. Placing it inside `draw` recreates the function object on every render call and makes it impossible to unit-test in isolation. Move it to module scope alongside `MAX_TICK_COUNT`.",
+      "index": 3
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 662,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The bottom-axis branch emits `log.warn(...)` when the tick count exceeds the limit. The top-axis branch (around line 725) uses the inverse condition `if (estimatedTicks <= MAX_TICK_COUNT)` and silently skips without any warning. This asymmetry means an overflowing top-axis tick interval produces no diagnostic output, making debugging harder. Add the same `log.warn` call to the top-axis path when the condition is not met.",
+      "index": 4
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttRenderer.js",
+      "line_number": 652,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`parseInt(resultTickInterval[1], 10)` should be validated before use. Although the regex `[1-9]\\d*` makes `NaN` practically impossible here, the result is passed directly to both `getEstimatedTickCount` and D3's `timeInterval.every()` without an `isNaN` check. An explicit guard (e.g. `if (isNaN(every) || every <= 0) { log.warn(...); }`) would make the intent clear and protect against any future regex changes.",
+      "index": 5
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttDb.js",
+      "line_number": 304,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The block comment says \"For all other formats, if dayjs strict parsing fails - throws an error\", but the `isTimestampFormat` variable introduced on line 307 only gates an additional `log.debug()` call \u2014 it does not change whether or when the error is thrown. The throw already exists unconditionally later in the same `else` branch (when `new Date(str)` also fails). The comment incorrectly implies the throw is conditional on `isTimestampFormat`, which will mislead future readers.",
+      "index": 6
+    },
+    {
+      "file_path": "packages/mermaid/src/diagrams/gantt/ganttDb.js",
+      "line_number": 307,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`isTimestampFormat` is computed but only used to guard a single `log.debug()` statement; it has no effect on control flow or the fallback behaviour. If the intention is to restrict `new Date(str)` fallback to timestamp formats only, the guard should wrap the fallback path. Otherwise, this variable is effectively dead code and should be removed to reduce confusion.",
+      "index": 7
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The domain extraction, `getEstimatedTickCount` call, and full `switch`/`case` block are duplicated nearly verbatim for the bottom axis and the top axis. This duplication is the direct cause of the logging inconsistency noted above and will require future bug fixes to be applied in two places. Consider extracting a helper such as `applyTickInterval(axis, every, interval, weekday, domain)` that both branches call, keeping the guard logic in one place.",
+      "index": 8
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description mentions a Temporal Dead Zone (TDZ) error as part of the root cause, but no corresponding fix for a TDZ error is visible in the diff. If the TDZ fix was already merged separately, the PR description should clarify this; if it still needs to be addressed, it should be included here.",
+      "index": 9
+    }
+  ],
+  "cost_usd": 0.4648887,
+  "duration_seconds": 393.68180775642395
+}

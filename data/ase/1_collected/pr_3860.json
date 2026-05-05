@@ -1,0 +1,33 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3860,
+  "title": "Test test_fd() fails when numpy is compiled with Intel compilers.",
+  "body": "The test ``test_fd()`` sometimes fails when numpy and scipy are compiled with Intel compilers, due to too tight numerical tolerance.  It only happens on some architectures (Niflheim's xeon24, not the other xeon architectures).  This MR increases the numerical tolerance from 1.0e-7 to 1.5e-7.\n\n```\n[gw7] linux -- Python 3.13.5 /home/niflheim/schiotz/development/ase-intel-2025b/bin/python\n\natoms = Atoms(symbols='Cu4', pbc=True, cell=[3.61, 3.61, 3.61], calculator=FiniteDifferenceCalculator(...))\n\n    def test_fd(atoms: Atoms) -> None:\n        \"\"\"Test `FiniteDifferenceCalculator`.\"\"\"\n        atoms.calc = EMT()\n        energy_analytical = atoms.get_potential_energy()\n        forces_analytical = atoms.get_forces()\n        stress_analytical = atoms.get_stress()\n    \n        atoms.calc = FiniteDifferenceCalculator(EMT())\n        energy_numerical = atoms.get_potential_energy()\n        forces_numerical = atoms.get_forces()\n        stress_numerical = atoms.get_stress()\n    \n        # check if `numerical` energy is exactly equal to `analytical`\n        assert energy_numerical == energy_analytical\n    \n        # check if `numerical` forces are *not* exactly equal to `analytical`\n        assert np.any(forces_numerical != forces_analytical)\n        assert np.any(stress_numerical != stress_analytical)\n    \n        np.testing.assert_allclose(forces_numerical, forces_analytical)\n>       np.testing.assert_allclose(stress_numerical, stress_analytical)\nE       AssertionError: \nE       Not equal to tolerance rtol=1e-07, atol=0\nE       \nE       Mismatched elements: 1 / 6 (16.7%)\nE       Max absolute difference among violations: 1.47574683e-10\nE       Max relative difference among violations: 1.1522783e-07\nE        ACTUAL: array([ 0.001923,  0.0073  , -0.001734, -0.001281,  0.00492 ,  0.001944])\nE        DESIRED: array([ 0.001923,  0.0073  , -0.001734, -0.001281,  0.00492 ,  0.001944])\n\n/home/niflheim/schiotz/development/ase-intel-2025b/ase/ase/test/calculator/test_fd.py:40: AssertionError\n```\n\n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [X] [I am familiar with **ASE's contribution guidelines.**](https://ase-lib.org/development/contribute.html)\n- [X] [**Doc strings** in code changed in this MR are up to date.](https://ase-lib.org/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [~] [**Unit tests** have been added for new or changed code.](https://ase-lib.org/development/tests.html)\n- [ ] [**Changes** have been added in `changelog.d` using `scriv`.](https://ase-lib.org/development/writing_changelog.html)\n- [~] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "schiotz",
+  "merged_at": "2025-11-04T11:19:50.080Z",
+  "base_ref": "master",
+  "merge_commit_sha": "341e26a85b63ae74f43ebc4f13f69ebd9f9200af",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2866000220",
+          "author": "yuzie007",
+          "body": "Thank you so much @schiotz for finding the issue! The fix is straightforward and reasonable, and I would like to merge it now.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-11-04T11:19:44.645Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 1
+}

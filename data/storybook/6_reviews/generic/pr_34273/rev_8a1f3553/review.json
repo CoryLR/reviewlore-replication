@@ -1,0 +1,44 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/cli-storybook/src/codemod/helpers/config-to-csf-factory.ts",
+      "line_number": 40,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "`t.isCallExpression(node.declaration)` accesses `node.declaration` directly without unwrapping TypeScript type annotation syntax. A file like `export default defineMain({}) satisfies StorybookConfig` has a `TSSatisfiesExpression` as `node.declaration`, not a `CallExpression`, so `isAlreadyTransformed` would be `false` and the file would be re-processed unnecessarily. Elsewhere in this same function (Scenario 2) the code correctly uses `config._unwrap(node.declaration)` to handle `satisfies`, `as`, and chained `as` expressions. The same unwrapping should be applied here for consistency and correctness.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/codemod/helpers/config-to-csf-factory.ts",
+      "line_number": 45,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The early return fires regardless of whether the required import (`defineMain`/`definePreview`) is already present. A file containing `export default defineMain({})` but missing `import { defineMain } from '@storybook/react-vite/node'` would be returned as-is, leaving `defineMain` undefined at runtime. The test case `'should add missing import when already transformed but import is absent'` (test file, line 179) verifies exactly this scenario must still add the import \u2014 the proposed change breaks it. The condition should be gated on the import already being correct, e.g. `if (isAlreadyTransformed && !hasNamedExports && hasCorrectImport)`, requiring a prior check that the expected specifier is present in the existing imports.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/codemod/helpers/config-to-csf-factory.ts",
+      "line_number": 45,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `!hasNamedExports` guard is applied identically to both `main` and `preview` config types with no explanation. For `main` configs, named exports alongside an already-transformed `defineMain(...)` default export would be highly unusual; for `preview` configs they are much more plausible (e.g. `export const decorators = []` alongside `export default definePreview(...)`). Treating both uniformly here is silently asymmetric with the rest of the file's logic, which carefully distinguishes between the two config types. Either document why the same guard is appropriate for both, or split the condition accordingly.",
+      "index": 2
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The diff is incomplete relative to the scenarios it must handle. The test file already contains (or should contain) at least two cases that the proposed change breaks: (1) 'should add missing import when already transformed but import is absent' \u2014 a file with `export default defineMain({})` but no import declaration should still have the import added, not be returned as-is; (2) 'should add missing specifier when already transformed but defineMain is not in existing import' \u2014 same idea with a partial existing import. Because the new `return info.source` branch runs before any import-fixup logic, both cases would silently skip the necessary import repair. The fix needs to either move the early return to after import handling, or make the guard condition include a verified-correct-import check.",
+      "index": 3
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The comment on line 36 (`// Early return if the code is already transformed (default export is already defineMain/definePreview)`) is accurate but incomplete \u2014 it doesn't mention the second condition (`!hasNamedExports`), leaving a reader to wonder why an already-transformed file with named exports would NOT return early. Adding a brief note explaining the merge scenario (named exports need to be folded into the existing call) would make the intent clear without needing to trace through the rest of the function.",
+      "index": 4
+    }
+  ],
+  "cost_usd": 0.27367665,
+  "duration_seconds": 224.3295738697052
+}

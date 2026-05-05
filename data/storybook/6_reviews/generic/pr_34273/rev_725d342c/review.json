@@ -1,0 +1,38 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/lib/cli-storybook/src/codemod/helpers/config-to-csf-factory.ts",
+      "line_number": 43,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `typeof (config as any)._unwrap === 'function'` existence-guard is inconsistent with the rest of the function, which calls `config._unwrap(...)` directly and without any guard (e.g., existing line ~145: `config._unwrap(node.declaration as t.Node)`). If `_unwrap` could ever be absent, those existing call-sites would already throw, so the guard buys nothing. Worse, the fallback path (`node.declaration` untouched) silently skips TS-syntax unwrapping: a file whose default export is `export default defineMain({}) satisfies StorybookConfig` produces a `TSSatisfiesExpression` node, which fails the `t.isCallExpression` check below, so the file is **not** detected as already-transformed and gets re-processed. Remove the existence-check and call `config._unwrap(node.declaration)` directly, matching the pattern used everywhere else in the function.",
+      "index": 0
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/codemod/helpers/config-to-csf-factory.ts",
+      "line_number": 44,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `(config as any)` cast is inconsistent with every other access to underscore properties in this file (`config._ast`, `config._exportDecls`, `config._exportsObject`, `config._unwrap`) which are all accessed without casting. If TypeScript accepts those accesses without `as any`, it will accept this one too, so the cast can be dropped.",
+      "index": 1
+    },
+    {
+      "file_path": "code/lib/cli-storybook/src/codemod/helpers/config-to-csf-factory.ts",
+      "line_number": 42,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The `// eslint-disable-next-line no-underscore-dangle` comment is applied only here, but the same function already accesses `config._ast` (line 30), `config._exportDecls` (line 31), `config._exportsObject` (lines 88, 128, etc.), and `config._unwrap` (line ~145) with no such suppression. Either the ESLint rule is already configured to allow this pattern globally (making the comment redundant), or the suppressions are being applied inconsistently. Either way, this comment adds noise.",
+      "index": 2
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "There is no test for a file whose default export is an already-transformed call wrapped in a TypeScript type annotation \u2014 e.g., `export default defineMain({}) satisfies StorybookConfig` or `export default defineMain({}) as StorybookConfig`. The `_unwrap` logic in the new block was added specifically to handle such cases, but without a test, the correctness of that path is unverified. A test similar to the existing 'should leave already transformed code as is' test, but with TS-wrapped default exports, would catch the regression described in the `_unwrap` guard comment above.",
+      "index": 3
+    }
+  ],
+  "cost_usd": 0.2127984,
+  "duration_seconds": 130.437814950943
+}

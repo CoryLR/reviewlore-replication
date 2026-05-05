@@ -1,0 +1,60 @@
+{
+  "inline_comments": [
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.tsx",
+      "line_number": 200,
+      "dimension": "Code Defect",
+      "importance": "major",
+      "comment": "The `a11yErrorCount` variable is declared inside the `if (hasA11yAddon)` block (a few lines above) and is therefore out of scope here. As a result, the `announce()` politeness level only checks `errorCount` (component errors) and never accounts for a11y errors. The PR description explicitly states the level should be `assertive` when component test errors **or** accessibility errors are present. Fix by hoisting `a11yErrorCount` to a variable outside the `if (hasA11yAddon)` block:\n```tsx\nlet a11yErrorCount = 0;\nif (hasA11yAddon) {\n  a11yErrorCount = a11yStatusValueToStoryIds['status-value:error'].length;\n  // ...\n}\n// ...\nannounce(message, errorCount > 0 || a11yErrorCount > 0 ? 'assertive' : 'polite');\n```",
+      "index": 0
+    },
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.tsx",
+      "line_number": 146,
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The `useRef` declaration and accompanying `useEffect` are placed ~145 lines into the component body, after a large block of derived variable calculations. Hooks buried this deep are hard to discover during future maintenance. Consider either grouping them near the top of the component (referencing `componentTestStatusValueToStoryIds` etc. will still work since they're defined earlier) or extracting the announcement logic into a dedicated custom hook (e.g. `useTestProviderAnnouncements`).",
+      "index": 1
+    },
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.tsx",
+      "line_number": 202,
+      "dimension": "Performance Issue",
+      "importance": "minor",
+      "comment": "`componentTestStatusValueToStoryIds` and `a11yStatusValueToStoryIds` are likely new object references on every render (computed inline from status arrays). Including them in the dependency array means this effect re-executes on every render, not just when `testProviderState` changes. The `prevState === testProviderState` guard prevents spurious announcements, but the effect body still runs and writes to `prevTestProviderStateRef` each time. Consider stabilising these objects with `useMemo`, or reading them from refs at the time of a state transition so they can be dropped from the dependency array.",
+      "index": 2
+    },
+    {
+      "file_path": "code/core/src/manager/utils/toHaveLiveRegion.ts",
+      "line_number": 18,
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "The JSDoc says `string for **exact** match`, but the implementation on line 59 uses `content.includes(text)`, which is a **substring** match. A live region containing `\"3 tests passed today\"` would match `{ text: 'tests passed' }`, which may not be intended. Either change the implementation to use `content === text` for exact matching (and update the test on line 16 of the test file accordingly), or correct the doc to say `string for substring match`.",
+      "index": 3
+    },
+    {
+      "file_path": "code/addons/vitest/src/components/TestProviderRender.stories.tsx",
+      "line_number": 12,
+      "dimension": "Code Style",
+      "importance": "minor",
+      "comment": "The import path `'../../../../core/src/manager/utils/toHaveLiveRegion'` crosses four directory levels into another workspace package via a raw relative path. This is brittle \u2014 any reorganisation of either package's directory structure silently breaks it. The `code/core` package is already available under the `storybook/internal/*` namespace; if this utility is intended for broader use, it should be exported from there. Alternatively, if it's test-only, a path alias configured in `tsconfig` or `vite.config` would be more resilient.",
+      "index": 4
+    }
+  ],
+  "general_comments": [
+    {
+      "dimension": "Code Defect",
+      "importance": "minor",
+      "comment": "`toHaveLiveRegion` is registered via `expect.extend({ toHaveLiveRegion })` in the stories file, but there is no TypeScript declaration merging (e.g., `declare module 'vitest' { interface Matchers<R> { toHaveLiveRegion(options: LiveRegionMatcherOptions): R; } }`) anywhere in the added code. Without this, TypeScript will produce a type error at every `.toHaveLiveRegion(...)` call site and editors won't provide autocomplete. A type declaration should be co-located in `toHaveLiveRegion.ts` or added to a global types file.",
+      "index": 5
+    },
+    {
+      "dimension": "Maintainability and Readability",
+      "importance": "minor",
+      "comment": "The PR description states that `extend-to-be-announced` is added as a devDependency and registered in `code/.storybook/storybook.setup.ts`, and the Usage section shows a `toBeAnnounced` assertion pattern. However, none of these changes appear in the diff: `extend-to-be-announced` is absent from `package.json`, `storybook.setup.ts` is unchanged, and `toBeAnnounced` is not used anywhere in the added code. The actual stories rely solely on `toHaveLiveRegion` (DOM inspection). The description should be updated to match the actual implementation, or the intended `extend-to-be-announced` integration should be completed, since the two strategies differ meaningfully: DOM inspection can miss announcements that are cleared before the assertion runs.",
+      "index": 6
+    }
+  ],
+  "cost_usd": 0.4588023,
+  "duration_seconds": 283.930526971817
+}

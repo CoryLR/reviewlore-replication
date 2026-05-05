@@ -1,0 +1,192 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3768,
+  "title": "Fix timestep in NHC subloop",
+  "body": "Closes https://gitlab.com/ase/ase/-/issues/1716\n\nAs @beidouamg pointed out, a timestep used in subloops of Nose-Hoover-chain thermostat integration was wrong.\nThis MR fixes it.\n\nThe original unittest checked forward n steps with `timestep` and backward 2n steps with `timestep/2`, but it appears this check was too tight for numerical error (or some undiscovered bug...).\nThis MR also changes the unittest to check forward n steps and backward n steps with the same timestep. \n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://wiki.fysik.dtu.dk/ase/development/contribute.html)\n- [x] [**Doc strings** in code changed in this MR are up to date.](https://wiki.fysik.dtu.dk/ase/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [x] [**Unit tests** have been added for new or changed code.](https://wiki.fysik.dtu.dk/ase/development/tests.html)\n- [ ] [**Changes** have been added in `changelog.d` using `scriv`.](https://wiki.fysik.dtu.dk/ase/development/writing_changelog.html)\n- [x] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "lan496",
+  "merged_at": "2025-08-07T14:35:25.670Z",
+  "base_ref": "master",
+  "merge_commit_sha": "53b7e947e25b06127bf126d61dde96ac398e9419",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2665756561",
+          "author": "askhl",
+          "body": "I think the previous version of the test was stronger since it tests something physical (2 * half-a-time-step being the same as a time step, which is not trivial given the complexity of MD expressions).\n\nIs there a reason we cannot do so anymore?\n\nI don't want to ask for too much, but it might be worth thinking about an improvement of the test since something must have been incorrect about the previous implementation.  Any ideas?\n\nThanks a lot for the quick fix!",
+          "file_path": "ase/test/md/test_nose_hoover_chain.py",
+          "line_number": 50,
+          "commit_sha": "64f8f63ee0c0c61c0b4a890743e06b1ead6ee70b",
+          "base_sha": "32592d1a1fcf0f70cc41278c99f3199a8399842f",
+          "created_at": "2025-08-04T04:31:51.941Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2665757312",
+          "author": "askhl",
+          "body": "@schiotz do you have ideas for how to best test the propagation?",
+          "file_path": "ase/test/md/test_nose_hoover_chain.py",
+          "line_number": 50,
+          "commit_sha": "64f8f63ee0c0c61c0b4a890743e06b1ead6ee70b",
+          "base_sha": "32592d1a1fcf0f70cc41278c99f3199a8399842f",
+          "created_at": "2025-08-04T04:33:22.249Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2665803461",
+          "author": "lan496",
+          "body": "Honestly, I do not fully understand why the previous time integration tests failed. It seems _integrate_p_eta_j is very susceptible to numerical fluctuation, possibly due to multiplication by exp (self._p_eta[j] *= np.exp(...)). If we set a tiny value for timestep, the previous time integration tests would pass, but it does not fully capture an algorithm implementation error in turn...",
+          "file_path": "ase/test/md/test_nose_hoover_chain.py",
+          "line_number": 50,
+          "commit_sha": "64f8f63ee0c0c61c0b4a890743e06b1ead6ee70b",
+          "base_sha": "32592d1a1fcf0f70cc41278c99f3199a8399842f",
+          "created_at": "2025-08-04T05:42:01.205Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2670467434",
+          "author": "askhl",
+          "body": "One step of length dt should always be equivalent to two steps of dt/2 if dt is small enough right?  The thermostat should only have a very small effect.  Maybe we could test that (on *all* MD classes actually, some day) using randomized velocities/positions, and a quite strict precision.  That way, we verify some physical promise about local (in time) correctness.\n\nThat the MD propagation produces the correct long-term dynamics is of course a more difficult question, but I'd be quite happy if we could test something meaningful for an individual step, since we often have very coarse criteria in the longer tests and they may not detect problems that the dt/2 test could.\n\nPlease feel free to discuss.",
+          "file_path": "ase/test/md/test_nose_hoover_chain.py",
+          "line_number": 50,
+          "commit_sha": "64f8f63ee0c0c61c0b4a890743e06b1ead6ee70b",
+          "base_sha": "32592d1a1fcf0f70cc41278c99f3199a8399842f",
+          "created_at": "2025-08-05T17:37:28.512Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2671548589",
+          "author": "lan496",
+          "body": "> One step of length dt should always be equivalent to two steps of dt/2 if dt is small enough right?\n\nYes. Let U(dt) be a true time integrator from the Nose-Hoover equations. The current implementation, say U_{sym}(dt), should satisfies U(dt) - U_{sym}(dt) = O(dt^3). \nSo, if dt is sufficiently small, we expect U_{sym}(dt/2)^2 ~ U(dt) ~ U_{sym}(dt) \n\n> I'd be quite happy if we could test something meaningful for an individual step\n\nThat's right! I will think about another unit test for this MR",
+          "file_path": "ase/test/md/test_nose_hoover_chain.py",
+          "line_number": 50,
+          "commit_sha": "64f8f63ee0c0c61c0b4a890743e06b1ead6ee70b",
+          "base_sha": "32592d1a1fcf0f70cc41278c99f3199a8399842f",
+          "created_at": "2025-08-06T06:38:29.992Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests improving the test to be stronger/more physical, and asks whether the previous stronger test approach can be retained or improved upon."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2672046236",
+          "author": "schiotz",
+          "body": "I think it is very useful to test details of the propagation of both the MD and the thermostat, when possible and applicable, for example by checking that two half timesteps do the same as one big - we just need to remember that we are testing very small changes here, so maybe it is better to test that 20 half steps does the same as 10 whole.\n\nIn addition, once these new MD algorithms started to get added to ASE, I decided it was time to add proper tests of their longer-time properties.  But those tests are slow, as they require statistics.  I therefore added them to Asap and marked them as slow tests, so they are run every Saturday on Niflheim.\n\nThe tests check that temperatures and pressures approach the right values as the simulation proceeds, but also that they approach the right values with *roughly* the right rate.  For NHC, the rate is not checked as NHC is known for being good at maintaining the right ensemble, but not for approaching it from afar - oscillations tend to appear in the auxillary variables that take a long time to die out.\n\nIn addition, with dynamics that claim to reproduce the canonical ensemble (NVT), it is checked that the fluctuations in T are correct.\n\nWith the NpT ensembles, the tests are a bit more relaxed since the barostat and the thermostat interact, so equilibrium is reached a little bit slower than the timescales seem to indicate.  Also, I consistently observe slightly too large fluctuations in both T and p, but not as bad as in some of the older dynamics, where the fluctuations are all wrong.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-06T10:19:46.766Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Suggests testing that 20 half steps equals 10 whole steps as a concrete improvement to the test suite."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2675561264",
+          "author": "askhl",
+          "body": "Thanks a lot @lan496 and all.  I'll go ahead and merge this.\n\nShould there be a release note?  \"Fixed bug in Nose-Hoover chain thermostat which would [...description of bug...]\"?",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-07T14:35:17.624Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2676940570",
+          "author": "lan496",
+          "body": "Yes, something like \"Fixed bug in Nose-Hoover chain thermostat which would inconsistently update extended variables for the thermostat.\"",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-08T00:44:39.624Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": true,
+      "actionable": true,
+      "actionability_reasoning": "Suggests adding a release note documenting the bug fix."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2675627760",
+          "author": "askhl",
+          "body": "Unfortunately on one of my machines (and one of the CAMD runners) the test will fail:\n\n```\n>       assert np.allclose(thermostat._p_eta, p_eta_start, atol=1e-6)\nE       assert False\nE        +  where False = <function allclose at 0x12f9035558b0>(array([ 3.76773741e-06, -3.68151289e-07,  4.05009980e-07]), array([0., 0., 0.]), atol=1e-06)\nE        +    where <function allclose at 0x12f9035558b0> = np.allclose\nE        +    and   array([ 3.76773741e-06, -3.68151289e-07,  4.05009980e-07]) = <ase.md.nose_hoover_chain.NoseHooverChainThermostat object at 0x12f8f4288100>._p_eta\n\n/home/askhl/src/ase/ase/test/md/test_nose_hoover_chain.py:66: AssertionError\n```\n\nIt seems like a simple tolerance problem, so I will simply make it less strict and merge immediately.\n\nPlease let me know if anything better can be done about it.\n\n(I notice that `p_eta_start` is simply zeros.  I assume that's meant to be so.)",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-07T14:58:45.464Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "Identifies a test failure and proposes making the tolerance less strict as a concrete fix."
+    }
+  ],
+  "review_thread_count": 5,
+  "removed_threads": [
+    {
+      "thread": {
+        "is_resolved": false,
+        "is_outdated": false,
+        "is_inline": false,
+        "comments": [
+          {
+            "id": "2672244699",
+            "author": "lan496",
+            "body": "I have added a new unit test for NoseHooverChainThermostat,  https://gitlab.com/ase/ase/-/merge_requests/3768/diffs?commit_id=64f8f63ee0c0c61c0b4a890743e06b1ead6ee70b .\nThis test compares NoseHooverChainThermostat with delta by n steps and that with delta/2 with 2n steps. The difference between the two time integrations should decrease by delta until rounding errors are reached. \nAlthough the current implementation passes the test, the previous wrong equation before this MR also looks to pass the test due to the small coefficient changes...",
+            "file_path": null,
+            "line_number": null,
+            "commit_sha": null,
+            "base_sha": null,
+            "created_at": "2025-08-06T11:51:30.637Z",
+            "is_outdated": false
+          }
+        ]
+      },
+      "removal_reason": "stage1_self_comment"
+    }
+  ],
+  "filter_stats": {
+    "total_threads": 5,
+    "stage1_kept": 4,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 1,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0,
+    "stage3_cost_usd": 0.01799175
+  }
+}

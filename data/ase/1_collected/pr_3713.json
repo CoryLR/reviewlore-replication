@@ -1,0 +1,116 @@
+{
+  "platform": "gitlab",
+  "project": "ase/ase",
+  "number": 3713,
+  "title": "Add move_mask to write",
+  "body": "Closes #1693 \n\n# Checklist: `x` (done) or `~` (irrelevant)\n\n- [x] [I am familiar with **ASE's contribution guidelines.**](https://wiki.fysik.dtu.dk/ase/development/contribute.html)\n- [~] [**Doc strings** in code changed in this MR are up to date.](https://wiki.fysik.dtu.dk/ase/development/python_codingstandard.html#writing-documentation-in-the-code)\n- [~] [**Unit tests** have been added for new or changed code.](https://wiki.fysik.dtu.dk/ase/development/tests.html)\n- [~] [**Changes** have been added in `changelog.d` using `scriv`.](https://wiki.fysik.dtu.dk/ase/development/writing_changelog.html)\n- [x] [**Issue is resolved** via \"closes #XXXX\" if applicable.](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)",
+  "author": "ericyuan00000",
+  "merged_at": "2025-07-05T08:21:44.981Z",
+  "base_ref": "master",
+  "merge_commit_sha": "f0aea3fd3ee2a671c0fa449ed0c076dcd66b4d29",
+  "merge_commit_parent_count": 2,
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2569930262",
+          "author": "yuzie007",
+          "body": "Thank you so much @ericyuan00000 for the MR!\n\nThe suggested solution for #1693 looks reasonable to me. When there are no constraints, the behavior does not change, while when there are `FixAtoms` and/or `FixCartesian`, this is now automatically stored as `move_mask` even not specifying it explicitly via `columns`.\n\nCould you add or extend a test for the modified feature?\nMy suggestion is to extend `test_constraints.py` in `ase/test/fio/test_extxyz.py` to test both explicit and implicit specifications of `columns` as\n```python\n@pytest.mark.parametrize(\n    'columns',\n    [None, ['symbols', 'positions', 'move_mask']],\n)\n@pytest.mark.parametrize('constraint', [FixAtoms(indices=(0, 2)),\n                                        FixCartesian(1, mask=(1, 0, 1)),\n                                        [FixCartesian(0), FixCartesian(2)]])\ndef test_constraints(constraint, columns):\n    atoms = molecule('H2O')\n    atoms.set_constraint(constraint)\n\n    ase.io.write('tmp.xyz', atoms, columns=columns)\n...\n```\nThen `pytest` should pass for this test.\n\nStrictly speaking, this MR is a backward-compatibility-breaking output change.\nIn the original implementation of `move_mask` (!891), it seems there was no discussion whether we should store the constraint info by default or not, but I think it should be OK because other properties in `atoms.arrays` and `atoms.calc.results` are stored by default.\nUsers who do not wish to store `FixAtoms` / `FixCartesian` info can simply remove them before writing the `.xyz` file e.g. as\n```python\ndel atoms.constraints\n```\n\nCould you also describe the change in `changelog.d`?\nYou can first create a file via `scriv create`, and then you can describe the change somehow like\n```rst\nI/O\n---\n\n- Changed :func:`~ase.io.extxyz.write_extxyz` to store\n  :class:`~ase.constraints.FixAtoms` and\n  :class:`~ase.constraints.FixCartesian` by default without explicitly\n  specifying ``move_mask`` in ``columns`` (:mr:`3713`)\n```\nThen, as far as no comments are from other developers, I think we can merge.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-06-18T08:28:56.604Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_inline": true,
+      "comments": [
+        {
+          "id": "2572415174",
+          "author": "yuzie007",
+          "body": "Could you add (keep) two blank lines here, to follow [PEP8](https://peps.python.org/pep-0008/#blank-lines) and thus pass the `lint` pipeline (https://gitlab.com/ericyuan00000/ase/-/jobs/10395448865)?",
+          "file_path": "ase/test/fio/test_extxyz.py",
+          "line_number": null,
+          "commit_sha": "dc2a774658f04ae79b3f3c90dc49ee60ef617fcc",
+          "base_sha": "b17fcfda79cf764c1aa443adfcec3256e49cdae6",
+          "created_at": "2025-06-19T07:34:24.940Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2574469711",
+          "author": "yuzie007",
+          "body": "Thank you @ericyuan00000 for the update!\n\nThe present version looks OK to me. Unless other maintainers have comments for a few days, I would like to merge.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-06-20T06:55:07.856Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2604569312",
+          "author": "yuzie007",
+          "body": "Merged. Thank you @ericyuan00000 once again for the contribution!",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-07-05T08:22:08.088Z",
+          "is_outdated": false
+        }
+      ]
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_inline": false,
+      "comments": [
+        {
+          "id": "2690343629",
+          "author": "dhamil",
+          "body": "@yuzie007 this fails in ase==3.26.0 if other types of constraints are applied to an `Atoms` object. If this should support writing other types of constraints, happy to add a fix",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-15T17:16:47.781Z",
+          "is_outdated": false
+        },
+        {
+          "id": "2691069708",
+          "author": "yuzie007",
+          "body": "Hi @dhamil Thank you for your feedback!\n\nYes, if there is some issue in the new implementation, please feel free to open an MR.\nThere, it would be nice to have a minimal example to reproduce the issue as well as a test to check if a new implementation fixes it.",
+          "file_path": null,
+          "line_number": null,
+          "commit_sha": null,
+          "base_sha": null,
+          "created_at": "2025-08-16T18:00:05.933Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 5
+}

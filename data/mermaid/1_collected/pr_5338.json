@@ -1,0 +1,103 @@
+{
+  "platform": "github",
+  "project": "mermaid-js/mermaid",
+  "number": 5338,
+  "title": "feat: add name attribute and class \"actor-line\" to line ",
+  "body": "## :bookmark_tabs: Summary\r\n\r\n- [x] The actors have unique names so adding a name field to the line connecting the actors for easier identification in SVG nodes.\r\n- [x] Additionally fixes a bug - `actor-line` class was never added to the line as it was getting overridden so now that's fixed as well\r\n\r\ncc @sidharthv96 \r\n\r\n```html\r\n<line id=\"actor11\" x1=\"714\" y1=\"5\" x2=\"714\" y2=\"621\" class=\"actor-line 200\" stroke-width=\"0.5px\" stroke=\"#999\" name=\"4\"></line>\r\n```\r\n\r\n\r\n## :straight_ruler: Design Decisions\r\n\r\nsimilar to https://github.com/mermaid-js/mermaid/pull/5284, this is adding a unique identifier for line nodes connecting the actors\r\n\r\n### :clipboard: Tasks\r\n\r\nMake sure you\r\n\r\n- [x] :book: have read the [contribution guidelines](https://mermaid.js.org/community/contributing.html)\r\n- [ ] :computer: have added necessary unit/e2e tests.\r\n- [ ] :notebook: have added documentation. Make sure [`MERMAID_RELEASE_VERSION`](https://mermaid.js.org/community/contributing.html#update-documentation) is used for all new features.\r\n- [x] :bookmark: targeted `develop` branch\r\n",
+  "author": "ad1992",
+  "merged_at": "2024-03-08T14:42:36Z",
+  "base_ref": "develop",
+  "merge_commit_sha": "648f779e2cbf577cf9759b483f24c5b12623729e",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "05f59f6ed2565ba0c028efaf939aaa830f684a77",
+    "233944bf2469859d3164dbdc6d0ede5baee95050"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": false,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAY2_J85Z2Vmq",
+          "author": "aloisklink",
+          "body": "Wow! Good catch on finding and fixing this bug, it's been around since https://github.com/mermaid-js/mermaid/pull/2318 :)\r\n\r\nDo you think it makes sense to change the `actor-line` styling to match what we currently have, so existing diagrams don't change? E.g. see below\r\n\r\n<details>\r\n  <summary> `git diff` to keep diagrams looking the same by default </summary>\r\n\r\n```diff\r\ndiff --git a/docs/config/theming.md b/docs/config/theming.md\r\nindex f8614b44b..5abccc7e4 100644\r\n--- a/docs/config/theming.md\r\n+++ b/docs/config/theming.md\r\n@@ -250,7 +250,7 @@ The theming engine will only recognize hex colors and not color names. So, the v\r\n | actorBkg              | mainBkg                        | Actor Background Color      |\r\n | actorBorder           | primaryBorderColor             | Actor Border Color          |\r\n | actorTextColor        | primaryTextColor               | Actor Text Color            |\r\n-| actorLineColor        | grey                           | Actor Line Color            |\r\n+| actorLineColor        | actorBorder                    | Actor Line Color            |\r\n | signalColor           | textColor                      | Signal Color                |\r\n | signalTextColor       | textColor                      | Signal Text Color           |\r\n | labelBoxBkgColor      | actorBkg                       | Label Box Background Color  |\r\ndiff --git a/packages/mermaid/src/docs/config/theming.md b/packages/mermaid/src/docs/config/theming.md\r\nindex 590301d70..3863202b4 100644\r\n--- a/packages/mermaid/src/docs/config/theming.md\r\n+++ b/packages/mermaid/src/docs/config/theming.md\r\n@@ -172,7 +172,7 @@ The theming engine will only recognize hex colors and not color names. So, the v\r\n | actorBkg              | mainBkg                        | Actor Background Color      |\r\n | actorBorder           | primaryBorderColor             | Actor Border Color          |\r\n | actorTextColor        | primaryTextColor               | Actor Text Color            |\r\n-| actorLineColor        | grey                           | Actor Line Color            |\r\n+| actorLineColor        | actorBorder                    | Actor Line Color            |\r\n | signalColor           | textColor                      | Signal Color                |\r\n | signalTextColor       | textColor                      | Signal Text Color           |\r\n | labelBoxBkgColor      | actorBkg                       | Label Box Background Color  |\r\ndiff --git a/packages/mermaid/src/themes/theme-base.js b/packages/mermaid/src/themes/theme-base.js\r\nindex d1a6eae2a..dde3b9ecf 100644\r\n--- a/packages/mermaid/src/themes/theme-base.js\r\n+++ b/packages/mermaid/src/themes/theme-base.js\r\n@@ -70,7 +70,7 @@ class Theme {\r\n     this.actorBorder = this.actorBorder || this.primaryBorderColor;\r\n     this.actorBkg = this.actorBkg || this.mainBkg;\r\n     this.actorTextColor = this.actorTextColor || this.primaryTextColor;\r\n-    this.actorLineColor = this.actorLineColor || 'grey';\r\n+    this.actorLineColor = this.actorLineColor || this.actorBorder;\r\n     this.labelBoxBkgColor = this.labelBoxBkgColor || this.actorBkg;\r\n     this.signalColor = this.signalColor || this.textColor;\r\n     this.signalTextColor = this.signalTextColor || this.textColor;\r\ndiff --git a/packages/mermaid/src/themes/theme-dark.js b/packages/mermaid/src/themes/theme-dark.js\r\nindex c56625109..ae264e9e9 100644\r\n--- a/packages/mermaid/src/themes/theme-dark.js\r\n+++ b/packages/mermaid/src/themes/theme-dark.js\r\n@@ -109,7 +109,7 @@ class Theme {\r\n     this.actorBorder = this.border1;\r\n     this.actorBkg = this.mainBkg;\r\n     this.actorTextColor = this.mainContrastColor;\r\n-    this.actorLineColor = this.mainContrastColor;\r\n+    this.actorLineColor = this.actorBorder;\r\n     this.signalColor = this.mainContrastColor;\r\n     this.signalTextColor = this.mainContrastColor;\r\n     this.labelBoxBkgColor = this.actorBkg;\r\ndiff --git a/packages/mermaid/src/themes/theme-default.js b/packages/mermaid/src/themes/theme-default.js\r\nindex 6aa18fcc7..c149b43f3 100644\r\n--- a/packages/mermaid/src/themes/theme-default.js\r\n+++ b/packages/mermaid/src/themes/theme-default.js\r\n@@ -53,7 +53,7 @@ class Theme {\r\n     this.actorBorder = 'calculated';\r\n     this.actorBkg = 'calculated';\r\n     this.actorTextColor = 'black';\r\n-    this.actorLineColor = 'grey';\r\n+    this.actorLineColor = 'calculated';\r\n     this.signalColor = 'calculated';\r\n     this.signalTextColor = 'calculated';\r\n     this.labelBoxBkgColor = 'calculated';\r\ndiff --git a/packages/mermaid/src/themes/theme-forest.js b/packages/mermaid/src/themes/theme-forest.js\r\nindex 0270f51ff..8ebe78ec8 100644\r\n--- a/packages/mermaid/src/themes/theme-forest.js\r\n+++ b/packages/mermaid/src/themes/theme-forest.js\r\n@@ -46,7 +46,7 @@ class Theme {\r\n     this.actorBorder = 'calculated';\r\n     this.actorBkg = 'calculated';\r\n     this.actorTextColor = 'black';\r\n-    this.actorLineColor = 'grey';\r\n+    this.actorLineColor = 'calculated';\r\n     this.signalColor = '#333';\r\n     this.signalTextColor = '#333';\r\n     this.labelBoxBkgColor = 'calculated';\r\ndiff --git a/packages/mermaid/src/themes/theme-neutral.js b/packages/mermaid/src/themes/theme-neutral.js\r\nindex 446a9189d..32f35ddd5 100644\r\n--- a/packages/mermaid/src/themes/theme-neutral.js\r\n+++ b/packages/mermaid/src/themes/theme-neutral.js\r\n@@ -113,7 +113,7 @@ class Theme {\r\n     this.actorBorder = lighten(this.border1, 23);\r\n     this.actorBkg = this.mainBkg;\r\n     this.actorTextColor = this.text;\r\n-    this.actorLineColor = this.lineColor;\r\n+    this.actorLineColor = this.actorBorder;\r\n     this.signalColor = this.text;\r\n     this.signalTextColor = this.text;\r\n     this.labelBoxBkgColor = this.actorBkg;\r\n```\r\n\r\n</details>\r\n\r\nIn my opinion, this looks better to me, but maybe I'm just biased towards it since I've been seeing this for the last few years!",
+          "file_path": "packages/mermaid/src/diagrams/sequence/svgDraw.js",
+          "line_number": 346,
+          "start_line": null,
+          "commit_sha": "233944bf2469859d3164dbdc6d0ede5baee95050",
+          "created_at": "2024-02-29T11:18:57Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85Z6e_R",
+          "author": "ad1992",
+          "body": "I  feel the one in this PR looks nicer since the line color is more prominent :) \r\nHowever, I am happy to keep it as the one in production as well.  Let me know which way we want to go ahead with and based on that I can push the changes as needed.\r\ncc @aloisklink @sidharthv96 ",
+          "file_path": "packages/mermaid/src/diagrams/sequence/svgDraw.js",
+          "line_number": 346,
+          "start_line": null,
+          "commit_sha": "233944bf2469859d3164dbdc6d0ede5baee95050",
+          "created_at": "2024-03-01T05:36:53Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85aD2Jq",
+          "author": "ad1992",
+          "body": "friendly reminder @aloisklink @sidharthv96 :)",
+          "file_path": "packages/mermaid/src/diagrams/sequence/svgDraw.js",
+          "line_number": 346,
+          "start_line": null,
+          "commit_sha": "233944bf2469859d3164dbdc6d0ede5baee95050",
+          "created_at": "2024-03-04T10:43:41Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85aGEr1",
+          "author": "aloisklink",
+          "body": "> However, I am happy to keep it as the one in production as well.\r\n\r\nIt might be better to keep the color as it is, even if it does look slightly worse, since this bug has been around so long that people are probably used to the current colour.\r\n\r\nPlus, due to the way this repo has GitHub permissions set up, if the visual regression tests show changes, we need an @mermaid-js admin to merge this PR. Otherwise, I can merge it myself without waiting for anybody else to review :smile:",
+          "file_path": "packages/mermaid/src/diagrams/sequence/svgDraw.js",
+          "line_number": 346,
+          "start_line": null,
+          "commit_sha": "233944bf2469859d3164dbdc6d0ede5baee95050",
+          "created_at": "2024-03-04T17:44:56Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85aISpe",
+          "author": "ad1992",
+          "body": "> It might be better to keep the color as it is, even if it does look slightly worse, since this bug has been around so long that people are probably used to the current colour.\r\n\r\nPlease let's not make this a reason for not pushing better changes to the UI when we agree its visually a better one :) It will be a change but visually better one so users will gradually start liking it :)",
+          "file_path": "packages/mermaid/src/diagrams/sequence/svgDraw.js",
+          "line_number": 346,
+          "start_line": null,
+          "commit_sha": "233944bf2469859d3164dbdc6d0ede5baee95050",
+          "created_at": "2024-03-05T04:35:54Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85aLc_y",
+          "author": "aloisklink",
+          "body": "@ad1992, for this PR, do you want to apply the above diff (either manually or by copying to a `.diff` file and running `git apply my-diff-file.diff`?) to prevent any visual changes? If there are no visual changes for this PR, I can merge it without waiting for anybody else.\r\n\r\nIt's probably easier to make the visual changes in another PR, since that will require admin permissions from another reviewer. I'd imagine we'd probably also want to pick a setting that looks good in all of the [built-in mermaid themes](https://mermaid.js.org/config/theming.html#available-themes), e.g.\r\n\r\n<table>\r\n  <tr>\r\n    <td> default </td>\r\n    <td> neutral </td>\r\n    <td> dark </td>\r\n    <td> forest </td>\r\n    <td> base </td>\r\n  </tr>\r\n  <tr>\r\n  <td>\r\n\r\n```mermaid\r\n---\r\nconfig:\r\n  theme: default\r\n---\r\nsequenceDiagram\r\n    Alice->>+John: Hello John, how are you?\r\n```\r\n  </td>\r\n  <td>\r\n\r\n```mermaid\r\n---\r\nconfig:\r\n  theme: neutral\r\n---\r\nsequenceDiagram\r\n    Alice->>+John: Hello John, how are you?\r\n```\r\n  </td>\r\n  <td>\r\n\r\n```mermaid\r\n---\r\nconfig:\r\n  theme: dark\r\n---\r\nsequenceDiagram\r\n    Alice->>+John: Hello John, how are you?\r\n```\r\n  </td>\r\n  <td>\r\n\r\n```mermaid\r\n---\r\nconfig:\r\n  theme: forest\r\n---\r\nsequenceDiagram\r\n    Alice->>+John: Hello John, how are you?\r\n```\r\n  </td>\r\n  <td>\r\n\r\n```mermaid\r\n---\r\nconfig:\r\n  theme: base\r\n---\r\nsequenceDiagram\r\n    Alice->>+John: Hello John, how are you?\r\n```\r\n  </td>\r\n  </tr>\r\n</table>\r\n\r\n",
+          "file_path": "packages/mermaid/src/diagrams/sequence/svgDraw.js",
+          "line_number": 346,
+          "start_line": null,
+          "commit_sha": "233944bf2469859d3164dbdc6d0ede5baee95050",
+          "created_at": "2024-03-05T14:44:53Z",
+          "is_outdated": false
+        },
+        {
+          "id": "PRRC_kwDOAY2_J85aPDNd",
+          "author": "ad1992",
+          "body": "Hey @aloisklink makes sense, I will push the changes then as suggested by you so that we can merge it and the diff related stuff can go in another PR",
+          "file_path": "packages/mermaid/src/diagrams/sequence/svgDraw.js",
+          "line_number": 346,
+          "start_line": null,
+          "commit_sha": "233944bf2469859d3164dbdc6d0ede5baee95050",
+          "created_at": "2024-03-06T06:33:08Z",
+          "is_outdated": false
+        }
+      ]
+    }
+  ],
+  "review_thread_count": 1
+}

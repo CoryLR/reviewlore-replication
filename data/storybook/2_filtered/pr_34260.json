@@ -1,0 +1,74 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34260,
+  "title": "Maintenance: Extract getBuilderOptions helper across framewo\u2026",
+  "body": "Closes #34258\r\n\r\n## What I did\r\nReplaces the duplicated `typeof framework === 'string' ? {} : framework.options.builder || {}` ternary across 6 framework preset files with the existing `getBuilderOptions` utility from `storybook/internal/common`.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n- [x] stories\r\n- [x] unit tests\r\n- [x] integration tests\r\n- [x] end-to-end tests\r\n\r\n#### Manual testing\r\nThis is a pure refactor with no behaviour changes. The existing `getBuilderOptions` utility is already tested. No manual testing required.\r\n\r\n### Documentation\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n## Summary by CodeRabbit\n\n* **Refactor**\n  * Consolidated builder-options resolution across Angular, Ember, Next.js Vite, React Webpack5, and Server Webpack5 into a single shared utility, replacing per-framework conditional logic.\n  * Standardized behavior with no changes to public APIs or exported signatures; end-user behavior and configuration surface remain unchanged.\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "alex-js-ltd",
+  "merged_at": "2026-03-30T14:53:29Z",
+  "base_ref": "next",
+  "merge_commit_sha": "5eeadf7f6994a812aa15e0813139dc1d8cdd50c9",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "df785903baa0e5ba36e9b6c1c72a7dc63987a554",
+    "223dce867accf6354e9e0a265328fa0847300cb1"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6xXP8i",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n**`getBuilderOptions` changes semantics versus the previous inline expression.**\n\nLine 43 now includes `core.builder.options` fallback (via `getBuilderOptions`), while the previous code only used `framework.options.builder || {}`. That is a behavior change, so this is not strictly a pure refactor. Please either preserve framework-only semantics here (and sibling presets) or explicitly update PR intent/tests to cover the new precedence.\n\n\n\n<details>\n<summary>Possible minimal fix to preserve previous behavior in this preset</summary>\n\n```diff\n export const core: PresetProperty<'core'> = async (config, options) => {\n   const framework = await options.presets.apply<StorybookConfig['framework']>('framework');\n+  const frameworkBuilderOptions =\n+    typeof framework === 'string' ? {} : framework.options.builder ?? {};\n@@\n     builder: {\n       name: fileURLToPath(import.meta.resolve('@storybook/builder-webpack5')),\n-      options: await getBuilderOptions(options),\n+      options: frameworkBuilderOptions,\n     },\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\nexport const core: PresetProperty<'core'> = async (config, options) => {\n  const framework = await options.presets.apply<StorybookConfig['framework']>('framework');\n  const frameworkBuilderOptions =\n    typeof framework === 'string' ? {} : framework.options.builder ?? {};\n\n  return {\n    builder: {\n      name: fileURLToPath(import.meta.resolve('@storybook/builder-webpack5')),\n      options: frameworkBuilderOptions,\n    },\n  };\n};\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/frameworks/nextjs/src/preset.ts` at line 43, The change to use\ngetBuilderOptions in preset.ts alters precedence compared to the prior inline\nexpression (which used framework.options.builder || {}); to fix, restore the\noriginal framework-only semantics by replacing the call to getBuilderOptions\nwith the previous behavior (use framework.options.builder || {}) in the options\nassignment inside the preset (or alternatively update the PR/tests to explicitly\nassert and document the new precedence if you intend to keep getBuilderOptions),\nensuring you update sibling presets similarly if you choose to preserve old\nsemantics.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:hawk -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commit 1432956",
+          "file_path": "code/frameworks/nextjs/src/preset.ts",
+          "line_number": 43,
+          "start_line": null,
+          "commit_sha": "603867d2e06c4cd0b871dfd8f70a8910ecd910aa",
+          "created_at": "2026-03-23T15:07:08Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a behavior change introduced by the refactor (semantic difference between getBuilderOptions and the previous inline expression) and requests either restoring the original semantics or explicitly updating tests/PR intent. A concrete code fix is provided."
+    },
+    {
+      "is_resolved": true,
+      "is_outdated": true,
+      "is_collapsed": true,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6y3d3R",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udfe0 Major_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Description: Search for framework preset configurations to verify if options is always provided\n\n# Find framework preset definitions/registrations\nrg -n -C5 \"presets\\.apply\\(['\\\"]framework['\\\"]\" --type ts\n\n# Check how frameworks are defined in config files\nrg -n -C3 \"framework:\" --type ts -g '!*.d.ts' | head -100\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 13421\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Find the Preset type definition to confirm options is optional\nrg -n \"type.*Preset\\s*=\" --type ts | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 341\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Search for imports of Preset to understand its full definition\nrg -n \"import.*Preset\" code/core/src/common/utils/get-framework-builder-options.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 47\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the types file for Preset definition\nfd -t f \"types.ts\" code/core | xargs grep -l \"Preset\"\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 96\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Look at the actual usages of getFrameworkBuilderOptions\nrg -n \"getFrameworkBuilderOptions\" --type ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1241\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Get the Preset type definition\nsed -n '298,320p' code/core/src/types/modules/core-common.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 647\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check the full context around the Preset type\nsed -n '290,330p' code/core/src/types/modules/core-common.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1097\n\n---\n\n\n\n</details>\n\n**Use optional chaining to safely access the `options` property on line 6.**\n\nPer the `Preset` type definition, `options` is optional (`options?: any`). When a framework preset does not include an `options` property, accessing `framework.options.builder` will throw a `TypeError`. This pattern is already used safely in the similar utility `get-builder-options.ts` and across multiple framework presets in the codebase.\n\n<details>\n<summary>\ud83d\udc1b Proposed fix using optional chaining</summary>\n\n```diff\n-  return typeof framework === 'string' ? {} : framework.options.builder || {};\n+  return typeof framework === 'string' ? {} : framework.options?.builder ?? {};\n```\n\n</details>\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@code/core/src/common/utils/get-framework-builder-options.ts` at line 6, The\nreturn expression in get-framework-builder-options (the ternary using variable\nframework) can throw when a Preset lacks options \u2014 change the access to use\noptional chaining so we safely read builder: for non-string framework values,\nuse framework.options?.builder || {} instead of framework.options.builder,\nensuring the function returns an empty object when options or builder are\nmissing.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:poseidon:ocelot:ad5e633a-aad1-429d-8801-6fe83371eee3 -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->\n\n\u2705 Addressed in commits 747b613 to 976d897",
+          "file_path": "code/core/src/common/utils/get-framework-builder-options.ts",
+          "line_number": 6,
+          "start_line": null,
+          "commit_sha": "dccd5e87fdce564af99ea7b0e655ecb3a545980f",
+          "created_at": "2026-03-27T13:03:59Z",
+          "is_outdated": true
+        }
+      ],
+      "resolution_signal": "resolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment flags a potential TypeError due to accessing an optional property without optional chaining, and provides a specific code fix using optional chaining to resolve it."
+    }
+  ],
+  "review_thread_count": 2,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 2,
+    "stage1_kept": 2,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "pr_number": 33367,
+  "source_mr_date": "2026-01-09T13:38:48Z",
+  "candidates": [
+    "When writing a regex to validate that a parsed token is a JavaScript identifier, use a complete pattern that constrains every character\u2014e.g. `/^[a-z_$][0-9a-z_$]*$/i`\u2014rather than a partial check that only inspects the first and last characters; partial checks silently allow strings like `foo-bar` or `a#b` to pass.",
+    "Before inserting any variable into a `new RegExp(...)` constructor, escape all regex metacharacters in the variable first (e.g. `v.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')`), even when the variable is derived from a trusted internal source such as stringified function source; skipping this step risks regex injection, parse errors, and ReDoS exposure.",
+    "When using a regex pattern like `{([^}]+)}` to capture content inside braces, be aware that it will prematurely terminate at the first `}` when the content itself contains nested braces (e.g., default values such as `{ a = { nested: true } }`); either use a balanced-brace algorithm, restrict usage to contexts where nesting is impossible, or add a JSDoc/inline comment explicitly documenting the known limitation.",
+    "When adding or modifying a utility that detects or parses destructuring in a play-function source string, include unit tests for: (a) properties annotated with inline `//` and block `/* */` comments, (b) trailing-comma and no-trailing-comma variants, (c) renamed/aliased properties (e.g. `{ mount: sbMount }`), and (d) destructuring performed on an object other than the play-context argument\u2014to surface false positives and false negatives early.",
+    "Wrap call sites of utilities that parse stringified function source (e.g. `mountDestructured` / `getUsedProps` in `mount-utils.ts`) in a `try-catch` block; regex-based source parsing can throw unexpectedly on minified code, unusual transpiler output, or exotic bundler configurations, and errors must not propagate to the story render pipeline.",
+    "Do not use `[^]+` in regular expressions in this codebase; Biome's `noEmptyCharacterClassInRegex` lint rule treats negated empty character classes as errors. Use `[\\s\\S]` (or `[\\\\s\\\\S]` inside a `RegExp` string literal) to match any character including newlines.",
+    "When extracting the body of a stringified function, match from the first `{` to the *last* `}` using a greedy pattern such as `/^[^(]*\\([^)]*\\)[^{]*\\{([\\s\\S]*)\\}\\s*$/`; a pattern that terminates at the first `}` will silently truncate the body of any function whose body contains nested `{}` blocks (object literals, control-flow statements, etc.)."
+  ],
+  "analysis": [],
+  "cost_usd": 0.14415725000000001,
+  "duration_seconds": 98.60524702072144
+}

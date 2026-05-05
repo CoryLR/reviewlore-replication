@@ -1,0 +1,93 @@
+{
+  "platform": "github",
+  "project": "storybookjs/storybook",
+  "number": 34212,
+  "title": "Build: Retry-mechanism for dts bundle-generation",
+  "body": "## What I did\r\n\r\nWe run dts bundling on 5 entrypoints at a time.\r\nThis is usually fine, however occasionally we run into the problem where `entrypoint A` uses `entrypoint B`.\r\nThis is fine, of course, but then if `entrypoint B` is at that time getting generated, the file might be partially written.\r\nWhen `entrypoint A` then tries to load the `b.d.ts` file it will error and yield a \"not a valid module\".\r\n\r\nI've tried a few things to solve this, but ultimately landed on a retry mechanism, because everything else i tried to make the system more predictable had severe performance implications.\r\n\r\n## Checklist for Contributors\r\n\r\n### Testing\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to communicate how to test your changes -->\r\n\r\n#### The changes in this PR are covered in the following automated tests:\r\n\r\n- [ ] stories\r\n- [ ] unit tests\r\n- [ ] integration tests\r\n- [ ] end-to-end tests\r\n\r\n#### Manual testing\r\n\r\nI manually ran the compile step a few times, and I noticed no changes, no regressions.\r\n\r\n### Documentation\r\n\r\n<!-- Please check (put an \"x\" inside the \"[ ]\") the applicable items below to indicate which documentation has been updated. -->\r\n\r\n- [ ] Add or update documentation reflecting your changes\r\n- [ ] If you are deprecating/removing a feature, make sure to update\r\n      [MIGRATION.MD](https://github.com/storybookjs/storybook/blob/next/MIGRATION.md)\r\n\r\n## Checklist for Maintainers\r\n\r\n- [ ] When this PR is ready for testing, make sure to add `ci:normal`, `ci:merged` or `ci:daily` GH label to it to run a specific set of sandboxes. The particular set of sandboxes can be found in `code/lib/cli-storybook/src/sandbox-templates.ts`\r\n- [ ] Make sure this PR contains **one** of the labels below:\r\n   <details>\r\n     <summary>Available labels</summary>\r\n\r\n  - `bug`: Internal changes that fixes incorrect behavior.\r\n  - `maintenance`: User-facing maintenance tasks.\r\n  - `dependencies`: Upgrading (sometimes downgrading) dependencies.\r\n  - `build`: Internal-facing build tooling & test updates. Will not show up in release changelog.\r\n  - `cleanup`: Minor cleanup style change. Will not show up in release changelog.\r\n  - `documentation`: Documentation **only** changes. Will not show up in release changelog.\r\n  - `feature request`: Introducing a new feature.\r\n  - `BREAKING CHANGE`: Changes that break compatibility in some way with current major version.\r\n  - `other`: Changes that don't fit in the above categories.\r\n\r\n   </details>\r\n\r\n### \ud83e\udd8b Canary release\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\nThis PR does not have a canary release associated. You can request a canary release of this pull request by mentioning the `@storybookjs/core` team here.\r\n\r\n_core team members can create a canary release [here](https://github.com/storybookjs/storybook/actions/workflows/publish.yml) or locally with `gh workflow run --repo storybookjs/storybook publish.yml --field pr=<PR_NUMBER>`_\r\n\r\n<!-- CANARY_RELEASE_SECTION -->\r\n\r\n<!-- BENCHMARK_SECTION -->\r\n<!-- BENCHMARK_SECTION -->\r\n\n\n<!-- This is an auto-generated comment: release notes by coderabbit.ai -->\n\n## Summary by CodeRabbit\n\n## Release Notes\n\n* **Bug Fixes**\n  * Implemented automatic retry mechanism for type declaration file generation during the build process. Failed generation processes are now automatically retried up to two times with a 500-millisecond delay between attempts before the build fails, improving overall reliability when facing transient errors. Enhanced logging for retry events.\n\n<!-- end of auto-generated comment: release notes by coderabbit.ai -->",
+  "author": "ndelangen",
+  "merged_at": "2026-03-23T12:53:50Z",
+  "base_ref": "next",
+  "merge_commit_sha": "7801015c514f212ac10c7a5a9b7b27d6476241fe",
+  "merge_commit_parent_count": 2,
+  "merge_commit_parent_shas": [
+    "b2fb7d8043f0e1f61e05d31656ec9fa81b3d1912",
+    "afe1be141144a78ff9b9aaee07552ad6e4b96f43"
+  ],
+  "review_threads": [
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6wWu67",
+          "author": "Sidnioulz",
+          "body": "If you reach max attempts, could it be worth printing an error message that says \"This part of the build is known to be flaky, but failed ${MAX_ATTEMPTS} times in a row. Consider re-running the CI job.\"?\n\nIt helps external human contributors if we point out, in CI failures, which ones we suspect to be flaky vs which ones are probably caused by their code.",
+          "file_path": "scripts/build/utils/generate-types.ts",
+          "line_number": 81,
+          "start_line": null,
+          "commit_sha": "afe1be141144a78ff9b9aaee07552ad6e4b96f43",
+          "created_at": "2026-03-19T09:13:20Z",
+          "is_outdated": false,
+          "dimension": "Maintainability and Readability",
+          "category": "Unclear Code Descriptions",
+          "label_confidence": "medium",
+          "label_reasoning": "The comment suggests adding a more informative error message to help contributors understand flaky CI failures. This is about improving code/output clarity and communication, fitting 'Unclear Code Descriptions'."
+        },
+        {
+          "id": "PRRC_kwDOAzqfmc6wW9kw",
+          "author": "ndelangen",
+          "body": "The build might also actually be broken @Sidnioulz ",
+          "file_path": "scripts/build/utils/generate-types.ts",
+          "line_number": 81,
+          "start_line": null,
+          "commit_sha": "afe1be141144a78ff9b9aaee07552ad6e4b96f43",
+          "created_at": "2026-03-19T09:25:42Z",
+          "is_outdated": false
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment requests adding a specific error message when max retry attempts are reached, to help contributors identify flaky CI failures."
+    },
+    {
+      "is_resolved": false,
+      "is_outdated": false,
+      "is_collapsed": false,
+      "comments": [
+        {
+          "id": "PRRC_kwDOAzqfmc6wttkF",
+          "author": "coderabbitai",
+          "body": "_\u26a0\ufe0f Potential issue_ | _\ud83d\udd34 Critical_\n\n<details>\n<summary>\ud83e\udde9 Analysis chain</summary>\n\n\ud83c\udfc1 Script executed:\n\n```shell\n#!/bin/bash\n# Check if this pattern (kill(408)) exists elsewhere in the codebase and whether it's intentional\nrg -n 'kill\\(408\\)' --type ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 156\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\ncat -n scripts/build/utils/generate-types.ts | sed -n '50,85p'\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 1569\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check Node.js documentation or comments about kill() and signal values\nrg -B3 -A3 'kill\\(408\\)' scripts/build/utils/generate-types.ts\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 314\n\n---\n\n\ud83c\udfc1 Script executed:\n\n```shell\n# Check if there are any TypeScript type definitions or comments in the file about process signals\nrg -i 'signal|timeout' scripts/build/utils/generate-types.ts | head -20\n```\n\nRepository: storybookjs/storybook\n\nLength of output: 273\n\n---\n\n\n\n</details>\n\n**Replace `kill(408)` with a valid Unix signal.**\n\nThe value `408` is not a recognized Unix signal and will be silently ignored, causing the timeout mechanism to fail. Standard signals are 1\u201331 (e.g., `SIGTERM` = 15, `SIGKILL` = 9). Use `'SIGTERM'` to gracefully terminate the process.\n\n<details>\n<summary>Suggested fix</summary>\n\n```diff\n-                dtsProcess.kill(408); // timed out\n+                dtsProcess.kill('SIGTERM'); // timed out\n```\n</details>\n\n<!-- suggestion_start -->\n\n<details>\n<summary>\ud83d\udcdd Committable suggestion</summary>\n\n> \u203c\ufe0f **IMPORTANT**\n> Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.\n\n```suggestion\n                dtsProcess.kill('SIGTERM'); // timed out\n```\n\n</details>\n\n<!-- suggestion_end -->\n\n<details>\n<summary>\ud83e\udd16 Prompt for AI Agents</summary>\n\n```\nVerify each finding against the current code and only fix it if needed.\n\nIn `@scripts/build/utils/generate-types.ts` at line 70, The timeout branch\ncurrently calls dtsProcess.kill(408) using an invalid numeric signal; update the\ntimeout handler in generate-types.ts to call dtsProcess.kill('SIGTERM') (use the\nstring signal name) so the child is terminated with a valid Unix signal;\noptionally follow up by checking the process state or falling back to\ndtsProcess.kill('SIGKILL') if the graceful SIGTERM does not stop the process.\n```\n\n</details>\n\n<!-- fingerprinting:phantom:medusa:ocelot -->\n\n<!-- This is an auto-generated comment by CodeRabbit -->",
+          "file_path": "scripts/build/utils/generate-types.ts",
+          "line_number": 70,
+          "start_line": null,
+          "commit_sha": "afe1be141144a78ff9b9aaee07552ad6e4b96f43",
+          "created_at": "2026-03-20T09:30:17Z",
+          "is_outdated": false,
+          "dimension": "Code Defect",
+          "category": "API Misuse",
+          "label_confidence": "high",
+          "label_reasoning": "Calling process.kill(408) with an invalid Unix signal number is incorrect usage of the Node.js process/child process API. Valid signals are 1-31 or named strings like 'SIGTERM'. This causes the timeout mechanism to silently fail."
+        }
+      ],
+      "resolution_signal": "unresolved",
+      "has_acknowledgment": false,
+      "actionable": true,
+      "actionability_reasoning": "The comment identifies a bug where kill(408) uses an invalid Unix signal and provides a specific fix to replace it with kill('SIGTERM')."
+    }
+  ],
+  "review_thread_count": 2,
+  "removed_threads": [],
+  "filter_stats": {
+    "total_threads": 2,
+    "stage1_kept": 2,
+    "stage1_filtered_bot": 0,
+    "stage1_filtered_self_comment": 0,
+    "stage1_filtered_too_short": 0,
+    "stage1_filtered_non_substantive": 0,
+    "stage1_filtered_empty": 0,
+    "stage3_filtered_non_actionable": 0
+  }
+}
