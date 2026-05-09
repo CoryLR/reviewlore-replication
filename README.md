@@ -10,6 +10,8 @@ Stdlib-only script (Python 3.8+, no `uv` or LLM key) that computes the paper's r
 python3 compute_all_results.py
 ```
 
+The expected stdout is documented in [EXPECTED-OUTPUT.md](EXPECTED-OUTPUT.md). The `Data:` line near the top shows local clone path and therefore varies.
+
 ---
 
 ## Pipeline Prerequisites
@@ -83,7 +85,7 @@ Every file and directory in this artifact, with a 1-2 sentence description.
 - `.gitattributes` -- marks bundled bare-repo pack and index files as binary so git does not try to diff them.
 - `.gitignore` -- excludes local runtime scratch (caches, virtualenvs), regenerated sample worktrees, trial / live output trees, and platform metadata.
 - `README.md` -- this file.
-- `EXPECTED-OUTPUT.md` -- literal expected stdout for `relox evaluate ase` (the grading-relevant output of Step 2), plus per-subject headline recall numbers for storybook, mermaid, and ase.
+- `EXPECTED-OUTPUT.md` -- expected stdout for `python3 compute_all_results.py` (saved data verification) and `relox evaluate ase` (full-pipeline), plus per-subject headline recall numbers for storybook, mermaid, and ase.
 - `compute_all_results.py` -- no-dependency saved-data verification; walks `data/` and prints the paper's result numbers with labels. Stdlib only, runs on Python 3.8+.
 - `pyproject.toml` -- Python project metadata: Python 3.13 floor, runtime deps (httpx, click, pyyaml, NLTK, sacrebleu, etc.), dev deps (pytest), and the `[project.scripts]` entries that expose `relo` (tuning CLI) and `relox` (experiment CLI).
 - `uv.lock` -- fully-pinned dependency lockfile consumed by `uv sync` for bit-identical environments.
