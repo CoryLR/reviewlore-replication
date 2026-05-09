@@ -1,8 +1,18 @@
 # Tailored vs. Generic LLM Code Review: Replication Package
 
-Replication artifact for the SWE 699 final report (George Mason University, Spring 2026). The default `replay` setting reproduces all paper numbers from saved LLM output under `data/`; no Anthropic API key, Claude subscription, or Claude Code installation required, and no network or LLM calls are made after `uv sync` installs dependencies.
+Replication artifact for the SWE 699 final report (George Mason University, Spring 2026).
 
-## Prerequisites
+## Verification with saved data
+
+Stdlib-only script (Python 3.8+, no `uv` or LLM key) that computes the paper's result numbers from `data/` in one script.
+
+```bash
+python3 compute_all_results.py
+```
+
+---
+
+## Pipeline Prerequisites
 
 - uv (Python version, package, and venv manager): `curl -LsSf https://astral.sh/uv/install.sh | sh` (macOS/Linux), `brew install uv`, or [docs](https://docs.astral.sh/uv/) for Windows.
 - git 2.5+.
@@ -74,6 +84,7 @@ Every file and directory in this artifact, with a 1-2 sentence description.
 - `.gitignore` -- excludes local runtime scratch (caches, virtualenvs), regenerated sample worktrees, trial / live output trees, and platform metadata.
 - `README.md` -- this file.
 - `EXPECTED-OUTPUT.md` -- literal expected stdout for `relox evaluate ase` (the grading-relevant output of Step 2), plus per-subject headline recall numbers for storybook, mermaid, and ase.
+- `compute_all_results.py` -- no-dependency saved-data verification; walks `data/` and prints the paper's result numbers with labels. Stdlib only, runs on Python 3.8+.
 - `pyproject.toml` -- Python project metadata: Python 3.13 floor, runtime deps (httpx, click, pyyaml, NLTK, sacrebleu, etc.), dev deps (pytest), and the `[project.scripts]` entries that expose `relo` (tuning CLI) and `relox` (experiment CLI).
 - `uv.lock` -- fully-pinned dependency lockfile consumed by `uv sync` for bit-identical environments.
 - `reviewlore.yaml` -- single source of truth for runtime config: default backend (`replay`), per-stage models / budgets / prompt paths, optimizer batch size, concurrency limits, filter rules, conditions list, and per-project (platform, repo, language, subject_repo) entries.
